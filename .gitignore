@@ -1,0 +1,53 @@
+# Secrets / env
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+
+# Node / TypeScript (reserved — may not apply depending on ADR-001)
+node_modules/
+dist/
+build/
+.next/
+*.tsbuildinfo
+
+# Python (reserved — may not apply depending on ADR-001)
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Go (reserved)
+bin/
+vendor/
+
+# Rust (reserved)
+target/
+Cargo.lock
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+
+# Editors
+.idea/
+.vscode/
+*.iml
+
+# Logs / runtime
+*.log
+logs/
+tmp/
+temp/
+
+# Local trace data (product will generate these once code exists)
+.chronos/
+traces/
+*.trace.jsonl
