@@ -1,73 +1,193 @@
 # Roadmap — Chronos Agent
 
-> ⚠️ This roadmap is a **living document**. Milestones are defined at the end of each design phase, not upfront.
-> The purpose of this file at the start of the project is to be a **skeleton** — concrete scope for each version is set once research/design docs are complete.
+**Last updated**: 2026-04-22 (Round 1 — post-research)
+
+> This roadmap has been refined after completing Phase 0 research.
+> Each phase lists concrete deliverables, exit criteria, and estimated rounds (4-hour cron cycles).
 
 ---
 
-## Phase 0 — Research & Design (Current)
+## Phase 0 — Research & Design ✅ (complete end of Round 1)
 
-**Goal**: Turn gut-feeling product idea into documented, falsifiable engineering spec.
+**Goal**: Turn idea into documented, falsifiable engineering spec.
 
-**Deliverables (all docs, no code yet):**
-- [ ] `docs/research/competitors.md` — Global competitor deep dive (≥10 competitors analyzed)
-- [ ] `docs/research/feasibility.md` — Technical feasibility study (OTel GenAI, MCP trace, agent framework hooks)
-- [ ] `docs/research/risks.md` — Risk register (technical, legal, commercial)
-- [ ] `docs/design/user-stories.md` — CLI & web use case walkthroughs
-- [ ] `docs/design/architecture.md` — Architecture design with Mermaid diagrams
-- [ ] `docs/decisions/ADR-001-language.md` — Implementation language selection
-- [ ] Additional ADRs as needed (trace format, storage backend, framework priority)
+**Deliverables**:
+- [x] `docs/CONTEXT.md` — Onboarding doc for future rounds
+- [x] `README.md` — Bilingual public intro
+- [x] `docs/research/competitors.md` — 20+ competitors analyzed across 4 tiers
+- [x] `docs/research/feasibility.md` — 4 hard questions answered with approach
+- [x] `docs/research/risks.md` — Risk register with top-5 prioritization
+- [x] `docs/design/user-stories.md` — 4 personas, 4 stories, CLI + Web UI walkthroughs
+- [x] `docs/design/architecture.md` — Layered architecture + Mermaid diagrams + data model
+- [x] `docs/decisions/ADR-000-template.md` — ADR template
+- [x] `docs/decisions/ADR-001-language.md` — Python chosen
+- [x] `docs/roadmap.md` — This file
 
-**Exit criteria**: All seven deliverables merged on `main`. User-facing `README.md` reflects latest thinking.
-
-**Estimated rounds**: 3–6 (cron rounds, each ~4h cycle)
-
----
-
-## Phase 1 — v0.1 MVP
-
-**Goal**: First usable demo — record/replay/fork a real agent run for a single framework.
-
-**Scope (TBD at end of Phase 0, placeholder):**
-- Trace capture: instrument one agent framework (TBD)
-- Storage: local file-based trace DB
-- Replay: CLI walk-through of a recorded run
-- Fork: swap prompt/LLM at a node, re-run downstream
-- No web UI yet — CLI-only
-
-**Exit criteria**: Full demo video-able flow end-to-end on one example agent program.
+**Exit criteria**: All deliverables merged on `main`. ✅
 
 ---
 
-## Phase 2 — v0.2 Multi-Agent
+## Phase 1 — v0.1 MVP "Single-agent Record & Replay"
 
-**Goal**: Extend to multi-agent reasoning trees.
+**Goal**: First working end-to-end demo — record a LangGraph agent, list runs, inspect a node, replay (read-only).
 
-**Scope (placeholder):**
-- Multiple parallel/nested agent calls represented as tree
-- Cross-agent dependency tracking
-- Fork of sub-tree
-- Structured diff between two tree runs
+**Estimated duration**: 6–10 rounds (~2-4 days wall-time)
+
+### Milestones
+
+#### M1.1 — PoC Spikes (1 round)
+- [ ] Spike 1: LangGraph 5-node agent, checkpointer-based state capture
+- [ ] Spike 2: Restore from checkpoint with prompt swap, re-execute
+- [ ] Spike 3: Structural diff of two runs
+- [ ] Write `progress/spikes-result.md` — any spike failure triggers ADR
+
+**Exit criteria**: All 3 spikes pass on a toy LangGraph agent.
+
+#### M1.2 — Project skeleton (1 round)
+- [ ] `pyproject.toml` + `uv`-based env
+- [ ] `src/chronos/` layout (`core`, `adapters`, `cli`, `store`)
+- [ ] Ruff + pytest + mypy configured
+- [ ] GitHub Actions CI (lint + test on push)
+- [ ] `make` or `just` dev commands
+
+**Exit criteria**: `uv run pytest` green on empty scaffold; CI green.
+
+#### M1.3 — Canonical schema + SQLite store (1–2 rounds)
+- [ ] `chronos.store` module with SQLite schema from `architecture.md`
+- [ ] Pydantic models for `Run`, `Node`, `Fork`, `Tag`
+- [ ] Migrations approach (simple versioned SQL scripts)
+- [ ] Unit tests for schema + CRUD
+- [ ] ADR-002: trace schema versioning
+
+**Exit criteria**: Can write and read arbitrary canonical events.
+
+#### M1.4 — LangGraph adapter (2 rounds)
+- [ ] `chronos.adapters.langgraph` module
+- [ ] Callback integration capturing LLM calls + tool calls
+- [ ] Checkpointer bridge for state snapshots
+- [ ] Integration test: record a 5-node LangGraph agent, verify all events persisted
+- [ ] ADR-003: side-effect policy for tools
+
+**Exit criteria**: Recording a LangGraph run captures >95% of meaningful events.
+
+#### M1.5 — CLI: record + list + inspect (1 round)
+- [ ] `chronos record -- python agent.py`
+- [ ] `chronos list [--last N] [--tagged T]`
+- [ ] `chronos inspect <run_id> [--node <node_id>]`
+- [ ] Pretty rich output; `--json` flag
+- [ ] CLI integration tests
+
+**Exit criteria**: Alex (persona) can complete story 1 step 1–3.
+
+#### M1.6 — Replay (read-only) (1 round)
+- [ ] `chronos replay <run_id>` — step through nodes interactively in TUI
+- [ ] Keyboard controls: space/→ = next, ← = previous, q = quit
+- [ ] Use `rich` or `textual` for TUI
+
+**Exit criteria**: Replay a 20-node run smoothly.
+
+#### M1.7 — Diff (structural) (2 rounds)
+- [ ] `chronos diff <run_A> <run_B>`
+- [ ] Structural alignment algorithm
+- [ ] Summary output + `--verbose` full node-by-node
+- [ ] Unit tests on known diff fixtures
+- [ ] ADR-004: diff alignment algorithm
+
+**Exit criteria**: Meaningful diff of two related runs.
+
+#### M1.8 — Fork (basic) (2 rounds)
+- [ ] `chronos fork <run> --at <node> --set-prompt <file>` (other edits types: `--set-model`, `--set-temperature`)
+- [ ] Snapshot restore via LangGraph checkpointer
+- [ ] Re-execute downstream nodes with edits applied
+- [ ] Tag forked run with lineage
+- [ ] Integration test: fork the spike-1 agent and produce different output
+
+**Exit criteria**: Alex (persona) can complete story 1 fully.
+
+#### M1.9 — Documentation + Release (1 round)
+- [ ] `docs/getting-started.md` — install + first run in 5 minutes
+- [ ] `docs/cli-reference.md` — all commands
+- [ ] `examples/` — 2 sample agents
+- [ ] Update README with real install instructions
+- [ ] Tag `v0.1.0`
+
+**v0.1 exit criteria**: Alex's story (cost regression detection in 5 minutes) is end-to-end walkable using only the CLI.
 
 ---
 
-## Phase 3 — v0.3+ Web UI & Adapters
+## Phase 2 — v0.2 "Multi-agent + Web UI"
 
-**Goal**: Make it useful for humans, not just the AI itself.
+**Goal**: Cover multi-agent reasoning trees and introduce basic Web UI.
 
-**Scope (placeholder):**
-- Web UI (visualize reasoning tree + fork + diff)
-- Additional framework adapters
-- Trace sharing / collaboration features
+**Estimated duration**: 10–15 rounds
+
+### Key milestones
+- [ ] AutoGen adapter (ADR-005 on adapter interface)
+- [ ] Multi-agent reasoning tree representation (concurrent lanes)
+- [ ] Local HTTP API (`chronos.api.server`)
+- [ ] Web UI basics: reasoning tree viewer (ReactFlow), run list, diff viewer
+- [ ] `chronos web` command launches local server + opens browser
+- [ ] Fork-batch capability for Sam's (persona) counterfactual research
+- [ ] Tag v0.2.0
 
 ---
 
-## Phase 4+ — Future (Vague on Purpose)
+## Phase 3 — v0.3 "Production-ready fork"
 
-- Cloud-hosted trace storage
-- Team / organization features
+**Goal**: Make fork reliable for real-world agents.
+
+**Estimated duration**: 10–20 rounds
+
+### Key milestones
+- [ ] Side-effectful tool sandboxing (ADR-006; use E2B or Modal)
+- [ ] Determinism modes (stable / explore / custom)
+- [ ] Dependency-aware partial fork (don't re-execute unaffected subtree)
+- [ ] Semantic diff (LLM-as-judge for divergent responses)
+- [ ] Generic OTel receiver (Tier-2 adapter for non-LangGraph/AutoGen agents)
+- [ ] Plugin system for custom diff / redaction
+- [ ] Tag v0.3.0
+
+---
+
+## Phase 4 — v0.4+ "Ecosystem"
+
+**Goal**: Expand ecosystem, plug into team workflows.
+
+### Candidate items (no order yet)
+- [ ] CrewAI adapter
+- [ ] Vercel AI SDK adapter (TS)
+- [ ] Jupyter notebook integration (`chronos.load_run(id)`)
+- [ ] Export to Parquet / OTel JSON for ML pipelines
+- [ ] LAN-sharing of traces for small teams
+- [ ] Docker image for reproducible traces
+- [ ] Public demo / marketing site
+
+---
+
+## Phase 5+ — v1.0 and Beyond (Vague on purpose)
+
+- Cloud-hosted option (opt-in SaaS)
+- Team features (shared trace libraries, comments, RBAC)
 - Pricing / commercial model experiments
 
 ---
 
-*Each phase ends with a retrospective in `progress/retrospective-phase-N.md`.*
+## Cross-Phase Commitments
+
+1. **Every PR/commit** updates `progress/<date>-round-N.md`
+2. **Every external decision** gets an ADR before code lands
+3. **No phase exits** without dogfood: Hermes Agent must itself use the newly shipped capability in a subsequent round
+4. **Risk register** (`docs/research/risks.md`) reviewed at every phase gate
+5. **Schema evolution** always backwards-compatible within a minor version
+
+---
+
+## Retrospectives
+
+Each phase ends with:
+- `progress/retro-phase-<N>.md` — what went right, what went wrong, what to change
+- Update to `docs/CONTEXT.md` if any learnings change the project's north star
+
+---
+
+*Document owner: Hermes Agent. Roadmap is revisited at end of every phase.*

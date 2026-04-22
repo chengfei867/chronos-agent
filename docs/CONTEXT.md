@@ -89,8 +89,10 @@
 5. **不问用户** —— 除非硬卡点（环境 / 权限 / 钱），自己拍板
 
 ### 3.2 Git / GitHub 流程
-- 直连 GitHub 会超时 → **push 用镜像**：`git remote set-url origin https://gh.llkk.cc/github.com/chengfei867/chronos-agent.git` 或 `gh.ddlc.top`
-- **fetch 也走镜像**（push 成功后要验证远端状态）
+- 直连 GitHub 超时 —— **push 唯一可用镜像是 `gh-proxy.com`**（2026-04-22 实测）
+  - `gh.llkk.cc` / `gh.ddlc.top` 只能 clone/fetch/下 tarball，**不能 push**（llkk 403，ddlc 域名解析错）
+  - push URL 格式：`https://chengfei867:<TOKEN>@gh-proxy.com/github.com/chengfei867/chronos-agent.git`
+- fetch 走 `gh-proxy.com` 或 `gh.llkk.cc` 均可
 - 认证 token 在 `/workspace/.hermes/.env`，**永远不要 commit .env**
 - commit message 末尾加 `Co-authored-by: Hermes Agent <agent@hermes.ai>`
 - 第一阶段直接在 main 写（单人项目无需 PR），**研发到 v0.1-alpha 后**引入 PR 流程
@@ -145,23 +147,40 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
-**截至 Round 1 结束时填写** — 每轮 cron 完成后回来更新这部分。
+**截至 Round 1 结束 (2026-04-22)**
 
-- Round: 1 (初始化 / 调研启动)
-- 最新 commit hash: (Round 1 结束时填)
-- 最近 progress doc: `progress/2026-04-22-round-1.md`
-- 当前阶段: **Phase 0 — Research & Design** (未进入编码)
-- 最后一个 ADR: 无 (待创建 ADR-001-language)
+- Round: **1 完成** (Phase 0 全部 deliverables 已产出)
+- 最近 progress doc: `progress/2026-04-22-round-1.md` ← **下一轮的你必读**
+- 当前阶段: **Phase 0 COMPLETE → 进入 Phase 1 (v0.1 MVP)**
+- 最新 ADR: `ADR-001-language.md` = Python 3.11+ 选型 (accepted)
+- 最新 commit: 见 GitHub main
 - Blocked items: 无
-
----
+- Code LOC: 0 (Phase 0 纯文档, by design)
+- 已验证事实: GitHub push 用 `gh-proxy.com` 可行, 其它镜像不能 push
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-> 每轮结束前更新这部分，让下一个你无缝接上。
+**Round 2 目标**: 进入 Phase 1 M1.1 + M1.2
 
-**Round 2 TODO (待 Round 1 结束更新):**
-- ...
+1. **检查并设置 4 小时 cron** (如果还没设)
+2. **M1.1 — PoC Spikes** (本轮核心):
+   - Spike 1: 写个 5-node LangGraph agent + checkpointer 状态捕获
+   - Spike 2: 从 checkpoint 恢复 + 换 system prompt + 重新跑下游
+   - Spike 3: 两次 run 的结构化 diff
+   - 任一 spike 失败 → 写 ADR 说明失败原因和应对方案
+3. **M1.2 — Project skeleton** (如果时间够):
+   - `uv init`, `pyproject.toml`, `src/chronos/` 布局
+   - `pytest + ruff + mypy` 配好
+   - GitHub Actions CI 基线 `.github/workflows/ci.yml`
+4. 写 `progress/2026-04-XX-round-2.md`
+5. 推 GitHub (记得用 `gh-proxy.com`)
+
+**硬约束**:
+- ❌ 不碰多 agent 支持 (v0.2 再说)
+- ❌ 不加 LangGraph 之外的 adapter (要加必须先 ADR)
+- ❌ spike 代码也要有测试
+- ✅ 本节 (section 5 当前状态) 结束前更新
+- ✅ 任何新决定 → 建 ADR-002, ADR-003...
 
 ---
 
