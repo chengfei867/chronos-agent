@@ -147,40 +147,63 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
-**截至 Round 1 结束 (2026-04-22)**
+**截至 Round 2 结束 (2026-04-22)**
 
-- Round: **1 完成** (Phase 0 全部 deliverables 已产出)
-- 最近 progress doc: `progress/2026-04-22-round-1.md` ← **下一轮的你必读**
-- 当前阶段: **Phase 0 COMPLETE → 进入 Phase 1 (v0.1 MVP)**
-- 最新 ADR: `ADR-001-language.md` = Python 3.11+ 选型 (accepted)
+- Round: **2 完成** (M1.1 spikes + M1.2 骨架全部拿下)
+- 最近 progress doc: `progress/2026-04-22-round-2.md` ← **下一轮的你必读**
+- 当前阶段: **Phase 1 进行中 — 下一步 M1.3 SQLite 持久化**
+- 最新 ADR: `ADR-002-langgraph-first-adapter.md` = LangGraph 作为首个 adapter + 5 条 spike 发现
 - 最新 commit: 见 GitHub main
 - Blocked items: 无
-- Code LOC: 0 (Phase 0 纯文档, by design)
-- 已验证事实: GitHub push 用 `gh-proxy.com` 可行, 其它镜像不能 push
+- Code LOC: ~800 (core/models + cli + 3 spikes + 8 unit tests)
+- 测试状态: **14/14 pass, 98% coverage**
+- 已验证事实:
+  - GitHub push 用 `gh-proxy.com` 可行, 其它镜像不能 push
+  - LangGraph 1.1.9 `checkpointer` 可以完整 capture / fork / diff (spike 1/2/3 全绿)
+  - `update_state(cfg, values, as_node=X)` 是 fork 原语
+  - `get_state_history()` 返回**最新在前** — 用时必 reverse
+  - fork thread 的 step 编号与原 thread **不对齐** → diff 必须按 node name 语义对齐
+
+## Cron 窗口门控 (2026-04-22 用户指令)
+
+用户要求 cron 只在**北京时间 0-11 点**跑。当前 cron 是 `every 3h` 全天跑。
+**每轮启动必做**: 读当前时间，如果北京时间不在 [0, 11] 闭区间内，立即退出不做事（不烧 LLM）。代码:
+
+```python
+from datetime import datetime, timezone, timedelta
+beijing_hour = (datetime.now(timezone.utc) + timedelta(hours=8)).hour
+if not (0 <= beijing_hour <= 11):
+    print(f"跳过本轮 — 北京 {beijing_hour} 点超出 0-11 窗口")
+    sys.exit(0)
+```
+或 agent prompt 里直接让它自检。
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 2 目标**: 进入 Phase 1 M1.1 + M1.2
+**Round 3 目标**: M1.3 — SQLite 持久化层 (从 InMemorySaver 升级到可持久化的 Chronos-native saver)
 
-1. **检查并设置 4 小时 cron** (如果还没设)
-2. **M1.1 — PoC Spikes** (本轮核心):
-   - Spike 1: 写个 5-node LangGraph agent + checkpointer 状态捕获
-   - Spike 2: 从 checkpoint 恢复 + 换 system prompt + 重新跑下游
-   - Spike 3: 两次 run 的结构化 diff
-   - 任一 spike 失败 → 写 ADR 说明失败原因和应对方案
-3. **M1.2 — Project skeleton** (如果时间够):
-   - `uv init`, `pyproject.toml`, `src/chronos/` 布局
-   - `pytest + ruff + mypy` 配好
-   - GitHub Actions CI 基线 `.github/workflows/ci.yml`
-4. 写 `progress/2026-04-XX-round-2.md`
-5. 推 GitHub (记得用 `gh-proxy.com`)
+1. **窗口门控先做** (见 section 5 最后的代码)
+2. **M1.3 核心**:
+   - 设计 SQLite schema: `runs` / `nodes` / `forks` 三张表
+   - 实现 `src/chronos/store/sqlite.py` — 包一层 LangGraph 的 `SqliteSaver`，同时 tee 到我们自己的表
+   - 验证跨进程 replay: 进程 A 跑完存到 `chronos.db`，进程 B 只读 `chronos.db` 能完整重建出 run tree
+   - Spike → integration test，不要留在 `tests/spikes/` 里
+3. **M1.4 草稿** (若时间够):
+   - `chronos record <script.py>` — 给用户的装饰器/包装 API 草图
+   - `chronos list` — 读 sqlite 吐表
+4. **必做**:
+   - 写 `progress/2026-04-XX-round-3.md`
+   - 推 GitHub (用 `gh-proxy.com`)
+   - 更新本文件 section 5/6
 
 **硬约束**:
-- ❌ 不碰多 agent 支持 (v0.2 再说)
-- ❌ 不加 LangGraph 之外的 adapter (要加必须先 ADR)
-- ❌ spike 代码也要有测试
-- ✅ 本节 (section 5 当前状态) 结束前更新
-- ✅ 任何新决定 → 建 ADR-002, ADR-003...
+- ❌ 不开始写 Web UI
+- ❌ 不加 AutoGen/CrewAI adapter (Phase 2 再说)
+- ❌ 不跳过 sqlite schema 设计直接写代码 — 先设计文档
+- ✅ 任何新决定 → ADR-003, ADR-004...
+- ✅ Spike 3 发现的 "按 node name 语义对齐" 是 M1.7 的必备，M1.3 的 schema 要为此预留字段
+
+**关键提醒**: LangGraph 有现成的 `SqliteSaver`，先考虑怎么复用它而不是从头写。不过 Chronos 需要存的不只是 checkpoint，还有 `Run` / `Fork` 元数据，所以至少要额外加我们自己的表。
 
 ---
 

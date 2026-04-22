@@ -51,3 +51,32 @@ temp/
 .chronos/
 traces/
 *.trace.jsonl
+
+# uv / python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+dist/
+build/
+
+# chronos-agent runtime artifacts
+.chronos/
+chronos.db
+chronos.db-journal
+chronos.db-wal
+chronos.db-shm
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
