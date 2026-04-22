@@ -276,7 +276,9 @@ class LangGraphRecorder:
         # For an original run, the input placeholder (idx 0) is NOT a Node;
         # we start real nodes at idx 1. initial_state lives on idx 1's values.
         initial_state = (
-            dict(snapshots[1].values) if len(snapshots) >= 2 and isinstance(snapshots[1].values, dict) else {}
+            dict(snapshots[1].values)
+            if len(snapshots) >= 2 and isinstance(snapshots[1].values, dict)
+            else {}
         )
         run_id = str(uuid.uuid4())
         run, nodes = self._build_run_and_nodes(
@@ -287,8 +289,8 @@ class LangGraphRecorder:
             task_description=task_description,
             tags=tags,
             initial_state=initial_state,
-            loop_start=1,                   # skip the input placeholder
-            first_step_index=0,             # child of nothing; start at 0
+            loop_start=1,  # skip the input placeholder
+            first_step_index=0,  # child of nothing; start at 0
             first_parent_node_id=None,
             extra_metadata={},
         )
@@ -336,9 +338,7 @@ class LangGraphRecorder:
 
         # For a forked thread: snapshots[0] is the seed and also plays the
         # role of "pre-first-downstream-node". initial_state = seed values.
-        initial_state = (
-            dict(snapshots[0].values) if isinstance(snapshots[0].values, dict) else {}
-        )
+        initial_state = dict(snapshots[0].values) if isinstance(snapshots[0].values, dict) else {}
 
         child_run_id = str(uuid.uuid4())
         run, nodes = self._build_run_and_nodes(
@@ -349,9 +349,9 @@ class LangGraphRecorder:
             task_description=task_description,
             tags=[*tags, "fork"],
             initial_state=initial_state,
-            loop_start=0,                      # forked thread has no input placeholder
+            loop_start=0,  # forked thread has no input placeholder
             first_step_index=parent_node.step_index + 1,
-            first_parent_node_id=parent_node.id,   # first child node points to parent node cross-Run
+            first_parent_node_id=parent_node.id,  # first child node points to parent node cross-Run
             extra_metadata={
                 "forked_from_run": parent_run.id,
                 "forked_at_node": parent_node.id,
@@ -441,9 +441,7 @@ class LangGraphRecorder:
             task = pre.tasks[0]
             node_name = getattr(task, "name", None)
             if not node_name:
-                raise AdapterError(
-                    f"snapshot[{i}].tasks[0] has no .name — LangGraph API changed?"
-                )
+                raise AdapterError(f"snapshot[{i}].tasks[0] has no .name — LangGraph API changed?")
 
             kind = self._kind_map.get(node_name, NodeKind.FN)
             lg_step = _meta_step(pre)

@@ -81,14 +81,14 @@
 
 **Exit criteria**: User can programmatically fork a recorded run and produce a divergent child run with persisted lineage. ✅ (CLI `chronos fork` is M1.8 — the adapter layer is done; CLI wiring lands then.)
 
-#### M1.6 — CLI: runs list / show + forks show (1 round) ← **NEXT (Round 6)**
-- [ ] `chronos runs list [--limit N] [--json]`
-- [ ] `chronos runs show <id> [--json]` — node tree
-- [ ] `chronos forks show <fork_id> [--json]` — parent/child + overrides
-- [ ] Pretty `rich` output + `--json` flag
-- [ ] CLI integration tests (typer `CliRunner`)
+#### M1.6 — CLI: runs list / show + forks show (1 round) ✅ DONE (Round 6)
+- [x] `chronos runs list [--limit N] [--json]`
+- [x] `chronos runs show <id> [--json]` — node tree
+- [x] `chronos forks show <fork_id> [--json]` — parent/child + overrides
+- [x] Pretty `rich` output + `--json` flag
+- [x] CLI integration tests (typer `CliRunner`) — 20 tests, full matrix
 
-**Exit criteria**: Users can inspect any recorded run or fork from the terminal without writing Python.
+**Exit criteria**: Users can inspect any recorded run or fork from the terminal without writing Python. ✅
 
 #### M1.7 — Replay (read-only) (1 round)
 - [ ] `chronos replay <run_id>` — step through nodes interactively in TUI

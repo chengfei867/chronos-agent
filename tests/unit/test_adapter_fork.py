@@ -56,9 +56,7 @@ class ForkFakeGraph:
     def update_state(self, cfg: dict, values: dict, *, as_node: str) -> None:
         thread_id = cfg["configurable"]["thread_id"]
         if thread_id == self.orig_thread_id:
-            raise AssertionError(
-                "test bug: update_state on the original thread would corrupt it"
-            )
+            raise AssertionError("test bug: update_state on the original thread would corrupt it")
         # Compute next downstream node based on position
         next_node = self.downstream_nodes[0] if self.downstream_nodes else None
         seed = FakeSnapshot(
@@ -73,9 +71,7 @@ class ForkFakeGraph:
             },
             metadata={"source": "update", "step": 0, "parents": {}},
             created_at="2026-04-23T00:00:00.000+00:00",
-            tasks=[FakeTask(name=next_node, id=f"task-{next_node}")]
-            if next_node
-            else [],
+            tasks=[FakeTask(name=next_node, id=f"task-{next_node}")] if next_node else [],
         )
         # Reset thread to just the seed (oldest-first).
         self._threads[thread_id] = [seed]
@@ -96,9 +92,7 @@ class ForkFakeGraph:
             cumulative["log"] = log
 
             next_node: str | None = (
-                self.downstream_nodes[idx + 1]
-                if idx + 1 < len(self.downstream_nodes)
-                else None
+                self.downstream_nodes[idx + 1] if idx + 1 < len(self.downstream_nodes) else None
             )
             step_idx = idx + 1
             snap = FakeSnapshot(
@@ -113,9 +107,7 @@ class ForkFakeGraph:
                 },
                 metadata={"source": "loop", "step": step_idx, "parents": {}},
                 created_at=f"2026-04-23T00:00:00.{step_idx:03d}+00:00",
-                tasks=[FakeTask(name=next_node, id=f"task-{next_node}")]
-                if next_node
-                else [],
+                tasks=[FakeTask(name=next_node, id=f"task-{next_node}")] if next_node else [],
             )
             hist.append(snap)
         return cumulative
@@ -266,12 +258,15 @@ def test_fork_raises_on_unknown_parent_run(tmp_path):
             orig_history_newest_first=build_4node_history(),
             downstream_nodes=["draft"],
         )
-        with pytest.raises(AdapterError, match="not found"), recorder.fork(
-            fork_graph,
-            parent_run_id="no-such-run",
-            at_node_id="no-such-node",
-            overrides={},
-            child_thread_id="t1-fork",
+        with (
+            pytest.raises(AdapterError, match="not found"),
+            recorder.fork(
+                fork_graph,
+                parent_run_id="no-such-run",
+                at_node_id="no-such-node",
+                overrides={},
+                child_thread_id="t1-fork",
+            ),
         ):
             pass
 
@@ -294,12 +289,15 @@ def test_fork_raises_on_node_belonging_to_different_run(tmp_path):
             orig_history_newest_first=build_4node_history(),
             downstream_nodes=["draft"],
         )
-        with pytest.raises(AdapterError, match="does not belong"), recorder.fork(
-            fork_graph,
-            parent_run_id=run_a,
-            at_node_id=mismatched_node,
-            overrides={},
-            child_thread_id="t1-fork",
+        with (
+            pytest.raises(AdapterError, match="does not belong"),
+            recorder.fork(
+                fork_graph,
+                parent_run_id=run_a,
+                at_node_id=mismatched_node,
+                overrides={},
+                child_thread_id="t1-fork",
+            ),
         ):
             pass
 
@@ -314,12 +312,15 @@ def test_fork_raises_when_child_thread_equals_parent_thread(tmp_path):
             orig_history_newest_first=build_4node_history(),
             downstream_nodes=["draft"],
         )
-        with pytest.raises(AdapterError, match="must differ"), recorder.fork(
-            fork_graph,
-            parent_run_id=parent_run_id,
-            at_node_id=name_to_id["research"],
-            overrides={},
-            child_thread_id="t1",  # same as parent!
+        with (
+            pytest.raises(AdapterError, match="must differ"),
+            recorder.fork(
+                fork_graph,
+                parent_run_id=parent_run_id,
+                at_node_id=name_to_id["research"],
+                overrides={},
+                child_thread_id="t1",  # same as parent!
+            ),
         ):
             pass
 
@@ -345,12 +346,15 @@ def test_fork_raises_on_unexpected_first_source(tmp_path):
             orig_history_newest_first=build_4node_history(),
             downstream_nodes=["draft"],
         )
-        with pytest.raises(AdapterError, match="source='update'"), recorder.fork(
-            bg,
-            parent_run_id=parent_run_id,
-            at_node_id=name_to_id["research"],
-            overrides={},
-            child_thread_id="t1-fork",
+        with (
+            pytest.raises(AdapterError, match="source='update'"),
+            recorder.fork(
+                bg,
+                parent_run_id=parent_run_id,
+                at_node_id=name_to_id["research"],
+                overrides={},
+                child_thread_id="t1-fork",
+            ),
         ):
             bg.invoke(None, {"configurable": {"thread_id": "t1-fork"}})
 
@@ -372,13 +376,16 @@ def test_fork_persists_failed_child_when_user_invoke_raises(tmp_path):
             pass
 
         captured_ref = []
-        with pytest.raises(BoomError), recorder.fork(
-            fork_graph,
-            parent_run_id=parent_run_id,
-            at_node_id=name_to_id["research"],
-            overrides={"research": "alt"},
-            child_thread_id="t1-fork",
-        ) as fref:
+        with (
+            pytest.raises(BoomError),
+            recorder.fork(
+                fork_graph,
+                parent_run_id=parent_run_id,
+                at_node_id=name_to_id["research"],
+                overrides={"research": "alt"},
+                child_thread_id="t1-fork",
+            ) as fref,
+        ):
             captured_ref.append(fref)
             # User invokes partially then blows up
             fork_graph.invoke(None, {"configurable": {"thread_id": "t1-fork"}})

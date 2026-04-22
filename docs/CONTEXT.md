@@ -147,37 +147,38 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
-**截至 Round 5 结束 (2026-04-23 凌晨 ~01:30, cron 正常窗口内)**
+**截至 Round 6 结束 (2026-04-23 北京 ~04:50, cron 正常窗口内)**
 
-- Round: **5 完成** (M1.5 Fork 原语 adapter-level 全部拿下 — Chronos 的 killer feature)
-- 最近 progress doc: `progress/2026-04-23-round-5.md` ← **下一轮的你必读**
-- 当前阶段: **Phase 1 进行中 — 下一步大概率是 CLI 读侧 (M1.6) 或结构化 diff (M1.7)**
-- 最新 ADR: `ADR-005-fork-semantics.md` = fork() 算法规约 (基于 spike5 的实证)
-- 最新 commit: 见 GitHub main (R5 commit)
+- Round: **6 完成** (M1.6 CLI 读侧 — Chronos 第一次"看得见摸得着")
+- 最近 progress doc: `progress/2026-04-23-round-6.md` ← **下一轮的你必读**
+- 当前阶段: **Phase 1 进行中 — 下一步大概率是 M1.8 结构化 diff (需要 ADR-006) 或 M1.7 Replay TUI**
+- 最新 ADR: `ADR-005-fork-semantics.md` (R6 没开 ADR — 在 progress doc §"ADR-006 was not needed" 里论证了为啥)
+- 最新 commit: 见 GitHub main (R6 commit)
 - Blocked items: 无
-- Code LOC: ~2,400 (adapter +176 行, +9 fork 单测 + 1 fork e2e + spike5)
-- 测试状态: **66/66 pass, 93% coverage** (unit 56 + integration 4 + spike 6)
-- API 当前表面:
+- Code LOC: ~2,730 (adapter +0, cli +280, tests +280, spike6 +200)
+- 测试状态: **82/82 pass, 93% coverage** (unit 72 + integration 4 + spike 6)
+- CLI 表面 (R6 新增):
+  - `chronos runs list [--db PATH] [--limit N] [--json]`
+  - `chronos runs show <run_id> [--db PATH] [--json]` — tree, 若是 fork 的 child 会显示 "forked from ..." 血缘行
+  - `chronos forks show <fork_id> [--db PATH] [--json]` — parent/child/overrides/downstream nodes
+  - 所有命令支持 `--db` / `$CHRONOS_DB` / 默认 `./chronos.db`
+  - 错误退出码: 2 = DB 不存在/不可读, 1 = id 找不到, 0 = 成功
+- API 表面 (R4/R5 遗留, 未变):
   - `LangGraphRecorder(store).record(graph, input, config) -> RunRef`
-  - `LangGraphRecorder(store).fork(graph, *, parent_run_id, at_node_id, overrides, child_thread_id, reason=None)` — context manager, yields `ForkRef`
-- 已验证事实 (累计, 只列新增):
-  - **Fork 线程 history shape**: N+1 snapshots (vs 原始 run 的 N+2), B[0] 同时是 seed 和 pre-first-downstream-node, `metadata.source = 'update'`, `metadata.step` 从 0 起 (thread-local 重置)
-  - **Fork 语义**: child Run 的第一个 Node 的 `parent_node_id` **跨 Run** 指向 parent Run 里的 `at_node_id` — 这是推理树谱系的唯一证据
-  - **Forks 表** (ADR-003) 写入 edited_fields / reason / created_at, 由 `put_fork` append-only
-  - **`_build_run_and_nodes` helper** 是 record/fork 共享实现, 参数化 4 个旋钮 (`loop_start` / `first_step_index` / `first_parent_node_id` / `extra_metadata`), 未来 AutoGen adapter 应该能复用
-  - **E2E 必须让 graph 真的依赖上游 state**, 否则 fork overrides 无可见效果 — 单测测不出这个 (fixture 级别的 trap, 非 adapter bug)
-  - **用户 invoke 抛异常** 时 adapter 仍要 persist 部分 child Run + Fork row 再重新 raise (fail-safe 契约)
-  - **不变式**: `child_thread_id == parent thread_id` → AdapterError (覆盖保护); `at_node_id` 不属于 `parent_run_id` → AdapterError; child B[0] 的 source 必须是 `'update'` 否则 drift
-- 旧事实 (仍生效):
+  - `LangGraphRecorder(store).fork(graph, *, parent_run_id, at_node_id, overrides, child_thread_id, reason=None)` context manager
+- 已验证事实 (R6 新增):
+  - **`NodeKind` 合法值**: `{llm, tool, fn, router, fork, end}` — 没有 `STEP` (我第一次写 spike6 时踩过)
+  - **Rich `Console.print` 会按 terminal width 自动换行**, 对 JSON 输出是灾难 → JSON 模式必须走 `print(json.dumps(..., default=str))`, 不能走 rich
+  - **Typer `CliRunner` 的错误输出可能 route 到 stdout 或 stderr**, 依赖 rich tty 检测 — 测试断言错误文本时要 `(stdout + stderr).lower()` 双查
+  - **Typer 的 `typer.Option(...)` 默认参数被 ruff B008 拒绝** — 这是 Typer 官方用法, 正确做法是 per-file-ignore (pyproject 里已加)
+  - **`SqliteStore.open()` 会静默创建不存在的文件** — CLI 读命令**必须**先 `Path.exists()` 检查, 否则"在错误目录跑命令"会变成"返回空列表"的坑
+  - **R5 的 cross-Run `parent_node_id`** 在 R6 第一次被用户可见地消费: `chronos runs show <child>` 直接渲染出 "forked from X @ node Y"
+- 旧事实 (仍生效, 不重复列):
   - GitHub push 只有 `gh-proxy.com` 可行
-  - LangGraph 1.1.9 `checkpointer` 可以完整 capture / fork / diff
-  - `update_state(cfg, values, as_node=X)` 是 fork 原语
-  - `get_state_history()` 最新在前 — 用时必 reverse
-  - `metadata["writes"]` 永远 null, 节点名在 `pre_snapshot.tasks[0].name`, 结果在 `post_snapshot.values`
-  - SQLite subprocess cross-process roundtrip OK; `INSERT OR IGNORE` 不是 `OR REPLACE`
-  - Runs/Nodes 是 upsert, Forks 是 append-only
-  - LangGraph 不暴露 token/usage/cost, v0.1 留 None, M2 再补
-  - Duck-typed fake snapshot 单测 + 真 LangGraph 集成测 双保险
+  - LangGraph 1.1.9 checkpointer 完整 capture / fork / diff
+  - Fork 语义 (见 R5 事实清单)
+  - Runs/Nodes upsert, Forks append-only
+  - Duck-typed fake + real integration 双测试策略
 
 ## Cron 窗口门控 (2026-04-22 用户指令)
 
@@ -196,39 +197,45 @@ if not (0 <= beijing_hour <= 11):
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 6 候选** (按优先级排, R5 把 fork 原语搞定, 现在到了 "让人看得见"):
+**Round 7 候选** (按优先级排, R6 把 CLI 读侧搞定, 现在到了 "让 fork 的价值被看见"):
 
-### 选项 A (推荐): M1.6 — CLI 读侧 (`chronos runs list/show` + `chronos forks show`)
-- `chronos runs list [--limit N]` — 从 sqlite 读, `rich` 表格输出 (id/thread/status/nodes/created_at)
-- `chronos runs show <id>` — 单 run 的 node 树形展开, 带 step_index 和 name
-- `chronos forks show <fork_id>` — parent/child run 对照 + overrides 摘要
-- 所有数据已经在 DB 里, 零新风险, 第一次让用户能"摸到"项目
-- 写 `src/chronos/cli/` 用 `typer` 或 `click` + `rich`; 加 entry point 到 `pyproject.toml`
-- 需要 ADR-006 ? 可选 — CLI 选型足够小决定, 能在 progress doc 论证就省掉
+### 选项 A (强推): M1.8 — 结构化 Diff (`chronos diff <run_a> <run_b>`) + ADR-006
+- fork 已经可以跑, CLI 已经可以看, 但**没有一个命令能直接看出 parent vs child 差在哪** — 这是 fork 价值的致命缺口
+- 按 node name 对齐 (step_index 做 tiebreak, R4/R5 已知 fork 后 step_index 错位)
+- diff state_after 的每个 key, 标注 ADDED / REMOVED / CHANGED, 长 string 做 difflib.unified_diff
+- 特别场景: `chronos diff <parent> <child_of_fork>` 自动从 Fork 记录拿到分叉点, 只 diff 下游节点 (上游必然相同, 不显示冗余)
+- **必须写 ADR-006 (alignment algorithm)** — 这是真正的架构决策, 未来 semantic diff / Web UI diff viewer 都会依赖这个对齐规则
+- 输出: rich table (ADD 绿 / DEL 红 / CHG 黄) + `--json` 模式 + `--verbose` 展开 state diff
+- 测试: 用 R6 的 `seeded_db` fixture 扩展, 加 parent-only / child-only / same-name-different-state 三种典型 case
 
-### 选项 B: M1.7 — 结构化 Diff (`chronos diff <run_a> <run_b>`)
-- 按 node name 语义对齐 (不按 step_index, R4 已知 fork 的 step 错位)
-- diff state-after 字段, token diff 留 None (LangGraph 没给)
-- 特别适合 parent vs child 对照 — 展示 fork 的价值
-- 需要 ADR-006 (alignment algorithm)
-- 比 CLI 费事, 但视觉效果更震撼
+### 选项 B: M1.7 — Replay TUI (`chronos replay <run_id>`)
+- 用 `rich.live` 或 `textual` 做 step-by-step 交互 (空格下一步, ← 上一步, q 退出)
+- 需要 ADR-007 (rich.live vs textual vs plain curses)
+- 视觉炫酷但工时重, ROI 不如 diff
+- Chronos 独特价值 = fork + diff, 不是 replay (Langfuse 已有 replay); 应该强化独特价值而不是追平 baseline
 
-### 选项 C: Fork API 顶层便利封装 `chronos.fork(run_id, at=..., overrides=...)`
-- 当前 API 是 `recorder.fork(graph, ...)`, 需要用户先 new recorder
-- 便利性问题, 不是必需; 小任务, 可以顺手做
+### 选项 C: `chronos fork <run> --at <node> --set key=value` CLI 包装
+- 底层 `fork()` primitive 已经 ready, 只差 CLI 胶水 + KV 解析 + 用户的 graph 怎么传进来 (大问题!)
+- 问题: fork 需要用户的 LangGraph 对象, 而 CLI 拿不到 — 要么用户指定 `--graph module:attr` 动态导入, 要么 fork 命令只能做成 Python library (`chronos.fork(...)`)
+- **这个问题比看起来复杂**, 不适合做成 CLI 单轮任务 — 应该先做 ADR-008 "如何让 CLI 触发需要用户对象的操作"
 
-**本轮建议选 A** — CLI 读侧把 "录制 + 分叉" 全流程变得可视, 投入产出比最高。
-A 完成后还有余力可以顺手做 C (小)。B 放到 Round 7。
+**本轮 (Round 7) 强推 A** — 理由 (已在 progress doc §Round 7 candidates 展开):
+1. fork 已经 ship 但"看不见差异", diff 是闭环的最后一块拼图
+2. R6 的 `runs show` / `forks show` 已经搭好了可视化底座, diff 能复用
+3. ADR-006 逾期, diff alignment 是最好的 forcing function
+4. replay 是追平竞品, diff 是拉开差距
 
-**硬约束 (延续 R5)**:
+**硬约束 (延续 R5/R6)**:
 - ❌ 不开始写 Web UI
 - ❌ 不加 AutoGen/CrewAI adapter (Phase 2 再说)
-- ❌ 不改 SQLite schema
-- ✅ 任何新决定 → ADR-006...
-- ✅ CLI 输出要有 JSON 模式 (`--json`), 为将来 TUI / web 做准备
-- ✅ CLI 命令也要写测试 (typer 有 `CliRunner`, click 类似)
+- ❌ 不改 SQLite schema (diff 是纯读, schema 不动)
+- ❌ 不动 `LangGraphRecorder.record()` 或 `.fork()` 实现 (除非发现 bug)
+- ✅ ADR-006 必写 (alignment algorithm)
+- ✅ `--json` 模式必做, 为将来 Web UI diff viewer 准备
+- ✅ 先写一个 spike 7 验证 `difflib.SequenceMatcher` 对 node_name 序列的对齐效果 (特别是 fork 后下游 node 相同但 step_index 错位的情形)
+- ✅ diff 的测试 fixture 要覆盖: 纯 replay fork (edited_fields 空但下游非确定)、overrides 导致某节点 state 变化、overrides 导致下游 early-exit (child 节点比 parent 少)
 
-**关键提醒**: R4 和 R5 都靠 "spike 先行" 各自省了 1-2 小时盲写。R6 的 CLI 看起来无脑, 但坑通常在 `rich` 的 tree/table 渲染对长字段的处理, 和 typer 的异常传播。能先写一个 30 行 spike 跑一遍再正式开工最好。
+**关键提醒**: R4/R5/R6 spike-先行全部奏效 (3 for 3)。Round 7 做 diff, 看似用 `difflib` 就行, 但坑大概率在"fork 的 child step_index 从 parent 分叉点继续"导致朴素的 step_index 对齐完全崩。**先 spike7 跑一遍再开 ADR-006 再开工**, 这是 R6 明确交给 R7 的纪律。
 
 ---
 
@@ -268,4 +275,4 @@ A 完成后还有余力可以顺手做 C (小)。B 放到 Round 7。
 
 ---
 
-*Last updated: 2026-04-23 by Round 5 agent (北京凌晨 ~01:30)*
+*Last updated: 2026-04-23 by Round 6 agent (北京 ~04:50)*

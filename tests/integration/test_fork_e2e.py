@@ -86,9 +86,7 @@ def test_fork_roundtrips_through_sqlite(tmp_path: Path) -> None:
         assert fork.parent_run_id == parent_id
         assert fork.child_run_id == child_id
         assert fork.parent_node_id == research_node.id
-        assert fork.edited_fields == {
-            "research": "[FORKED] totally different research content"
-        }
+        assert fork.edited_fields == {"research": "[FORKED] totally different research content"}
         assert fork.reason == "e2e-test fork at research"
 
         # Reverse lookup: find fork by child

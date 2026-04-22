@@ -126,20 +126,16 @@ def test_spike5_fork_history_shape() -> None:
 
     # --- Structural recordings for the ADR ---
     a_sources = [
-        (s.metadata or {}).get("source") if isinstance(s.metadata, dict) else None
-        for s in hist_a
+        (s.metadata or {}).get("source") if isinstance(s.metadata, dict) else None for s in hist_a
     ]
     b_sources = [
-        (s.metadata or {}).get("source") if isinstance(s.metadata, dict) else None
-        for s in hist_b
+        (s.metadata or {}).get("source") if isinstance(s.metadata, dict) else None for s in hist_b
     ]
     a_steps = [
-        (s.metadata or {}).get("step") if isinstance(s.metadata, dict) else None
-        for s in hist_a
+        (s.metadata or {}).get("step") if isinstance(s.metadata, dict) else None for s in hist_a
     ]
     b_steps = [
-        (s.metadata or {}).get("step") if isinstance(s.metadata, dict) else None
-        for s in hist_b
+        (s.metadata or {}).get("step") if isinstance(s.metadata, dict) else None for s in hist_b
     ]
     print(f"\nA sources: {a_sources}")
     print(f"B sources: {b_sources}")
