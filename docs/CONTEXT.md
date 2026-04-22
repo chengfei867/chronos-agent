@@ -147,22 +147,26 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
-**截至 Round 2 结束 (2026-04-22)**
+**截至 Round 3 结束 (2026-04-22 晚, 用户追加手动触发)**
 
-- Round: **2 完成** (M1.1 spikes + M1.2 骨架全部拿下)
-- 最近 progress doc: `progress/2026-04-22-round-2.md` ← **下一轮的你必读**
-- 当前阶段: **Phase 1 进行中 — 下一步 M1.3 SQLite 持久化**
-- 最新 ADR: `ADR-002-langgraph-first-adapter.md` = LangGraph 作为首个 adapter + 5 条 spike 发现
-- 最新 commit: 见 GitHub main
+- Round: **3 完成** (M1.3 SQLite 持久化层全部拿下)
+- 最近 progress doc: `progress/2026-04-22-round-3.md` ← **下一轮的你必读**
+- 当前阶段: **Phase 1 进行中 — 下一步 M1.4 LangGraph recorder adapter**
+- 最新 ADR: `ADR-003-sqlite-schema.md` = schema 设计 + 版本策略 + cost 整数化
+- 最新 commit: 见 GitHub main (R3 commit)
 - Blocked items: 无
-- Code LOC: ~800 (core/models + cli + 3 spikes + 8 unit tests)
-- 测试状态: **14/14 pass, 98% coverage**
-- 已验证事实:
+- Code LOC: ~1,600 (加了 store/ 模块 + 20 单元测 + 3 集成测)
+- 测试状态: **45/45 pass, 97% coverage** (unit 20 + integration 3 + spike 3 + cli/models 19)
+- 已验证事实 (累计):
   - GitHub push 用 `gh-proxy.com` 可行, 其它镜像不能 push
-  - LangGraph 1.1.9 `checkpointer` 可以完整 capture / fork / diff (spike 1/2/3 全绿)
+  - LangGraph 1.1.9 `checkpointer` 可以完整 capture / fork / diff
   - `update_state(cfg, values, as_node=X)` 是 fork 原语
   - `get_state_history()` 返回**最新在前** — 用时必 reverse
   - fork thread 的 step 编号与原 thread **不对齐** → diff 必须按 node name 语义对齐
+  - **SQLite schema/storage**: cross-process roundtrip 在 subprocess + fresh handle 下验证通过
+  - Migration `INSERT` 必须 `OR IGNORE` 不能 `OR REPLACE`，否则 tampered schema_version 会被 migration 静默修复
+  - Forks 是 append-only (plain INSERT)；Runs/Nodes 是 upsert (INSERT OR REPLACE)
+  - Inline subprocess 脚本 >20 行就必须落盘到独立 `.py`，不要 `textwrap.dedent` f-string 地狱
 
 ## Cron 窗口门控 (2026-04-22 用户指令)
 
@@ -177,33 +181,37 @@ if not (0 <= beijing_hour <= 11):
     sys.exit(0)
 ```
 或 agent prompt 里直接让它自检。
+**例外**: 用户手动触发/手动说"继续跑"可以不看窗口 (Round 3 就是这种情况)。
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 3 目标**: M1.3 — SQLite 持久化层 (从 InMemorySaver 升级到可持久化的 Chronos-native saver)
+**Round 4 目标**: M1.4 — LangGraph recorder adapter (自动捕获, 替换手工 reshape)
 
-1. **窗口门控先做** (见 section 5 最后的代码)
-2. **M1.3 核心**:
-   - 设计 SQLite schema: `runs` / `nodes` / `forks` 三张表
-   - 实现 `src/chronos/store/sqlite.py` — 包一层 LangGraph 的 `SqliteSaver`，同时 tee 到我们自己的表
-   - 验证跨进程 replay: 进程 A 跑完存到 `chronos.db`，进程 B 只读 `chronos.db` 能完整重建出 run tree
-   - Spike → integration test，不要留在 `tests/spikes/` 里
-3. **M1.4 草稿** (若时间够):
-   - `chronos record <script.py>` — 给用户的装饰器/包装 API 草图
-   - `chronos list` — 读 sqlite 吐表
+1. **窗口门控先做** (cron 自动启动时, 手动触发除外)
+2. **M1.4 核心**:
+   - 新文件 `src/chronos/adapters/langgraph.py`
+   - 提供高层 API: `with Chronos(db_path).record(graph, thread_id="t1") as rec: graph.invoke(...)` — 上下文管理器自动捕获整条执行轨迹
+   - 内部实现: 在 invoke 后遍历 `graph.get_state_history(cfg)` (记得 reverse!) + 转成 `Run`/`Node` pydantic 写入 SQLite
+   - Cost / usage 从 StateSnapshot 里抽 (LangGraph 1.1.9 的字段名 — 需要 spike 确认, 可能在 `metadata["writes"]` 或 tool outputs 里)
+   - 替换掉 `tests/integration/fixtures_writer.py` 里的手工 reshape — 用真 adapter
+3. **M1.5 草稿** (若时间够):
+   - `chronos runs list` CLI (从 sqlite 读, rich 格式化输出)
+   - `chronos runs show <id>` — 展开单次 run 的 node 列表
 4. **必做**:
-   - 写 `progress/2026-04-XX-round-3.md`
+   - 写 `progress/2026-04-XX-round-4.md`
    - 推 GitHub (用 `gh-proxy.com`)
    - 更新本文件 section 5/6
+   - 若 LangGraph StateSnapshot 结构有意外 → ADR-004
 
 **硬约束**:
 - ❌ 不开始写 Web UI
 - ❌ 不加 AutoGen/CrewAI adapter (Phase 2 再说)
-- ❌ 不跳过 sqlite schema 设计直接写代码 — 先设计文档
-- ✅ 任何新决定 → ADR-003, ADR-004...
-- ✅ Spike 3 发现的 "按 node name 语义对齐" 是 M1.7 的必备，M1.3 的 schema 要为此预留字段
+- ❌ 不要在 adapter 里藏"魔法"状态变换 — 每个字段映射写清楚, 方便 Phase 2 抄
+- ✅ 任何新决定 → ADR-004...
+- ✅ recorder 必须**不侵入**用户代码 (用户写原生 LangGraph, 我们包 checkpointer 或走 post-run history API)
+- ✅ 保持 schema 不变, 若要改 → 001_init.sql 冻结 + 新建 002_xxx.sql
 
-**关键提醒**: LangGraph 有现成的 `SqliteSaver`，先考虑怎么复用它而不是从头写。不过 Chronos 需要存的不只是 checkpoint，还有 `Run` / `Fork` 元数据，所以至少要额外加我们自己的表。
+**关键提醒**: `fixtures_writer.py` 里手工 reshape 的代码是 M1.4 adapter 的参考实现。LangGraph 的 `StateSnapshot` 已经把所有信息给齐了 (values, next, config, metadata, created_at, parent_config)。
 
 ---
 
