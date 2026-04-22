@@ -147,31 +147,37 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
-**截至 Round 4 结束 (2026-04-22 深夜, 用户"继续吧我还没睡"触发)**
+**截至 Round 5 结束 (2026-04-23 凌晨 ~01:30, cron 正常窗口内)**
 
-- Round: **4 完成** (M1.4 LangGraph recorder adapter 全部拿下)
-- 最近 progress doc: `progress/2026-04-22-round-4.md` ← **下一轮的你必读**
-- 当前阶段: **Phase 1 进行中 — 下一步 M1.5 Fork 原语 or CLI 读侧**
-- 最新 ADR: `ADR-004-langgraph-snapshot-mapping.md` = adapter 映射算法 (基于 spike4 的实证)
-- 最新 commit: 见 GitHub main (R4 commit)
+- Round: **5 完成** (M1.5 Fork 原语 adapter-level 全部拿下 — Chronos 的 killer feature)
+- 最近 progress doc: `progress/2026-04-23-round-5.md` ← **下一轮的你必读**
+- 当前阶段: **Phase 1 进行中 — 下一步大概率是 CLI 读侧 (M1.6) 或结构化 diff (M1.7)**
+- 最新 ADR: `ADR-005-fork-semantics.md` = fork() 算法规约 (基于 spike5 的实证)
+- 最新 commit: 见 GitHub main (R5 commit)
 - Blocked items: 无
-- Code LOC: ~2,100 (加了 adapters/ 模块 + 11 单元测 + spike4 探针)
-- 测试状态: **56/56 pass, 93% coverage** (unit 47 + integration 3 + spike 6)
-- 已验证事实 (累计):
-  - GitHub push 用 `gh-proxy.com` 可行, 其它镜像不能 push
+- Code LOC: ~2,400 (adapter +176 行, +9 fork 单测 + 1 fork e2e + spike5)
+- 测试状态: **66/66 pass, 93% coverage** (unit 56 + integration 4 + spike 6)
+- API 当前表面:
+  - `LangGraphRecorder(store).record(graph, input, config) -> RunRef`
+  - `LangGraphRecorder(store).fork(graph, *, parent_run_id, at_node_id, overrides, child_thread_id, reason=None)` — context manager, yields `ForkRef`
+- 已验证事实 (累计, 只列新增):
+  - **Fork 线程 history shape**: N+1 snapshots (vs 原始 run 的 N+2), B[0] 同时是 seed 和 pre-first-downstream-node, `metadata.source = 'update'`, `metadata.step` 从 0 起 (thread-local 重置)
+  - **Fork 语义**: child Run 的第一个 Node 的 `parent_node_id` **跨 Run** 指向 parent Run 里的 `at_node_id` — 这是推理树谱系的唯一证据
+  - **Forks 表** (ADR-003) 写入 edited_fields / reason / created_at, 由 `put_fork` append-only
+  - **`_build_run_and_nodes` helper** 是 record/fork 共享实现, 参数化 4 个旋钮 (`loop_start` / `first_step_index` / `first_parent_node_id` / `extra_metadata`), 未来 AutoGen adapter 应该能复用
+  - **E2E 必须让 graph 真的依赖上游 state**, 否则 fork overrides 无可见效果 — 单测测不出这个 (fixture 级别的 trap, 非 adapter bug)
+  - **用户 invoke 抛异常** 时 adapter 仍要 persist 部分 child Run + Fork row 再重新 raise (fail-safe 契约)
+  - **不变式**: `child_thread_id == parent thread_id` → AdapterError (覆盖保护); `at_node_id` 不属于 `parent_run_id` → AdapterError; child B[0] 的 source 必须是 `'update'` 否则 drift
+- 旧事实 (仍生效):
+  - GitHub push 只有 `gh-proxy.com` 可行
   - LangGraph 1.1.9 `checkpointer` 可以完整 capture / fork / diff
   - `update_state(cfg, values, as_node=X)` 是 fork 原语
-  - `get_state_history()` 返回**最新在前** — 用时必 reverse
-  - fork thread 的 step 编号与原 thread **不对齐** → diff 必须按 node name 语义对齐
-  - **SQLite schema/storage**: cross-process roundtrip 在 subprocess + fresh handle 下验证通过
-  - Migration `INSERT` 必须 `OR IGNORE` 不能 `OR REPLACE`，否则 tampered schema_version 会被 migration 静默修复
-  - Forks 是 append-only (plain INSERT)；Runs/Nodes 是 upsert (INSERT OR REPLACE)
-  - Inline subprocess 脚本 >20 行就必须落盘到独立 `.py`，不要 `textwrap.dedent` f-string 地狱
-  - **StateSnapshot `metadata["writes"]` 永远是 null** (R3 CONTEXT 猜测是错的 — spike4 证伪)
-  - **节点信息在 `pre_snapshot.tasks[0].name`** (那个即将运行的节点) + **结果在 `post_snapshot.values`**
-  - 6 snapshots for 4 nodes: 1 input placeholder + 4 pre-node + 1 terminal
-  - LangGraph **不暴露 token/usage/cost 字段** → v0.1 adapter 这些字段返回 None, M2 再补
-  - Adapter 用 duck-typed fake snapshot 做单测 > mock real LangGraph (快 + 是契约文档)
+  - `get_state_history()` 最新在前 — 用时必 reverse
+  - `metadata["writes"]` 永远 null, 节点名在 `pre_snapshot.tasks[0].name`, 结果在 `post_snapshot.values`
+  - SQLite subprocess cross-process roundtrip OK; `INSERT OR IGNORE` 不是 `OR REPLACE`
+  - Runs/Nodes 是 upsert, Forks 是 append-only
+  - LangGraph 不暴露 token/usage/cost, v0.1 留 None, M2 再补
+  - Duck-typed fake snapshot 单测 + 真 LangGraph 集成测 双保险
 
 ## Cron 窗口门控 (2026-04-22 用户指令)
 
@@ -190,38 +196,39 @@ if not (0 <= beijing_hour <= 11):
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 5 候选** (三选一, 按优先级排):
+**Round 6 候选** (按优先级排, R5 把 fork 原语搞定, 现在到了 "让人看得见"):
 
-### 选项 A (推荐): M1.5 — Fork 原语
-- `chronos.fork(run_id, at_step=k, overrides={...})` — 在已记录的 run 的第 k 步，用新的 state 值分叉一个新 run
-- 底层走 LangGraph `update_state(cfg, values, as_node=...)` + 新 thread_id
-- 需要先 spike: **fork 后如何把新 thread 的 history 也拿去 adapter 记录？** (关键未知: fork thread 的 step 编号与原始 thread 的关系)
-- Fork 记录写入 `forks` 表 (schema 已备好, Round 3 做的)
-- **这是 Chronos 的 killer feature, 不能拖**
+### 选项 A (推荐): M1.6 — CLI 读侧 (`chronos runs list/show` + `chronos forks show`)
+- `chronos runs list [--limit N]` — 从 sqlite 读, `rich` 表格输出 (id/thread/status/nodes/created_at)
+- `chronos runs show <id>` — 单 run 的 node 树形展开, 带 step_index 和 name
+- `chronos forks show <fork_id>` — parent/child run 对照 + overrides 摘要
+- 所有数据已经在 DB 里, 零新风险, 第一次让用户能"摸到"项目
+- 写 `src/chronos/cli/` 用 `typer` 或 `click` + `rich`; 加 entry point 到 `pyproject.toml`
+- 需要 ADR-006 ? 可选 — CLI 选型足够小决定, 能在 progress doc 论证就省掉
 
-### 选项 B: CLI 读侧打通用户闭环
-- `chronos runs list` — 从 sqlite 读, rich 表格输出
-- `chronos runs show <id>` — 单 run 的 node 树形展开
-- `chronos runs diff <a> <b>` — 结构化 diff (但无 fork 的话意义不大)
-- 低风险, 让用户第一次能看到"自己的东西"
+### 选项 B: M1.7 — 结构化 Diff (`chronos diff <run_a> <run_b>`)
+- 按 node name 语义对齐 (不按 step_index, R4 已知 fork 的 step 错位)
+- diff state-after 字段, token diff 留 None (LangGraph 没给)
+- 特别适合 parent vs child 对照 — 展示 fork 的价值
+- 需要 ADR-006 (alignment algorithm)
+- 比 CLI 费事, 但视觉效果更震撼
 
-### 选项 C: Usage/Cost harvester hook
-- 给 `LangGraphRecorder` 加 `usage_extractor: Callable[[state], Usage|None]` 参数
-- 用户把 usage dict 塞进 state, adapter 自动收
-- 简单, 但不解决核心问题 (没有 fork 的 Chronos 只是又一个 trace viewer)
+### 选项 C: Fork API 顶层便利封装 `chronos.fork(run_id, at=..., overrides=...)`
+- 当前 API 是 `recorder.fork(graph, ...)`, 需要用户先 new recorder
+- 便利性问题, 不是必需; 小任务, 可以顺手做
 
-**本轮建议选 A** — 没有 fork 就没有产品。
-CLI (选项 B) 可以在 A 完成后顺手做一半 (`runs list/show`)。
+**本轮建议选 A** — CLI 读侧把 "录制 + 分叉" 全流程变得可视, 投入产出比最高。
+A 完成后还有余力可以顺手做 C (小)。B 放到 Round 7。
 
-**硬约束**:
+**硬约束 (延续 R5)**:
 - ❌ 不开始写 Web UI
 - ❌ 不加 AutoGen/CrewAI adapter (Phase 2 再说)
-- ❌ 不改 SQLite schema (用已有的 forks 表)
-- ✅ 任何新决定 → ADR-005...
-- ✅ Spike 先行 (fork 行为可能和想的不一样, 跟 R4 spike4 类似投资)
-- ✅ 单元测 + 集成测都要 (duck-type 单测 + real langgraph 集成测双保险)
+- ❌ 不改 SQLite schema
+- ✅ 任何新决定 → ADR-006...
+- ✅ CLI 输出要有 JSON 模式 (`--json`), 为将来 TUI / web 做准备
+- ✅ CLI 命令也要写测试 (typer 有 `CliRunner`, click 类似)
 
-**关键提醒**: Round 4 证明"调研先于实现"真的省时间 —— spike4 60 行跑一遍, 把 CONTEXT.md Round 3 对 `metadata["writes"]` 的错误假设抓出来, 省下 2 小时盲写 + 推倒重来。Round 5 fork 同样必须先 spike。
+**关键提醒**: R4 和 R5 都靠 "spike 先行" 各自省了 1-2 小时盲写。R6 的 CLI 看起来无脑, 但坑通常在 `rich` 的 tree/table 渲染对长字段的处理, 和 typer 的异常传播。能先写一个 30 行 spike 跑一遍再正式开工最好。
 
 ---
 
@@ -261,4 +268,4 @@ CLI (选项 B) 可以在 A 完成后顺手做一半 (`runs list/show`)。
 
 ---
 
-*Last updated: 2026-04-22 by Round 4 agent (晚 12点前后)*
+*Last updated: 2026-04-23 by Round 5 agent (北京凌晨 ~01:30)*

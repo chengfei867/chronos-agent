@@ -61,48 +61,50 @@
 
 **Exit criteria**: Can write and read arbitrary canonical events.
 
-#### M1.4 — LangGraph adapter (2 rounds)
-- [ ] `chronos.adapters.langgraph` module
-- [ ] Callback integration capturing LLM calls + tool calls
-- [ ] Checkpointer bridge for state snapshots
-- [ ] Integration test: record a 5-node LangGraph agent, verify all events persisted
-- [ ] ADR-003: side-effect policy for tools
+#### M1.4 — LangGraph adapter (2 rounds) ✅ DONE (Round 4)
+- [x] `chronos.adapters.langgraph` module
+- [x] Callback integration capturing LLM calls + tool calls (state snapshots via checkpointer — LLM call granularity deferred to M2 when LangGraph exposes usage)
+- [x] Checkpointer bridge for state snapshots
+- [x] Integration test: record a 5-node LangGraph agent, verify all events persisted
+- [x] ADR-004: snapshot→node mapping algorithm (side-effect policy deferred to Phase 2)
 
-**Exit criteria**: Recording a LangGraph run captures >95% of meaningful events.
+**Exit criteria**: Recording a LangGraph run captures >95% of meaningful events. ✅
 
-#### M1.5 — CLI: record + list + inspect (1 round)
-- [ ] `chronos record -- python agent.py`
-- [ ] `chronos list [--last N] [--tagged T]`
-- [ ] `chronos inspect <run_id> [--node <node_id>]`
-- [ ] Pretty rich output; `--json` flag
-- [ ] CLI integration tests
+#### M1.5 — Fork primitive (adapter-level) ✅ DONE (Round 5)
+> **Note**: Original roadmap ordering had Fork as M1.8 and CLI as M1.5. After shipping M1.4 we realised the fork primitive is the killer feature and shouldn't wait behind 3 milestones of CLI/replay/diff. Promoted to M1.5; CLI renumbered to M1.6. See `progress/2026-04-23-round-5.md` + ADR-005.
+- [x] `LangGraphRecorder.fork(graph, *, parent_run_id, at_node_id, overrides, child_thread_id, reason)` context manager
+- [x] Snapshot restore via `graph.update_state(cfg, values, as_node=X)`
+- [x] Re-execute downstream nodes with edits applied
+- [x] Tag forked run with lineage (cross-Run `parent_node_id`, `Fork` row in `forks` table)
+- [x] Unit tests (9 duck-typed) + integration test (spike-1 5-node graph, fork at research, assert `final_a != final_b`)
+- [x] ADR-005: fork semantics
 
-**Exit criteria**: Alex (persona) can complete story 1 step 1–3.
+**Exit criteria**: User can programmatically fork a recorded run and produce a divergent child run with persisted lineage. ✅ (CLI `chronos fork` is M1.8 — the adapter layer is done; CLI wiring lands then.)
 
-#### M1.6 — Replay (read-only) (1 round)
+#### M1.6 — CLI: runs list / show + forks show (1 round) ← **NEXT (Round 6)**
+- [ ] `chronos runs list [--limit N] [--json]`
+- [ ] `chronos runs show <id> [--json]` — node tree
+- [ ] `chronos forks show <fork_id> [--json]` — parent/child + overrides
+- [ ] Pretty `rich` output + `--json` flag
+- [ ] CLI integration tests (typer `CliRunner`)
+
+**Exit criteria**: Users can inspect any recorded run or fork from the terminal without writing Python.
+
+#### M1.7 — Replay (read-only) (1 round)
 - [ ] `chronos replay <run_id>` — step through nodes interactively in TUI
 - [ ] Keyboard controls: space/→ = next, ← = previous, q = quit
 - [ ] Use `rich` or `textual` for TUI
 
 **Exit criteria**: Replay a 20-node run smoothly.
 
-#### M1.7 — Diff (structural) (2 rounds)
-- [ ] `chronos diff <run_A> <run_B>`
-- [ ] Structural alignment algorithm
+#### M1.8 — Diff (structural) + `chronos fork` CLI (2 rounds)
+- [ ] `chronos diff <run_A> <run_B>` — structural alignment by node name
 - [ ] Summary output + `--verbose` full node-by-node
-- [ ] Unit tests on known diff fixtures
-- [ ] ADR-004: diff alignment algorithm
+- [ ] `chronos fork <run> --at <node> --set-state k=v` — CLI wrapper on M1.5 primitive
+- [ ] Unit tests on known diff fixtures + CLI tests
+- [ ] ADR-006: diff alignment algorithm
 
-**Exit criteria**: Meaningful diff of two related runs.
-
-#### M1.8 — Fork (basic) (2 rounds)
-- [ ] `chronos fork <run> --at <node> --set-prompt <file>` (other edits types: `--set-model`, `--set-temperature`)
-- [ ] Snapshot restore via LangGraph checkpointer
-- [ ] Re-execute downstream nodes with edits applied
-- [ ] Tag forked run with lineage
-- [ ] Integration test: fork the spike-1 agent and produce different output
-
-**Exit criteria**: Alex (persona) can complete story 1 fully.
+**Exit criteria**: Meaningful diff of two related runs + CLI-driven fork workflow (Alex's story 1 end-to-end).
 
 #### M1.9 — Documentation + Release (1 round)
 - [ ] `docs/getting-started.md` — install + first run in 5 minutes

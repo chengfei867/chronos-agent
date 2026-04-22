@@ -3,22 +3,29 @@
 This module converts a completed LangGraph run into Chronos's canonical
 :class:`Run` + :class:`Node` records, with no manual reshape from the user.
 
-See :doc:`docs/decisions/ADR-004-langgraph-snapshot-mapping` for the exact
-mapping algorithm and empirical evidence it's based on.
+See :doc:`docs/decisions/ADR-004-langgraph-snapshot-mapping` for the mapping
+algorithm on *original* threads and :doc:`docs/decisions/ADR-005-fork-semantics`
+for the fork mapping on *forked* threads.
 
 Public API
 ----------
 
-    >>> from chronos.adapters.langgraph import LangGraphRecorder
-    >>> from chronos.store import SqliteStore
-    >>>
-    >>> with SqliteStore.open("chronos.db") as store:
-    ...     recorder = LangGraphRecorder(store)
-    ...     with recorder.record(graph, thread_id="t1") as run_ref:
-    ...         graph.invoke(initial_state, {"configurable": {"thread_id": "t1"}})
-    ...     # on context exit, the adapter walks the state history and
-    ...     # persists a Run + one Node per executed graph step.
-    >>> run_ref.run_id  # UUID str of the recorded Run
+Record an original run::
+
+    >>> with recorder.record(graph, thread_id="t1") as run_ref:
+    ...     graph.invoke(initial_state, {"configurable": {"thread_id": "t1"}})
+    >>> run_ref.run_id
+
+Fork an existing run::
+
+    >>> with recorder.fork(
+    ...     parent_run_id=run_ref.run_id,
+    ...     at_node_id=some_node_id,
+    ...     overrides={"research": "alternative"},
+    ...     child_thread_id="t1-fork",
+    ... ) as fork_ref:
+    ...     graph.invoke(None, {"configurable": {"thread_id": "t1-fork"}})
+    >>> fork_ref.child_run_id, fork_ref.fork_id
 """
 
 from __future__ import annotations
@@ -30,7 +37,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
-from chronos.core.models import Node, NodeKind, Run, RunStatus
+from chronos.core.models import Fork, Node, NodeKind, Run, RunStatus
 
 if TYPE_CHECKING:
     from chronos.store import SqliteStore
@@ -44,27 +51,42 @@ if TYPE_CHECKING:
 class AdapterError(RuntimeError):
     """Raised when the LangGraph snapshot structure doesn't match expectations.
 
-    Usually indicates a LangGraph version drift — the spike 4 shape we
-    depend on may have changed. Re-run spike 4 and update ADR-004 if so.
+    Usually indicates a LangGraph version drift — the spike 4 / spike 5 shape
+    we depend on may have changed. Re-run the spikes and update the ADRs if so.
     """
 
 
 # ---------------------------------------------------------------------------
-# Reference returned to the ``with recorder.record(...)`` block
+# References returned to user code
 # ---------------------------------------------------------------------------
 
 
 @dataclass
 class RunRef:
-    """Mutable handle users can read after the ``record`` block exits.
+    """Mutable handle returned from :meth:`LangGraphRecorder.record`.
 
-    Before ``__exit__``, ``run_id`` is None (we can't commit until the user
-    actually invokes the graph). After exit it holds the persisted Run's id
-    so callers can query the store.
+    Populated on context-manager exit: ``run_id`` becomes the UUID of the
+    persisted Run, ``node_ids`` lists the persisted Nodes in step order.
     """
 
     thread_id: str
     run_id: str | None = None
+    node_ids: list[str] = field(default_factory=list)
+
+
+@dataclass
+class ForkRef:
+    """Mutable handle returned from :meth:`LangGraphRecorder.fork`.
+
+    Populated on context-manager exit with the child Run's id, the Fork
+    record id, and the persisted child-side Node ids.
+    """
+
+    parent_run_id: str
+    at_node_id: str
+    child_thread_id: str
+    child_run_id: str | None = None
+    fork_id: str | None = None
     node_ids: list[str] = field(default_factory=list)
 
 
@@ -74,17 +96,16 @@ class RunRef:
 
 
 class LangGraphRecorder:
-    """Recorder: translates LangGraph checkpoints → Chronos records.
+    """Translates LangGraph checkpoints → Chronos records (record + fork).
 
     Instantiate once per process; reuse across many runs. The adapter is
-    stateless between ``record()`` calls.
+    stateless between ``record()`` / ``fork()`` calls — all state lives in
+    the injected :class:`SqliteStore`.
 
     Args:
         store: A :class:`SqliteStore` to persist into.
         kind_map: Optional dict mapping ``node_name -> NodeKind``. Nodes not
-            in the map default to :attr:`NodeKind.FN`. Pass
-            ``{"plan": NodeKind.LLM, "search_tool": NodeKind.TOOL, ...}`` to
-            record richer semantics.
+            in the map default to :attr:`NodeKind.FN`.
     """
 
     def __init__(
@@ -97,7 +118,7 @@ class LangGraphRecorder:
         self._kind_map: dict[str, NodeKind] = dict(kind_map or {})
 
     # ------------------------------------------------------------------
-    # Public context manager
+    # record() — original runs (ADR-004)
     # ------------------------------------------------------------------
 
     @contextmanager
@@ -111,32 +132,15 @@ class LangGraphRecorder:
     ) -> Iterator[RunRef]:
         """Capture a LangGraph execution for the given ``thread_id``.
 
-        The user is responsible for actually invoking ``graph`` with a
-        matching config inside the ``with`` block. We reconstruct the run
+        The user is responsible for invoking ``graph`` inside the
+        ``with`` block with a matching config. We reconstruct the run
         from ``graph.get_state_history()`` on exit.
-
-        Args:
-            graph: A compiled LangGraph ``StateGraph``.
-            thread_id: Must match ``config["configurable"]["thread_id"]``
-                passed to ``graph.invoke()`` inside the block.
-            task_description: Optional human-readable label for the run.
-            tags: Optional list of tags to store on the Run.
-
-        Yields:
-            A :class:`RunRef` that will have its ``run_id`` populated on exit.
-
-        Raises:
-            AdapterError: If no snapshots are found for ``thread_id`` (the
-                user forgot to invoke) or if the snapshot structure is
-                unexpected.
         """
         ref = RunRef(thread_id=thread_id)
         try:
             yield ref
         except Exception:
-            # User's graph.invoke() raised. We still try to record whatever
-            # snapshots exist, marking the run as FAILED. Re-raise after.
-            self._persist_from_history(
+            self._record_from_history(
                 graph,
                 ref,
                 status=RunStatus.FAILED,
@@ -145,7 +149,7 @@ class LangGraphRecorder:
             )
             raise
         else:
-            self._persist_from_history(
+            self._record_from_history(
                 graph,
                 ref,
                 status=RunStatus.COMPLETED,
@@ -154,10 +158,100 @@ class LangGraphRecorder:
             )
 
     # ------------------------------------------------------------------
-    # Internals
+    # fork() — forked runs (ADR-005)
     # ------------------------------------------------------------------
 
-    def _persist_from_history(
+    @contextmanager
+    def fork(
+        self,
+        graph: Any,
+        *,
+        parent_run_id: str,
+        at_node_id: str,
+        overrides: dict[str, Any] | None = None,
+        child_thread_id: str,
+        reason: str | None = None,
+        task_description: str | None = None,
+        tags: list[str] | None = None,
+    ) -> Iterator[ForkRef]:
+        """Fork a prior recorded run at a given node, with state overrides.
+
+        On enter, we seed ``child_thread_id`` with the parent node's
+        ``state_after`` merged with ``overrides``, using
+        ``graph.update_state(as_node=<parent_node_name>)``. The user is
+        then expected to call ``graph.invoke(None, cfg_child)`` to let
+        the graph continue from the seed.
+
+        On exit, we walk ``graph.get_state_history(cfg_child)``, persist
+        a child :class:`Run` + :class:`Node` rows + a :class:`Fork`
+        linkage record. See ADR-005 for the full algorithm.
+        """
+        overrides = dict(overrides or {})
+
+        # --- Pre-flight: load parent artifacts and validate ---
+        parent_run = self._store.get_run(parent_run_id)
+        if parent_run is None:
+            raise AdapterError(f"parent_run_id={parent_run_id!r} not found in store")
+
+        parent_node = self._store.get_node(at_node_id)
+        if parent_node is None:
+            raise AdapterError(f"at_node_id={at_node_id!r} not found in store")
+        if parent_node.run_id != parent_run_id:
+            raise AdapterError(
+                f"at_node_id={at_node_id!r} does not belong to parent_run_id={parent_run_id!r}"
+            )
+
+        if child_thread_id == parent_run.adapter_thread_id:
+            raise AdapterError(
+                f"child_thread_id={child_thread_id!r} must differ from parent "
+                f"thread_id={parent_run.adapter_thread_id!r} (would overwrite parent checkpoints)"
+            )
+
+        # --- Build seed state: parent node's state_after + overrides ---
+        seeded_state = dict(parent_node.state_after or {})
+        seeded_state.update(overrides)
+
+        cfg_child: Any = {"configurable": {"thread_id": child_thread_id}}
+
+        # Seed the new thread: pretend <parent_node.node_name> just produced this state.
+        graph.update_state(cfg_child, seeded_state, as_node=parent_node.node_name)
+
+        ref = ForkRef(
+            parent_run_id=parent_run_id,
+            at_node_id=at_node_id,
+            child_thread_id=child_thread_id,
+        )
+
+        # --- User runs graph.invoke(None, cfg_child) inside the block ---
+        status = RunStatus.COMPLETED
+        failure: BaseException | None = None
+        try:
+            yield ref
+        except BaseException as exc:
+            status = RunStatus.FAILED
+            failure = exc
+
+        # --- Teardown: persist child Run + Nodes + Fork record ---
+        self._fork_from_history(
+            graph,
+            ref,
+            parent_run=parent_run,
+            parent_node=parent_node,
+            overrides=overrides,
+            reason=reason,
+            status=status,
+            task_description=task_description,
+            tags=tags or [],
+        )
+
+        if failure is not None:
+            raise failure
+
+    # ------------------------------------------------------------------
+    # Internal: record() pipeline
+    # ------------------------------------------------------------------
+
+    def _record_from_history(
         self,
         graph: Any,
         ref: RunRef,
@@ -166,91 +260,198 @@ class LangGraphRecorder:
         task_description: str | None,
         tags: list[str],
     ) -> None:
-        """Walk graph.get_state_history() and write Run + Nodes to the store.
-
-        Implements the algorithm from ADR-004 §"Decision — The Mapping
-        Algorithm". Any structural deviation → :class:`AdapterError`.
-        """
         cfg: Any = {"configurable": {"thread_id": ref.thread_id}}
-
-        # newest-first → oldest-first (the natural reading order)
         snapshots = list(reversed(list(graph.get_state_history(cfg))))
 
         if not snapshots:
-            # User didn't actually invoke anything; nothing to record.
-            # (Alternatively: create an empty Run. We choose to no-op
-            #  so scripts that fail before invoke don't pollute the DB.)
-            return
+            return  # nothing to record (user never invoked)
 
-        # --- Sanity: the first snapshot should be the `source=input` placeholder.
-        first = snapshots[0]
-        first_source = _meta_source(first)
+        first_source = _meta_source(snapshots[0])
         if first_source != "input":
             raise AdapterError(
                 f"expected first snapshot source='input', got {first_source!r}. "
-                "LangGraph version may have changed — re-run spike4 and "
-                "update ADR-004."
+                "LangGraph version may have changed — re-run spike4 and update ADR-004."
             )
 
-        # Build a provisional Run. We'll fill in final_state after the loop.
+        # For an original run, the input placeholder (idx 0) is NOT a Node;
+        # we start real nodes at idx 1. initial_state lives on idx 1's values.
+        initial_state = (
+            dict(snapshots[1].values) if len(snapshots) >= 2 and isinstance(snapshots[1].values, dict) else {}
+        )
         run_id = str(uuid.uuid4())
-        started_at = _parse_created_at(first)
-        last_snapshot = snapshots[-1]
-        ended_at = _parse_created_at(last_snapshot)
+        run, nodes = self._build_run_and_nodes(
+            snapshots=snapshots,
+            run_id=run_id,
+            thread_id=ref.thread_id,
+            status=status,
+            task_description=task_description,
+            tags=tags,
+            initial_state=initial_state,
+            loop_start=1,                   # skip the input placeholder
+            first_step_index=0,             # child of nothing; start at 0
+            first_parent_node_id=None,
+            extra_metadata={},
+        )
 
-        # initial_state: the values on the very first executed-node snapshot.
-        # That's snapshots[1] (index 0 is the input placeholder). If the user
-        # didn't actually invoke, we already returned above.
-        initial_state = dict(snapshots[1].values) if len(snapshots) >= 2 else {}
+        with self._store.transaction():
+            self._store.put_run(run)
+            for n in nodes:
+                self._store.put_node(n)
+
+        ref.run_id = run_id
+        ref.node_ids = [n.id for n in nodes]
+
+    # ------------------------------------------------------------------
+    # Internal: fork() pipeline
+    # ------------------------------------------------------------------
+
+    def _fork_from_history(
+        self,
+        graph: Any,
+        ref: ForkRef,
+        *,
+        parent_run: Run,
+        parent_node: Node,
+        overrides: dict[str, Any],
+        reason: str | None,
+        status: RunStatus,
+        task_description: str | None,
+        tags: list[str],
+    ) -> None:
+        cfg_child: Any = {"configurable": {"thread_id": ref.child_thread_id}}
+        snapshots = list(reversed(list(graph.get_state_history(cfg_child))))
+
+        if not snapshots:
+            raise AdapterError(
+                f"no snapshots on forked thread_id={ref.child_thread_id!r}. "
+                "Did update_state run? This is likely a bug in the adapter."
+            )
+
+        first_source = _meta_source(snapshots[0])
+        if first_source != "update":
+            raise AdapterError(
+                f"expected forked thread's first snapshot source='update', got {first_source!r}. "
+                "LangGraph version may have changed — re-run spike5 and update ADR-005."
+            )
+
+        # For a forked thread: snapshots[0] is the seed and also plays the
+        # role of "pre-first-downstream-node". initial_state = seed values.
+        initial_state = (
+            dict(snapshots[0].values) if isinstance(snapshots[0].values, dict) else {}
+        )
+
+        child_run_id = str(uuid.uuid4())
+        run, nodes = self._build_run_and_nodes(
+            snapshots=snapshots,
+            run_id=child_run_id,
+            thread_id=ref.child_thread_id,
+            status=status,
+            task_description=task_description,
+            tags=[*tags, "fork"],
+            initial_state=initial_state,
+            loop_start=0,                      # forked thread has no input placeholder
+            first_step_index=parent_node.step_index + 1,
+            first_parent_node_id=parent_node.id,   # first child node points to parent node cross-Run
+            extra_metadata={
+                "forked_from_run": parent_run.id,
+                "forked_at_node": parent_node.id,
+                "forked_at_node_name": parent_node.node_name,
+                "overrides_keys": sorted(overrides.keys()),
+            },
+        )
+
+        fork_record = Fork(
+            id=str(uuid.uuid4()),
+            parent_run_id=parent_run.id,
+            parent_node_id=parent_node.id,
+            child_run_id=child_run_id,
+            edited_fields=dict(overrides),
+            reason=reason,
+        )
+
+        with self._store.transaction():
+            self._store.put_run(run)
+            for n in nodes:
+                self._store.put_node(n)
+            self._store.put_fork(fork_record)
+
+        ref.child_run_id = child_run_id
+        ref.fork_id = fork_record.id
+        ref.node_ids = [n.id for n in nodes]
+
+    # ------------------------------------------------------------------
+    # Shared core: snapshot list → (Run, list[Node])
+    # ------------------------------------------------------------------
+
+    def _build_run_and_nodes(
+        self,
+        *,
+        snapshots: list[Any],
+        run_id: str,
+        thread_id: str,
+        status: RunStatus,
+        task_description: str | None,
+        tags: list[str],
+        initial_state: dict[str, Any],
+        loop_start: int,
+        first_step_index: int,
+        first_parent_node_id: str | None,
+        extra_metadata: dict[str, Any],
+    ) -> tuple[Run, list[Node]]:
+        """Walk snapshots and build canonical Run + Nodes.
+
+        Unified helper for :meth:`_record_from_history` (original runs,
+        ``loop_start=1``, ``first_step_index=0``) and
+        :meth:`_fork_from_history` (forked threads, ``loop_start=0``,
+        ``first_step_index=parent.step_index + 1``).
+        """
+        first = snapshots[0]
+        last = snapshots[-1]
+        started_at = _parse_created_at(first)
+        ended_at = _parse_created_at(last)
 
         run = Run(
             id=run_id,
             adapter="langgraph",
-            adapter_thread_id=ref.thread_id,
+            adapter_thread_id=thread_id,
             status=status,
             started_at=started_at,
             ended_at=ended_at,
             task_description=task_description,
             initial_state=initial_state,
-            final_state=_coerce_state(last_snapshot.values),
+            final_state=_coerce_state(last.values),
             tags=list(tags),
             metadata={
                 "checkpoint_ns": _ckpt_ns(first),
                 "num_snapshots": len(snapshots),
+                **extra_metadata,
             },
         )
 
-        # --- Build nodes by pairing pre/post snapshots ---
-        node_rows: list[Node] = []
-        prev_node_id: str | None = None
+        nodes: list[Node] = []
+        prev_node_id: str | None = first_parent_node_id
+        step_cursor = first_step_index
 
-        # Iterate over pairs (pre, post) where pre is a checkpoint whose
-        # `tasks[0]` tells us which node is about to run, and `post.values`
-        # is the state after it ran.
-        for i in range(1, len(snapshots) - 1):
+        for i in range(loop_start, len(snapshots) - 1):
             pre = snapshots[i]
             post = snapshots[i + 1]
-
             if not pre.tasks:
-                # Shouldn't happen for well-formed runs; skip defensively.
                 continue
 
             task = pre.tasks[0]
             node_name = getattr(task, "name", None)
             if not node_name:
-                raise AdapterError(f"snapshot[{i}].tasks[0] has no .name — LangGraph API changed?")
-
-            step_idx = _meta_step(pre)
-            if step_idx is None or step_idx < 0:
-                # step=-1 is the input placeholder — should have been at i=0.
-                continue
+                raise AdapterError(
+                    f"snapshot[{i}].tasks[0] has no .name — LangGraph API changed?"
+                )
 
             kind = self._kind_map.get(node_name, NodeKind.FN)
+            lg_step = _meta_step(pre)
 
             node = Node(
                 id=str(uuid.uuid4()),
                 run_id=run_id,
-                step_index=step_idx,
+                step_index=step_cursor,
                 node_name=node_name,
                 kind=kind,
                 parent_node_id=prev_node_id,
@@ -261,19 +462,14 @@ class LangGraphRecorder:
                     "checkpoint_id": _ckpt_id(post),
                     "parent_checkpoint_id": _ckpt_id(pre),
                     "langgraph_task_id": getattr(task, "id", None),
+                    "langgraph_step": lg_step,
                 },
             )
-            node_rows.append(node)
+            nodes.append(node)
             prev_node_id = node.id
+            step_cursor += 1
 
-        # --- Persist atomically ---
-        with self._store.transaction():
-            self._store.put_run(run)
-            for node in node_rows:
-                self._store.put_node(node)
-
-        ref.run_id = run_id
-        ref.node_ids = [n.id for n in node_rows]
+        return run, nodes
 
 
 # ---------------------------------------------------------------------------
@@ -303,7 +499,6 @@ def _parse_created_at(snap: Any) -> datetime:
         return datetime.fromisoformat(raw)
     if isinstance(raw, datetime):
         return raw if raw.tzinfo else raw.replace(tzinfo=UTC)
-    # Fallback: unknown shape — use now() so we don't blow up the whole run.
     return datetime.now(UTC)
 
 
@@ -319,10 +514,9 @@ def _ckpt_ns(snap: Any) -> str:
 
 
 def _coerce_state(values: Any) -> dict[str, Any]:
-    """LangGraph usually gives us a dict; be defensive for edge types."""
     if isinstance(values, dict):
         return dict(values)
     return {"__non_dict__": repr(values)}
 
 
-__all__ = ["AdapterError", "LangGraphRecorder", "RunRef"]
+__all__ = ["AdapterError", "ForkRef", "LangGraphRecorder", "RunRef"]
