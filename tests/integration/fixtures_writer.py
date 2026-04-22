@@ -1,23 +1,23 @@
-"""Standalone writer script for the SQLite integration test.
+"""Standalone writer script for the SQLite + adapter integration test.
 
 Invoked by test_sqlite_e2e.py as a subprocess::
 
     python fixtures_writer.py <db_path>
 
-Runs the spike1 5-node LangGraph pipeline with FakeLLM, reshapes every step
-into canonical Chronos Run/Node pydantic objects, persists to SQLite, then
-prints the run_id on stdout.
+Runs the spike1 5-node LangGraph pipeline with FakeLLM and records it via
+the ``LangGraphRecorder`` adapter (zero hand-reshape), then prints the run_id
+on stdout.
 
-Kept as a plain .py file (not an inline string) so f-string escaping doesn't
-bite us and so we get real syntax highlighting / linting / type checks.
+**Before Round 4**: this file had ~40 lines of hand-written reshape code
+mapping final_state + log → Node rows. After Round 4 (M1.4) the adapter
+does that automatically; the code below is what every real Chronos user
+will write.
 """
 
 from __future__ import annotations
 
 import itertools
 import sys
-import uuid
-from datetime import UTC, datetime
 from pathlib import Path
 
 # Make the spikes dir importable for fake_llm
@@ -29,7 +29,8 @@ from langgraph.checkpoint.memory import InMemorySaver  # noqa: E402
 from langgraph.graph import END, START, StateGraph  # noqa: E402
 from typing_extensions import TypedDict  # noqa: E402
 
-from chronos.core.models import Node, NodeKind, Run, RunStatus, Usage  # noqa: E402
+from chronos.adapters import LangGraphRecorder  # noqa: E402
+from chronos.core.models import NodeKind  # noqa: E402
 from chronos.store import SqliteStore  # noqa: E402
 
 NODES = ["plan", "research", "draft", "critique", "polish"]
@@ -46,7 +47,7 @@ class State(TypedDict, total=False):
 
 
 def _make_step(llm: FakeLLM, name: str):
-    """Build a graph step closure. Keeps logic pure for easier reasoning."""
+    """Build a graph step closure. Kept pure for easier reasoning."""
 
     def fn(state: State) -> dict:
         resp = llm.call(
@@ -54,7 +55,6 @@ def _make_step(llm: FakeLLM, name: str):
             user=f"Task: {state.get('task', '')}",
         )
         key = "final" if name == "polish" else name
-        # Deterministic per-step token count derived from fingerprint
         tok = int(resp.fingerprint, 16) % 200 + 10
         log = list(state.get("log", []))
         log.append({"node": name, "tokens": tok})
@@ -64,7 +64,7 @@ def _make_step(llm: FakeLLM, name: str):
 
 
 def run_pipeline_and_persist(db_path: Path) -> str:
-    """Run the 5-node spike1 pipeline, persist to chronos.db, return run_id."""
+    """Run the 5-node spike1 pipeline via the adapter; return run_id."""
     llm = FakeLLM()
 
     g: StateGraph = StateGraph(State)
@@ -78,53 +78,21 @@ def run_pipeline_and_persist(db_path: Path) -> str:
     graph = g.compile(checkpointer=InMemorySaver())
     cfg = {"configurable": {"thread_id": "t1"}}
     initial: State = {"task": "write a haiku about rain", "log": []}
-    final_state = graph.invoke(initial, cfg)
 
-    # --- Reshape into Chronos canonical model ---
-    run_id = str(uuid.uuid4())
-    started = datetime.now(UTC)
-    run = Run(
-        id=run_id,
-        adapter="langgraph",
-        adapter_thread_id="t1",
-        status=RunStatus.COMPLETED,
-        started_at=started,
-        ended_at=datetime.now(UTC),
-        task_description=initial["task"],
-        initial_state=dict(initial),
-        final_state=dict(final_state),
-    )
-
-    node_rows: list[Node] = []
-    prev_node_id: str | None = None
-    for i, (name, log_entry) in enumerate(zip(NODES, final_state["log"], strict=False)):
-        key = "final" if name == "polish" else name
-        state_after = {"task": final_state["task"], key: final_state[key]}
-        tokens = log_entry["tokens"]
-        node = Node(
-            id=str(uuid.uuid4()),
-            run_id=run_id,
-            step_index=i,
-            node_name=name,
-            kind=NodeKind.LLM,
-            parent_node_id=prev_node_id,
-            state_after=state_after,
-            model_name="fake-llm-v0",
-            usage=Usage(
-                prompt_tokens=tokens // 2,
-                completion_tokens=tokens - tokens // 2,
-            ),
-            cost_usd_cents=tokens,  # toy pricing
+    with SqliteStore.open(db_path) as store:
+        recorder = LangGraphRecorder(
+            store,
+            kind_map={n: NodeKind.LLM for n in NODES},
         )
-        node_rows.append(node)
-        prev_node_id = node.id
+        with recorder.record(
+            graph,
+            thread_id="t1",
+            task_description=initial["task"],
+        ) as ref:
+            graph.invoke(initial, cfg)
 
-    with SqliteStore.open(db_path) as store, store.transaction():
-        store.put_run(run)
-        for node in node_rows:
-            store.put_node(node)
-
-    return run_id
+        assert ref.run_id is not None, "adapter failed to persist"
+        return ref.run_id
 
 
 if __name__ == "__main__":

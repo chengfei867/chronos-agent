@@ -68,12 +68,21 @@ def test_spike1_pipeline_roundtrips_through_sqlite(tmp_path: Path) -> None:
         for prev, curr in itertools.pairwise(nodes):
             assert curr.parent_node_id == prev.id
 
-        # LLM metadata populated
+        # State progressively accumulates across nodes (ADR-004 §Finding 4)
+        assert "plan" in nodes[0].state_after
+        assert "final" in nodes[4].state_after
+
+        # Every node carries the langgraph checkpoint chain in metadata
         for n in nodes:
-            assert n.usage is not None
-            assert n.usage.total_tokens > 0
-            assert n.model_name == "fake-llm-v0"
-            assert n.cost_usd_cents is not None
+            assert n.metadata.get("checkpoint_id") is not None
+            assert n.metadata.get("parent_checkpoint_id") is not None
+
+        # NOTE (ADR-004): usage/model_name/cost are NOT populated by the v0.1
+        # LangGraph adapter because StateSnapshot doesn't expose them. These
+        # fields are reserved for M2 provider-specific spans. Users who want
+        # them in v0.1 must embed usage dicts inside their graph state.
+        assert all(n.usage is None for n in nodes)
+        assert all(n.model_name is None for n in nodes)
 
 
 def test_concurrent_readers_see_committed_writes(tmp_path: Path) -> None:

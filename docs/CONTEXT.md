@@ -147,16 +147,16 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
-**截至 Round 3 结束 (2026-04-22 晚, 用户追加手动触发)**
+**截至 Round 4 结束 (2026-04-22 深夜, 用户"继续吧我还没睡"触发)**
 
-- Round: **3 完成** (M1.3 SQLite 持久化层全部拿下)
-- 最近 progress doc: `progress/2026-04-22-round-3.md` ← **下一轮的你必读**
-- 当前阶段: **Phase 1 进行中 — 下一步 M1.4 LangGraph recorder adapter**
-- 最新 ADR: `ADR-003-sqlite-schema.md` = schema 设计 + 版本策略 + cost 整数化
-- 最新 commit: 见 GitHub main (R3 commit)
+- Round: **4 完成** (M1.4 LangGraph recorder adapter 全部拿下)
+- 最近 progress doc: `progress/2026-04-22-round-4.md` ← **下一轮的你必读**
+- 当前阶段: **Phase 1 进行中 — 下一步 M1.5 Fork 原语 or CLI 读侧**
+- 最新 ADR: `ADR-004-langgraph-snapshot-mapping.md` = adapter 映射算法 (基于 spike4 的实证)
+- 最新 commit: 见 GitHub main (R4 commit)
 - Blocked items: 无
-- Code LOC: ~1,600 (加了 store/ 模块 + 20 单元测 + 3 集成测)
-- 测试状态: **45/45 pass, 97% coverage** (unit 20 + integration 3 + spike 3 + cli/models 19)
+- Code LOC: ~2,100 (加了 adapters/ 模块 + 11 单元测 + spike4 探针)
+- 测试状态: **56/56 pass, 93% coverage** (unit 47 + integration 3 + spike 6)
 - 已验证事实 (累计):
   - GitHub push 用 `gh-proxy.com` 可行, 其它镜像不能 push
   - LangGraph 1.1.9 `checkpointer` 可以完整 capture / fork / diff
@@ -167,6 +167,11 @@ chronos-agent/
   - Migration `INSERT` 必须 `OR IGNORE` 不能 `OR REPLACE`，否则 tampered schema_version 会被 migration 静默修复
   - Forks 是 append-only (plain INSERT)；Runs/Nodes 是 upsert (INSERT OR REPLACE)
   - Inline subprocess 脚本 >20 行就必须落盘到独立 `.py`，不要 `textwrap.dedent` f-string 地狱
+  - **StateSnapshot `metadata["writes"]` 永远是 null** (R3 CONTEXT 猜测是错的 — spike4 证伪)
+  - **节点信息在 `pre_snapshot.tasks[0].name`** (那个即将运行的节点) + **结果在 `post_snapshot.values`**
+  - 6 snapshots for 4 nodes: 1 input placeholder + 4 pre-node + 1 terminal
+  - LangGraph **不暴露 token/usage/cost 字段** → v0.1 adapter 这些字段返回 None, M2 再补
+  - Adapter 用 duck-typed fake snapshot 做单测 > mock real LangGraph (快 + 是契约文档)
 
 ## Cron 窗口门控 (2026-04-22 用户指令)
 
@@ -181,37 +186,42 @@ if not (0 <= beijing_hour <= 11):
     sys.exit(0)
 ```
 或 agent prompt 里直接让它自检。
-**例外**: 用户手动触发/手动说"继续跑"可以不看窗口 (Round 3 就是这种情况)。
+**例外**: 用户手动触发/手动说"继续跑"可以不看窗口 (Round 3/4 就是这种情况)。
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 4 目标**: M1.4 — LangGraph recorder adapter (自动捕获, 替换手工 reshape)
+**Round 5 候选** (三选一, 按优先级排):
 
-1. **窗口门控先做** (cron 自动启动时, 手动触发除外)
-2. **M1.4 核心**:
-   - 新文件 `src/chronos/adapters/langgraph.py`
-   - 提供高层 API: `with Chronos(db_path).record(graph, thread_id="t1") as rec: graph.invoke(...)` — 上下文管理器自动捕获整条执行轨迹
-   - 内部实现: 在 invoke 后遍历 `graph.get_state_history(cfg)` (记得 reverse!) + 转成 `Run`/`Node` pydantic 写入 SQLite
-   - Cost / usage 从 StateSnapshot 里抽 (LangGraph 1.1.9 的字段名 — 需要 spike 确认, 可能在 `metadata["writes"]` 或 tool outputs 里)
-   - 替换掉 `tests/integration/fixtures_writer.py` 里的手工 reshape — 用真 adapter
-3. **M1.5 草稿** (若时间够):
-   - `chronos runs list` CLI (从 sqlite 读, rich 格式化输出)
-   - `chronos runs show <id>` — 展开单次 run 的 node 列表
-4. **必做**:
-   - 写 `progress/2026-04-XX-round-4.md`
-   - 推 GitHub (用 `gh-proxy.com`)
-   - 更新本文件 section 5/6
-   - 若 LangGraph StateSnapshot 结构有意外 → ADR-004
+### 选项 A (推荐): M1.5 — Fork 原语
+- `chronos.fork(run_id, at_step=k, overrides={...})` — 在已记录的 run 的第 k 步，用新的 state 值分叉一个新 run
+- 底层走 LangGraph `update_state(cfg, values, as_node=...)` + 新 thread_id
+- 需要先 spike: **fork 后如何把新 thread 的 history 也拿去 adapter 记录？** (关键未知: fork thread 的 step 编号与原始 thread 的关系)
+- Fork 记录写入 `forks` 表 (schema 已备好, Round 3 做的)
+- **这是 Chronos 的 killer feature, 不能拖**
+
+### 选项 B: CLI 读侧打通用户闭环
+- `chronos runs list` — 从 sqlite 读, rich 表格输出
+- `chronos runs show <id>` — 单 run 的 node 树形展开
+- `chronos runs diff <a> <b>` — 结构化 diff (但无 fork 的话意义不大)
+- 低风险, 让用户第一次能看到"自己的东西"
+
+### 选项 C: Usage/Cost harvester hook
+- 给 `LangGraphRecorder` 加 `usage_extractor: Callable[[state], Usage|None]` 参数
+- 用户把 usage dict 塞进 state, adapter 自动收
+- 简单, 但不解决核心问题 (没有 fork 的 Chronos 只是又一个 trace viewer)
+
+**本轮建议选 A** — 没有 fork 就没有产品。
+CLI (选项 B) 可以在 A 完成后顺手做一半 (`runs list/show`)。
 
 **硬约束**:
 - ❌ 不开始写 Web UI
 - ❌ 不加 AutoGen/CrewAI adapter (Phase 2 再说)
-- ❌ 不要在 adapter 里藏"魔法"状态变换 — 每个字段映射写清楚, 方便 Phase 2 抄
-- ✅ 任何新决定 → ADR-004...
-- ✅ recorder 必须**不侵入**用户代码 (用户写原生 LangGraph, 我们包 checkpointer 或走 post-run history API)
-- ✅ 保持 schema 不变, 若要改 → 001_init.sql 冻结 + 新建 002_xxx.sql
+- ❌ 不改 SQLite schema (用已有的 forks 表)
+- ✅ 任何新决定 → ADR-005...
+- ✅ Spike 先行 (fork 行为可能和想的不一样, 跟 R4 spike4 类似投资)
+- ✅ 单元测 + 集成测都要 (duck-type 单测 + real langgraph 集成测双保险)
 
-**关键提醒**: `fixtures_writer.py` 里手工 reshape 的代码是 M1.4 adapter 的参考实现。LangGraph 的 `StateSnapshot` 已经把所有信息给齐了 (values, next, config, metadata, created_at, parent_config)。
+**关键提醒**: Round 4 证明"调研先于实现"真的省时间 —— spike4 60 行跑一遍, 把 CONTEXT.md Round 3 对 `metadata["writes"]` 的错误假设抓出来, 省下 2 小时盲写 + 推倒重来。Round 5 fork 同样必须先 spike。
 
 ---
 
@@ -251,4 +261,4 @@ if not (0 <= beijing_hour <= 11):
 
 ---
 
-*Last updated: 2026-04-22 by Round 1 agent*
+*Last updated: 2026-04-22 by Round 4 agent (晚 12点前后)*
