@@ -4,7 +4,13 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
-_Nothing yet — R24 will decide._
+### Added (Round 24)
+
+- **ADR-014 — Phase 2 Entry Criteria** (`docs/decisions/ADR-014-phase-2-entry-criteria.md`). Formalises when Phase 2 (AutoGen adapter, Web UI, multi-agent lanes) is allowed to begin. Four **required** criteria: R1 adapter interface frozen (with ADR + one non-trivial change implementable without touching `chronos.core.*`), R2 extractor contract v2 consolidated into a single ADR, R3 one *adversarial* LangGraph dogfood (candidate: `.astream_events` streaming, explicitly flagged untested in R17 case study), R4 `docs/CONTEXT.md` §4 refreshed for Phase-2 operational red lines. Three **optional** confidence-raisers: O1 second LLM backend exercised, O2 external user signal, O3 performance baseline. All four required are ❌ as of R24 — non-binding work breakdown puts Phase 2 opening around R29. Ties back to R10 near-miss (agent caught itself mid-`uv add autogen-agentchat` under "自由发挥") by replacing vibe-based discipline with a falsifiable checklist.
+
+### Fixed (Round 24) — test harness color-env pollution
+
+- `tests/conftest.py` (new file) adds a top-level autouse fixture that neutralises five shell color env vars (`FORCE_COLOR`, `NO_COLOR`, `CLICOLOR`, `CLICOLOR_FORCE`, `PY_COLORS`), sets `TERM=dumb`/`COLUMNS=80`, and monkeypatches the module-level `chronos.cli._common.console` **and** `chronos.cli.console` to a fresh no-color `Console(force_terminal=False, no_color=True, color_system=None, width=80, highlight=False)`. Restores automatically per pytest `monkeypatch` semantics. Fixes v0.1.6 demo-report Finding #1: five CLI tests (`test_{diff,runs,replay}_help_surfaces`, `test_cli_fork_plan_json_to_stdout`, `test_cli_fork_plan_emit_python_writes_valid_stub`) failed when developers ran `pytest` with `FORCE_COLOR=1` exported (common for terminal-capture workflows), because `rich` emitted ANSI sequences that broke `substring in result.stdout` assertions across line wraps. The fix is test-harness-only; user CLI invocations retain colors as before. Verified: **264/264 pass with `FORCE_COLOR=1` set**.
 
 ---
 

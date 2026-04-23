@@ -147,29 +147,24 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
-**截至 Round 23-C 结束 (2026-04-23 晚 CST, 用户交互轮) — v0.1.6 cut (R23-A + R23-B + R23-C bundle); R22 stub 经 dogfood 验证 + 3 bug 修复 + checkpointer 陷阱文档化; `[Unreleased]` 空等 R24**
+**截至 Round 24 结束 (2026-04-23 晚 CST, 用户交互轮) — ADR-014 (Phase 2 entry criteria) 落地 + FORCE_COLOR conftest 修复; `[Unreleased]` 有条目等 R2X 打包**
 
-- Round: **23-C 完成** (R23-A dogfood+bug fix → R23-B case study → **R23-C stub checkpointer hint + v0.1.6 cut**)
-- 最近 progress doc: `progress/2026-04-23-round-23a.md` (R23-A 核心) + case study `docs/case-studies/fork-via-emit-python.md` (R23-B) ← **下一轮必读**
-- 当前阶段: **Phase 1 + 三轮 dogfood + ADR-013 冻结 + ADR-013 alt C shipped + R22 stub 经 E2E 实战 + checkpointer 陷阱已写进 stub/docs + v0.1.6 cut; `[Unreleased]` 空等 R24**
-- 最新 ADR: **ADR-013 (R21)** — 未变
-- 最新 tag: **v0.1.6** (R23-A+B+C bundle, annotated)
+- Round: **24 完成** (formalization round — ADR + test-harness hygiene)
+- 最近 progress doc: `progress/2026-04-23-round-24.md` ← **下一轮必读**
+- 当前阶段: **Phase 1 + 三轮 dogfood + R22 stub 经 E2E 实战 + v0.1.6 cut + ADR-014 = Phase 2 entry checklist 成文 (R1/R2/R3/R4 四条红/绿判据)**
+- 最新 ADR: **ADR-014 (R24)** — Phase 2 entry criteria
+- 最新 tag: **v0.1.6** (未变; R24 无 version bump, 按 ADR-014 定位是 formalization round)
 - Blocked items: 无
-- 测试状态: **264/264 pass, 93% coverage** (R22 260 → R23 总计 +4 regression tests)
-- CLI 表面: `chronos fork plan <run_id> --emit python|json` — 同 v0.1.5; 但 python 路径的 stub 模板含 checkpointer 警告
-- **R23 bundle 产出 (A+B+C)**:
-  - `src/chronos/fork_plan.py`: `to_python()` 模板修 3 处 R22 bug + 加 checkpointer `IMPORTANT:` 注释块
-  - `src/chronos/cli/fork.py`: `render_plan_preview` emit-aware hint
-  - `docs/case-studies/fork-via-emit-python.md`: 完整 tutorial + 3 bug 复盘 + checkpointer 陷阱深度解释 + ADR-008/013 回顾
-  - `tests/unit/test_fork_plan.py`: +4 regression tests (22 → 26), 含 exec-based
-  - `tests/unit/test_fork_cli.py`: 1 断言更新
-  - `CHANGELOG.md`: `[Unreleased]` 清空, `[0.1.6] — 2026-04-23 (Round 23-A + 23-B + 23-C)` 四段 (Fixed/Added/Documentation/Tests+Evidence)
-  - `__version__=0.1.6`, `pyproject.toml::version=0.1.6`, CLI 状态行更新
-  - `progress/2026-04-23-round-23a.md`
-- **R23 bundle 的理由**: R23-A 修 R22 bug + R23-B 写 case study + R23-C 加 stub hint 讲的是一个故事 — "R22 的 feature 经得住真实使用, 但 R22 tests 不够深 (只 compile 不 exec); 现在补齐 + 把学到的教给用户". 整体内聚, 一起 cut v0.1.6
-- **R23-A 实战结果**: `chronos fork plan ... --emit python` → 填 2 TODO → `python <stub>` → 新 child run `16ca0fa5-cbec-418b-bd47-7a9546048b01` + fork `f6b36f40-82c3-45d8-9386-5b8a4e7b393c` 入库. 工作流验证通
-- **R23-A DX 发现 (R23-B 已写进 case study, R23-C 已写进 stub)**: `graph.invoke(None, {thread_id})` 续跑需要持久化且跨 run 共享的 LangGraph checkpointer; R17 `InMemorySaver` per-factory-call 不够
-- **R22 dogfood artifacts**: `/workspace/chronos-dogfood/supervisor/` 下 `fork_stub.py` + `fork_stub_filled.py`; `dogfood.db` 多了 R23-A child run
+- 测试状态: **264/264 pass, 93% coverage**; **FORCE_COLOR=1 下也 264/264 pass** (R24 修)
+- CLI 表面: 同 v0.1.6, 未变
+- **R24 产出**:
+  - `docs/decisions/ADR-014-phase-2-entry-criteria.md` (~12 KB, Accepted): 四条必须 criteria (R1 adapter interface frozen, R2 extractor contract v2, R3 adversarial dogfood, R4 CONTEXT.md §4 Phase-2 refresh) + 三条 optional (O1 second LLM backend, O2 external user signal, O3 perf baseline) + R24→R2X non-binding 展望 (R25=R2, R26=R1, R27=R3, R28=R4, Phase 2 在 R29 开)
+  - `tests/conftest.py` (NEW): autouse fixture 清 `FORCE_COLOR`/`NO_COLOR`/`CLICOLOR`/`CLICOLOR_FORCE`/`PY_COLORS`, 设 `TERM=dumb`/`COLUMNS=80`, **并 monkeypatch `chronos.cli._common.console` + `chronos.cli.console` 为 no-color Console** — 修 v0.1.6 demo report Finding #1 (5 个 CLI stdout-assert 测试被 shell `FORCE_COLOR=1` 污染)
+  - `CHANGELOG.md`: `[Unreleased]` 加 `### Added` (ADR-014) + `### Fixed` (conftest fixture)
+  - `progress/2026-04-23-round-24.md`
+- **R24 为什么是 ADR-only + 一个小修, 不是 feature**: 经过 14 轮深度 Phase-1 加码后, 边际收益递减; 最该做的是把 "Phase 2 什么时候开" 从直觉升级成 falsifiable checklist, 避免 R10 near-miss 复发 (当时差点在 "自由发挥" 下 `uv add autogen-agentchat`)。ADR-013 冻结了 fork-exec, ADR-014 冻结了 Phase 2 入场 — 两者共同构成元治理层
+- **R24 ADR-014 四条必须 criteria 当前状态**: R1 ❌ (adapter 表面只是代码, 无 ADR), R2 ❌ (extractor contract 散在 ADR-010/011/012), R3 ❌ (三次 dogfood 都是 canonical, 没打过 adversarial — `.astream_events` 或 sub-graph 是候选), R4 ❌ (CONTEXT.md §4 还是 Phase-1 red line)。**→ R25-R28 有清晰目标, Phase 2 R29 开**
+- **R23 bundle 回顾 (仍有效)**: R22 stub 经 dogfood 验证 + 3 bug 修复 + checkpointer 陷阱文档化在 stub 模板 + case study
 - 旧事实 (仍生效, 不重复):
   - GitHub push 只有 `gh-proxy.com`
   - LangGraph 1.1.9 record/fork/diff 全链路 OK
@@ -188,7 +183,7 @@ chronos-agent/
   - **CLI 模块形状 (R14 确立)**: subcommand 实现模块暴露 `*_command(console, open_store_fn, ...)`
   - **OneAPI 配方 (R17/R18 确立)**: `model="Claude Opus 4.7"`, 不传 temperature, 响应恒包装饰性 error 字段忽略, UV_INDEX_URL=aliyun
   - **M milestone naming / multi-round bundle**: bug fix 不 bump M; release cut 单独一轮打包多个前轮
-  - **Release pattern (R13/R16/R19/R22/R23 五次验证 — 够做 skill 了)**: bump version → pyproject → CLI 状态行 → CHANGELOG → 全绿 → commit → tag -a → push main+tag
+  - **Release pattern (R13/R16/R19/R22/R23 五次验证 — 已成 skill `chronos-release-pattern`)**: bump version → pyproject → CLI 状态行 → CHANGELOG → 全绿 → commit → tag -a → push main+tag
   - **Dogfood script 陷阱**: `model_name` 在 `Node.model_name`; **R21 起推荐 `n.model` 短形式**
   - **Em-dash (U+2014) / U+2212 minus 被 ruff RUF001 禁** (仅 py 源码, md 文档 OK)
   - **Pydantic v2 field-level docstring**: 字段注解行下方 `"""..."""` 即是 docstring
@@ -196,6 +191,7 @@ chronos-agent/
   - **ForkRef 字段**: `child_run_id`, `fork_id`, `node_ids` — 仅在 CM **exit** 后填
   - **SqliteStore 公开 API**: `SqliteStore.open(path)` classmethod 用作 CM
   - **LangGraph fork 语义 (R23-A 确立)**: `graph.invoke(None, {thread_id})` 续跑要求持久化且跨 run 共享的 checkpointer (`SqliteSaver.from_conn_string(...)`), 不是 per-factory-call 新 `InMemorySaver`
+  - **测试环境 color 污染 (R24 确立)**: shell `FORCE_COLOR=1` 会让 rich 的 ANSI 输出打断 `CliRunner` stdout-assert; `tests/conftest.py` autouse fixture 同时清 env + rebind 两个模块级 `console`
 
 ## Cron 窗口门控 (2026-04-22 用户指令)
 
@@ -215,44 +211,47 @@ if not (0 <= beijing_hour <= 11):
 
 **Round 23-B/C 候选 — R23-A 搞定了 dogfood + bug fix, 还差 case study 和 checkpointer 陷阱决策; 到齐再 cut v0.1.6**
 
-### R23 剩余步 (按优先级排序, 下一轮挑一个做)
+### R25 候选 (按 ADR-014 非绑定优先级排序, 下一轮挑一个做)
 
-**R23-B (最推荐, 独立, 不阻塞)**: 写 `docs/case-studies/fork-via-emit-python.md`
-- 输入: `progress/2026-04-23-round-23a.md` 里的完整流程 + `/workspace/chronos-dogfood/supervisor/fork_stub_filled.py` 作为参考脚本
-- 结构建议: (1) 场景 (反事实 debugging 动机) (2) `chronos fork plan --emit python` 生成 → 检查 → 填 → 跑 的 happy path (3) **checkpointer 陷阱**: 为什么 `graph.invoke(None, {thread_id})` 需要持久化 checkpointer + 正确的 `SqliteSaver` snippet (4) R23-A 跑出来的真 run id 作 evidence (5) 回头看: ADR-008 + ADR-013 冻结的背后逻辑被这个陷阱再次佐证
-- 成功条件: 一个自包含的 tutorial, 用户照着走能跑通; 顺带给 Chronos 的文档仓补一块最大的空白
-- 预期: 半轮-1 轮
+**R25 = ADR-014 criterion R2 (最推荐)**: 写 ADR-015 — Extractor contract v2
+- 输入: ADR-010 (state serialization boundary) + ADR-011 (同) + ADR-012 (multi-LLM per node) + 三次 dogfood case study 的 extractor 发现
+- 输出: 单一 ADR 合并 `UsageExtractor` protocol 的现在全部约束 (pre/post state access, multi-LLM per node, serialization boundary, 框架无关契约)
+- 为什么先做 R2 (不是 R1): R1 adapter interface 的抽象**包含**了 extractor registration 机制, 没有 v2 extractor contract 就写 adapter interface 会倒逼 retrofit
+- 预期: 1 轮, 无代码改动 (纯 ADR)
 
-**R23-C (推荐, 短)**: 决定 stub 的 checkpointer 提示加不加
-- 选项 B1-lite: stub 加第三个 `TODO(user)` 注释块 (2-3 行: "ensure the graph was compiled with a checkpointer that persists across runs, e.g. `SqliteSaver.from_conn_string(...)`"; 不加实际代码, 只加 comment)
-- 选项 B2: 不改 stub, 把提示写进 `chronos fork --help` epilog + case study (R23-B 已经 cover)
-- 默认建议: B1-lite + B2 一起; stub 的认知负担已经不大, 一条 comment 行不痛, 可以少一个文档依赖
-- 实现后: CHANGELOG `[Unreleased]::Fixed` 续一行 + 测试 (1 text-level invariant)
+**R26 候选 = ADR-014 criterion R1**: 写 ADR-016 — Adapter interface + 证明
+- 前置: R25 完成
+- 输出: (1) `AdapterProtocol` / `RecorderProtocol` 的稳定表面 ADR + (2) 至少一个 non-trivial LangGraph adapter 变更**只改 adapter 层**不改 `chronos.core.*` 的证明
+- 候选的 non-trivial 变更: subgraph nesting 支持 (R17 case study 显式标记 untested), 或 streaming token extraction via `.astream_events`
+- 预期: 1-2 轮, 有代码改动 (adapter refactor)
 
-**R23-D (R23-B + R23-C 都做完后)**: cut v0.1.6
-- 内容: R23-A (3 bug fixes) + R23-C (stub hint) + R23-B (docs 不参与 version bump 但可以在 CHANGELOG 提)
-- 按 R13/R16/R19/R22 四次验证的 7 步 release pattern
-- 同时把 release pattern 正式写成 skill (`software-development/chronos-release-cut`? 或 `github/version-cut`?) — 四次重复已够明显
+**R27 候选 = ADR-014 criterion R3**: adversarial LangGraph dogfood
+- 前置: R26 完成更好但不强制 (可以并行)
+- 目标: 一个**明确预期会炸**的 dogfood target. Top pick: `.astream_events` streaming (R17 flagged) — Web UI 将来一定要用
+- 备选: subgraph nesting (create_react_agent 内部) / 错误路径下的 extractor 行为
+- 输出: 一个新 case study + 发现的 gap 修复 + 若无 gap 则是 "adapter 已经 battle-tested" 的 evidence
+- 预期: 1-2 轮
 
-**R23-E (选做, 低优先)**: Phase 2 spike (AutoGen adapter)
-- R10 红线已具备松动条件 (Phase 1 稳 + ADR-013 冻 + dogfood 三轮 + v0.1.5 cut), 但 R23-A 刚发现 checkpointer DX 陷阱, 建议 Phase 2 之前先把 R23-B/C 闭环再动
-- 时间盒 1 轮; 目标最小 `AutoGenRecorder.record()` + 1 example + 暴露 Recorder 协议漏洞
+**R28 候选 = ADR-014 criterion R4**: CONTEXT.md §4 Phase-2 refresh + Phase 2 entry decision
+- 前置: R25 + R26 + R27 都 ✅
+- 输出: CONTEXT.md §4 重写 "Phase 2 red lines" (e.g., AutoGen adapter 不得 import AutoGen serialization primitives 作为 Chronos 核心依赖; Web UI 不得 mutate 已录 run; 第二个 adapter 必须通过 ADR-016 的 interface)
+- Phase 2 正式开 (R29 起 AutoGen adapter 开工), 或推迟并明确理由
 
-**R22-C (一直 leftover, 超低优先)**: R17/R18 脚本改用 `Node.model` 短形式
-- R23-A 走 R17 脚本时验证了老形式还工作, 非紧急
-- 见到下一次再改的时候顺手办
+**R25-prime (若 R25 中途发现 ADR-014 本身需要微调)**: 修 ADR-014
+- ADR 是活文档, 发现判据定得不合适就改, 别硬顶
 
-### R23 非目标
+### R24 非目标 (继承并扩展)
 
-- ❌ execute-fork 实现 (ADR-013 冻结)
-- ❌ 第四轮 dogfood (R23 系列不新做 dogfood; R23-A 已在老 workspace 上验完了)
-- ❌ v0.1.6 cut 在 R23-B/C 前
+- ❌ execute-fork 实现 (ADR-013 冻结, 未解除)
+- ❌ `uv add autogen-agentchat` (ADR-014 R1/R2/R3/R4 未满足, Phase 2 未开)
+- ❌ Web UI 任何代码
+- ❌ v0.1.7 cut 在 R25 产出前 (R24 的 `[Unreleased]` 条目薄, 打包没意义)
 
 ### Release strategy
 
-- `[Unreleased]` 已含 R23-A Fixed 段
-- R23-C 完成再续一条 Fixed 段 (stub hint)
-- R23-B 是 docs-only, 不阻塞 version cut, 可以在 R23-B 完成之后直接 cut 或与 R23-C 一起 cut
+- `[Unreleased]` 已含 R24 `### Added` (ADR-014) + `### Fixed` (conftest fixture)
+- 下一个 cut 建议: R25 完成后 (ADR-015 extractor contract v2 落地), bundle R24+R25 成 v0.1.7
+- 按 `chronos-release-pattern` skill 走 7 步
 
 ---
 
