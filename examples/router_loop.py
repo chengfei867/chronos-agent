@@ -211,6 +211,10 @@ def _print_next_steps(db_path: Path, parent_id: str, child_id: str) -> None:
     print(f"  chronos replay {parent_id} --db {db_path} --no-interactive")
     print(f"  chronos diff {parent_id} {child_id} --db {db_path}")
     print(f"  chronos diff {parent_id} {child_id} --db {db_path} --full")
+    print(
+        f"  chronos fork plan {parent_id} --at-index 0 --allow-new-keys "
+        f"--reason demo --out /tmp/router_fork_plan.json --db {db_path}"
+    )
     print()
 
 

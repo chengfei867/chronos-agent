@@ -130,6 +130,69 @@ Exit codes: `0`, `1` a run id not found, `2` DB not found.
 
 ---
 
+## `chronos fork plan <run_id>`
+
+Emit a portable **fork plan** JSON artifact — a description of a proposed fork that your code consumes via `chronos.fork_plan.load_plan()`. The CLI never executes your graph; see [ADR-008](decisions/ADR-008-fork-cli-plan-artifact.md) for the rationale.
+
+```bash
+chronos fork plan <run_id> \
+  (--at-node <name> | --at-index <k> | --at-node-id <uid>) \
+  [--override key=value]... \
+  [--override-json '{"k": ...}'] \
+  [--child-thread-id <str>] \
+  [--reason <str>] \
+  [--tag <str>]... \
+  [--out <path>] \
+  [--json] \
+  [--allow-new-keys] \
+  [--db <path>]
+```
+
+**Fork-point selector** (exactly one required):
+
+- `--at-node <name>` — by node name. Errors if the name appears more than once (loops/routers).
+- `--at-index <k>` — by 0-based `step_index`. Always unambiguous.
+- `--at-node-id <uid>` — by the node's SQLite id. Useful when piping.
+
+**Overrides:**
+
+- `--override k=v` — single override. `v` is JSON-parsed first (`3`, `true`, `[1,2]`), falls back to raw string. Repeatable.
+- `--override-json '{...}'` — merge a full JSON object. Applied after `--override` tokens, so it wins on collisions.
+- `--allow-new-keys` — permit override keys that don't exist in the parent node's `state_after`. Default: reject unknown keys to catch typos.
+
+**Output:**
+
+- Default: write plan to `./fork_plan.json` and print a Rich preview.
+- `--out <path>` — write somewhere else.
+- `--json` — emit plan JSON to stdout instead (no file, no preview). Ideal for piping.
+
+**Consume the plan in your code:**
+
+```python
+from chronos.fork_plan import load_plan
+
+plan = load_plan("fork_plan.json")
+with recorder.fork(graph, **plan.recorder_kwargs()) as ref:
+    graph.invoke(None, {"configurable": {"thread_id": plan.child_thread_id}})
+print("forked →", ref.child_run_id)
+```
+
+`plan.recorder_kwargs()` returns exactly the kwargs accepted by `LangGraphRecorder.fork()` — no extra fields leak through.
+
+**Example:**
+
+```bash
+chronos fork plan 2d8ba237-... \
+    --at-node research \
+    --override research="alt-take" \
+    --reason "swap researcher prompt" \
+    --tag experiment \
+    --db chronos.db
+# writes fork_plan.json; commit it alongside your experiment script.
+```
+
+---
+
 ## Environment variables
 
 | Var           | Used by | Meaning                                 |

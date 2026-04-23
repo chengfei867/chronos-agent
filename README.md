@@ -16,7 +16,7 @@
 - **Record** — Transparently capture every node, prompt, tool call, and state transition of an agent run
 - **Fork** — Branch from any recorded node, swap a prompt / tool / model / value, and re-execute the downstream nodes in a parallel timeline
 - **Diff** — Structurally compare two runs (or a run and one of its forks) — which nodes diverged, which state keys changed, and how
-- **Replay** *(Phase 1.1)* — Step through a historical run interactively in a TUI
+- **Replay** — Step through a historical run interactively in a TUI (`chronos replay <run_id>`)
 
 ### Quickstart (5 minutes)
 
@@ -47,9 +47,10 @@ Phase 1 MVP — **feature-complete for single-agent record/fork/diff on LangGrap
 | LangGraph adapter (record) | M1.4    | ✅                      |
 | Fork primitive (adapter) | M1.5      | ✅                      |
 | CLI read-side (`runs`, `forks`) | M1.6 | ✅                   |
-| Replay TUI (`chronos replay`) | M1.7 | ⏳ Phase 1.1            |
+| Replay TUI (`chronos replay`) | M1.7 | ✅ (ADR-007)           |
 | Structural diff (`chronos diff`) | M1.8 | ✅ (ADR-006)        |
-| Docs + `examples/` + v0.1.0 tag | M1.9 | 🔄 in progress       |
+| Docs + `examples/` + v0.1.0 tag | M1.9 | ✅ released 2026-04-23 |
+| `chronos fork` CLI + plan artifact | M1.10 | ✅ (ADR-008)       |
 
 **Next phases**: multi-agent reasoning trees (v0.2), additional framework adapters (AutoGen / CrewAI / raw OpenAI tool-loops), Web UI (v0.3+).
 
@@ -76,7 +77,7 @@ See [`docs/CONTEXT.md`](./docs/CONTEXT.md) — the onboarding document the AI re
 - **记录 (Record)** — 透明拦截 agent 每一步的状态、prompt、工具调用
 - **分叉 (Fork)** — 在任意记录节点 checkout 出分支，改一个 prompt / 工具 / 模型 / 状态键，重跑下游得到平行世界
 - **差分 (Diff)** — 结构化对比两个 run（或同一 run 的 parent 和 fork child），哪个节点分叉了、哪些 state key 变了、怎么变的
-- **回放 (Replay)** *(Phase 1.1)* — TUI 逐步回放历史 run
+- **回放 (Replay)** — TUI 逐步回放历史 run（`chronos replay <run_id>`）
 
 ### 5 分钟上手
 
@@ -95,7 +96,7 @@ chronos diff <PARENT_ID> <CHILD_ID> --db examples/chronos.db
 
 ### 当前阶段
 
-Phase 1 MVP — **LangGraph 单 agent 的 record/fork/diff 功能完整**。M1.1–M1.6、M1.8 已 ship；M1.7 (replay TUI) 排在 Phase 1.1。详细里程碑见 [`docs/roadmap.md`](./docs/roadmap.md)。
+Phase 1 MVP — **LangGraph 单 agent 的 record/replay/fork/diff 功能完整**。M1.1–M1.10 已全部 ship，v0.1.0 已发布（2026-04-23），v0.1.1 候选含 replay TUI + `chronos fork` CLI。详细里程碑见 [`docs/roadmap.md`](./docs/roadmap.md)。
 
 ### 为什么是现在？
 

@@ -221,6 +221,11 @@ def _print_next_steps(db_path: Path, parent_id: str, child_id: str) -> None:
     print(f"  chronos diff {parent_id} {child_id} --db {db_path} --verbose")
     print(f"  chronos diff {parent_id} {child_id} --db {db_path} --full")
     print(f"  chronos diff {parent_id} {child_id} --db {db_path} --json")
+    print(
+        f"  chronos fork plan {parent_id} --at-node research "
+        '--override research="alt" --reason demo '
+        f"--out /tmp/linear_fork_plan.json --db {db_path}"
+    )
     print()
 
 

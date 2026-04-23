@@ -204,54 +204,59 @@ if not (0 <= beijing_hour <= 11):
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 11 候选** (R10 已 ship: M1.7 replay + dogfood CI + ADR-007, 选项 A 全额吃下, v0.1.1 候选):
+**Round 12 候选** (R11 已 ship: M1.10 `chronos fork` CLI + ADR-008, 选项 A 全额吃下, v0.1.1 tag 已 cut):
 
-### R10 实际产出 (2026-04-23 12:20 北京 完成)
-- ✅ `scripts/dogfood.sh` + CI 接入 (12/12 green)
-- ✅ ADR-007 `rich.live` 选型
-- ✅ `chronos replay <run_id>` (cli/replay.py, 91% cov, +26 tests)
-- ✅ 140/140 tests, 92% 覆盖, ruff/mypy 全清
-- ✅ cli-reference.md + CHANGELOG [Unreleased] 更新
-- ✅ examples 加 `chronos replay` 到 "Try these commands"
-- ⚠️ **近失**: R10 开局试图装 autogen-agentchat, 被 CONTEXT.md 第 3 节硬约束抓回. Lesson: **每轮动 deps 前先读 CONTEXT.md 第 3 节**, 别被"自由发挥"这种话冲昏头
+### R11 实际产出 (2026-04-23 北京下午, 用户交互轮)
+- ✅ ADR-008 `chronos fork` plan-artifact 选型 (拒了 inspection-only + dynamic-import 两条歧路)
+- ✅ `src/chronos/fork_plan.py` (ForkPlan dataclass + load/dump + deep-copy overrides)
+- ✅ `chronos fork plan <run_id>` CLI (3 种 fork-point 选择器 + override 两种语法 + key 校验)
+- ✅ 195/195 tests, 93% 覆盖 (R11 新增 55 tests), ruff/mypy 全清
+- ✅ dogfood 12/12 → 14/14 green (examples 里塞进 fork plan 命令自动被捡起来)
+- ✅ cli-reference.md + CHANGELOG + README + examples 同步更新
+- ✅ v0.1.1 tag cut + push (四动词 CLI 全闭环)
 
-### 选项 A (R11 推荐): `chronos fork` CLI wrapper + ADR-008
-- 现在 record/replay/fork/diff 里只剩 `fork` 没有 CLI 入口 (adapter API 完整但 CLI 未定)
-- 需要 ADR-008 决定语义: library-only vs `--at <node> --set k=v` DSL vs `--patch <json-file>`
-- 倾向 `--patch <json-file>` + library-only 并存 (boring, scriptable)
-- 做完 cut v0.1.1 标签, 四动词 CLI 全闭环
+### R10 近失教训 (延续记忆)
+- ⚠️ R10 开局试图装 autogen-agentchat, 被 CONTEXT.md 第 3 节硬约束抓回. Lesson: **每轮动 deps 前先读 CONTEXT.md 第 3 节**, 别被"自由发挥"这种话冲昏头
 
-### 选项 B: CLI 文件拆分 (tech debt)
-- `src/chronos/cli/__init__.py` 500 行, 按 subcommand group 拆成 `cli/runs.py / cli/diff.py / cli/forks.py`
+### 选项 A (R12 推荐): CLI 文件拆分 (tech debt)
+- `src/chronos/cli/__init__.py` 已 ~600 行 (R11 又加了 30 行), 按 subcommand group 拆成 `cli/runs.py / cli/diff.py / cli/forks.py`
 - 低风险但 diff 巨大, 适合单独一轮不混其他功能
 - 不需要 ADR
 
-### 选项 C: AutoGen adapter (Phase 2 正式启动)
-- ⚠️ **仍需用户点头**才能做 — R10 已经试过一次自作主张, 被抓回
-- 证明 adapter 抽象假设; 先 spike AutoGen 的 checkpoint / message-history API
-- **必须 ADR-008 (如果 R11 选了选项 A 则 ADR-009)** AutoGen 状态模型 → Chronos NodeKind 映射
-
-### 选项 D: usage harvester hook — 从 LangGraph callback 收 token/cost
+### 选项 B: usage harvester hook — 从 LangGraph callback 收 token/cost
 - M1.4 时 defer 的旧承诺
 - 低风险, 不需要 ADR, 加一个 `usage_extractor: Callable | None` kwarg
+- 给 `chronos runs show` 加一列 tokens / cost
+
+### 选项 C: `chronos fork apply` — 把 plan.json 一键跑起来
+- R11 只做了 `chronos fork plan`, 用户还得写 3 行 Python 才能真正 fork
+- 如果能提供 `--graph-factory my_module:build_graph` 约定, CLI 就能动态 import + 执行
+- ⚠️ ADR-008 明确拒了这条路 (安全风险 + 强耦合), 如果 R12 要做需要写 ADR-009 推翻 ADR-008 的部分结论
+- **不建议 cron 轮自启**
+
+### 选项 D: AutoGen adapter (Phase 2 正式启动)
+- ⚠️ **仍需用户点头**才能做 — R10 已经试过一次自作主张, 被抓回
+- 证明 adapter 抽象假设; 先 spike AutoGen 的 checkpoint / message-history API
+- **必须新 ADR** (下一个编号 ADR-009) AutoGen 状态模型 → Chronos NodeKind 映射
 
 ### 选项 E: Web UI skeleton
 - 大承诺, 一轮起不了步; 需要 ADR 前端技术栈 + 至少 3 轮专心做
 - **不建议 cron 轮自启**, 除非用户明说要
 
-**R11 倾向**: 选项 A (`chronos fork` CLI + ADR-008). 四动词全闭环 + 可 cut v0.1.1 tag. 然后如果用户还想推进, R12 做选项 B 的 CLI 拆分清 tech debt, R13+ 再议 Phase 2.
+**R12 倾向**: 选项 A (CLI 文件拆分, 清 tech debt). R11 后 CLI 已经有 5 个 subcommand group (runs/forks/replay/diff/fork), 继续堆下去 `__init__.py` 会烂. 然后 R13 做选项 B (usage harvester). R14+ 再议 Phase 2 / `fork apply`.
 
-**硬约束 (延续, R10 again 强调)**:
+**硬约束 (延续, R10/R11 again 强调)**:
 - ❌ 不开始写 Web UI (除非用户点头)
 - ❌ **不加 AutoGen/CrewAI adapter** — R10 试过被抓回, 这是硬红线, 除非用户**显式**说启动 Phase 2
 - ❌ 不改 SQLite schema
-- ❌ 不动 v0.1.0 frozen 的 API 签名 (record/replay/fork/diff/CLI 命令)
-- ✅ 任何新功能 → 新 ADR (下一个编号 ADR-008)
-- ✅ spike / ADR 先行纪律 5 战 5 胜 (R10 ADR-007 加分), 继续
+- ❌ 不动 v0.1.1 frozen 的 API 签名 (record/replay/fork/diff/fork plan CLI 命令 + `ForkPlan` schema v1)
+- ✅ 任何新功能 → 新 ADR (下一个编号 ADR-009)
+- ✅ spike / ADR 先行纪律 6 战 6 胜 (R11 ADR-008 加分), 继续
 - ✅ **progress doc 每轮末必写 + commit + push** (R8 摔一跤, R10 差点再摔一次)
 - ✅ **动 deps / pyproject.toml 前先读 CONTEXT.md 第 3 节和本节硬约束** (R10 新增教训)
 - ✅ 断言时间用 `TZ='Asia/Shanghai' date` 或 `curl -sI https://www.baidu.com | grep -i '^date:'`, 别信 session 时间
 - ✅ cron 实际节奏: **every 180m (3h)**, 不是 6h, 不是 18:00 一次 — 下一轮 cron 有 3h 窗口别浪费
+- ✅ **`ForkPlan` schema 是 v0.1.1 对外契约** — 字段增删要 bump `chronos_fork_plan_version` 并写 ADR (R11 新增)
 
 ---
 
@@ -291,4 +296,4 @@ if not (0 <= beijing_hour <= 11):
 
 ---
 
-*Last updated: 2026-04-23 by Round 9 agent (北京 ~11:40, 用户交互轮, v0.1.0 tag cut)*
+*Last updated: 2026-04-23 by Round 11 agent (北京下午, 用户交互轮, v0.1.1 tag cut, M1.10 fork CLI ship)*

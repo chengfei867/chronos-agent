@@ -1,8 +1,9 @@
 """Chronos CLI — entry point and read-side commands.
 
-v0.1 scope (M1.6): read-only inspection of runs, nodes, and forks recorded
-by an adapter (currently only LangGraph). Write-side commands (`record`,
-`fork`, `replay`, `diff`) land in later milestones.
+v0.1 scope: read-only inspection of runs, nodes, and forks (`runs`, `forks
+show`, `diff`, `replay`), plus `fork plan` which emits a portable plan
+artifact consumed by user code (ADR-008). Write-side execution (`record`,
+`fork run`) stays in adapter APIs.
 
 Command surface::
 
@@ -12,13 +13,14 @@ Command surface::
     chronos runs show <run_id> [--db PATH] [--json]
     chronos forks show <fork_id> [--db PATH] [--json]
     chronos diff <run_a> <run_b> [--db PATH] [--json] [--verbose] [--full]
+    chronos replay <run_id> [--db PATH] [--no-interactive]
+    chronos fork plan <run_id> (--at-node N | --at-index K | --at-node-id ID)
+        [--override k=v]... [--override-json JSON] [--child-thread-id T]
+        [--reason R] [--tag T]... [--out PATH] [--json] [--allow-new-keys]
+        [--db PATH]
 
 All commands honour ``CHRONOS_DB`` env var as a fallback for ``--db``, and
 default to ``./chronos.db`` if neither is set.
-
-See ``docs/decisions/ADR-000-template.md`` for the ADR cadence. No ADR was
-opened for Typer-vs-Click because the choice is local to the CLI module and
-is documented in ``progress/2026-04-23-round-6.md`` §2.
 """
 
 from __future__ import annotations
@@ -55,8 +57,14 @@ forks_app = typer.Typer(
     help="Inspect recorded forks (parent ↔ child lineage).",
     no_args_is_help=True,
 )
+fork_app = typer.Typer(
+    name="fork",
+    help="Plan a fork — emit a JSON artifact the user's code consumes.",
+    no_args_is_help=True,
+)
 app.add_typer(runs_app, name="runs")
 app.add_typer(forks_app, name="forks")
+app.add_typer(fork_app, name="fork")
 
 console = Console()
 
@@ -186,10 +194,10 @@ def main(
 def info() -> None:
     """Print environment diagnostics."""
     console.print(f"[bold]chronos[/bold] {__version__}")
-    console.print("Status: pre-alpha (Phase 1 M1.7 — replay TUI + M1.8 structural diff)")
+    console.print("Status: pre-alpha (Phase 1 M1.8 — fork plan CLI)")
     console.print(
-        "Commands: [green]runs list/show, forks show, diff, replay[/green] available; "
-        "[dim]record, fork[/dim] [yellow](adapter-level only; CLI wrapper later)[/yellow]"
+        "Commands: [green]runs list/show, forks show, diff, replay, fork plan[/green] "
+        "available; [dim]record[/dim] [yellow](adapter-level only)[/yellow]"
     )
 
 
@@ -525,6 +533,94 @@ def diff(
         f"[yellow]{summary['changed']} changed[/]  "
         f"[green]{summary['added']} added[/]  "
         f"[red]{summary['removed']} removed[/]"
+    )
+
+
+# ---------------------------------------------------------------------------
+# `chronos fork plan` — emit fork plan artifact (ADR-008)
+# ---------------------------------------------------------------------------
+
+
+@fork_app.command("plan")
+def fork_plan_cmd(
+    run_id: str = typer.Argument(..., help="Parent run id (see `chronos runs list`)."),
+    at_node: str | None = typer.Option(
+        None, "--at-node", help="Fork at node with this name (errors if ambiguous)."
+    ),
+    at_index: int | None = typer.Option(
+        None, "--at-index", help="Fork at this 0-based step index."
+    ),
+    at_node_id: str | None = typer.Option(
+        None, "--at-node-id", help="Fork at the node with this exact id."
+    ),
+    overrides: list[str] = typer.Option(
+        [],
+        "--override",
+        "-o",
+        help="State override as key=value (value is JSON-parsed if possible). Repeatable.",
+    ),
+    overrides_json: list[str] = typer.Option(
+        [],
+        "--override-json",
+        help="State overrides as a JSON object string; merged last, wins on collisions.",
+    ),
+    child_thread_id: str | None = typer.Option(
+        None,
+        "--child-thread-id",
+        help="Override the auto-generated child thread id.",
+    ),
+    reason: str | None = typer.Option(
+        None, "--reason", help="Human-readable reason stored on the fork record."
+    ),
+    tags: list[str] = typer.Option([], "--tag", help="Tag to attach to the child run. Repeatable."),
+    out: Path | None = typer.Option(
+        None,
+        "--out",
+        help="Path to write the plan JSON (default: ./fork_plan.json).",
+    ),
+    as_json: bool = typer.Option(
+        False,
+        "--json",
+        help="Emit plan JSON to stdout instead of writing a file (no preview).",
+    ),
+    allow_new_keys: bool = typer.Option(
+        False,
+        "--allow-new-keys",
+        help="Permit override keys that aren't already present in parent state_after.",
+    ),
+    db: Path | None = typer.Option(
+        None, "--db", help="Path to chronos.db (overrides $CHRONOS_DB)."
+    ),
+) -> None:
+    """Emit a fork plan JSON artifact (see ADR-008).
+
+    The CLI does not execute your graph. It resolves the fork point,
+    validates overrides against the parent node's ``state_after``, and
+    writes a small portable plan file. Consume it in your code::
+
+        from chronos.fork_plan import load_plan
+        plan = load_plan("fork_plan.json")
+        with recorder.fork(graph, **plan.recorder_kwargs()) as ref:
+            graph.invoke(None, {"configurable": {"thread_id": plan.child_thread_id}})
+    """
+    from chronos.cli.fork import fork_plan_command
+
+    fork_plan_command(
+        run_id=run_id,
+        at_node=at_node,
+        at_index=at_index,
+        at_node_id=at_node_id,
+        overrides=overrides,
+        overrides_json=overrides_json,
+        child_thread_id=child_thread_id,
+        reason=reason,
+        tags=tags,
+        out=out,
+        as_json=as_json,
+        allow_new_keys=allow_new_keys,
+        db=db,
+        open_store_fn=_open_store,
+        console=console,
     )
 
 
