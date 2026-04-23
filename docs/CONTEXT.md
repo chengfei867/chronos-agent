@@ -147,25 +147,25 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
-**截至 Round 20 结束 (2026-04-23 20:00 CST, 用户交互轮) — v0.1.4 保持; 三轮 dogfood 完成; ADR-008 evidence-complete**
+**截至 Round 21 结束 (2026-04-23 20:20 CST, 用户交互轮) — v0.1.4 保持; ADR-013 landed; Node.model alias landed; [Unreleased] 攒段**
 
-- Round: **20 完成** (R17 dogfood #1 supervisor → R18 dogfood #2 swarm + ADR-012 → R19 v0.1.4 release → **R20 dogfood #3 bigtool + F2 DX finding + ADR-008 三轮证据收齐**)
-- 最近 progress doc: `progress/2026-04-23-round-20.md` ← **下一轮必读**; R19 在 `progress/2026-04-23-round-19.md`
-- 当前阶段: **Phase 1 MVP + 三轮 dogfood 完成 + 三 extractor 全家桶 + v0.1.4 tag; R21 将写 ADR-013 + 修 F2 DX wart**
-- 最新 ADR: `ADR-012-multi-llm-per-node-usage.md` (R18); **ADR-013 pending (R21 写)**
-- 最新 tag: **v0.1.4** (R19 cut; R20 零 code 改动, 不 bump)
+- Round: **21 完成** (R19 v0.1.4 release → R20 dogfood #3 bigtool + findings → **R21 ADR-013 + Node.model alias + 3 guardrail tests**)
+- 最近 progress doc: `progress/2026-04-23-round-21.md` ← **下一轮必读**; R20 在 `progress/2026-04-23-round-20.md`
+- 当前阶段: **Phase 1 + 三轮 dogfood + ADR-013 边界明确 + DX polish landed; [Unreleased] 攒 R21 内容等后续 release cut**
+- 最新 ADR: **ADR-013 (R21) — fork auto-execution stays frozen, 三轮 dogfood 证据**
+- 最新 tag: v0.1.4 (不动)
 - Blocked items: 无
-- 测试状态: **247/247 pass, 93% coverage, ruff + format clean** (R20 未改代码)
+- 测试状态: **250/250 pass, 93% coverage** (R20 247 → R21 250, 新增 3 个 Node.model + Usage guardrail 测试)
 - CLI 表面: 未变
-- **R20 产出 (纯 dogfood + 决策, 零 Chronos code 改动)**:
-  - `docs/case-studies/langgraph-bigtool.md` (6.3 KB, dogfood #3 案例)
-  - `progress/2026-04-23-round-20.md` (6.4 KB, 含 ADR-013 action items 草稿)
-  - `/workspace/chronos-dogfood/bigtool/` sandbox (dogfood.db + baseline 脚本)
-- **R20 两个 finding**:
-  - **F1 (upstream, 非 Chronos)**: `langgraph-bigtool 0.0.3` × `langgraph 1.1.9` 不兼容, `ToolNode.inject_tool_args` 改成 `_inject_tool_args`; 本地 monkey-patch 才能跑. 文档化, 不下 PR
-  - **F2 (Chronos DX wart)**: `model_name` 在 `Node.model_name`, 不在 `Node.usage.model_name`. R17/R18/R20 三份 dogfood 脚本都写错了, 证明是真实认知摩擦. 修方案: docstrings + `Node.model` property alias. R21 做
-- **ADR-008 三轮 dogfood 全部 0 execute-fork 需求** = weak-consistent-across-topologies 证据已齐. R21 写 ADR-013 形式化 "fork=JSON-only 保持冻结" 决策
-- **Dogfood topology 三角**: R17 centralized router (supervisor) / R18 decentralized handoff (swarm) / R20 single-agent + meta-tool (bigtool) — 三轴覆盖. 每轮都独立暴露不同 surface
+- **R21 产出 (ADR + 小 API 加法)**:
+  - `docs/decisions/ADR-013-fork-auto-execution-stay-frozen.md` (新, Accepted)
+  - `src/chronos/core/models.py`: `Usage` 加 cross-ref docstring; `Node.usage` 字段加 inline docstring; `Node.model` property alias (+~30 LOC)
+  - `tests/unit/test_models.py`: 3 个新测试 (property 正路径 + null-safety + `Usage.model_name` 不存在 guardrail)
+  - `CHANGELOG.md`: `[Unreleased]` 新增 R21 段
+  - `progress/2026-04-23-round-21.md`
+- **R21 不 bump 版本的理由**: 改动太小 (~30 LOC + 1 ADR), v0.1.4 刚 cut 6 小时, 攒到下一轮有实质内容再 cut v0.1.5
+- **ADR-008 boundary 官方冻结** (ADR-013 formalizes): 三轮 dogfood × 三种正交 topology × 0 execute-fork 需求; trigger conditions 明确; 可逆但需要新证据
+- **Dogfood topology 三角定型**: R17 centralized / R18 decentralized / R20 single-agent+meta-tool
 - 旧事实 (仍生效, 不重复):
   - GitHub push 只有 `gh-proxy.com`
   - LangGraph 1.1.9 record/fork/diff 全链路 OK
@@ -177,7 +177,7 @@ chronos-agent/
   - `SqliteStore.open()` 静默建文件, 读命令守 `Path.exists()`
   - **progress doc 每轮必写**
   - **`ForkPlan` schema 是 v0.1.1 对外契约**
-  - **ADR-009 usage extractor 协议是 v0.1.2 对外契约**
+  - **ADR-009 usage extractor 协议是 v0.1.2 对外契约** (ADR-012 扩展不改签名)
   - **Anthropic prompt caching 计账** (R15): cache_creation + cache_read 加到 prompt_tokens
   - **OpenAI reasoning tokens 语义** (R15): reasoning 是 completion 子字段, 不减
   - **Duck typing 原则** (R15): extractor 不 import SDK
@@ -185,7 +185,9 @@ chronos-agent/
   - **OneAPI 配方 (R17/R18 确立)**: `model="Claude Opus 4.7"`, 不传 temperature, 响应恒包装饰性 error 字段忽略, UV_INDEX_URL=aliyun
   - **M milestone naming / multi-round bundle**: bug fix 不 bump M; release cut 单独一轮打包多个前轮
   - **Release pattern (R13/R16/R19 三次验证)**: bump version → pyproject → CLI 状态行 → CHANGELOG → 全绿 → commit → tag -a → push main+tag
-  - **Dogfood script 陷阱 (R20 确立)**: `model_name` 在 `Node.model_name` 不是 `Node.usage.model_name` — 三份脚本踩过坑; R21 前写脚本直接用 `n.model_name`
+  - **Dogfood script 陷阱 (R20 确立 / R21 修)**: `model_name` 在 `Node.model_name` 不是 `Node.usage.model_name`; **R21 起推荐 `n.model` 短形式**
+  - **Em-dash (U+2014) / U+2212 minus 被 ruff RUF001 禁** (R21 又踩一次 — 肌肉记忆写进来)
+  - **Pydantic v2 field-level docstring**: 字段注解行下方 `"""..."""` 即是该字段的 docstring (R21 实际用了, 确认 ruff/mypy 不反对)
 
 ## Cron 窗口门控 (2026-04-22 用户指令)
 
@@ -203,47 +205,51 @@ if not (0 <= beijing_hour <= 11):
 **例外**: 用户手动触发/手动说"继续跑"可以不看窗口 (Round 3/4 就是这种情况)。
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 21 — 落地 R20 两大产出: ADR-013 + F2 修 (R20 写出了结论, R21 把它兑现成代码 + 文档)**
+**Round 22 候选 — R21 把 ADR-013 和 F2 都落了, R22 视野重新打开**
 
-### R21 核心目标 (推荐落地, 低 scope 高信号)
+### R22 选项 (按优先级排序, 下一轮挑一个做)
 
-**R21-A (必做)**: 写 ADR-013 — "Fork auto-execution: stay frozen"
-- 输入: R17 + R18 + R20 三轮 dogfood, 全 0 execute-fork 需求
-- 输出: `docs/decisions/ADR-013-fork-auto-execution-stay-frozen.md`
-- Status: **Accepted**
-- 内容要点:
-  - 证据类型: weak-consistent-across-topologies (单用户 × 单 LLM backend × 三 graph shape)
-  - 决策: ADR-008 的 "fork=JSON-only" 边界**保持冻结**
-  - Non-goal: 不是永久禁止 execute-fork, 而是 "无证据表明这是下一步要建的"
-  - 后续触发条件: 有外部用户写 issue 要求 auto-execute, 或新的 dogfood topology 暴露 JSON-only 的硬边界
-- 不改代码, 纯 ADR 文档
+**R22-A (最推荐)**: `chronos fork emit-python` — ADR-013 deferred alt C
+- 背景: ADR-013 明确冻结 execute-fork, 但 deferred alt C 是个真正的中间路径: **Chronos 生成一段可粘贴的 Python 代码, 用户粘贴进自己的 graph 调用里就能完成 fork**. 不跨 execute-fork 边界, 但填了 "JSON-only 太裸" 的 DX gap
+- 输入: 一个 `ForkPlan` 对象 (已有的 v0.1.1 契约)
+- 输出: 一段 Python stdout (或文件), 含 `from chronos import ForkPlan; plan = ForkPlan(...)` + `# paste into your graph.invoke(...) call` 示范
+- 新 CLI 动词: `chronos fork emit-python <fork_id>` (加在 fork 子命令下)
+- 预期改动: ~50-80 LOC + 5-8 tests; 可选 bump v0.1.5 or 攒
+- **用户价值可感知**: 第一个 "让 fork 真的能用起来而不用读文档" 的改进
 
-**R21-B (必做)**: 修 F2 DX wart — `Node.model_name` 认知摩擦
-- 低成本路径 (推荐):
-  1. 给 `Usage` 类加 docstring cross-ref: "model_name is NOT here; see Node.model_name"
-  2. 给 `Node.usage` 字段加 docstring cross-ref 同上
-  3. 加 `Node.model` read-only property = alias for `Node.model_name` (让 `n.model` 也能用)
-- **不改 schema** (移 model_name 到 Usage 是破坏性改动, 拒绝)
-- +2-3 tests: property alias 返回正确值; 读写语义一致
-- 预期改动 <20 LOC
+**R22-B**: Phase 2 spike — AutoGen adapter 一轮试水
+- ⚠️ R10 红线: Phase 2 之前不碰 AutoGen. R22 起 Phase 1 MVP 已稳定 + ADR-013 冻结 fork + dogfood 三轮完成, 可以动了
+- 目标: 不是完整 AutoGen adapter, 是写 `src/chronos/adapters/autogen.py` 最小 `AutoGenRecorder.record()` context manager + 1 个 minimal example
+- 验证 `Recorder` 协议是否真的 framework-agnostic, 暴露哪些 protocol 漏洞
+- 时间盒子: 1 轮; 不成就写 lessons, 不硬推
+- 成功条件: 能在 AutoGen 2-agent 对话上抓出至少 2 个 node, token count 合理
 
-**R21-C (选做, 可省)**: 修 R17 + R18 dogfood 脚本里的 `getattr(u, "model_name")` bug
-- 历史 dogfood 工件, 不是对外表面
-- 如果 R21-B 加了 `Node.model` alias, 可以顺手把 dogfood 脚本改成 `n.model` 示范新 API
-- 改或不改取决于时间
+**R22-C (选做, 低优先)**: R21-C leftover — R17/R18 老 dogfood 脚本用 `n.model` 替换 `u.model_name`
+- 改 2 个历史脚本, 演示新 API, ~5 min
+- 如果做 R22-A 或 R22-B 时 "顺手" 做了更好; 独立做一轮不划算
 
-### R21 release strategy
-- R21-A 纯 ADR, 不 bump
-- R21-B 加 property, **技术上是对外表面加法**, 但 `Node.model` 只是 alias, 不改既有字段 → **加法, 非破坏**
-- 可以等 R22 + R23 攒一两个小改动再 cut v0.1.5, 或 R21 自己 cut — 用户决定
-- **Release pattern 已肌肉记忆 (R13/R16/R19 三次验证)**: bump version → pyproject → CLI 状态行 → CHANGELOG → 全绿 → commit → tag -a → push main+tag
+### R22 非目标
+- ❌ execute-fork 实现 (ADR-013 冻结)
+- ❌ 第四轮 dogfood (三轮已够, 除非外部用户要求)
+- ❌ v0.1.5 cut 除非 R22-A 或 R22-B 产出够大
 
-### R21 非目标 (明确不做)
-- ❌ 开始 Phase 2 (AutoGen/CrewAI adapter) — 仍在 Phase 1.5, 等 ADR-013 落定
-- ❌ 第四轮 dogfood — 三轮已够; 再做一轮边际效益低, 除非有外部用户要求特定 topology
-- ❌ execute-fork 实现 — ADR-013 明确冻结
+### Release strategy for R22+
+- `[Unreleased]` 现在有 R21 的 `Node.model` + ADR-013 两段
+- R22 如果做 R22-A 产出一个 CLI 动词, 值得 cut v0.1.5
+- R22 如果做 R22-B (Phase 2 spike), 通常**不** cut, 留给 Phase 2 M2.1 里再打包
+- 继续用 R13/R16/R19 肌肉记忆的 7 步 release pattern
 
-### 旧 R17 候选 (历史存档, 已实现或已过时, 下面保留作参考)
+---
+
+### 旧 R21 计划 (已完成, 存档)
+
+- ~~R21-A 写 ADR-013~~ ✅ done (Accepted)
+- ~~R21-B 加 Node.model + docstring cross-ref~~ ✅ done (+~30 LOC, 3 tests)
+- ~~R21-C 修老脚本~~ → 推到 R22 (可选)
+
+---
+
+### 更早的 R17 候选 (历史存档, 下面保留作参考)
 
 ---
 

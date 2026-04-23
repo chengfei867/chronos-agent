@@ -4,7 +4,16 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
-_Nothing yet — R19 will decide._
+### Added (Round 21) — `Node.model` convenience property
+- New read-only property `Node.model` returns `self.model_name`. Shorter, canonical form. Prefer `node.model` in user code.
+- Docstring cross-refs added to `Usage` class and `Node.usage` field, explicitly calling out that `model_name` is **not** a `Usage` field — it lives on `Node`. Addresses R20 Finding #2 (three independent dogfood scripts wrote `node.usage.model_name` and got `None`).
+- 3 new tests guard the property + enforce the guardrail that `Usage.model_name` stays rejected (ADR-013 affirmation).
+- No schema change, no version bump, additive only.
+
+### Documentation (Round 21) — ADR-013 (fork auto-execution: stay frozen)
+- ADR-013 formalizes the stop-thinking-about-it decision on execute-fork, based on R17+R18+R20 three-round weak-consistent dogfood evidence (zero execute-fork demand across supervisor / swarm / bigtool topologies).
+- Affirms ADR-008 "fork=JSON-only" boundary; documents explicit trigger conditions for reopening.
+- Third-party case study: `docs/case-studies/langgraph-bigtool.md` (R20 dogfood #3).
 
 ---
 

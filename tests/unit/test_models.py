@@ -125,6 +125,31 @@ def test_usage_total_tokens() -> None:
     assert u.total_tokens == 160
 
 
+def test_node_model_property_aliases_model_name() -> None:
+    """R20 Finding #2: node.model is a convenience alias for node.model_name."""
+    node = _new_node(kind=NodeKind.LLM, model_name="claude-opus-4-7")
+    assert node.model == "claude-opus-4-7"
+    assert node.model == node.model_name
+
+
+def test_node_model_property_none_when_model_name_unset() -> None:
+    node = _new_node()
+    assert node.model_name is None
+    assert node.model is None
+
+
+def test_usage_has_no_model_name_field() -> None:
+    """Guardrail for R20 Finding #2: ``model_name`` must never move onto
+    ``Usage``. If someone schemas it in, three years of muscle memory
+    tells users it was there all along, and we break ADR-013's
+    affirmation that the cognitive model is fields-parallel-on-Node.
+    """
+    u = Usage(prompt_tokens=1, completion_tokens=1)
+    assert not hasattr(u, "model_name")
+    # Pydantic model_fields is the authoritative schema view
+    assert "model_name" not in Usage.model_fields
+
+
 # --- Fork ------------------------------------------------------------------
 
 

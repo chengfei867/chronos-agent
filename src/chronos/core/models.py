@@ -65,7 +65,15 @@ class RunStatus(StrEnum):
 
 
 class Usage(BaseModel):
-    """Token & cost usage for a single LLM node (where applicable)."""
+    """Token & cost usage for a single LLM node (where applicable).
+
+    **Note:** this class intentionally only holds token counts. The
+    ``model_name`` for an LLM call is **not** stored here -- it lives on
+    :attr:`Node.model_name` (or, as a shorthand, :attr:`Node.model`).
+    Three independent dogfood scripts wrote ``node.usage.model_name`` and
+    got ``None`` before we wrote this docstring; don't be the fourth.
+    See ADR-013 / R20 Finding #2.
+    """
 
     prompt_tokens: int = 0
     completion_tokens: int = 0
@@ -123,6 +131,8 @@ class Node(BaseModel):
     # LLM-specific (nullable unless kind == LLM)
     model_name: str | None = None
     usage: Usage | None = None
+    """Token counts for this LLM call. Note: ``usage.model_name`` does not
+    exist -- see :attr:`model_name` / :attr:`model` for that."""
     cost_usd_cents: int | None = None
 
     # Tool-specific (nullable unless kind == TOOL)
@@ -132,6 +142,18 @@ class Node(BaseModel):
     error_message: str | None = None
 
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @property
+    def model(self) -> str | None:
+        """Convenience alias for :attr:`model_name`.
+
+        Exists because three separate dogfood scripts reached for
+        ``node.usage.model_name`` (wrong) or ``node.model`` (also wrong,
+        but less wrong) before we added this. Prefer ``node.model``
+        going forward -- it's shorter and harder to confuse with
+        :class:`Usage` token fields. See ADR-013 / R20 Finding #2.
+        """
+        return self.model_name
 
     @model_validator(mode="after")
     def _check_times(self) -> Node:
