@@ -97,7 +97,7 @@ def info() -> None:
     console.print(f"[bold]chronos[/bold] {__version__}")
     console.print(
         "Status: pre-alpha (Phase 1 M1.11 — usage extractor hook "
-        "+ native Anthropic/OpenAI adapters, v0.1.3)"
+        "+ native Anthropic/OpenAI adapters + multi-LLM-per-node accumulation, v0.1.4)"
     )
     console.print(
         "Commands: [green]runs list/show, forks show, diff, replay, fork plan[/green] "

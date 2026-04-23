@@ -4,7 +4,40 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
-_Nothing yet — R17 will decide._
+_Nothing yet — R19 will decide._
+
+---
+
+## [0.1.4] — 2026-04-23 (Round 17 + Round 18)
+
+**Theme**: Real-world dogfood finds silent token undercount. Two consecutive rounds of using Chronos on real 1000+ ★ LangGraph ecosystem libraries (`langgraph-supervisor-py`, `langgraph-swarm-py`) surfaced bugs that 242 green unit tests had not caught. Numbers that looked valid were wrong by up to ~50%. Now fixed.
+
+### Fixed (Round 18) — multi-LLM-per-node token accumulation (ADR-012)
+- All three LangGraph usage extractors (`aimessage_usage_extractor`, `anthropic_usage_extractor`, `openai_usage_extractor`) previously used "last AIMessage wins" semantics, which silently under-counted tokens by 30-70% on graphs where a single super-step issues multiple LLM calls. Swarm-style graphs (`create_react_agent` sub-graphs embedded in a parent swarm) are the most common trigger.
+- Concrete evidence: on `langgraph-swarm-py`, Bob-node usage was reported as `1222 prompt + 99 completion` when the true usage was `2275 + 211` (46% of prompt tokens, 53% of completion tokens silently dropped).
+- **Fix**: extractors now diff `UsageContext.post_values["messages"]` against `UsageContext.pre_values["messages"]` and sum usage across **all** new `AIMessage` objects, not just the last one. `UsageContext.pre_values` was exposed in R15 (ADR-011) but had never been used — R18 makes it earn its keep.
+- No public API change. No data-model change. Preserves all prior semantics (cache tokens fold into `prompt_tokens`; `reasoning_tokens` sub-field of `completion_tokens`; `None` for non-LLM nodes).
+- ADR-012 — multi-LLM-per-node usage accumulation (extends ADR-009 contract without signature change).
+- 5 regression tests added: swarm Bob-node scenario, pre-history protection, OpenAI path, non-LLM node `None` return, initial-step fallback.
+- R17 supervisor dogfood re-run confirms no regression; `research_expert` now reports `1957+283` (was `1755+271` — a previously-unnoticed ~10% undercount in the old code path, also now accurate).
+- Case study published: `docs/case-studies/langgraph-swarm.md`.
+
+### Fixed (Round 17) — state serialization + JSON-to-pydantic coercion (ADR-011)
+- First real-world dogfood target: `langgraph-supervisor-py`. Three showstopper bugs surfaced on the very first run, all of them invisible to the unit suite.
+- `LangGraphRecorder` now recursively coerces pydantic models to `dict` before SQLite write-back (`TypeError: Object of type HumanMessage is not JSON serializable`). Extractors now accept both `AIMessage` pydantic objects and dict-coerced messages (ADR-011).
+- Case study published: `docs/case-studies/langgraph-supervisor.md`.
+
+### Numbers
+- Tests: 236 → **247 pass** (+5 R17 regression, +6 R18 regression; 2 R18 tests renamed in-place since semantics changed from "last wins" to "sum all new"). Coverage **93%**. Ruff + format clean.
+- Version bumped `0.1.3` → `0.1.4` in `src/chronos/__init__.py` and `pyproject.toml`.
+- CLI status line updated: `"Phase 1 M1.11 — usage extractor hook + native Anthropic/OpenAI adapters + multi-LLM-per-node accumulation, v0.1.4"`.
+- Git tag `v0.1.4` pushed to `origin` (private repo, gh-proxy.com mirror).
+
+### Notes
+- No schema changes. `UsageExtractor` Protocol signature from ADR-009 unchanged — R18 only extends the documented accumulation semantics.
+- M1.11 milestone kept (R17 + R18 fix latent bugs in the same capability; not a new milestone).
+- ADR-008 (execute-fork boundary): 2 consecutive dogfood rounds produced **zero** demand for auto-executing forked plans. Boundary stays frozen — evidence now based on real usage, not speculation.
+- **Core lesson (now project DNA)**: N green unit tests + M showstopper bugs can coexist; unit tests do not replace dogfood. R18 re-validated this even *after* R17 had sharpened the tests.
 
 ---
 
