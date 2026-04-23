@@ -147,26 +147,29 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
-**截至 Round 23-A 结束 (2026-04-23 晚 CST, 用户交互轮) — R22 `--emit python` 过 E2E 实战; 发现并修 3 个 R22 stub bug; `[Unreleased]` 已填 Fixed 段等 R23 剩余两步**
+**截至 Round 23-C 结束 (2026-04-23 晚 CST, 用户交互轮) — v0.1.6 cut (R23-A + R23-B + R23-C bundle); R22 stub 经 dogfood 验证 + 3 bug 修复 + checkpointer 陷阱文档化; `[Unreleased]` 空等 R24**
 
-- Round: **23-A 完成** (R22 `--emit python` 生成 + v0.1.5 cut → **R23-A dogfood 验证 + bug 修复**)
-- 最近 progress doc: `progress/2026-04-23-round-23a.md` ← **下一轮必读**; R22 在 `progress/2026-04-23-round-22.md`
-- 当前阶段: **Phase 1 + 三轮 dogfood + ADR-013 冻结 + ADR-013 alt C shipped + v0.1.5 cut + R22 stub 经实战验证 (3 bug 已修); `[Unreleased]` 含 R23-A Fixed 段等 R23-B/C**
+- Round: **23-C 完成** (R23-A dogfood+bug fix → R23-B case study → **R23-C stub checkpointer hint + v0.1.6 cut**)
+- 最近 progress doc: `progress/2026-04-23-round-23a.md` (R23-A 核心) + case study `docs/case-studies/fork-via-emit-python.md` (R23-B) ← **下一轮必读**
+- 当前阶段: **Phase 1 + 三轮 dogfood + ADR-013 冻结 + ADR-013 alt C shipped + R22 stub 经 E2E 实战 + checkpointer 陷阱已写进 stub/docs + v0.1.6 cut; `[Unreleased]` 空等 R24**
 - 最新 ADR: **ADR-013 (R21)** — 未变
-- 最新 tag: **v0.1.5** (R21+R22 bundle) — 未变; R23 各步攒进 `[Unreleased]` 直到 R23-C 完成再 cut v0.1.6
+- 最新 tag: **v0.1.6** (R23-A+B+C bundle, annotated)
 - Blocked items: 无
-- 测试状态: **263/263 pass, 93% coverage** (R22 260 → R23-A +3 regression tests)
-- CLI 表面: 未变 (`chronos fork plan <run_id> --emit python|json`); 但 python 路径的 stub 模板和 preview hint 已改
-- **R23-A 产出 (R22 bug fixes + E2E 实战)**:
-  - `src/chronos/fork_plan.py`: `to_python()` 模板修 3 处 — `ref.run_id` → `ref.child_run_id`; `print(...)` 移出 `with` 块 + 注释说明 lifecycle; 示例 import 改成 `from chronos.store import SqliteStore` + `SqliteStore.open(path)` CM
-  - `src/chronos/cli/fork.py`: `render_plan_preview` 加 `emit="json"/"python"` kwarg; python 路径提示不同 (告诉用户填 TODO + `python <stub>`); 删掉多余的 trailing status line
-  - `tests/unit/test_fork_plan.py`: +3 regression tests (22 → 25), 其一真 `exec` stub 验证 child_run_id 打印; 另两个 text-level 守卫
-  - `tests/unit/test_fork_cli.py`: 1 断言更新 (旧 "paste-ready..." 字符串已删)
-  - `CHANGELOG.md`: `[Unreleased]::Fixed (Round 23-A)` 段
+- 测试状态: **264/264 pass, 93% coverage** (R22 260 → R23 总计 +4 regression tests)
+- CLI 表面: `chronos fork plan <run_id> --emit python|json` — 同 v0.1.5; 但 python 路径的 stub 模板含 checkpointer 警告
+- **R23 bundle 产出 (A+B+C)**:
+  - `src/chronos/fork_plan.py`: `to_python()` 模板修 3 处 R22 bug + 加 checkpointer `IMPORTANT:` 注释块
+  - `src/chronos/cli/fork.py`: `render_plan_preview` emit-aware hint
+  - `docs/case-studies/fork-via-emit-python.md`: 完整 tutorial + 3 bug 复盘 + checkpointer 陷阱深度解释 + ADR-008/013 回顾
+  - `tests/unit/test_fork_plan.py`: +4 regression tests (22 → 26), 含 exec-based
+  - `tests/unit/test_fork_cli.py`: 1 断言更新
+  - `CHANGELOG.md`: `[Unreleased]` 清空, `[0.1.6] — 2026-04-23 (Round 23-A + 23-B + 23-C)` 四段 (Fixed/Added/Documentation/Tests+Evidence)
+  - `__version__=0.1.6`, `pyproject.toml::version=0.1.6`, CLI 状态行更新
   - `progress/2026-04-23-round-23a.md`
-- **R23-A 实战结果**: `chronos fork plan ... --emit python` 生成 stub → 填 2 个 TODO(user) → `python fork_stub_filled.py` → 新 child run `16ca0fa5-cbec-418b-bd47-7a9546048b01` + fork `f6b36f40-82c3-45d8-9386-5b8a4e7b393c` 入库. 工作流通
-- **R23-A DX 发现 (待 R23-B/C 决定)**: `graph.invoke(None, {thread_id})` 只有在 graph 配了**持久化且跨 run 共享**的 checkpointer 时才续跑; R17 `build_supervisor_app()` 的 `InMemorySaver` 每次 import 是新实例 → child run 有 fork 记录但 `node_ids=[]`. 不是 Chronos bug, 是 LangGraph 语义, 但 stub/help/docs 都没说. R23-C 决定: 加 stub TODO 块 (B1-lite) vs. docs-only (B2)
-- **R22 dogfood artifacts**: `/workspace/chronos-dogfood/supervisor/` 下新增 `fork_stub.py` + `fork_stub_filled.py`; `dogfood.db` 多了一个 R23-A child run
+- **R23 bundle 的理由**: R23-A 修 R22 bug + R23-B 写 case study + R23-C 加 stub hint 讲的是一个故事 — "R22 的 feature 经得住真实使用, 但 R22 tests 不够深 (只 compile 不 exec); 现在补齐 + 把学到的教给用户". 整体内聚, 一起 cut v0.1.6
+- **R23-A 实战结果**: `chronos fork plan ... --emit python` → 填 2 TODO → `python <stub>` → 新 child run `16ca0fa5-cbec-418b-bd47-7a9546048b01` + fork `f6b36f40-82c3-45d8-9386-5b8a4e7b393c` 入库. 工作流验证通
+- **R23-A DX 发现 (R23-B 已写进 case study, R23-C 已写进 stub)**: `graph.invoke(None, {thread_id})` 续跑需要持久化且跨 run 共享的 LangGraph checkpointer; R17 `InMemorySaver` per-factory-call 不够
+- **R22 dogfood artifacts**: `/workspace/chronos-dogfood/supervisor/` 下 `fork_stub.py` + `fork_stub_filled.py`; `dogfood.db` 多了 R23-A child run
 - 旧事实 (仍生效, 不重复):
   - GitHub push 只有 `gh-proxy.com`
   - LangGraph 1.1.9 record/fork/diff 全链路 OK
@@ -185,13 +188,14 @@ chronos-agent/
   - **CLI 模块形状 (R14 确立)**: subcommand 实现模块暴露 `*_command(console, open_store_fn, ...)`
   - **OneAPI 配方 (R17/R18 确立)**: `model="Claude Opus 4.7"`, 不传 temperature, 响应恒包装饰性 error 字段忽略, UV_INDEX_URL=aliyun
   - **M milestone naming / multi-round bundle**: bug fix 不 bump M; release cut 单独一轮打包多个前轮
-  - **Release pattern (R13/R16/R19/R22 四次验证)**: bump version → pyproject → CLI 状态行 → CHANGELOG → 全绿 → commit → tag -a → push main+tag
+  - **Release pattern (R13/R16/R19/R22/R23 五次验证 — 够做 skill 了)**: bump version → pyproject → CLI 状态行 → CHANGELOG → 全绿 → commit → tag -a → push main+tag
   - **Dogfood script 陷阱**: `model_name` 在 `Node.model_name`; **R21 起推荐 `n.model` 短形式**
-  - **Em-dash (U+2014) / U+2212 minus 被 ruff RUF001 禁**
+  - **Em-dash (U+2014) / U+2212 minus 被 ruff RUF001 禁** (仅 py 源码, md 文档 OK)
   - **Pydantic v2 field-level docstring**: 字段注解行下方 `"""..."""` 即是 docstring
-  - **R22 教训 (R23-A 实战确认)**: 代码生成类测试必须 `compile()` **并** `exec()`, 否则 field-name typo / lifecycle 顺序错误会漏
-  - **ForkRef 字段**: `child_run_id`, `fork_id`, `node_ids` — 仅在 CM **exit** 后填 (R22 生成器首版踩过)
-  - **SqliteStore 公开 API**: `SqliteStore.open(path)` classmethod 用作 CM (不是 `SqliteStore(path)`, 也不是 `from chronos.store.sqlite import SqliteStore` — 公开入口在 `chronos.store`)
+  - **代码生成类测试必须 `compile()` + `exec()`** (R22 教训, R23-A 实战确认): 只 compile 会漏 field-name typo / lifecycle ordering / placeholder 默认值
+  - **ForkRef 字段**: `child_run_id`, `fork_id`, `node_ids` — 仅在 CM **exit** 后填
+  - **SqliteStore 公开 API**: `SqliteStore.open(path)` classmethod 用作 CM
+  - **LangGraph fork 语义 (R23-A 确立)**: `graph.invoke(None, {thread_id})` 续跑要求持久化且跨 run 共享的 checkpointer (`SqliteSaver.from_conn_string(...)`), 不是 per-factory-call 新 `InMemorySaver`
 
 ## Cron 窗口门控 (2026-04-22 用户指令)
 

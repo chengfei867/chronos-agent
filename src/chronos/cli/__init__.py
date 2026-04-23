@@ -97,7 +97,7 @@ def info() -> None:
     console.print(f"[bold]chronos[/bold] {__version__}")
     console.print(
         "Status: pre-alpha (Phase 1 M1.12 -- Node.model alias + "
-        "fork plan --emit python (ADR-013 alt C), v0.1.5)"
+        "fork plan --emit python (ADR-013 alt C), v0.1.6)"
     )
     console.print(
         "Commands: [green]runs list/show, forks show, diff, replay, fork plan[/green] "

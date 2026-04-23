@@ -418,3 +418,20 @@ def test_to_python_uses_child_run_id_not_run_id() -> None:
     src = _sample_plan().to_python()
     assert "ref.child_run_id" in src
     assert "ref.run_id" not in src
+
+
+def test_to_python_mentions_checkpointer_persistence_gotcha() -> None:
+    """R23-C: stub must warn about the checkpointer-persistence pitfall.
+
+    Child runs only step through graph nodes if the parent and the fork
+    share a persistent or cross-call-live checkpointer. An InMemorySaver
+    built per factory call produces an empty child (only the fork record,
+    zero new node ids). The stub must tell users this before they write
+    their graph factory.
+    """
+    src = _sample_plan().to_python()
+    # Must name the concrete failure mode and the concrete fix.
+    assert "checkpointer" in src
+    assert "SqliteSaver" in src
+    # Must point users at the case study for the full explanation.
+    assert "fork-via-emit-python" in src

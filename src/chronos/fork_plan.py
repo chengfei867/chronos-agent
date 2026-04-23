@@ -176,6 +176,15 @@ two TODO(user) blocks below is your step.
 
 # TODO(user): build or import your compiled LangGraph ``{graph_var}`` here.
 # It must be the same graph (same nodes, same edges) as the parent run.
+#
+# IMPORTANT: for the child run to actually *step through* nodes (instead of
+# only registering the fork record), the graph must be compiled with a
+# checkpointer that BOTH the parent run and this fork share. An InMemorySaver
+# that is recreated per factory call will not work -- the parent's state is
+# not visible to the fresh instance. Use a persistent checkpointer such as
+# ``SqliteSaver.from_conn_string("checkpoints.db")``, or keep a single saver
+# alive across both record(...) and fork(...). See
+# ``docs/case-studies/fork-via-emit-python.md`` for the full explanation.
 
 # Fork kwargs are inlined below as Python literals -- no JSON file needed.
 with {recorder_var}.fork(

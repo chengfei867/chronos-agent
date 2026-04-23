@@ -4,20 +4,40 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
+_Nothing yet — R24 will decide._
+
+---
+
+## [0.1.6] — 2026-04-23 (Round 23-A + Round 23-B + Round 23-C)
+
+**Theme**: R22's `fork plan --emit python` survives first real use. Dogfood of the feature against the R17 supervisor baseline (parent run `69932676-5b33...`) surfaced three bugs the R22 tests missed (they only `compile()`-checked, never `exec`-ed), plus one DX pitfall worth documenting. All four addressed before cut.
+
 ### Fixed (Round 23-A) — `fork plan --emit python` stub executability
 
-Dogfood of R22 against the R17 supervisor baseline (`chronos-dogfood/supervisor`) exposed three bugs that slipped past R22 because tests only `compile()`-checked the generated stub, never `exec`-ed it. All three are fixed with regression tests that actually run the stub:
+Three bugs in the generated stub template, caught by real end-to-end use:
 
 - Stub used `ref.run_id`, but `ForkRef` exposes `child_run_id` (plus `fork_id`, `node_ids`). Any real execution of the stub would `AttributeError` at the final print line. Now correctly uses `ref.child_run_id`.
 - Final `print(...)` was placed *inside* the `with recorder.fork(...)` block, but `ForkRef` fields are populated on context-manager **exit** — so the print always fired before population and printed `None`. Print moved below the `with` block with a comment explaining the lifecycle.
-- Example import/construction comments suggested `from chronos.store.sqlite import SqliteStore` + `SqliteStore("..."); store.open()`, neither of which is the public API. Corrected to `from chronos.store import SqliteStore` + `SqliteStore.open(path)` context-manager idiom (matches how `chronos-dogfood/supervisor/dogfood_baseline.py` actually opens its store).
+- Example import/construction comments suggested `from chronos.store.sqlite import SqliteStore` + `SqliteStore("..."); store.open()`, neither of which is the public API. Corrected to `from chronos.store import SqliteStore` + `SqliteStore.open(path)` context-manager idiom.
 - CLI `render_plan_preview` previously printed the same `consume in code with from chronos.fork_plan import load_plan` hint for both `--emit json` and `--emit python`. Now emit-aware: the python path tells users to fill the two `TODO(user)` blocks and `python <stub>`.
+
+### Added (Round 23-C) — checkpointer-persistence warning in the stub
+
+The stub's graph `TODO(user)` block now includes an `IMPORTANT:` note explaining that child runs only step through graph nodes if the parent and the fork share a persistent or cross-call-live LangGraph checkpointer. An `InMemorySaver` rebuilt per factory call registers the fork record but produces `node_ids=[]`. Note recommends `SqliteSaver.from_conn_string(...)` and points at the case study.
+
+### Documentation (Round 23-B)
+
+- New case study: `docs/case-studies/fork-via-emit-python.md` walks through the full use-in-anger path — generate → fill → run → inspect — with the three R22 bugs and the checkpointer-persistence pitfall explained in detail. Also revisits why ADR-008 / ADR-013 chose the stub-emission path over execute-fork automation.
 
 ### Tests
 
-- `test_fork_plan.py` gained 3 regression tests (22 → 25): one actually `exec`s the stub with a mocked recorder + graph and asserts the print line reaches stdout with the correct value; two assert the comment/import and field-name invariants at source level.
+- `test_fork_plan.py` gained 4 regression tests (22 → 26): one actually `exec`s the stub with a mocked recorder + graph and asserts the print line reaches stdout with the correct value; three assert text-level invariants (correct imports, correct `ref` field, checkpointer warning present).
 - `test_fork_cli.py` assertion for the stale "paste-ready Python stub written to" message replaced with the new preview-based hint check.
-- Full suite: **263 / 263 pass, 93% coverage**, ruff/format/mypy all green.
+- Full suite: **264 / 264 pass, 93% coverage**, ruff/format/mypy all green.
+
+### Evidence
+
+End-to-end verified: `chronos fork plan 69932676-5b33... --emit python --out fork_stub.py --db dogfood.db` → fill 2 TODO blocks → `python fork_stub_filled.py` → new child run `16ca0fa5-cbec-418b-bd47-7a9546048b01` + fork `f6b36f40-82c3-45d8-9386-5b8a4e7b393c` land in the DB alongside the parent.
 
 ---
 
