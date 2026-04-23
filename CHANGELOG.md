@@ -4,6 +4,14 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
+(nothing yet — next round candidates see `docs/CONTEXT.md` §6)
+
+---
+
+## [0.1.1] — 2026-04-23 (Round 10 + Round 11)
+
+Phase 1 follow-up: the **record / replay / fork / diff four-verb loop** is now end-to-end in CLI (not just library). Shipped in two rounds:
+
 ### Added (Round 11) — M1.10 `chronos fork` CLI + fork plan artifact
 - `chronos fork plan <run_id>` — emit a portable **fork plan** JSON artifact describing a proposed fork (parent run, fork-point node, overrides, child thread id, reason, tags). CLI never executes user code; plans are consumed via `chronos.fork_plan.load_plan()` in the user's script, which then calls `recorder.fork(graph, **plan.recorder_kwargs())`. Fork-point selectable via `--at-node <name>` (unique-name check), `--at-index <k>` (step index, always unambiguous), or `--at-node-id <uid>`.
 - Override ergonomics: repeatable `--override k=v` (JSON-parsed first, falls back to raw string), `--override-json '{...}'` for bulk merges, `--allow-new-keys` to opt out of the default "reject unknown keys" typo guard.
