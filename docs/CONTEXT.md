@@ -147,45 +147,50 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
-**截至 Round 9 结束 (2026-04-23 北京 ~11:40, 用户交互轮)**
+**截至 Round 12 结束 (2026-04-23 北京下午, 用户交互轮)**
 
-- Round: **9 完成** (R8 examples/docs 收尾 + v0.1.0 tag)
-- 最近 progress doc: `progress/2026-04-23-round-9.md` ← **下一轮的你必读**; R8 的补记在 `progress/2026-04-23-round-8.md`
-- 当前阶段: **Phase 1 MVP 完成, v0.1.0 已 tag** — record/fork/diff 闭环, replay (M1.7) 主动推迟到 0.1.1
-- 最新 ADR: `ADR-006-diff-alignment.md` (Accepted)
-- 最新 tag: **v0.1.0** (R9 cut)
+- Round: **12 完成** (R11 M1.10 fork CLI + v0.1.1 tag → R12 M1.11 usage extractor)
+- 最近 progress doc: `progress/2026-04-23-round-12.md` ← **下一轮的你必读**; R11 在 `progress/2026-04-23-round-11.md`
+- 当前阶段: **Phase 1 MVP + 四动词 CLI 闭环 (v0.1.1) + token/cost 可视化 (R12 未 tag)** — 下一轮 R13 预计 cut v0.1.2
+- 最新 ADR: `ADR-009-usage-extractor-hook.md` (Accepted)
+- 最新 tag: **v0.1.1** (R11 cut); R12 **未 tag**, 等 R13 捆绑 small follow-ups 一起 cut v0.1.2
 - Blocked items: 无
-- 测试状态: **114/114 pass, 92% coverage, ruff + mypy clean**
-- CLI 表面 (v0.1.0):
-  - `chronos runs list [--db PATH] [-n N] [--json]`
-  - `chronos runs show <id> [--db PATH] [--json]`
+- 测试状态: **216/216 pass, 94% coverage, ruff + mypy clean** (R12 新增 21 tests)
+- CLI 表面 (R12 新增/增强):
+  - `chronos runs list [--db PATH] [-n N] [--json] [--with-usage]` ← R12 加 `--with-usage`
+  - `chronos runs show <id> [--db PATH] [--json]` ← R12 隐式加 total-usage + per-node 内联 tokens
   - `chronos forks show <id> [--db PATH] [--json]`
-  - `chronos diff <run_a> <run_b> [--db PATH] [--json] [--verbose] [--full]`
+  - `chronos diff <a> <b> [--db PATH] [--json] [--verbose] [--full] [--show-usage]` ← R12 加 `--show-usage`
+  - `chronos fork plan <run_id> ...`
+  - `chronos replay <run_id> [--db PATH] [--no-interactive]`
   - `chronos info`
-  - ⚠️ `--db` 是 **per-subcommand** 旗标, 不是全局; 错用 `chronos --db X cmd` 会报 `No such option`
-- Examples (R8 新增):
-  - `examples/linear_pipeline.py` — 5 节点 Alex 故事, 确定性 FakeLLM
-  - `examples/router_loop.py` — 带循环边的 graph + 强制早退 fork
-  - 两个都能 `uv run python examples/<name>.py` 跑出来, 零 API key
-- Docs (R8 新增):
-  - `docs/getting-started.md` (165 行, 5 min onboarding, 含 Troubleshooting)
-  - `docs/cli-reference.md` (136 行, 每个命令/旗标/退出码)
-  - `CHANGELOG.md` (Keep-a-Changelog 格式, `[Unreleased]` → R10 时 roll 进 `[0.1.0]`)
-  - `README.md` 重写, `.gitignore` 排除 `examples/chronos.db`
-- 新验证事实 (R9):
-  - **Docstring drift 是真实 bug** — R8 改了运行时 print 和 Troubleshooting, 但忘改 docstring. R9 靠 dogfood (实跑 example + 复制命令) 发现. 教训: 每轮末做一次 grep-consistency 扫描
-  - **Examples 跑 + 复制命令真能跑** 已实测通过 (R9 手验 linear_pipeline 的 `--verbose` diff)
-  - **fork-aware diff 切片在真数据下表现良好** — linear_pipeline parent→fork-child 正确切到 3 个下游节点 (draft/review/finalize), 不显示上游 plan/research
+  - ⚠️ `--db` 是 **per-subcommand** 旗标, 不是全局
+- Adapter API 新增 (R12):
+  - `LangGraphRecorder(..., usage_extractor: UsageExtractor | None = None)` — callable Protocol
+  - `chronos.adapters.langgraph_usage`: `UsageContext`, `UsageResult`, `UsageExtractor`, `aimessage_usage_extractor`
+- Schema 字段激活 (R12 无改动, 纯填充):
+  - `Node.usage: Usage | None` 和 `Node.cost_usd_cents: int | None` (M1.1 就有, 此前 0 引用)
+- Examples (R12 更新):
+  - 两个 example 都接了 demo `usage_extractor`, "Try these" 块里加 `--with-usage` / `--show-usage`
+  - dogfood 14/14 仍 green (新命令自动被捡起来)
+- Docs (R12 更新):
+  - `docs/cli-reference.md` — `runs list --with-usage`, `diff --show-usage`, 新章节 "Token usage & cost tracking"
+  - `docs/getting-started.md` — 新 §4b "Track token usage and cost"
+  - `CHANGELOG.md` — `[Unreleased]` 填上 R12 完整条目
+- 新验证事实 (R12):
+  - **Schema 字段闲置是真实欠款** — `Usage` / `cost_usd_cents` 从 M1.1 就写在表里, 到 R12 才有 adapter 往里塞数据. 教训: schema 字段加了就要立刻配 writer 路径, 不然会静静躺着好几轮
+  - **失败容忍设计最关键的决策** — extractor 是用户代码, 可能抛任何异常; ADR-009 定死 "raise → log warning + 存 None, 永不破 capture", 这保证主流程可靠性
+  - **`--with-usage` 性能开销是真实的** — 要给每个 run 多跑一次 `get_nodes_for_run` + SUM, 所以设计成 opt-in flag 而不是默认行为
 - 旧事实 (仍生效, 不重复):
   - GitHub push 只有 `gh-proxy.com`
   - LangGraph 1.1.9 record/fork/diff 全链路 OK
-  - Fork 语义见 R5 进度
   - `NodeKind` 合法值 `{llm, tool, fn, router, fork, end}`
   - Runs/Nodes upsert, Forks append-only
   - Duck + real 双测试策略
   - JSON 模式走 stdlib `print(json.dumps(...))` 不走 rich Console
   - `SqliteStore.open()` 静默建文件, 读命令守 `Path.exists()`
-  - **progress doc 每轮必写** (用户 2026-04-23 强调) — R8 跳了这一步, R9 补写
+  - **progress doc 每轮必写**
+  - **`ForkPlan` schema 是 v0.1.1 对外契约** — 字段增删要 bump `chronos_fork_plan_version` + 写 ADR (R11 新增)
 
 ## Cron 窗口门控 (2026-04-22 用户指令)
 
@@ -201,62 +206,68 @@ if not (0 <= beijing_hour <= 11):
 ```
 或 agent prompt 里直接让它自检。
 **例外**: 用户手动触发/手动说"继续跑"可以不看窗口 (Round 3/4 就是这种情况)。
-
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 12 候选** (R11 已 ship: M1.10 `chronos fork` CLI + ADR-008, 选项 A 全额吃下, v0.1.1 tag 已 cut):
+**Round 13 候选** (R12 已 ship: M1.11 usage extractor hook + ADR-009 + CLI token/cost 三表面, 未 tag 留给 R13):
 
-### R11 实际产出 (2026-04-23 北京下午, 用户交互轮)
-- ✅ ADR-008 `chronos fork` plan-artifact 选型 (拒了 inspection-only + dynamic-import 两条歧路)
-- ✅ `src/chronos/fork_plan.py` (ForkPlan dataclass + load/dump + deep-copy overrides)
-- ✅ `chronos fork plan <run_id>` CLI (3 种 fork-point 选择器 + override 两种语法 + key 校验)
-- ✅ 195/195 tests, 93% 覆盖 (R11 新增 55 tests), ruff/mypy 全清
-- ✅ dogfood 12/12 → 14/14 green (examples 里塞进 fork plan 命令自动被捡起来)
-- ✅ cli-reference.md + CHANGELOG + README + examples 同步更新
-- ✅ v0.1.1 tag cut + push (四动词 CLI 全闭环)
+### R12 实际产出 (2026-04-23 北京下午, 用户交互轮)
+- ✅ ADR-009 usage-extractor hook 选型 (拒了全局 callback / adapter 子类 / middleware chain / LLM-call interception 四条歧路)
+- ✅ `src/chronos/adapters/langgraph_usage.py` (UsageContext/UsageResult frozen dataclasses, UsageExtractor Protocol, aimessage_usage_extractor)
+- ✅ `LangGraphRecorder` 加 `usage_extractor` kwarg + `_extract_usage` 失败容忍 helper
+- ✅ `chronos runs show` 自动加 total-usage 行 + per-node 内联 tokens
+- ✅ `chronos runs list --with-usage` (opt-in per-run SUM columns)
+- ✅ `chronos diff A B --show-usage` (A/B/Δ 对比表, 红绿着色)
+- ✅ JSON 输出自动带 `usage` / `cost_usd_cents` / `usage.delta_tokens`
+- ✅ 216/216 tests (+21), 94% cov (+1pt), ruff/mypy 全清
+- ✅ dogfood 14/14 green (两个 example 接 demo extractor + 新命令进 "Try these")
+- ✅ cli-reference.md + getting-started.md + CHANGELOG + CONTEXT 同步更新
+- ❌ 未 tag (按计划留给 R13 bundle cut v0.1.2)
 
-### R10 近失教训 (延续记忆)
-- ⚠️ R10 开局试图装 autogen-agentchat, 被 CONTEXT.md 第 3 节硬约束抓回. Lesson: **每轮动 deps 前先读 CONTEXT.md 第 3 节**, 别被"自由发挥"这种话冲昏头
+### 选项 A (R13 强推荐): cut v0.1.2 tag + small follow-ups
+- R12 已累计: usage extractor hook + 三 CLI 表面 + ADR-009 + 21 tests, 是明显的 feature release
+- Tag 前建议收尾项 (按优先级):
+  1. `CHANGELOG.md` 的 `[Unreleased]` → `[0.1.2]` 章节 + 日期
+  2. `src/chronos/__init__.py` 里的 `__version__` 从 `"0.1.1"` → `"0.1.2"`
+  3. 如果 R13 前期还想塞 1-2 个 low-risk fix (比如 `aimessage_usage_extractor` 支持 Anthropic format), 现在塞; 塞完再 cut
+  4. `git tag -a v0.1.2 -m "..."` + push via gh-proxy.com
+- 预计 1 轮就能完成
 
-### 选项 A (R12 推荐): CLI 文件拆分 (tech debt)
-- `src/chronos/cli/__init__.py` 已 ~600 行 (R11 又加了 30 行), 按 subcommand group 拆成 `cli/runs.py / cli/diff.py / cli/forks.py`
-- 低风险但 diff 巨大, 适合单独一轮不混其他功能
+### 选项 B: CLI 文件拆分 (tech debt, R11/R12 连续推迟)
+- `src/chronos/cli/__init__.py` 现在 ~750 行 (R12 又加了 usage helpers + 3 处 flag), 按 subcommand group 拆成 `cli/runs.py / cli/diff.py / cli/forks.py / cli/replay.py / cli/fork.py`
+- 低风险但 diff 巨大, 适合一轮专攻不混功能
 - 不需要 ADR
-
-### 选项 B: usage harvester hook — 从 LangGraph callback 收 token/cost
-- M1.4 时 defer 的旧承诺
-- 低风险, 不需要 ADR, 加一个 `usage_extractor: Callable | None` kwarg
-- 给 `chronos runs show` 加一列 tokens / cost
+- **注意**: 拆完测试路径可能要微调 (CliRunner 对模块路径不敏感, 但 import 风格变了)
 
 ### 选项 C: `chronos fork apply` — 把 plan.json 一键跑起来
 - R11 只做了 `chronos fork plan`, 用户还得写 3 行 Python 才能真正 fork
 - 如果能提供 `--graph-factory my_module:build_graph` 约定, CLI 就能动态 import + 执行
-- ⚠️ ADR-008 明确拒了这条路 (安全风险 + 强耦合), 如果 R12 要做需要写 ADR-009 推翻 ADR-008 的部分结论
+- ⚠️ ADR-008 明确拒了这条路 (安全风险 + 强耦合), 要做得写新 ADR 推翻 ADR-008 部分结论
 - **不建议 cron 轮自启**
 
 ### 选项 D: AutoGen adapter (Phase 2 正式启动)
 - ⚠️ **仍需用户点头**才能做 — R10 已经试过一次自作主张, 被抓回
 - 证明 adapter 抽象假设; 先 spike AutoGen 的 checkpoint / message-history API
-- **必须新 ADR** (下一个编号 ADR-009) AutoGen 状态模型 → Chronos NodeKind 映射
+- **必须新 ADR** (下一个编号 ADR-010) AutoGen 状态模型 → Chronos NodeKind 映射
 
 ### 选项 E: Web UI skeleton
 - 大承诺, 一轮起不了步; 需要 ADR 前端技术栈 + 至少 3 轮专心做
-- **不建议 cron 轮自启**, 除非用户明说要
+- **不建议 cron 轮自启**
 
-**R12 倾向**: 选项 A (CLI 文件拆分, 清 tech debt). R11 后 CLI 已经有 5 个 subcommand group (runs/forks/replay/diff/fork), 继续堆下去 `__init__.py` 会烂. 然后 R13 做选项 B (usage harvester). R14+ 再议 Phase 2 / `fork apply`.
+**R13 倾向**: **选项 A** (cut v0.1.2 tag), 因为 R12 已经是明确的 feature 积累, 拖久了 CHANGELOG 会失焦. 若用户临时要新功能可优先塞, 再 tag. 然后 R14 才动选项 B (CLI 文件拆分), R15+ 再议 Phase 2.
 
-**硬约束 (延续, R10/R11 again 强调)**:
+**硬约束 (延续, R10/R11/R12 再次强调)**:
 - ❌ 不开始写 Web UI (除非用户点头)
 - ❌ **不加 AutoGen/CrewAI adapter** — R10 试过被抓回, 这是硬红线, 除非用户**显式**说启动 Phase 2
 - ❌ 不改 SQLite schema
 - ❌ 不动 v0.1.1 frozen 的 API 签名 (record/replay/fork/diff/fork plan CLI 命令 + `ForkPlan` schema v1)
-- ✅ 任何新功能 → 新 ADR (下一个编号 ADR-009)
-- ✅ spike / ADR 先行纪律 6 战 6 胜 (R11 ADR-008 加分), 继续
-- ✅ **progress doc 每轮末必写 + commit + push** (R8 摔一跤, R10 差点再摔一次)
-- ✅ **动 deps / pyproject.toml 前先读 CONTEXT.md 第 3 节和本节硬约束** (R10 新增教训)
+- ❌ **不动 ADR-009 frozen 的 usage extractor 协议** (R12 新增): `UsageExtractor` 签名、`UsageContext` / `UsageResult` 字段、失败容忍语义都是 v0.1.2 对外契约
+- ✅ 任何新功能 → 新 ADR (下一个编号 ADR-010)
+- ✅ spike / ADR 先行纪律 7 战 7 胜 (R12 ADR-009 加分), 继续
+- ✅ **progress doc 每轮末必写 + commit + push**
+- ✅ **动 deps / pyproject.toml 前先读 CONTEXT.md 第 3 节和本节硬约束**
 - ✅ 断言时间用 `TZ='Asia/Shanghai' date` 或 `curl -sI https://www.baidu.com | grep -i '^date:'`, 别信 session 时间
-- ✅ cron 实际节奏: **every 180m (3h)**, 不是 6h, 不是 18:00 一次 — 下一轮 cron 有 3h 窗口别浪费
-- ✅ **`ForkPlan` schema 是 v0.1.1 对外契约** — 字段增删要 bump `chronos_fork_plan_version` 并写 ADR (R11 新增)
+- ✅ cron 实际节奏: **every 180m (3h)**
+- ✅ **`ForkPlan` schema 是 v0.1.1 对外契约** — 字段增删要 bump `chronos_fork_plan_version` + 写 ADR
 
 ---
 
@@ -296,4 +307,4 @@ if not (0 <= beijing_hour <= 11):
 
 ---
 
-*Last updated: 2026-04-23 by Round 11 agent (北京下午, 用户交互轮, v0.1.1 tag cut, M1.10 fork CLI ship)*
+*Last updated: 2026-04-23 by Round 12 agent (北京下午, 用户交互轮, M1.11 usage extractor hook ship, 未 tag 留 R13 cut v0.1.2)*

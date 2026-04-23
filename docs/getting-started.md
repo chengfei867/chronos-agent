@@ -145,6 +145,32 @@ chronos diff <parent> <child> --db chronos.db
 
 ---
 
+## 4b. Track token usage and cost
+
+Chronos can record per-node prompt/completion tokens and USD cost — opt in by passing a `usage_extractor`. For standard LangChain `AIMessage` outputs the battery is included:
+
+```python
+from chronos.adapters.langgraph_usage import aimessage_usage_extractor
+
+recorder = LangGraphRecorder(
+    store,
+    kind_map={"plan": NodeKind.LLM, "tool": NodeKind.TOOL},
+    usage_extractor=aimessage_usage_extractor,
+)
+```
+
+Then three new CLI surfaces light up:
+
+```bash
+chronos runs list --db chronos.db --with-usage     # per-run token/cost columns
+chronos runs show <run_id> --db chronos.db         # total + per-node inline tokens
+chronos diff <a> <b> --db chronos.db --show-usage  # A vs B vs Δ cost table
+```
+
+See [ADR-009](decisions/ADR-009-usage-extractor-hook.md) for custom extractors and failure semantics.
+
+---
+
 ## 5. Next steps
 
 - **CLI reference**: [`docs/cli-reference.md`](cli-reference.md)

@@ -30,7 +30,7 @@ chronos info
 List recorded runs, most recent first.
 
 ```bash
-chronos runs list [--db PATH] [-n LIMIT] [--json]
+chronos runs list [--db PATH] [-n LIMIT] [--json] [--with-usage]
 ```
 
 | Flag        | Default | Meaning                                       |
@@ -38,6 +38,7 @@ chronos runs list [--db PATH] [-n LIMIT] [--json]
 | `--db PATH` | `./chronos.db` or `$CHRONOS_DB` | Path to the Chronos DB. |
 | `-n LIMIT`  | 50      | Max rows to return (1–10000).                 |
 | `--json`    | off     | Emit newline-terminated JSON instead of a table. |
+| `--with-usage` | off  | Aggregate token counts and cost (¢) for each run. One extra SQL fetch per row — opt-in for performance. Requires runs whose adapter was given a `usage_extractor` (see [ADR-009](decisions/ADR-009-usage-extractor-hook.md)). |
 
 Exit codes: `0` success, `2` DB not found.
 
@@ -45,7 +46,7 @@ Exit codes: `0` success, `2` DB not found.
 
 ## `chronos runs show <run_id>`
 
-Print the node tree of a single run — one row per node with step index, name, kind, and timing.
+Print the node tree of a single run — one row per node with step index, name, kind, and timing. If any node has captured `usage`, per-node tokens appear inline and a total-usage line prints at the top.
 
 ```bash
 chronos runs show <run_id> [--db PATH] [--json]
@@ -103,15 +104,16 @@ Exit codes: `0`, `1` fork id not found, `2` DB not found.
 Structural diff of two runs (see [ADR-006](decisions/ADR-006-diff-alignment.md) for the alignment algorithm).
 
 ```bash
-chronos diff <run_a> <run_b> [--db PATH] [--json] [--verbose] [--full]
+chronos diff <run_a> <run_b> [--db PATH] [--json] [--verbose] [--full] [--show-usage]
 ```
 
 | Flag          | Default | Meaning                                                     |
 |---------------|---------|-------------------------------------------------------------|
 | `--db PATH`   | `./chronos.db`| DB path.                                              |
-| `--json`      | off     | Emit the frozen ADR-006 JSON schema instead of a table.     |
+| `--json`      | off     | Emit the frozen ADR-006 JSON schema instead of a table. With `--show-usage` the JSON gains a `usage` field with A/B totals and Δ.  |
 | `-v` / `--verbose` | off | Expand every CHANGED node into per-key `key: <a> → <b>` diff. |
 | `--full`      | off     | Disable fork-aware slicing. By default, if B is a fork child of A, the diff is restricted to nodes *after* the fork point (because everything before it is identical by construction). Pass `--full` to force a full-run comparison. |
+| `--show-usage` | off    | Append a side-by-side A vs B token/cost table with Δ (B − A). Positive deltas render red (regression), negative green (savings). Requires `usage_extractor` was attached at record time ([ADR-009](decisions/ADR-009-usage-extractor-hook.md)). |
 
 ### Tags (row prefix column)
 
@@ -190,6 +192,42 @@ chronos fork plan 2d8ba237-... \
     --db chronos.db
 # writes fork_plan.json; commit it alongside your experiment script.
 ```
+
+---
+
+## Token usage & cost tracking (ADR-009)
+
+Chronos stores per-node `usage` (prompt/completion tokens, model name) and `cost_usd_cents` in the SQLite schema. These fields only populate if you supply a `usage_extractor` when constructing the adapter:
+
+```python
+from chronos.adapters import LangGraphRecorder
+from chronos.adapters.langgraph_usage import aimessage_usage_extractor
+
+recorder = LangGraphRecorder(
+    store,
+    kind_map=NODE_KIND_MAP,
+    usage_extractor=aimessage_usage_extractor,  # reads AIMessage.usage_metadata
+)
+```
+
+The shipped `aimessage_usage_extractor` handles the common LangChain case (`AIMessage.usage_metadata` / `response_metadata`). For custom providers or offline meters, write your own:
+
+```python
+from chronos.adapters.langgraph_usage import UsageContext, UsageResult
+
+def my_extractor(ctx: UsageContext) -> UsageResult | None:
+    # ctx.node_name, ctx.pre_values, ctx.post_values, ctx.task
+    ...
+    return UsageResult(prompt_tokens=..., completion_tokens=..., cost_usd_cents=..., model_name=...)
+```
+
+Extractor errors never break capture — any raise is logged at WARNING and the node stores `usage=None`. See [ADR-009](decisions/ADR-009-usage-extractor-hook.md) for the full protocol.
+
+**Surface in CLI:**
+- `chronos runs show <id>` — total-usage line + per-node inline tokens.
+- `chronos runs list --with-usage` — per-run token/cost columns.
+- `chronos diff A B --show-usage` — side-by-side A vs B vs Δ.
+- All three also appear in `--json` output when the data is populated.
 
 ---
 

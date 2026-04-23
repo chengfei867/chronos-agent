@@ -41,9 +41,44 @@ from typing_extensions import TypedDict
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from chronos.adapters import LangGraphRecorder
+from chronos.adapters.langgraph_usage import UsageContext, UsageResult
 from chronos.core.models import NodeKind
 from chronos.store import SqliteStore
 from examples._fake_llm import FakeLLM
+
+# ---------------------------------------------------------------------------
+# Demo usage extractor (ADR-009)
+# ---------------------------------------------------------------------------
+
+
+def _demo_usage_extractor(ctx: UsageContext) -> UsageResult | None:
+    """Toy usage extractor for the example.
+
+    Real projects would read ``AIMessage.usage_metadata`` (see
+    ``chronos.adapters.langgraph_usage.aimessage_usage_extractor``) or plug
+    in their provider's callback tracker. Here we approximate tokens from
+    the character counts of the values the node produced, then apply a
+    fake per-1k-token price. Purely for illustration — so the ``--with-usage``
+    and ``--show-usage`` CLI flags have something to render.
+    """
+    # Ignore nodes that don't "think" (the example's researcher swap is what
+    # we want to highlight). Emit usage for every node though, so the demo
+    # covers the common case.
+    # Approximate prompt tokens = len(pre state repr) // 4, completion = len(delta) // 4.
+    pre_len = sum(len(repr(v)) for v in ctx.pre_values.values())
+    post_len = sum(len(repr(v)) for v in ctx.post_values.values())
+    prompt_tokens = max(1, pre_len // 4)
+    completion_tokens = max(1, (post_len - pre_len) // 4)
+
+    # Pretend $3 per 1M prompt + $15 per 1M completion (round to cents).
+    cost_cents = round((prompt_tokens * 3 + completion_tokens * 15) / 10_000)
+
+    return UsageResult(
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
+        cost_usd_cents=cost_cents,
+        model_name="fake-llm-v1",
+    )
 
 
 class PipelineState(TypedDict):
@@ -147,7 +182,11 @@ def run_demo(db_path: Path) -> tuple[str, str]:
     }
 
     with SqliteStore.open(db_path) as store:
-        recorder = LangGraphRecorder(store, kind_map=NODE_KIND_MAP)
+        recorder = LangGraphRecorder(
+            store,
+            kind_map=NODE_KIND_MAP,
+            usage_extractor=_demo_usage_extractor,  # ADR-009
+        )
 
         # --- Step 1: RECORD the baseline run ---
         with recorder.record(
@@ -215,9 +254,11 @@ def _print_next_steps(db_path: Path, parent_id: str, child_id: str) -> None:
     print("Try these commands:")
     print()
     print(f"  chronos runs list --db {db_path}")
+    print(f"  chronos runs list --db {db_path} --with-usage")
     print(f"  chronos runs show {parent_id} --db {db_path}")
     print(f"  chronos replay {parent_id} --db {db_path} --no-interactive")
     print(f"  chronos diff {parent_id} {child_id} --db {db_path}")
+    print(f"  chronos diff {parent_id} {child_id} --db {db_path} --show-usage")
     print(f"  chronos diff {parent_id} {child_id} --db {db_path} --verbose")
     print(f"  chronos diff {parent_id} {child_id} --db {db_path} --full")
     print(f"  chronos diff {parent_id} {child_id} --db {db_path} --json")

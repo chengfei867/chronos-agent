@@ -38,6 +38,7 @@ from typing_extensions import TypedDict
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from chronos.adapters import LangGraphRecorder
+from chronos.adapters.langgraph_usage import UsageContext, UsageResult
 from chronos.core.models import NodeKind
 from chronos.store import SqliteStore
 from examples._fake_llm import FakeLLM
@@ -123,6 +124,29 @@ NODE_KIND_MAP = {
 }
 
 
+# Demo usage extractor (ADR-009) — routers are rule-based so we skip them,
+# while LLM nodes get toy token + cost numbers proportional to state size.
+# Real projects read AIMessage.usage_metadata instead.
+_TOKENS_PER_NODE = {"plan": 120, "research": 450, "finalize": 300}
+
+
+def _demo_usage_extractor(ctx: UsageContext) -> UsageResult | None:
+    if ctx.node_name == "router":
+        # Rule-based node — no LLM call, no usage.
+        return None
+    base = _TOKENS_PER_NODE.get(ctx.node_name, 100)
+    prompt = base
+    completion = max(1, base // 3)
+    # Pretend $3/1M prompt + $15/1M completion, rounded to cents.
+    cost_cents = round((prompt * 3 + completion * 15) / 10_000)
+    return UsageResult(
+        prompt_tokens=prompt,
+        completion_tokens=completion,
+        cost_usd_cents=cost_cents,
+        model_name="fake-llm-v1",
+    )
+
+
 def run_demo(db_path: Path) -> tuple[str, str]:
     """Record a 3-round baseline, fork after round 1 forcing early exit.
 
@@ -145,7 +169,11 @@ def run_demo(db_path: Path) -> tuple[str, str]:
     }
 
     with SqliteStore.open(db_path) as store:
-        recorder = LangGraphRecorder(store, kind_map=NODE_KIND_MAP)
+        recorder = LangGraphRecorder(
+            store,
+            kind_map=NODE_KIND_MAP,
+            usage_extractor=_demo_usage_extractor,  # ADR-009
+        )
 
         # --- Parent run (3 research rounds) ---
         with recorder.record(
@@ -207,9 +235,11 @@ def _print_next_steps(db_path: Path, parent_id: str, child_id: str) -> None:
     print("Try these commands (note the REMOVED loop iterations in the diff):")
     print()
     print(f"  chronos runs list --db {db_path}")
+    print(f"  chronos runs list --db {db_path} --with-usage")
     print(f"  chronos runs show {parent_id} --db {db_path}")
     print(f"  chronos replay {parent_id} --db {db_path} --no-interactive")
     print(f"  chronos diff {parent_id} {child_id} --db {db_path}")
+    print(f"  chronos diff {parent_id} {child_id} --db {db_path} --show-usage")
     print(f"  chronos diff {parent_id} {child_id} --db {db_path} --full")
     print(
         f"  chronos fork plan {parent_id} --at-index 0 --allow-new-keys "

@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import json
 import os
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -112,6 +113,95 @@ def _truncate(s: str, n: int) -> str:
     return s if len(s) <= n else s[: n - 1] + "…"
 
 
+# ---------------------------------------------------------------------------
+# Usage summaries (ADR-009)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class _RunUsageSummary:
+    """Aggregated usage across a run's nodes for table rendering."""
+
+    nodes_with_usage: int = 0
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    reasoning_tokens: int = 0
+    cost_usd_cents: int = 0
+    any_cost: bool = False
+
+    @property
+    def total_tokens(self) -> int:
+        return self.prompt_tokens + self.completion_tokens + self.reasoning_tokens
+
+    def tokens_cell(self) -> str:
+        if self.nodes_with_usage == 0:
+            return "[dim]—[/]"
+        return str(self.total_tokens)
+
+    def cost_cell(self) -> str:
+        if not self.any_cost:
+            return "[dim]—[/]"
+        return str(self.cost_usd_cents)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "nodes_with_usage": self.nodes_with_usage,
+            "prompt_tokens": self.prompt_tokens,
+            "completion_tokens": self.completion_tokens,
+            "reasoning_tokens": self.reasoning_tokens,
+            "total_tokens": self.total_tokens,
+            "cost_usd_cents": self.cost_usd_cents if self.any_cost else None,
+        }
+
+
+def _summarise_usage(nodes: list[Node]) -> _RunUsageSummary:
+    summ = _RunUsageSummary()
+    for n in nodes:
+        if n.usage is None:
+            continue
+        summ.nodes_with_usage += 1
+        summ.prompt_tokens += n.usage.prompt_tokens
+        summ.completion_tokens += n.usage.completion_tokens
+        summ.reasoning_tokens += n.usage.reasoning_tokens
+        if n.cost_usd_cents is not None:
+            summ.any_cost = True
+            summ.cost_usd_cents += n.cost_usd_cents
+    return summ
+
+
+def _sum_usage(nodes: list[Node]) -> _RunUsageSummary | None:
+    summ = _summarise_usage(nodes)
+    return summ if summ.nodes_with_usage > 0 else None
+
+
+def _fmt_usage_inline(summ: _RunUsageSummary) -> str:
+    parts = [
+        f"{summ.prompt_tokens} prompt",
+        f"{summ.completion_tokens} completion",
+    ]
+    if summ.reasoning_tokens:
+        parts.append(f"{summ.reasoning_tokens} reasoning")
+    parts.append(f"= [bold]{summ.total_tokens}[/] tokens")
+    if summ.any_cost:
+        parts.append(f"[bold]{summ.cost_usd_cents}¢[/]")
+    parts.append(f"across {summ.nodes_with_usage} node(s)")
+    return ", ".join(parts)
+
+
+def _fmt_node_usage(node: Node) -> str:
+    assert node.usage is not None
+    u = node.usage
+    parts = [f"{u.prompt_tokens}+{u.completion_tokens}"]
+    if u.reasoning_tokens:
+        parts.append(f"(+{u.reasoning_tokens} reasoning)")
+    parts.append(f"= {u.prompt_tokens + u.completion_tokens + u.reasoning_tokens} tokens")
+    if node.cost_usd_cents is not None:
+        parts.append(f"{node.cost_usd_cents}¢")
+    if node.model_name:
+        parts.append(f"[dim]{node.model_name}[/]")
+    return " ".join(parts)
+
+
 def _run_to_dict(run: Run) -> dict[str, Any]:
     return {
         "id": run.id,
@@ -142,6 +232,16 @@ def _node_to_dict(node: Node) -> dict[str, Any]:
         "model_name": node.model_name,
         "tool_name": node.tool_name,
         "error_message": node.error_message,
+        "usage": (
+            {
+                "prompt_tokens": node.usage.prompt_tokens,
+                "completion_tokens": node.usage.completion_tokens,
+                "reasoning_tokens": node.usage.reasoning_tokens,
+            }
+            if node.usage is not None
+            else None
+        ),
+        "cost_usd_cents": node.cost_usd_cents,
         "metadata": node.metadata,
     }
 
@@ -244,16 +344,30 @@ def runs_list(
     ),
     limit: int = typer.Option(50, "--limit", "-n", min=1, max=10_000, help="Max rows to return."),
     json_out: bool = typer.Option(False, "--json", help="Emit JSON instead of a table."),
+    with_usage: bool = typer.Option(
+        False,
+        "--with-usage",
+        help="Include summed tokens / cost columns. Extra SELECT per run — slower for large DBs.",
+    ),
 ) -> None:
     """List recorded runs (most recent first)."""
     store = _open_store(db)
     try:
         runs = store.list_runs(limit=limit)
+        usage_by_run: dict[str, _RunUsageSummary] = {}
+        if with_usage:
+            for r in runs:
+                nodes = store.get_nodes_for_run(r.id)
+                usage_by_run[r.id] = _summarise_usage(nodes)
     finally:
         store.close()
 
     if json_out:
-        _emit_json([_run_to_dict(r) for r in runs])
+        payload = [_run_to_dict(r) for r in runs]
+        if with_usage:
+            for item, r in zip(payload, runs, strict=True):
+                item["usage_summary"] = usage_by_run[r.id].to_dict()
+        _emit_json(payload)
         return
 
     if not runs:
@@ -270,16 +384,24 @@ def runs_list(
     table.add_column("thread")
     table.add_column("status")
     table.add_column("started_at")
+    if with_usage:
+        table.add_column("tokens", justify="right")
+        table.add_column("cost ¢", justify="right")
     table.add_column("task", overflow="fold")
     for r in runs:
-        table.add_row(
+        row = [
             r.id,
             r.adapter,
             r.adapter_thread_id,
             r.status.value,
             r.started_at.isoformat(timespec="seconds"),
-            _truncate(r.task_description or "", 80),
-        )
+        ]
+        if with_usage:
+            summ = usage_by_run[r.id]
+            row.append(summ.tokens_cell())
+            row.append(summ.cost_cell())
+        row.append(_truncate(r.task_description or "", 80))
+        table.add_row(*row)
     console.print(table)
 
 
@@ -332,6 +454,9 @@ def runs_show(
             f"[dim](fork {fork.id})[/]"
         )
     nlist = root.add(f"nodes ({len(nodes)})")
+    total_usage = _sum_usage(nodes)
+    if total_usage is not None:
+        root.add(f"[bold]total usage:[/] {_fmt_usage_inline(total_usage)}")
     for n in nodes:
         label = (
             f"[{n.step_index}] [green]{n.node_name}[/] [dim]{n.kind.value}[/] [dim cyan]{n.id}[/]"
@@ -341,6 +466,8 @@ def runs_show(
             nnode.add(f"[dim]parent: {n.parent_node_id}[/]")
         if n.tool_name:
             nnode.add(f"tool: {n.tool_name}")
+        if n.usage is not None:
+            nnode.add(f"[yellow]usage:[/] {_fmt_node_usage(n)}")
         if n.error_message:
             nnode.add(f"[red]error: {_truncate(n.error_message, 120)}[/]")
     console.print(root)
@@ -482,6 +609,77 @@ def _render_diff_table(report: DiffReport, verbose: bool) -> Table:
     return table
 
 
+def _render_usage_compare(
+    usage_a: _RunUsageSummary | None, usage_b: _RunUsageSummary | None
+) -> None:
+    """Render a side-by-side token/cost comparison for `diff --show-usage`."""
+    if (usage_a is None or usage_a.nodes_with_usage == 0) and (
+        usage_b is None or usage_b.nodes_with_usage == 0
+    ):
+        console.print("[dim]usage: no usage recorded on either side.[/]")
+        return
+
+    t = Table(title="Usage comparison (A vs B)", header_style="bold cyan")
+    t.add_column("metric")
+    t.add_column("A", justify="right")
+    t.add_column("B", justify="right")
+    t.add_column("Δ (B − A)", justify="right")  # noqa: RUF001
+
+    def _cell(v: int) -> str:
+        return str(v)
+
+    def _delta(a: int, b: int) -> str:
+        d = b - a
+        if d == 0:
+            return "[dim]0[/]"
+        colour = "green" if d < 0 else "red"
+        sign = "+" if d > 0 else ""
+        return f"[{colour}]{sign}{d}[/]"
+
+    a = usage_a or _RunUsageSummary()
+    b = usage_b or _RunUsageSummary()
+
+    t.add_row(
+        "prompt",
+        _cell(a.prompt_tokens),
+        _cell(b.prompt_tokens),
+        _delta(a.prompt_tokens, b.prompt_tokens),
+    )
+    t.add_row(
+        "completion",
+        _cell(a.completion_tokens),
+        _cell(b.completion_tokens),
+        _delta(a.completion_tokens, b.completion_tokens),
+    )
+    if a.reasoning_tokens or b.reasoning_tokens:
+        t.add_row(
+            "reasoning",
+            _cell(a.reasoning_tokens),
+            _cell(b.reasoning_tokens),
+            _delta(a.reasoning_tokens, b.reasoning_tokens),
+        )
+    t.add_row(
+        "[bold]total tokens[/]",
+        f"[bold]{a.total_tokens}[/]",
+        f"[bold]{b.total_tokens}[/]",
+        _delta(a.total_tokens, b.total_tokens),
+    )
+    if a.any_cost or b.any_cost:
+        t.add_row(
+            "[bold]cost ¢[/]",
+            f"[bold]{a.cost_usd_cents if a.any_cost else '—'}[/]",
+            f"[bold]{b.cost_usd_cents if b.any_cost else '—'}[/]",
+            _delta(a.cost_usd_cents, b.cost_usd_cents),
+        )
+    t.add_row(
+        "nodes w/ usage",
+        _cell(a.nodes_with_usage),
+        _cell(b.nodes_with_usage),
+        _delta(a.nodes_with_usage, b.nodes_with_usage),
+    )
+    console.print(t)
+
+
 @app.command()
 def diff(
     run_a: str = typer.Argument(..., help="First run id (the 'A' side)."),
@@ -502,6 +700,11 @@ def diff(
             "identical by construction)."
         ),
     ),
+    show_usage: bool = typer.Option(
+        False,
+        "--show-usage",
+        help="Include token/cost comparison between run A and run B (ADR-009).",
+    ),
 ) -> None:
     """Structural diff of two recorded runs (ADR-006 alignment)."""
     store = _open_store(db)
@@ -511,11 +714,26 @@ def diff(
         except DiffRunNotFoundError as exc:
             console.print(f"[red]error:[/] no such run: [bold]{exc.run_id}[/]")
             raise typer.Exit(code=1) from exc
+        usage_a: _RunUsageSummary | None = None
+        usage_b: _RunUsageSummary | None = None
+        if show_usage:
+            usage_a = _summarise_usage(store.get_nodes_for_run(run_a))
+            usage_b = _summarise_usage(store.get_nodes_for_run(run_b))
     finally:
         store.close()
 
     if json_out:
-        _emit_json(report.to_dict())
+        payload = report.to_dict()
+        if show_usage:
+            payload["usage"] = {
+                "a": usage_a.to_dict() if usage_a else None,
+                "b": usage_b.to_dict() if usage_b else None,
+                "delta_tokens": (
+                    (usage_b.total_tokens if usage_b else 0)
+                    - (usage_a.total_tokens if usage_a else 0)
+                ),
+            }
+        _emit_json(payload)
         return
 
     summary = report.summary
@@ -534,6 +752,8 @@ def diff(
         f"[green]{summary['added']} added[/]  "
         f"[red]{summary['removed']} removed[/]"
     )
+    if show_usage:
+        _render_usage_compare(usage_a, usage_b)
 
 
 # ---------------------------------------------------------------------------

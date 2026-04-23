@@ -4,7 +4,21 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
-(nothing yet — next round candidates see `docs/CONTEXT.md` §6)
+### Added (Round 12) — M1.11 usage extractor hook + CLI token/cost surfaces
+- `usage_extractor: UsageExtractor | None` kwarg on `LangGraphRecorder.__init__` — callable protocol `(UsageContext) -> UsageResult | None` invoked per node to populate the previously-dormant `Node.usage` and `Node.cost_usd_cents` schema fields (added in M1.1, zero references until now).
+- New module `chronos.adapters.langgraph_usage` — `UsageContext` / `UsageResult` frozen dataclasses, `UsageExtractor` Protocol, plus `aimessage_usage_extractor` convenience implementation that reads LangChain `AIMessage.usage_metadata` / `response_metadata`.
+- Failure tolerance: extractor raises are logged at WARNING and stored as `usage=None` — capture never breaks (tested).
+- `chronos runs show <id>` — total-usage summary line + per-node inline token counts when data is present.
+- `chronos runs list --with-usage` — opt-in flag adds `tokens` and `cost¢` columns (per-run SUM). Opt-in because it costs one extra node-fetch per row.
+- `chronos diff A B --show-usage` — side-by-side A vs B vs Δ token/cost table, colorized (green = savings, red = regression). JSON mode gains a `usage` subtree with deltas.
+- `_node_to_dict` (JSON output) always exposes `usage` and `cost_usd_cents` when populated — machine readers get it free.
+- Examples updated: both `examples/linear_pipeline.py` and `examples/router_loop.py` wire a demo extractor and print `--with-usage` / `--show-usage` in their "Try these commands" block (dogfood auto-picks them up).
+- ADR-009 — usage-extractor hook design (chose callable protocol over global callback / adapter subclass / middleware chain / runtime LLM-call interception).
+- 21 new unit tests (`test_usage_extractor.py`): dataclass frozen semantics, `aimessage_usage_extractor` happy-path + edge cases, hook null/None/success/raise paths, CLI rendering. Totals: **216/216 pass, 94% coverage**.
+
+### Notes
+- No schema changes — pure fill of existing-but-unused fields, fully backward compatible (runs without an extractor keep recording identically).
+- No tag this round. R13 will bundle any small follow-ups and cut **v0.1.2**.
 
 ---
 

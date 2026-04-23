@@ -30,6 +30,7 @@ Fork an existing run::
 
 from __future__ import annotations
 
+import logging
 import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -37,10 +38,13 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
-from chronos.core.models import Fork, Node, NodeKind, Run, RunStatus
+from chronos.adapters.langgraph_usage import UsageContext, UsageExtractor, UsageResult
+from chronos.core.models import Fork, Node, NodeKind, Run, RunStatus, Usage
 
 if TYPE_CHECKING:
     from chronos.store import SqliteStore
+
+_usage_log = logging.getLogger("chronos.adapters.langgraph.usage")
 
 
 # ---------------------------------------------------------------------------
@@ -113,9 +117,11 @@ class LangGraphRecorder:
         store: SqliteStore,
         *,
         kind_map: dict[str, NodeKind] | None = None,
+        usage_extractor: UsageExtractor | None = None,
     ) -> None:
         self._store = store
         self._kind_map: dict[str, NodeKind] = dict(kind_map or {})
+        self._usage_extractor: UsageExtractor | None = usage_extractor
 
     # ------------------------------------------------------------------
     # record() — original runs (ADR-004)
@@ -383,6 +389,56 @@ class LangGraphRecorder:
     # Shared core: snapshot list → (Run, list[Node])
     # ------------------------------------------------------------------
 
+    def _extract_usage(
+        self,
+        *,
+        node_name: str,
+        pre: Any,
+        post: Any,
+        task: Any,
+    ) -> tuple[Usage | None, int | None, str | None]:
+        """Call the user's ``usage_extractor`` (if any) with failure tolerance.
+
+        Returns a ``(usage, cost_usd_cents, model_name)`` tuple suitable for
+        splatting into a :class:`Node` constructor. Any of the three may be
+        ``None``.
+
+        Per ADR-009: a raised exception from the extractor is logged at
+        WARNING level and downgraded to ``(None, None, None)``. This keeps a
+        buggy pricing table from aborting an entire recording.
+        """
+        if self._usage_extractor is None:
+            return None, None, None
+
+        ctx = UsageContext(
+            node_name=node_name,
+            pre_snapshot=pre,
+            post_snapshot=post,
+            pre_values=_coerce_state(pre.values),
+            post_values=_coerce_state(post.values),
+            task=task,
+        )
+
+        try:
+            result: UsageResult | None = self._usage_extractor(ctx)
+        except Exception:
+            _usage_log.warning(
+                "usage_extractor raised on node %r; recording node without usage",
+                node_name,
+                exc_info=True,
+            )
+            return None, None, None
+
+        if result is None:
+            return None, None, None
+
+        usage = Usage(
+            prompt_tokens=result.prompt_tokens,
+            completion_tokens=result.completion_tokens,
+            reasoning_tokens=result.reasoning_tokens,
+        )
+        return usage, result.cost_usd_cents, result.model_name
+
     def _build_run_and_nodes(
         self,
         *,
@@ -446,6 +502,13 @@ class LangGraphRecorder:
             kind = self._kind_map.get(node_name, NodeKind.FN)
             lg_step = _meta_step(pre)
 
+            usage_obj, cost_cents, model_name = self._extract_usage(
+                node_name=node_name,
+                pre=pre,
+                post=post,
+                task=task,
+            )
+
             node = Node(
                 id=str(uuid.uuid4()),
                 run_id=run_id,
@@ -456,6 +519,9 @@ class LangGraphRecorder:
                 started_at=_parse_created_at(pre),
                 ended_at=_parse_created_at(post),
                 state_after=_coerce_state(post.values),
+                model_name=model_name,
+                usage=usage_obj,
+                cost_usd_cents=cost_cents,
                 metadata={
                     "checkpoint_id": _ckpt_id(post),
                     "parent_checkpoint_id": _ckpt_id(pre),
