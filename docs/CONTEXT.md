@@ -147,19 +147,25 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
-**截至 Round 16 结束 (2026-04-23 北京下午 17:28 起, 用户交互轮) — v0.1.3 已 tag**
+**截至 Round 17 结束 (2026-04-23 下午, 用户交互轮) — dogfood 产出 ADR-011 + 案例研究**
 
-- Round: **16 完成** (R11 M1.10 fork CLI + v0.1.1 tag → R12 M1.11 usage extractor → R13 cut v0.1.2 → R14 CLI 文件拆分 → R15 Anthropic/OpenAI native extractors + ADR-010 → **R16 cut v0.1.3 release**)
-- 最近 progress doc: `progress/2026-04-23-round-16.md` ← **下一轮的你必读**; R15 在 `progress/2026-04-23-round-15.md`
-- 当前阶段: **Phase 1 MVP + 四动词 CLI 闭环 + token/cost 三提取器全家桶 (v0.1.3 tag)**
-- 最新 ADR: `ADR-010-native-usage-extractors.md` (Accepted, R15)
-- 最新 tag: **v0.1.3** (R16 cut; CHANGELOG 段头为 "R14+R15+R16")
+- Round: **17 完成** (R11 M1.10 fork CLI + v0.1.1 tag → R12 M1.11 usage extractor → R13 cut v0.1.2 → R14 CLI 文件拆分 → R15 Anthropic/OpenAI native extractors + ADR-010 → R16 cut v0.1.3 release → **R17 第一次真实世界 dogfood: langgraph-supervisor-py**)
+- 最近 progress doc: `progress/2026-04-23-round-17.md` ← **下一轮的你必读**; R16 在 `progress/2026-04-23-round-16.md`
+- 当前阶段: **Phase 1 MVP + 四动词 CLI 闭环 + token/cost 三提取器全家桶 (v0.1.3 tag) + 第一个真实 dogfood 案例 (R17)**
+- 最新 ADR: `ADR-011-state-serialization-boundary.md` (Accepted, R17) — 递归 pydantic-to-dict coercion
+- 最新 tag: **v0.1.3** (R16 cut; R17 未 bump 因为是 bug fix + 新文档, 等 R18 一并 cut v0.1.4)
 - Blocked items: 无
-- 测试状态: **236/236 pass, 94% coverage, ruff + mypy clean** (与 R15 持平, R16 零 test 改动)
-- CLI 表面 (v0.1.3): 与 v0.1.2 同 (R14 纯 refactor, R15 纯 adapter 层新增, R16 纯 release), `chronos info` 状态行 = "Phase 1 M1.11 — usage extractor hook + native Anthropic/OpenAI adapters, v0.1.3"
-- **Adapter API** (R15): `aimessage_usage_extractor` / `anthropic_usage_extractor` / `openai_usage_extractor` 三件套; 所有实现同 `UsageExtractor` Protocol
+- 测试状态: **242/242 pass, 94% coverage, ruff + format clean** (R17 +6 regression tests)
+- CLI 表面: 未变 (R17 纯 adapter 层修复)
+- **Adapter API** (R15-R17): 三 extractor 现在同时支持 pydantic AIMessage **和 dict-coerced messages**; `_jsonable` 在 SQLite 写入前递归 coerce 所有 state values
 - **Schema 字段** / **Examples** / **CLI 模块形状 (R14)**: 与前几轮一致
-- **新验证事实 (R16)**:
+- **R17 新验证事实 (dogfood 得到的)**:
+  - OneAPI + Claude Opus 4.7: **不接 `temperature`** (thinking-mode 拒绝); model name 必须用 `GET /v1/models` 的 display form ("Claude Opus 4.7" 带空格)
+  - OneAPI 响应永远包一个装饰性的 `"error":{"type":"","message":""}` 字段 (即使成功), 解析时忽略即可
+  - `UV_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/` 是沙箱存活咒语
+  - Chronos 对 LangGraph 图**静默要求 checkpointer** — 未文档化 (R17 Finding #2, 后续 round 修)
+  - 真实 multi-agent trace: supervisor(604+107) → research_expert(1970+220) → supervisor(1049+218), 验证 per-node attribution 在真实 workload 上工作
+  - **重要**: 236 绿测试和真实 bug 可以共存 — 单元测试不能替代 dogfood
   - **M milestone naming discipline**: 不是每次 version bump 都要 bump M. R15 是 M1.11 能力的直接扩展 → M1.11 保留, 用 CLI 状态行文字反映增量 ("+ native Anthropic/OpenAI adapters"). 避免 M 编号膨胀, 只在真的新 milestone 时递增
   - **多轮 bundle 进一次 release 的命名**: CHANGELOG 段头用 "Round A + Round B + Round C" (这次是 R14+R15+R16). R13 的 R12+R13 是先例, R16 的三轮 bundle 是自然延伸
   - **R13 release pattern 已可复用**: bump `__version__` → bump `pyproject.toml::project.version` → 改 CLI 状态行 → CHANGELOG `[Unreleased]` → `[x.y.z]` → tag → push. 全程 1 轮, 零 test 改动
@@ -247,6 +253,28 @@ if not (0 <= beijing_hour <= 11):
 - A 解锁真正的 Phase 2 进度, 是项目最大价值点, 但需要用户显式授权 fork automated execution
 - B 是零戏剧性的 1 轮 ship, 补全 LangChain 三条路径的最后一条
 
+### R17 实际产出 (2026-04-23 下午, 用户交互轮) — 真实世界 dogfood + 3 个真 bug
+**走了上面都没列的第 6 条路: 选项 E = 用 Chronos 真跑一个开源 LangGraph 多 agent 项目.** 动机: "没有用户的产品谈完整性是自嗨"; 如果 dogfood 暴露出 fork-execute 的真实需求, 那就是 ADR-008 "real demand" gate 被满足; 如果没暴露, ADR-008 边界就 stay frozen — 两种结局都是证据.
+- ✅ 打分选中 `langgraph-supervisor-py` (multi-agent pattern / 1566 stars / 54 open issues / 官方 semi-deprecated)
+- ✅ 搭通 OneAPI + Claude Opus 4.7 (关键: 不传 `temperature`, model name 用 "Claude Opus 4.7" 带空格)
+- ✅ 写 `dogfood_baseline.py` 让 supervisor 跑 FAANG headcount 查询
+- ✅ **发现 Bug #1 (真 bug)**: `_coerce_state` 浅 copy, pydantic `HumanMessage` 爆 `json.dumps`. 修: 递归 `_jsonable` helper
+- ✅ **发现 Bug #2 (文档缺陷)**: Chronos 静默要求 checkpointer, 文档未说, 用户见到 LangGraph 原生错误. 延迟到下轮改 onboarding
+- ✅ **发现 Bug #3 (Bug #1 fix 引入的回归)**: 所有 extractor 用 `getattr(dict, "usage_metadata")` 永远拿 None → 所有 token 都是 0. 修: `_msg_field` dual-shape helper
+- ✅ 6 个 regression test 全补上 (242/242 pass, 93% → 94% coverage)
+- ✅ ADR-011 state-serialization-boundary 写完 (第一个由 dogfood 驱动的 ADR)
+- ✅ `docs/case-studies/langgraph-supervisor.md` 第一个 case study (7.4KB, 完整故事)
+- ✅ Dogfood 最终 trace: supervisor(604+107) → research_expert(1970+220) → supervisor(1049+218), per-node attribution 在真实 workload 上工作
+- ⏸ 选项 A (fork-execute) **刻意不做** — R17 没有产生任何需要 auto-execute 的证据, ADR-008 边界 stay frozen
+- 版本不动 (bug fix, 等 R18 一起 cut v0.1.4)
+- **R17 核心教训 (写进项目 DNA)**: **236 绿测试和 3 个 showstopper bug 可以共存; 单元测试不能替代 dogfood.** 下一轮应该继续往这条路上走
+
+### R18 选项 (面向未来的你)
+- **R18-A (推荐)**: 第二个 dogfood target — `langgraph-swarm-py` (swarm pattern 和 supervisor 形成对比) 或 `langgraph-reflection` (single-agent introspection). 连续 2-3 轮 dogfood 才能累积 "lift ADR-008 boundary" 的证据基础
+- **R18-B**: `chronos runs compare A B` — 由 R17 case study 的 "research_expert 占 60% prompt tokens" 观察驱动的跨-run diff UX. 1-2 轮
+- **R18-C**: 把 R17 Finding #2 的 checkpointer 要求写进 `docs/getting-started.md` + sharpen error message. 0.5 轮, 可以当 R18 附加项
+- **R18-D**: v0.1.4 release cut (如果 R18 产出自然累积到需要 bump)
+
 **硬约束 (延续, R10-R16 再次强调)**:
 - ❌ 不开始写 Web UI (除非用户点头)
 - ❌ **不加 AutoGen/CrewAI adapter** — R10 试过被抓回, 硬红线, 除非用户**显式**说启动 Phase 2
@@ -254,7 +282,7 @@ if not (0 <= beijing_hour <= 11):
 - ❌ 不动 v0.1.1 frozen 的 API 签名 (record/replay/fork/diff/fork plan CLI 命令 + `ForkPlan` schema v1)
 - ❌ **不改 ADR-009 `UsageExtractor` Protocol** — 协议本身和 v0.1.2 冻结的一致 (`UsageExtractor` 签名、`UsageContext` / `UsageResult` 字段、失败容忍语义)
 - ❌ **不动 R14 确立的 CLI 模块形状** (除非补充模式): subcommand 实现模块应该暴露 `*_command(...)` 并接受 DI; 新命令应该照抄这个模式, 别搞新的
-- ✅ 任何新功能 → 新 ADR (下一个编号 **ADR-011**)
+- ✅ 任何新功能 → 新 ADR (下一个编号 **ADR-012** — R17 已用掉 ADR-011)
 - ✅ spike / ADR 先行纪律 8 战 8 胜 (R12 ADR-009 + R15 ADR-010 加分), 继续
 - ✅ **progress doc 每轮末必写 + commit + push**
 - ✅ **动 deps / pyproject.toml 前先读 CONTEXT.md 第 3 节和本节硬约束**

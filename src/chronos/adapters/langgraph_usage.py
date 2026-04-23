@@ -19,7 +19,7 @@ Failure semantics
 
 If the user's extractor raises, the recorder logs a warning via the logger
 ``chronos.adapters.langgraph.usage`` and records the node with ``usage=None``.
-A buggy extractor must **never** abort a recording — partial usage data is
+A buggy extractor must **never** abort a recording - partial usage data is
 far more useful than losing the entire run.
 """
 
@@ -45,7 +45,7 @@ class UsageContext:
     post_snapshot: Any
     pre_values: dict[str, Any]
     post_values: dict[str, Any]
-    task: Any  # pre_snapshot.tasks[0] — exposed for message id / task.name
+    task: Any  # pre_snapshot.tasks[0] - exposed for message id / task.name
 
 
 @dataclass(frozen=True)
@@ -78,17 +78,47 @@ class UsageExtractor(Protocol):
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# Message-shape normalization (ADR-011)
+# ---------------------------------------------------------------------------
+#
+# ``_coerce_state`` in the adapter recursively converts pydantic
+# ``BaseMessage`` instances into plain dicts (so that SQLite JSON storage
+# succeeds). Extractors run *after* coercion, which means they receive dicts
+# on ``ctx.post_values["messages"]`` even though the names imply objects.
+#
+# To stay robust against either shape, every extractor goes through these two
+# helpers instead of ``getattr(msg, "usage_metadata", None)`` directly:
+#
+# * :func:`_msg_field` - read a top-level message field (``usage_metadata``,
+#   ``response_metadata``, ``type``, ...) from either a dict or an object.
+# * :func:`_msg_is_ai` - true for messages that originated as ``AIMessage``
+#   (dict form has ``type == "ai"``; object form has class name ``AIMessage``
+#   or subclass).
+
+
+def _msg_field(msg: Any, key: str) -> Any:
+    """Read ``msg[key]`` if ``msg`` is a dict, else ``getattr(msg, key, None)``."""
+    if isinstance(msg, dict):
+        return msg.get(key)
+    return getattr(msg, key, None)
+
+
 def aimessage_usage_extractor(ctx: UsageContext) -> UsageResult | None:
     """Best-effort extractor for LangChain ``AIMessage.usage_metadata``.
 
     Walks ``ctx.post_values["messages"]`` from the tail looking for the newest
-    message with a ``usage_metadata`` attribute shaped like::
+    message with a ``usage_metadata`` field shaped like::
 
         {"input_tokens": int, "output_tokens": int,
          "output_token_details": {"reasoning": int}, ...}
 
+    Works on both pydantic ``AIMessage`` instances and on dict-coerced
+    messages (see ADR-011) because both shapes are read through
+    :func:`_msg_field`.
+
     Returns ``None`` if no matching message is found. Does **not** compute
-    cost — callers who want cost should wrap this extractor and add their
+    cost - callers who want cost should wrap this extractor and add their
     own pricing table.
 
     Users with custom state shapes should write their own extractor; this
@@ -99,7 +129,7 @@ def aimessage_usage_extractor(ctx: UsageContext) -> UsageResult | None:
         return None
 
     for msg in reversed(messages):
-        meta = getattr(msg, "usage_metadata", None)
+        meta = _msg_field(msg, "usage_metadata")
         if not isinstance(meta, dict):
             continue
 
@@ -111,10 +141,10 @@ def aimessage_usage_extractor(ctx: UsageContext) -> UsageResult | None:
         if isinstance(details, dict):
             reasoning = int(details.get("reasoning", 0) or 0)
 
-        model = getattr(msg, "response_metadata", None)
+        resp_meta = _msg_field(msg, "response_metadata")
         model_name = None
-        if isinstance(model, dict):
-            model_name = model.get("model_name") or model.get("model")
+        if isinstance(resp_meta, dict):
+            model_name = resp_meta.get("model_name") or resp_meta.get("model")
 
         return UsageResult(
             prompt_tokens=prompt,
@@ -137,15 +167,16 @@ def _latest_message_with_response_metadata_key(
 ) -> tuple[Any, dict[str, Any]] | None:
     """Return the newest message whose ``response_metadata[key]`` is a dict.
 
-    Common helper for the native Anthropic / OpenAI extractors — they only
-    differ in which key they look for under ``response_metadata``.
+    Common helper for the native Anthropic / OpenAI extractors - they only
+    differ in which key they look for under ``response_metadata``. Works on
+    both pydantic message objects and dict-coerced messages (ADR-011).
     """
     messages = ctx.post_values.get("messages")
     if not isinstance(messages, list):
         return None
 
     for msg in reversed(messages):
-        meta = getattr(msg, "response_metadata", None)
+        meta = _msg_field(msg, "response_metadata")
         if not isinstance(meta, dict):
             continue
         payload = meta.get(key)
@@ -173,7 +204,7 @@ def anthropic_usage_extractor(ctx: UsageContext) -> UsageResult | None:
     (Cost differentials - cache-create is +25%, cache-read is -90% - are the
     user's pricing-table concern per ADR-009.)
 
-    Returns ``None`` if no message carries a usage block — normal for
+    Returns ``None`` if no message carries a usage block - normal for
     non-LLM nodes.
     """
     found = _latest_message_with_response_metadata_key(ctx, "usage")
@@ -227,7 +258,7 @@ def openai_usage_extractor(ctx: UsageContext) -> UsageResult | None:
     completion count rather than subtracting it, so the invariant
     ``prompt_tokens + completion_tokens == total_tokens`` is preserved.
 
-    Returns ``None`` if no message carries a token_usage block — normal for
+    Returns ``None`` if no message carries a token_usage block - normal for
     non-LLM nodes.
     """
     found = _latest_message_with_response_metadata_key(ctx, "token_usage")

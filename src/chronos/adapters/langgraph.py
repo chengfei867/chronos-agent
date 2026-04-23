@@ -282,7 +282,7 @@ class LangGraphRecorder:
         # For an original run, the input placeholder (idx 0) is NOT a Node;
         # we start real nodes at idx 1. initial_state lives on idx 1's values.
         initial_state = (
-            dict(snapshots[1].values)
+            _coerce_state(snapshots[1].values)
             if len(snapshots) >= 2 and isinstance(snapshots[1].values, dict)
             else {}
         )
@@ -344,7 +344,9 @@ class LangGraphRecorder:
 
         # For a forked thread: snapshots[0] is the seed and also plays the
         # role of "pre-first-downstream-node". initial_state = seed values.
-        initial_state = dict(snapshots[0].values) if isinstance(snapshots[0].values, dict) else {}
+        initial_state = (
+            _coerce_state(snapshots[0].values) if isinstance(snapshots[0].values, dict) else {}
+        )
 
         child_run_id = str(uuid.uuid4())
         run, nodes = self._build_run_and_nodes(
@@ -579,8 +581,41 @@ def _ckpt_ns(snap: Any) -> str:
 
 def _coerce_state(values: Any) -> dict[str, Any]:
     if isinstance(values, dict):
-        return dict(values)
+        return {k: _jsonable(v) for k, v in values.items()}
     return {"__non_dict__": repr(values)}
+
+
+def _jsonable(obj: Any) -> Any:
+    """Recursively coerce LangGraph state values into JSON-serializable shapes.
+
+    LangGraph state often contains LangChain ``BaseMessage`` subclasses
+    (``HumanMessage``, ``AIMessage``, ``ToolMessage``, etc.) - pydantic models
+    that json.dumps can't handle. We call their ``.model_dump()`` method if
+    present, recurse through dicts/lists/tuples, and repr-fallback anything
+    exotic. See ADR-011.
+    """
+    # Primitives: pass through.
+    if obj is None or isinstance(obj, (str, int, float, bool)):
+        return obj
+    # Pydantic models (LangChain BaseMessage, etc.)
+    if hasattr(obj, "model_dump"):
+        try:
+            return _jsonable(obj.model_dump())
+        except Exception:
+            pass
+    # dataclass-like
+    if hasattr(obj, "__dict__") and not isinstance(obj, type):
+        try:
+            return _jsonable(dict(obj.__dict__))
+        except Exception:
+            pass
+    # Collections
+    if isinstance(obj, dict):
+        return {str(k): _jsonable(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple, set, frozenset)):
+        return [_jsonable(x) for x in obj]
+    # Fallback: string repr (never raises).
+    return repr(obj)
 
 
 __all__ = ["AdapterError", "ForkRef", "LangGraphRecorder", "RunRef"]

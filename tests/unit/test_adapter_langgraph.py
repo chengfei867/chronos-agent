@@ -384,3 +384,71 @@ def test_cyclic_graph_preserves_step_ordering(tmp_path):
         assert [n.node_name for n in nodes] == ["loop", "loop"]
         assert [n.step_index for n in nodes] == [0, 1]
         assert nodes[1].parent_node_id == nodes[0].id
+
+
+# ---------------------------------------------------------------------------
+# ADR-011: _jsonable recursive coercion
+# ---------------------------------------------------------------------------
+
+
+def test_jsonable_coerces_pydantic_models_recursively():
+    """Pydantic BaseModel (LangChain message shape) should dump to dict."""
+    import json
+
+    from pydantic import BaseModel
+
+    from chronos.adapters.langgraph import _jsonable
+
+    class FakeMessage(BaseModel):
+        content: str
+        usage_metadata: dict
+
+    msg = FakeMessage(content="hi", usage_metadata={"input_tokens": 10})
+    result = _jsonable({"messages": [msg]})
+    # Must be JSON-serializable end-to-end.
+    json.dumps(result)
+    assert result["messages"][0]["content"] == "hi"
+    assert result["messages"][0]["usage_metadata"]["input_tokens"] == 10
+
+
+def test_jsonable_handles_nested_lists_and_tuples():
+    import json
+
+    from chronos.adapters.langgraph import _jsonable
+
+    result = _jsonable({"a": [1, (2, 3), {"b": "c"}]})
+    json.dumps(result)
+    assert result == {"a": [1, [2, 3], {"b": "c"}]}
+
+
+def test_jsonable_passes_through_primitives():
+    from chronos.adapters.langgraph import _jsonable
+
+    assert _jsonable(42) == 42
+    assert _jsonable("x") == "x"
+    assert _jsonable(None) is None
+    assert _jsonable(True) is True
+    assert _jsonable(3.14) == 3.14
+
+
+def test_jsonable_exotic_objects_fall_back_to_repr_safely():
+    """datetime / UUID / Enum / bytes shouldn't crash; worst case is a repr."""
+    import json
+    from datetime import datetime
+    from enum import Enum
+    from uuid import UUID
+
+    from chronos.adapters.langgraph import _jsonable
+
+    class Color(Enum):
+        RED = "red"
+
+    obj = {
+        "dt": datetime(2026, 4, 23, 12, 0, 0),
+        "uid": UUID("12345678-1234-5678-1234-567812345678"),
+        "color": Color.RED,
+        "bytes": b"raw",
+    }
+    result = _jsonable(obj)
+    # Either dict-expanded or repr'd, but MUST be JSON-serializable.
+    json.dumps(result)

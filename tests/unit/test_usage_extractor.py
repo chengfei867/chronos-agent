@@ -125,6 +125,29 @@ def test_aimessage_extractor_no_messages_key() -> None:
     assert aimessage_usage_extractor(_ctx({"messages": "not a list"})) is None
 
 
+def test_aimessage_extractor_works_on_dict_coerced_messages() -> None:
+    # ADR-011 regression guard: after _coerce_state dict-ifies pydantic
+    # messages, aimessage_usage_extractor must still be able to read
+    # usage_metadata from the dict shape. Prior to the fix this returned
+    # None because getattr(dict, "usage_metadata") is always None.
+    msg_dict = {
+        "type": "ai",
+        "content": "hello",
+        "usage_metadata": {
+            "input_tokens": 42,
+            "output_tokens": 17,
+            "output_token_details": {"reasoning": 3},
+        },
+        "response_metadata": {"model_name": "claude-3-5-sonnet"},
+    }
+    result = aimessage_usage_extractor(_ctx({"messages": [msg_dict]}))
+    assert result is not None
+    assert result.prompt_tokens == 42
+    assert result.completion_tokens == 17
+    assert result.reasoning_tokens == 3
+    assert result.model_name == "claude-3-5-sonnet"
+
+
 def test_aimessage_extractor_no_usage_metadata() -> None:
     msg = _FakeAIMessage(usage_metadata=None)
     assert aimessage_usage_extractor(_ctx({"messages": [msg]})) is None
@@ -250,6 +273,27 @@ def test_anthropic_extractor_picks_newest_with_usage() -> None:
 # ---------------------------------------------------------------------------
 # openai_usage_extractor (ADR-010)
 # ---------------------------------------------------------------------------
+
+
+def test_anthropic_extractor_works_on_dict_coerced_messages() -> None:
+    # ADR-011 regression guard: dict form of response_metadata.
+    msg_dict = {
+        "type": "ai",
+        "response_metadata": {
+            "model": "claude-opus-4-7",
+            "usage": {
+                "input_tokens": 100,
+                "output_tokens": 50,
+                "cache_creation_input_tokens": 10,
+                "cache_read_input_tokens": 5,
+            },
+        },
+    }
+    result = anthropic_usage_extractor(_ctx({"messages": [msg_dict]}))
+    assert result is not None
+    assert result.prompt_tokens == 115  # 100 + 10 + 5
+    assert result.completion_tokens == 50
+    assert result.model_name == "claude-opus-4-7"
 
 
 def test_openai_extractor_happy_path() -> None:
