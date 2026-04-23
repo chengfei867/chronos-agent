@@ -294,7 +294,7 @@ def main(
 def info() -> None:
     """Print environment diagnostics."""
     console.print(f"[bold]chronos[/bold] {__version__}")
-    console.print("Status: pre-alpha (Phase 1 M1.10 — fork plan CLI, v0.1.1)")
+    console.print("Status: pre-alpha (Phase 1 M1.11 — usage extractor hook, v0.1.2)")
     console.print(
         "Commands: [green]runs list/show, forks show, diff, replay, fork plan[/green] "
         "available; [dim]record[/dim] [yellow](adapter-level only)[/yellow]"

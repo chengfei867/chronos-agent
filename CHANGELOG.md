@@ -4,6 +4,14 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
+_Nothing yet — R14 will decide._
+
+---
+
+## [0.1.2] — 2026-04-23 (Round 12 + Round 13)
+
+**Theme**: Token usage & cost visibility. The four-verb loop (record/replay/fork/diff) gains a sibling capability — **know what each run cost**.
+
 ### Added (Round 12) — M1.11 usage extractor hook + CLI token/cost surfaces
 - `usage_extractor: UsageExtractor | None` kwarg on `LangGraphRecorder.__init__` — callable protocol `(UsageContext) -> UsageResult | None` invoked per node to populate the previously-dormant `Node.usage` and `Node.cost_usd_cents` schema fields (added in M1.1, zero references until now).
 - New module `chronos.adapters.langgraph_usage` — `UsageContext` / `UsageResult` frozen dataclasses, `UsageExtractor` Protocol, plus `aimessage_usage_extractor` convenience implementation that reads LangChain `AIMessage.usage_metadata` / `response_metadata`.
@@ -18,7 +26,11 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ### Notes
 - No schema changes — pure fill of existing-but-unused fields, fully backward compatible (runs without an extractor keep recording identically).
-- No tag this round. R13 will bundle any small follow-ups and cut **v0.1.2**.
+
+### Added (Round 13) — v0.1.2 release cut
+- Version bumped `0.1.1` → `0.1.2` in `src/chronos/__init__.py` and `pyproject.toml`.
+- Git tag `v0.1.2` pushed to `origin` (private repo, gh-proxy.com mirror).
+- No code changes this round — pure release packaging per R12 plan.
 
 ---
 
