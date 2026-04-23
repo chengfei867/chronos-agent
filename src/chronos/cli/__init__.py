@@ -11,6 +11,7 @@ Command surface::
     chronos runs list [--db PATH] [--limit N] [--json]
     chronos runs show <run_id> [--db PATH] [--json]
     chronos forks show <fork_id> [--db PATH] [--json]
+    chronos diff <run_a> <run_b> [--db PATH] [--json] [--verbose] [--full]
 
 All commands honour ``CHRONOS_DB`` env var as a fallback for ``--db``, and
 default to ``./chronos.db`` if neither is set.
@@ -33,6 +34,7 @@ from rich.table import Table
 from rich.tree import Tree
 
 from chronos import __version__
+from chronos.core.diff import DiffReport, DiffRunNotFoundError, diff_runs
 from chronos.core.models import Fork, Node, Run
 from chronos.store.sqlite import SqliteStore
 
@@ -184,10 +186,10 @@ def main(
 def info() -> None:
     """Print environment diagnostics."""
     console.print(f"[bold]chronos[/bold] {__version__}")
-    console.print("Status: pre-alpha (Phase 1 M1.6 — read-side CLI)")
+    console.print("Status: pre-alpha (Phase 1 M1.8 — structural diff)")
     console.print(
-        "Commands: [green]runs list/show, forks show[/green] available; "
-        "[dim]record, replay, diff, fork[/dim] [yellow](later milestones)[/yellow]"
+        "Commands: [green]runs list/show, forks show, diff[/green] available; "
+        "[dim]record, replay, fork[/dim] [yellow](later milestones)[/yellow]"
     )
 
 
@@ -371,6 +373,128 @@ def forks_show(
         v_repr = repr(v)
         edits.add(f"[bold]{k}[/] = {_truncate(v_repr, 120)}")
     console.print(root)
+
+
+# ---------------------------------------------------------------------------
+# `chronos diff`
+# ---------------------------------------------------------------------------
+
+
+_TAG_STYLE = {
+    "equal": "dim",
+    "changed": "yellow",
+    "added": "green",
+    "removed": "red",
+}
+_TAG_SYMBOL = {
+    "equal": "=",
+    "changed": "~",
+    "added": "+",
+    "removed": "-",
+}
+
+
+def _render_diff_table(report: DiffReport, verbose: bool) -> Table:
+    table = Table(
+        title=(
+            f"Diff {report.run_a.id} → {report.run_b.id}"
+            + (" (downstream of fork)" if report.restricted_to_downstream else "")
+        ),
+        show_lines=verbose,
+        header_style="bold cyan",
+    )
+    table.add_column("", no_wrap=True, width=2)
+    table.add_column("tag", no_wrap=True)
+    table.add_column("node_name", overflow="fold")
+    table.add_column("a (step)", no_wrap=True)
+    table.add_column("b (step)", no_wrap=True)
+    table.add_column("details", overflow="fold")
+
+    for e in report.entries:
+        style = _TAG_STYLE[e.tag]
+        sym = _TAG_SYMBOL[e.tag]
+        a_step = str(e.a.step_index) if e.a else "—"
+        b_step = str(e.b.step_index) if e.b else "—"
+        details = ""
+        if e.tag == "changed" and e.state_diff is not None:
+            parts: list[str] = []
+            if e.state_diff.added_keys:
+                parts.append(f"+{','.join(e.state_diff.added_keys)}")
+            if e.state_diff.removed_keys:
+                parts.append(f"-{','.join(e.state_diff.removed_keys)}")
+            if e.state_diff.changed_keys:
+                parts.append(f"~{','.join(e.state_diff.changed_keys.keys())}")
+            details = "  ".join(parts)
+            if verbose and e.state_diff.changed_keys:
+                long_bits = []
+                for k, ab in e.state_diff.changed_keys.items():
+                    long_bits.append(
+                        f"{k}: {_truncate(repr(ab['a']), 60)} → {_truncate(repr(ab['b']), 60)}"
+                    )
+                details += "\n" + "\n".join(long_bits)
+        table.add_row(
+            f"[{style}]{sym}[/]",
+            f"[{style}]{e.tag}[/]",
+            e.node_name,
+            a_step,
+            b_step,
+            details,
+        )
+    return table
+
+
+@app.command()
+def diff(
+    run_a: str = typer.Argument(..., help="First run id (the 'A' side)."),
+    run_b: str = typer.Argument(..., help="Second run id (the 'B' side)."),
+    db: Path | None = typer.Option(
+        None, "--db", help="Path to chronos.db (overrides $CHRONOS_DB)."
+    ),
+    json_out: bool = typer.Option(False, "--json", help="Emit JSON instead of a table."),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Show per-key state_after diffs inline."
+    ),
+    full: bool = typer.Option(
+        False,
+        "--full",
+        help=(
+            "Compare entire runs even when B is a fork child of A. "
+            "Default is to restrict to post-fork-point nodes (upstream is "
+            "identical by construction)."
+        ),
+    ),
+) -> None:
+    """Structural diff of two recorded runs (ADR-006 alignment)."""
+    store = _open_store(db)
+    try:
+        try:
+            report = diff_runs(store, run_a, run_b, restrict_to_downstream=not full)
+        except DiffRunNotFoundError as exc:
+            console.print(f"[red]error:[/] no such run: [bold]{exc.run_id}[/]")
+            raise typer.Exit(code=1) from exc
+    finally:
+        store.close()
+
+    if json_out:
+        _emit_json(report.to_dict())
+        return
+
+    summary = report.summary
+    if report.fork is not None and report.restricted_to_downstream:
+        console.print(
+            f"[magenta]B is forked from A @ node[/] "
+            f"[bold]{report.fork_point_node_name}[/] "
+            f"[dim](fork {report.fork.id})[/] — diffing downstream only. "
+            "Use --full for full-run diff."
+        )
+    console.print(_render_diff_table(report, verbose=verbose))
+    console.print(
+        "[bold]summary[/]: "
+        f"[dim]{summary['equal']} equal[/]  "
+        f"[yellow]{summary['changed']} changed[/]  "
+        f"[green]{summary['added']} added[/]  "
+        f"[red]{summary['removed']} removed[/]"
+    )
 
 
 if __name__ == "__main__":

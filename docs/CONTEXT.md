@@ -147,38 +147,45 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
-**截至 Round 6 结束 (2026-04-23 北京 ~04:50, cron 正常窗口内)**
+**截至 Round 7 结束 (2026-04-23 北京 ~08:00, cron 正常窗口内)**
 
-- Round: **6 完成** (M1.6 CLI 读侧 — Chronos 第一次"看得见摸得着")
-- 最近 progress doc: `progress/2026-04-23-round-6.md` ← **下一轮的你必读**
-- 当前阶段: **Phase 1 进行中 — 下一步大概率是 M1.8 结构化 diff (需要 ADR-006) 或 M1.7 Replay TUI**
-- 最新 ADR: `ADR-005-fork-semantics.md` (R6 没开 ADR — 在 progress doc §"ADR-006 was not needed" 里论证了为啥)
-- 最新 commit: 见 GitHub main (R6 commit)
+- Round: **7 完成** (M1.8 结构化 Diff — fork 的价值第一次变得可见)
+- 最近 progress doc: `progress/2026-04-23-round-7.md` ← **下一轮的你必读**
+- 当前阶段: **Phase 1 MVP 接近完成** — record/replay/fork/diff 四兄弟里就 replay (M1.7) 没做; 已具备 cut v0.1.0 的条件 (见 R7 progress doc §Round 8 candidates)
+- 最新 ADR: `ADR-006-diff-alignment.md` (Accepted) — 冻结 diff 对齐算法 + JSON schema
+- 最新 commit: 见 GitHub main (R7 commit)
 - Blocked items: 无
-- Code LOC: ~2,730 (adapter +0, cli +280, tests +280, spike6 +200)
-- 测试状态: **82/82 pass, 93% coverage** (unit 72 + integration 4 + spike 6)
-- CLI 表面 (R6 新增):
-  - `chronos runs list [--db PATH] [--limit N] [--json]`
-  - `chronos runs show <run_id> [--db PATH] [--json]` — tree, 若是 fork 的 child 会显示 "forked from ..." 血缘行
-  - `chronos forks show <fork_id> [--db PATH] [--json]` — parent/child/overrides/downstream nodes
-  - 所有命令支持 `--db` / `$CHRONOS_DB` / 默认 `./chronos.db`
-  - 错误退出码: 2 = DB 不存在/不可读, 1 = id 找不到, 0 = 成功
+- Code LOC: ~3,280 (diff 模块 +270, cli +125, tests +680, spike7 +280, ADR-006 +9KB)
+- 测试状态: **112/112 pass, 92% coverage** (+30 tests; coverage -1pt 因为 diff.py 是新代码, 自身 92%)
+- CLI 表面 (R7 新增 diff 命令):
+  - `chronos runs list / runs show / forks show` (R6 遗留, 未变)
+  - **新**: `chronos diff <run_a> <run_b> [--db PATH] [--json] [--verbose] [--full]`
+    - 默认 fork-aware: 如果 B 是 A 的 fork child, 自动只 diff 分叉点下游 (上游必然相同, 不做冗余显示); `--full` 关掉这个优化
+    - 输出: rich table (= 灰 / ~ 黄 / + 绿 / − 红) 或 ADR-006 frozen JSON schema
+    - `--verbose` 展开每个 CHANGED 节点的 state_after key-level 差异 (`key: <a_repr> → <b_repr>`)
+  - 错误退出码同前: 2 = DB 不存在, 1 = run id 找不到, 0 = 成功
+- API 表面 (R7 新增):
+  - `chronos.core.diff.diff_runs(store, run_a_id, run_b_id, *, restrict_to_downstream=True) -> DiffReport`
+  - `chronos.core.diff.align_nodes(nodes_a, nodes_b) -> list[DiffEntry]` (纯函数, 无 I/O, 便于测)
+  - `DiffReport.to_dict()` 输出 ADR-006 §Decision 6 冻结的 JSON schema
 - API 表面 (R4/R5 遗留, 未变):
   - `LangGraphRecorder(store).record(graph, input, config) -> RunRef`
   - `LangGraphRecorder(store).fork(graph, *, parent_run_id, at_node_id, overrides, child_thread_id, reason=None)` context manager
-- 已验证事实 (R6 新增):
-  - **`NodeKind` 合法值**: `{llm, tool, fn, router, fork, end}` — 没有 `STEP` (我第一次写 spike6 时踩过)
-  - **Rich `Console.print` 会按 terminal width 自动换行**, 对 JSON 输出是灾难 → JSON 模式必须走 `print(json.dumps(..., default=str))`, 不能走 rich
-  - **Typer `CliRunner` 的错误输出可能 route 到 stdout 或 stderr**, 依赖 rich tty 检测 — 测试断言错误文本时要 `(stdout + stderr).lower()` 双查
-  - **Typer 的 `typer.Option(...)` 默认参数被 ruff B008 拒绝** — 这是 Typer 官方用法, 正确做法是 per-file-ignore (pyproject 里已加)
-  - **`SqliteStore.open()` 会静默创建不存在的文件** — CLI 读命令**必须**先 `Path.exists()` 检查, 否则"在错误目录跑命令"会变成"返回空列表"的坑
-  - **R5 的 cross-Run `parent_node_id`** 在 R6 第一次被用户可见地消费: `chronos runs show <child>` 直接渲染出 "forked from X @ node Y"
+- 已验证事实 (R7 新增):
+  - **`difflib.SequenceMatcher` 对 `node_name` 序列做对齐能正确处理 loops** (重复出现的 node name 按顺序配对, 不会塌缩成 set 操作) — 这是 R7 最大的单点风险, spike7 case 3 实证通过 → ADR-006 敲定
+  - **fork-aware 默认切片** (B 是 A 的 fork child 时只 diff 分叉点下游) 是"让 fork 价值被看见"的关键 UX; 没有这个切片, 真正的差异会被 N-k 个 REMOVED 节点淹没
+  - **`replace` opcode 不做启发式 re-pairing** (ADR-006 §Decision 3) — 统一线性化成 REMOVE+ADD, 任何启发式都能被一次对抗性 fork edit 打穿, 下沉 Web UI 再做
+  - **ADR-006 JSON schema 已冻结** — 6 个顶级 key, 每条 entry 固定 `tag/node_name/a/b/state_diff`; 未来 Web UI diff viewer / `chronos export` / IDE 插件都按这个 schema 走
+  - **Pydantic `state_after` 深等值** 是 equal vs changed 判定的基石 (同名同位置, state 不同 → CHANGED); 这对 LangGraph 的大 state (含 LLM context) 最终会是性能热点, Phase 3 再上 content hash + lazy drill-down
 - 旧事实 (仍生效, 不重复列):
   - GitHub push 只有 `gh-proxy.com` 可行
   - LangGraph 1.1.9 checkpointer 完整 capture / fork / diff
   - Fork 语义 (见 R5 事实清单)
+  - `NodeKind` 合法值 `{llm, tool, fn, router, fork, end}`
   - Runs/Nodes upsert, Forks append-only
   - Duck-typed fake + real integration 双测试策略
+  - Rich `Console.print` 会按 terminal width 换行 → JSON 模式必须走 stdlib `print(json.dumps(...))`
+  - `SqliteStore.open()` 静默创建文件, 读命令必须先 `Path.exists()` 守卫
 
 ## Cron 窗口门控 (2026-04-22 用户指令)
 
@@ -197,45 +204,43 @@ if not (0 <= beijing_hour <= 11):
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 7 候选** (按优先级排, R6 把 CLI 读侧搞定, 现在到了 "让 fork 的价值被看见"):
+**Round 8 候选** (按 R7 progress doc §Round 8 candidates 排序; Phase 1 MVP 功能已基本闭环, 重心从"造功能"转向"让人能用"):
 
-### 选项 A (强推): M1.8 — 结构化 Diff (`chronos diff <run_a> <run_b>`) + ADR-006
-- fork 已经可以跑, CLI 已经可以看, 但**没有一个命令能直接看出 parent vs child 差在哪** — 这是 fork 价值的致命缺口
-- 按 node name 对齐 (step_index 做 tiebreak, R4/R5 已知 fork 后 step_index 错位)
-- diff state_after 的每个 key, 标注 ADDED / REMOVED / CHANGED, 长 string 做 difflib.unified_diff
-- 特别场景: `chronos diff <parent> <child_of_fork>` 自动从 Fork 记录拿到分叉点, 只 diff 下游节点 (上游必然相同, 不显示冗余)
-- **必须写 ADR-006 (alignment algorithm)** — 这是真正的架构决策, 未来 semantic diff / Web UI diff viewer 都会依赖这个对齐规则
-- 输出: rich table (ADD 绿 / DEL 红 / CHG 黄) + `--json` 模式 + `--verbose` 展开 state diff
-- 测试: 用 R6 的 `seeded_db` fixture 扩展, 加 parent-only / child-only / same-name-different-state 三种典型 case
+### 选项 A (R7 推荐): M1.9 — Getting Started docs + `examples/` + cut v0.1.0 + 自 dogfood
+- 现状: record (M1.4) + fork (M1.5) + CLI read (M1.6) + diff (M1.8) 全部 ship, 只差 M1.7 replay; 但 replay 是追平 Langfuse 的 baseline 功能, 不是 Chronos 的差异化价值
+- 要做的: `docs/getting-started.md` 5 分钟上手, `examples/` 下 1-2 个可运行的 LangGraph agent 示例 (最好一个是普通 ReAct, 一个是 router+tool loop 能展示 diff 威力), README 重写装链接, tag `v0.1.0`
+- **必做 dogfood** (roadmap §Cross-Phase Commitments §3 硬要求): 实际跑两个真 LangGraph agent, 用 `chronos diff` 比一下 — 不用 seeded_db fixture 假数据. 这一步最可能暴露 R7 diff 命令的真实 UX 问题
+- ROI: 低风险高回报, `getting-started.md` 是 forcing function, 会把 CLI 的所有坑逼出来
+- 不需要新 ADR
 
 ### 选项 B: M1.7 — Replay TUI (`chronos replay <run_id>`)
 - 用 `rich.live` 或 `textual` 做 step-by-step 交互 (空格下一步, ← 上一步, q 退出)
-- 需要 ADR-007 (rich.live vs textual vs plain curses)
-- 视觉炫酷但工时重, ROI 不如 diff
-- Chronos 独特价值 = fork + diff, 不是 replay (Langfuse 已有 replay); 应该强化独特价值而不是追平 baseline
+- **必须写 ADR-007** (rich.live vs textual vs plain curses) 再开工
+- 做完之后 record/replay/fork/diff 四个动词全闭环, 适合作为 v0.1.0 的完整故事; 但工时重
+- 如果 R8 走这条, 则 R9 走选项 A
 
 ### 选项 C: `chronos fork <run> --at <node> --set key=value` CLI 包装
-- 底层 `fork()` primitive 已经 ready, 只差 CLI 胶水 + KV 解析 + 用户的 graph 怎么传进来 (大问题!)
-- 问题: fork 需要用户的 LangGraph 对象, 而 CLI 拿不到 — 要么用户指定 `--graph module:attr` 动态导入, 要么 fork 命令只能做成 Python library (`chronos.fork(...)`)
-- **这个问题比看起来复杂**, 不适合做成 CLI 单轮任务 — 应该先做 ADR-008 "如何让 CLI 触发需要用户对象的操作"
+- 底层 `fork()` primitive 已 ready, 但 CLI 拿不到用户的 LangGraph 对象是真问题
+- 需要 ADR-008 "如何让 CLI 触发需要用户对象的操作" (`--graph module:attr` 动态导入 vs library-only)
+- 这个问题比看起来复杂, 不适合做成单轮 CLI 任务; 建议 Phase 1 末期或 Phase 2 做
 
-**本轮 (Round 7) 强推 A** — 理由 (已在 progress doc §Round 7 candidates 展开):
-1. fork 已经 ship 但"看不见差异", diff 是闭环的最后一块拼图
-2. R6 的 `runs show` / `forks show` 已经搭好了可视化底座, diff 能复用
-3. ADR-006 逾期, diff alignment 是最好的 forcing function
-4. replay 是追平竞品, diff 是拉开差距
+**本轮 (Round 8) 倾向选项 A** — 理由:
+1. Phase 1 MVP 已功能完整 (record/fork/diff 三件套), 当前最大瓶颈是"外人看不懂怎么上手"
+2. `getting-started.md` 逼着自己跑一遍流程, 会把 R7 diff 的实际坑挖出来 (dogfood)
+3. v0.1.0 是第一个可引用的里程碑, 对未来招 contributor / 写博客都有用
+4. 低风险, 可单轮完成, 不会把自己堵在一个未完成的大功能上
 
-**硬约束 (延续 R5/R6)**:
+**硬约束 (延续 R5/R6/R7)**:
 - ❌ 不开始写 Web UI
-- ❌ 不加 AutoGen/CrewAI adapter (Phase 2 再说)
-- ❌ 不改 SQLite schema (diff 是纯读, schema 不动)
-- ❌ 不动 `LangGraphRecorder.record()` 或 `.fork()` 实现 (除非发现 bug)
-- ✅ ADR-006 必写 (alignment algorithm)
-- ✅ `--json` 模式必做, 为将来 Web UI diff viewer 准备
-- ✅ 先写一个 spike 7 验证 `difflib.SequenceMatcher` 对 node_name 序列的对齐效果 (特别是 fork 后下游 node 相同但 step_index 错位的情形)
-- ✅ diff 的测试 fixture 要覆盖: 纯 replay fork (edited_fields 空但下游非确定)、overrides 导致某节点 state 变化、overrides 导致下游 early-exit (child 节点比 parent 少)
+- ❌ 不加 AutoGen/CrewAI adapter (Phase 2)
+- ❌ 不改 SQLite schema
+- ❌ 不动 `LangGraphRecorder.record()` / `.fork()` 实现 (除非 dogfood 发现 bug)
+- ✅ 如果 R8 做 replay (选项 B), 必须先 ADR-007 再写代码
+- ✅ Dogfood 必须用真 LangGraph agent, 不能用 seeded_db fixture 假数据 (这是 roadmap 硬性承诺)
+- ✅ `examples/` 里的示例必须能 `uv run python examples/xxx.py` 直接跑, 不需要用户配 OpenAI key (用 fake LLM 或 mock)
+- ✅ v0.1.0 tag 之前: README 改写, CHANGELOG.md 首个条目, `uv publish` 的 dry-run 验一下打包过的 sdist 跑得起来
 
-**关键提醒**: R4/R5/R6 spike-先行全部奏效 (3 for 3)。Round 7 做 diff, 看似用 `difflib` 就行, 但坑大概率在"fork 的 child step_index 从 parent 分叉点继续"导致朴素的 step_index 对齐完全崩。**先 spike7 跑一遍再开 ADR-006 再开工**, 这是 R6 明确交给 R7 的纪律。
+**关键提醒**: R4/R5/R6/R7 spike-先行纪律 4 战 4 胜. R8 如果走选项 A, 不需要 spike (文档任务); 如果走选项 B, spike8 必须验 textual vs rich.live 的交互手感 (不是跑不跑得起来, 是"按空格键感觉顺不顺")。
 
 ---
 

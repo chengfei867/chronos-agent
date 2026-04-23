@@ -97,12 +97,12 @@
 
 **Exit criteria**: Replay a 20-node run smoothly.
 
-#### M1.8 — Diff (structural) + `chronos fork` CLI (2 rounds)
-- [ ] `chronos diff <run_A> <run_B>` — structural alignment by node name
-- [ ] Summary output + `--verbose` full node-by-node
-- [ ] `chronos fork <run> --at <node> --set-state k=v` — CLI wrapper on M1.5 primitive
-- [ ] Unit tests on known diff fixtures + CLI tests
-- [ ] ADR-006: diff alignment algorithm
+#### M1.8 — Diff (structural) + `chronos fork` CLI (2 rounds) — DIFF PART ✅ DONE (Round 7)
+- [x] `chronos diff <run_A> <run_B>` — structural alignment by node name (Round 7)
+- [x] Summary output + `--verbose` full node-by-node (Round 7)
+- [ ] `chronos fork <run> --at <node> --set-state k=v` — CLI wrapper on M1.5 primitive (deferred — needs ADR-008 on CLI vs library split, see R7 progress doc option C)
+- [x] Unit tests on known diff fixtures + CLI tests (Round 7, 30 new tests)
+- [x] ADR-006: diff alignment algorithm (Round 7, Accepted)
 
 **Exit criteria**: Meaningful diff of two related runs + CLI-driven fork workflow (Alex's story 1 end-to-end).
 

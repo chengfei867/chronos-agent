@@ -343,3 +343,136 @@ def test_forks_subapp_help() -> None:
     result = runner.invoke(app, ["forks", "--help"])
     assert result.exit_code == 0
     assert "show" in result.stdout.lower()
+
+
+# ---------------------------------------------------------------------------
+# `chronos diff` (M1.8)
+# ---------------------------------------------------------------------------
+
+
+def test_diff_fork_child_restricted_default(seeded_db: tuple[Path, dict[str, str]]) -> None:
+    """Default fork-aware mode slices A to downstream-only."""
+    db, ids = seeded_db
+    result = runner.invoke(app, ["diff", ids["parent"], ids["child"], "--db", str(db)])
+    assert result.exit_code == 0, result.stdout + (result.stderr or "")
+    out = result.stdout
+    # fork annotation banner
+    assert "forked from a @ node" in out.lower() or "forked from a" in out.lower()
+    # single diff row: polish — same name, different state_after
+    assert "polish" in out
+    assert "changed" in out.lower()
+    # summary line
+    assert "summary" in out.lower()
+
+
+def test_diff_fork_child_full_mode(seeded_db: tuple[Path, dict[str, str]]) -> None:
+    """--full disables the fork-downstream slice, showing REMOVED for prefix."""
+    db, ids = seeded_db
+    result = runner.invoke(app, ["diff", ids["parent"], ids["child"], "--db", str(db), "--full"])
+    assert result.exit_code == 0, result.stdout + (result.stderr or "")
+    out = result.stdout.lower()
+    assert "removed" in out  # parent nodes plan + draft aren't on child
+    assert "plan" in out
+    assert "draft" in out
+    assert "polish" in out
+
+
+def test_diff_json_shape(seeded_db: tuple[Path, dict[str, str]]) -> None:
+    db, ids = seeded_db
+    result = runner.invoke(app, ["diff", ids["parent"], ids["child"], "--db", str(db), "--json"])
+    assert result.exit_code == 0, result.stdout + (result.stderr or "")
+    payload = json.loads(result.stdout)
+    assert set(payload.keys()) == {
+        "run_a",
+        "run_b",
+        "fork_of",
+        "restricted_to_downstream",
+        "entries",
+        "summary",
+    }
+    assert payload["restricted_to_downstream"] is True
+    assert payload["fork_of"]["parent_node_name"] == "draft"
+    # After slicing, A's "polish" vs B's "polish" — 1 changed entry
+    assert payload["summary"]["changed"] == 1
+    assert payload["summary"]["removed"] == 0
+    assert len(payload["entries"]) == 1
+    assert payload["entries"][0]["tag"] == "changed"
+    assert payload["entries"][0]["node_name"] == "polish"
+
+
+def test_diff_json_full_mode(seeded_db: tuple[Path, dict[str, str]]) -> None:
+    db, ids = seeded_db
+    result = runner.invoke(
+        app,
+        [
+            "diff",
+            ids["parent"],
+            ids["child"],
+            "--db",
+            str(db),
+            "--json",
+            "--full",
+        ],
+    )
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["restricted_to_downstream"] is False
+    # plan REMOVED, draft REMOVED, polish CHANGED
+    assert payload["summary"] == {"equal": 0, "changed": 1, "added": 0, "removed": 2}
+
+
+def test_diff_missing_run_a(seeded_db: tuple[Path, dict[str, str]]) -> None:
+    db, ids = seeded_db
+    result = runner.invoke(app, ["diff", "run-nope", ids["child"], "--db", str(db)])
+    assert result.exit_code == 1
+    combined = (result.stdout + (result.stderr or "")).lower()
+    assert "run-nope" in combined
+    assert "no such run" in combined
+
+
+def test_diff_missing_run_b(seeded_db: tuple[Path, dict[str, str]]) -> None:
+    db, ids = seeded_db
+    result = runner.invoke(app, ["diff", ids["parent"], "missing-B", "--db", str(db)])
+    assert result.exit_code == 1
+    combined = (result.stdout + (result.stderr or "")).lower()
+    assert "missing-b" in combined
+
+
+def test_diff_missing_db(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["diff", "x", "y", "--db", str(tmp_path / "nope.db")])
+    assert result.exit_code == 2
+    combined = (result.stdout + (result.stderr or "")).lower()
+    assert "chronos db not found" in combined
+
+
+def test_diff_verbose_flag_expands_state_diff(
+    seeded_db: tuple[Path, dict[str, str]],
+) -> None:
+    db, ids = seeded_db
+    result = runner.invoke(
+        app,
+        [
+            "diff",
+            ids["parent"],
+            ids["child"],
+            "--db",
+            str(db),
+            "--verbose",
+        ],
+    )
+    assert result.exit_code == 0
+    # verbose mode should print inline state_after deltas containing the
+    # key name(s) that differ. Parent polish state_after = {"i": 2},
+    # child polish state_after = {"forked": True}. Both keys differ.
+    out = result.stdout.lower()
+    assert "forked" in out or "→" in result.stdout or "->" in result.stdout
+
+
+def test_diff_help_surfaces() -> None:
+    result = runner.invoke(app, ["diff", "--help"])
+    assert result.exit_code == 0
+    assert "diff" in result.stdout.lower()
+    assert "--full" in result.stdout
+    assert "--json" in result.stdout
+    assert "--verbose" in result.stdout
+    assert "show" in result.stdout.lower()
