@@ -204,44 +204,54 @@ if not (0 <= beijing_hour <= 11):
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 10 候选** (v0.1.0 已 cut, Phase 1 收工, 选项集扩大):
+**Round 11 候选** (R10 已 ship: M1.7 replay + dogfood CI + ADR-007, 选项 A 全额吃下, v0.1.1 候选):
 
-### 选项 A (R9 推荐): `make dogfood` 自动化 + M1.7 replay TUI
-- R9 的教训: docstring drift 是 R8 漏的, 因为没有自动化验证. 先做一个 30 分钟小任务: `scripts/dogfood.sh` 跑两个 examples, 正则提取它们打印的 CLI 命令, 逐条 execute, 任一非 0 就 fail
-- 然后做 M1.7 replay TUI (`chronos replay <run_id>`): `rich.live` 或 `textual` 做 step-by-step 交互
-- **必须 ADR-007** (rich.live vs textual) 再开工
-- 做完 record/replay/fork/diff 四动词全闭环, 可 cut 0.1.1
+### R10 实际产出 (2026-04-23 12:20 北京 完成)
+- ✅ `scripts/dogfood.sh` + CI 接入 (12/12 green)
+- ✅ ADR-007 `rich.live` 选型
+- ✅ `chronos replay <run_id>` (cli/replay.py, 91% cov, +26 tests)
+- ✅ 140/140 tests, 92% 覆盖, ruff/mypy 全清
+- ✅ cli-reference.md + CHANGELOG [Unreleased] 更新
+- ✅ examples 加 `chronos replay` 到 "Try these commands"
+- ⚠️ **近失**: R10 开局试图装 autogen-agentchat, 被 CONTEXT.md 第 3 节硬约束抓回. Lesson: **每轮动 deps 前先读 CONTEXT.md 第 3 节**, 别被"自由发挥"这种话冲昏头
 
-### 选项 B: AutoGen adapter (Phase 2 起点)
-- 证明 adapter 抽象假设; R5 的 `_build_run_and_nodes` helper 就是为这天留的 seam
-- 先 spike AutoGen 的 checkpoint / message-history API 长啥样, 可能会发现我们的抽象不够通用 — 这是好事, 早发现早改
-- **必须 ADR-007** (AutoGen 状态模型 → Chronos NodeKind 映射)
-- 工时重, 高风险高回报
+### 选项 A (R11 推荐): `chronos fork` CLI wrapper + ADR-008
+- 现在 record/replay/fork/diff 里只剩 `fork` 没有 CLI 入口 (adapter API 完整但 CLI 未定)
+- 需要 ADR-008 决定语义: library-only vs `--at <node> --set k=v` DSL vs `--patch <json-file>`
+- 倾向 `--patch <json-file>` + library-only 并存 (boring, scriptable)
+- 做完 cut v0.1.1 标签, 四动词 CLI 全闭环
 
-### 选项 C: usage harvester hook — 从 LangGraph callback 收 token/cost
+### 选项 B: CLI 文件拆分 (tech debt)
+- `src/chronos/cli/__init__.py` 500 行, 按 subcommand group 拆成 `cli/runs.py / cli/diff.py / cli/forks.py`
+- 低风险但 diff 巨大, 适合单独一轮不混其他功能
+- 不需要 ADR
+
+### 选项 C: AutoGen adapter (Phase 2 正式启动)
+- ⚠️ **仍需用户点头**才能做 — R10 已经试过一次自作主张, 被抓回
+- 证明 adapter 抽象假设; 先 spike AutoGen 的 checkpoint / message-history API
+- **必须 ADR-008 (如果 R11 选了选项 A 则 ADR-009)** AutoGen 状态模型 → Chronos NodeKind 映射
+
+### 选项 D: usage harvester hook — 从 LangGraph callback 收 token/cost
 - M1.4 时 defer 的旧承诺
-- 低风险, 用户肯定会问
-- 不需要 ADR, 只加一个 `usage_extractor: Callable | None` kwarg 到 `LangGraphRecorder`
+- 低风险, 不需要 ADR, 加一个 `usage_extractor: Callable | None` kwarg
 
-### 选项 D: Web UI skeleton
-- CONTEXT.md 原硬约束 "❌ No Web UI yet" 后 v0.1.0 应可以松动
-- 但这是大承诺, 一轮起不了步; 需要 ADR-008 "前端技术栈" + 至少 3 轮专心做
-- **不建议 R10 做**, 除非用户明说要
+### 选项 E: Web UI skeleton
+- 大承诺, 一轮起不了步; 需要 ADR 前端技术栈 + 至少 3 轮专心做
+- **不建议 cron 轮自启**, 除非用户明说要
 
-**R10 倾向**: 选项 A 里的 **dogfood 自动化** 部分 (30 分钟), 然后看剩余预算决定是启动 M1.7 replay 还是直接交棒给 R11. 因为:
-1. Dogfood 自动化消除了 R8→R9 那种"发布前夜发现 docstring bug"的 class of failure
-2. replay 有独立 ADR 需求, 适合一个完整的 round 而不是拼缝
-3. R10 cron 如果有时间可以把 ADR-007 起个草稿给 R11 用
+**R11 倾向**: 选项 A (`chronos fork` CLI + ADR-008). 四动词全闭环 + 可 cut v0.1.1 tag. 然后如果用户还想推进, R12 做选项 B 的 CLI 拆分清 tech debt, R13+ 再议 Phase 2.
 
-**硬约束 (延续)**:
+**硬约束 (延续, R10 again 强调)**:
 - ❌ 不开始写 Web UI (除非用户点头)
-- ❌ 不加 AutoGen/CrewAI adapter (除非明确启动 Phase 2)
+- ❌ **不加 AutoGen/CrewAI adapter** — R10 试过被抓回, 这是硬红线, 除非用户**显式**说启动 Phase 2
 - ❌ 不改 SQLite schema
-- ❌ 不动 v0.1.0 frozen 的 API 签名 (record/fork/diff/CLI 命令)
-- ✅ 任何新功能 → 新 ADR (下一个编号 ADR-007)
-- ✅ spike 先行纪律 4 战 4 胜, 继续
-- ✅ **progress doc 每轮末必写** (R8 摔了一跤)
+- ❌ 不动 v0.1.0 frozen 的 API 签名 (record/replay/fork/diff/CLI 命令)
+- ✅ 任何新功能 → 新 ADR (下一个编号 ADR-008)
+- ✅ spike / ADR 先行纪律 5 战 5 胜 (R10 ADR-007 加分), 继续
+- ✅ **progress doc 每轮末必写 + commit + push** (R8 摔一跤, R10 差点再摔一次)
+- ✅ **动 deps / pyproject.toml 前先读 CONTEXT.md 第 3 节和本节硬约束** (R10 新增教训)
 - ✅ 断言时间用 `TZ='Asia/Shanghai' date` 或 `curl -sI https://www.baidu.com | grep -i '^date:'`, 别信 session 时间
+- ✅ cron 实际节奏: **every 180m (3h)**, 不是 6h, 不是 18:00 一次 — 下一轮 cron 有 3h 窗口别浪费
 
 ---
 

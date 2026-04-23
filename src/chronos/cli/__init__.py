@@ -186,10 +186,41 @@ def main(
 def info() -> None:
     """Print environment diagnostics."""
     console.print(f"[bold]chronos[/bold] {__version__}")
-    console.print("Status: pre-alpha (Phase 1 M1.8 — structural diff)")
+    console.print("Status: pre-alpha (Phase 1 M1.7 — replay TUI + M1.8 structural diff)")
     console.print(
-        "Commands: [green]runs list/show, forks show, diff[/green] available; "
-        "[dim]record, replay, fork[/dim] [yellow](later milestones)[/yellow]"
+        "Commands: [green]runs list/show, forks show, diff, replay[/green] available; "
+        "[dim]record, fork[/dim] [yellow](adapter-level only; CLI wrapper later)[/yellow]"
+    )
+
+
+@app.command("replay")
+def replay_cmd(
+    run_id: str = typer.Argument(..., help="Run id (see `chronos runs list`)."),
+    db: Path | None = typer.Option(
+        None, "--db", help="Path to chronos.db (overrides $CHRONOS_DB)."
+    ),
+    no_interactive: bool = typer.Option(
+        False,
+        "--no-interactive",
+        help="Force static (non-TTY) rendering — useful for CI / piping / logs.",
+    ),
+) -> None:
+    """Step through a recorded run node-by-node (interactive TUI).
+
+    Keyboard controls: space/→ = next · ← = prev · home/end = first/last · q = quit.
+
+    On a non-TTY stdin/stdout (CI, pipes, ``tee``) the command falls back
+    to printing every node's detail view in order. Pass
+    ``--no-interactive`` to force that fallback on a TTY too.
+    """
+    from chronos.cli.replay import replay_command
+
+    replay_command(
+        run_id=run_id,
+        db=db,
+        no_interactive=no_interactive,
+        open_store_fn=_open_store,
+        console=console,
     )
 
 

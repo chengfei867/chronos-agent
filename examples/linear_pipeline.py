@@ -216,6 +216,7 @@ def _print_next_steps(db_path: Path, parent_id: str, child_id: str) -> None:
     print()
     print(f"  chronos runs list --db {db_path}")
     print(f"  chronos runs show {parent_id} --db {db_path}")
+    print(f"  chronos replay {parent_id} --db {db_path} --no-interactive")
     print(f"  chronos diff {parent_id} {child_id} --db {db_path}")
     print(f"  chronos diff {parent_id} {child_id} --db {db_path} --verbose")
     print(f"  chronos diff {parent_id} {child_id} --db {db_path} --full")

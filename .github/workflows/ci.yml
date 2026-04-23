@@ -46,6 +46,10 @@ jobs:
       - name: Pytest
         run: uv run pytest -v
 
+      - name: Dogfood (examples run + suggested commands execute + docstring drift check)
+        if: matrix.python-version == '3.11'
+        run: bash scripts/dogfood.sh
+
       - name: Upload coverage
         if: matrix.python-version == '3.11'
         uses: actions/upload-artifact@v4

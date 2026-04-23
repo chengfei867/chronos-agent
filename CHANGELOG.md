@@ -4,7 +4,23 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
-### Added
+### Added (Round 10) — M1.7 replay TUI + dogfood CI
+- `chronos replay <run_id>` — interactive step-through of any recorded run. Uses `rich.live` for the TUI; keyboard controls: `space`/`→` next, `←` prev, `home`/`end` jump, `q` quit. Falls back to static node-by-node rendering when stdin/stdout isn't a TTY (CI, pipes, `tee`). `--no-interactive` forces static mode.
+- `scripts/dogfood.sh` — end-to-end dogfood: runs every `examples/*.py`, extracts the "Try these commands:" block, re-executes each suggested command, and scans for `chronos --db` docstring drift (the R9 bug class). Wired into GitHub Actions CI on Python 3.11.
+- ADR-007 — replay TUI framework selection (`rich.live` chosen; `textual`, `prompt_toolkit`, `curses`, pager-only rejected with rationale).
+- 26 new unit tests for the replay module (pure render + cursor logic + Typer CLI). Total: **140/140 pass, 92% coverage**.
+
+### Notes
+- With M1.7 shipped, the record/replay/fork/diff "four-verb loop" is now end-to-end. Next tag candidate is **v0.1.1**.
+- `chronos fork` CLI wrapper still deferred (adapter-level API is complete); future ADR-008 will decide CLI ergonomics (library-only vs `fork --at <node> --set k=v`).
+
+---
+
+## [0.1.0] — 2026-04-23 (Round 9)
+
+First tagged release. Phase 1 MVP complete: record → fork → diff across a LangGraph agent, all inspectable from the CLI.
+
+### Added (Round 8/9) — M1.9 examples, docs, release polish
 - `examples/linear_pipeline.py` — runnable LangGraph 5-node agent demoing record → fork → diff with a deterministic fake LLM (no API key required).
 - `examples/router_loop.py` — runnable LangGraph agent with a conditional edge loop, demoing fork-forced early exit and how the diff aligner handles repeated node names.
 - `examples/_fake_llm.py` — pure-function FakeLLM for deterministic demos.
@@ -13,8 +29,8 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 - Rewrite of `README.md` with real install instructions, quickstart, current milestone table, and development commands.
 - `.gitignore` now excludes `examples/chronos.db` and `*.db-journal` so demo DB churn isn't committed.
 
-### Notes
-- Full M1.9 scope in progress toward **v0.1.0** tag. Known Phase 1.1 gap: `chronos replay` TUI (M1.7) and `chronos fork` CLI wrapper (M1.8 partial).
+### Fixed (Round 9)
+- Docstring drift: `chronos --db X cmd` → `chronos cmd --db X` in three example docstrings (R8 missed these; dogfood script in R10 now catches this class of bug).
 
 ---
 

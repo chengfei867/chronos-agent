@@ -48,9 +48,7 @@ def test_linear_pipeline_records_and_forks(tmp_path: Path) -> None:
         # Diff: fork-aware slicing should find at least one CHANGED node.
         report = diff_runs(store, parent_id, child_id)
         changed = [e for e in report.entries if e.tag == "changed"]
-        assert changed, (
-            f"expected fork diff to find CHANGED nodes, got {report.summary!r}"
-        )
+        assert changed, f"expected fork diff to find CHANGED nodes, got {report.summary!r}"
 
 
 def test_router_loop_records_and_forks(tmp_path: Path) -> None:

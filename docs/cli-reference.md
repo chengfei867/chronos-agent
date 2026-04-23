@@ -55,6 +55,37 @@ Exit codes: `0` success, `1` run id not found, `2` DB not found.
 
 ---
 
+## `chronos replay <run_id>`
+
+Step through the nodes of a recorded run interactively. See [ADR-007](decisions/ADR-007-replay-tui-framework.md) for why we use `rich.live` and roll a minimal keyboard reader instead of pulling in a full TUI framework.
+
+```bash
+chronos replay <run_id> [--db PATH] [--no-interactive]
+```
+
+| Flag                 | Default | Meaning                                                       |
+|----------------------|---------|---------------------------------------------------------------|
+| `--db PATH`          | `./chronos.db` | DB path.                                              |
+| `--no-interactive`   | off     | Force static (non-TTY) rendering. Auto-enabled when stdin/stdout isn't a TTY (CI, pipes, `tee`). |
+
+### Interactive keyboard
+
+| Key                 | Action              |
+|---------------------|---------------------|
+| `space` / `→` / `↓` | Next node           |
+| `←` / `↑`           | Previous node       |
+| `home`              | Jump to first node  |
+| `end`               | Jump to last node   |
+| `q` / `Ctrl-C`      | Quit                |
+
+### Non-interactive mode
+
+When not attached to a TTY (or when `--no-interactive` is passed), `replay` prints every node's detail panel in order so the output can be captured to a file, piped to `jq`/`grep`, or run in CI.
+
+Exit codes: `0`, `1` run id not found, `2` DB not found.
+
+---
+
 ## `chronos forks show <fork_id>`
 
 Print a single fork record — parent run, child run, fork-point node, reason, overrides, and lineage.
