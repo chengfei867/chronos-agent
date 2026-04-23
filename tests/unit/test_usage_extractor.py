@@ -91,12 +91,12 @@ class _FakeAIMessage:
         self.response_metadata = response_metadata
 
 
-def _ctx(post_values: dict) -> UsageContext:
+def _ctx(post_values: dict, pre_values: dict | None = None) -> UsageContext:
     return UsageContext(
         node_name="n",
         pre_snapshot=None,
         post_snapshot=None,
-        pre_values={},
+        pre_values=pre_values if pre_values is not None else {},
         post_values=post_values,
         task=None,
     )
@@ -153,13 +153,20 @@ def test_aimessage_extractor_no_usage_metadata() -> None:
     assert aimessage_usage_extractor(_ctx({"messages": [msg]})) is None
 
 
-def test_aimessage_extractor_picks_last_message_with_usage() -> None:
+def test_aimessage_extractor_sums_all_new_messages() -> None:
+    """ADR-012: extractor sums usage across every new AIMessage in this node.
+
+    When a node appends more than one AIMessage (e.g. a react-agent subgraph
+    that makes multiple LLM calls in one super-step), we must NOT drop the
+    earlier ones. Originally the extractor returned only the last match;
+    after ADR-012 it accumulates all.
+    """
     m_old = _FakeAIMessage(usage_metadata={"input_tokens": 1, "output_tokens": 1})
     m_new = _FakeAIMessage(usage_metadata={"input_tokens": 99, "output_tokens": 100})
     result = aimessage_usage_extractor(_ctx({"messages": [m_old, m_new]}))
     assert result is not None
-    assert result.prompt_tokens == 99
-    assert result.completion_tokens == 100
+    assert result.prompt_tokens == 100  # 1 + 99
+    assert result.completion_tokens == 101  # 1 + 100
 
 
 def test_aimessage_extractor_missing_details_tolerated() -> None:
@@ -261,13 +268,14 @@ def test_anthropic_extractor_model_name_fallback_to_model_name_key() -> None:
     assert result.model_name == "claude-opus-4"
 
 
-def test_anthropic_extractor_picks_newest_with_usage() -> None:
+def test_anthropic_extractor_sums_all_new_messages() -> None:
+    """ADR-012: Anthropic extractor accumulates every new message's usage."""
     m_old = _FakeAIMessage(response_metadata={"usage": {"input_tokens": 1, "output_tokens": 1}})
     m_new = _FakeAIMessage(response_metadata={"usage": {"input_tokens": 99, "output_tokens": 77}})
     result = anthropic_usage_extractor(_ctx({"messages": [m_old, m_new]}))
     assert result is not None
-    assert result.prompt_tokens == 99
-    assert result.completion_tokens == 77
+    assert result.prompt_tokens == 100  # 1 + 99
+    assert result.completion_tokens == 78  # 1 + 77
 
 
 # ---------------------------------------------------------------------------
@@ -438,6 +446,121 @@ def test_composed_extractor_chain_aimessage_fallback() -> None:
     assert result is not None
     assert result.prompt_tokens == 11
     assert result.completion_tokens == 22
+
+
+# ---------------------------------------------------------------------------
+# ADR-012: multi-LLM-per-node accumulation (swarm dogfood regression guard)
+# ---------------------------------------------------------------------------
+#
+# These tests pin the behaviour discovered during R18 dogfood on
+# ``langgraph-swarm-py``: a single graph node (e.g. a ``create_react_agent``
+# subgraph collapsed into one swarm-level super-step) can issue several LLM
+# calls, each appending its own ``AIMessage``. The extractors must sum the
+# usage of **every** new message and ignore anything that was already in
+# ``pre_values.messages`` (so we don't double-count history).
+
+
+def test_adr012_aimessage_only_new_messages_counted() -> None:
+    """Pre history must not be summed — only messages appended this step."""
+    old = _FakeAIMessage(usage_metadata={"input_tokens": 1000, "output_tokens": 500})
+    new1 = _FakeAIMessage(usage_metadata={"input_tokens": 10, "output_tokens": 5})
+    new2 = _FakeAIMessage(usage_metadata={"input_tokens": 20, "output_tokens": 7})
+    ctx = _ctx(
+        post_values={"messages": [old, new1, new2]},
+        pre_values={"messages": [old]},
+    )
+    result = aimessage_usage_extractor(ctx)
+    assert result is not None
+    # Only new1 + new2, NOT old.
+    assert result.prompt_tokens == 30
+    assert result.completion_tokens == 12
+
+
+def test_adr012_anthropic_multi_llm_per_node() -> None:
+    """Swarm Bob-node scenario: 2 LLM calls in one super-step, both counted."""
+    old = _FakeAIMessage(response_metadata={"usage": {"input_tokens": 999, "output_tokens": 999}})
+    call1 = _FakeAIMessage(
+        response_metadata={
+            "model": "claude-opus-4-7",
+            "usage": {"input_tokens": 1053, "output_tokens": 112},
+        }
+    )
+    call2 = _FakeAIMessage(
+        response_metadata={
+            "model": "claude-opus-4-7",
+            "usage": {"input_tokens": 1222, "output_tokens": 99},
+        }
+    )
+    ctx = _ctx(
+        post_values={"messages": [old, call1, call2]},
+        pre_values={"messages": [old]},
+    )
+    result = anthropic_usage_extractor(ctx)
+    assert result is not None
+    # 1053+1222=2275 prompt, 112+99=211 completion.
+    assert result.prompt_tokens == 2275
+    assert result.completion_tokens == 211
+    # model_name picked up from the last hit.
+    assert result.model_name == "claude-opus-4-7"
+
+
+def test_adr012_anthropic_empty_new_returns_none() -> None:
+    """Non-LLM node (no new messages appended) returns None."""
+    old = _FakeAIMessage(response_metadata={"usage": {"input_tokens": 10, "output_tokens": 5}})
+    ctx = _ctx(
+        post_values={"messages": [old]},
+        pre_values={"messages": [old]},
+    )
+    assert anthropic_usage_extractor(ctx) is None
+
+
+def test_adr012_openai_sums_multi_new_messages() -> None:
+    """OpenAI extractor also accumulates across multiple new AIMessages."""
+    old = {
+        "type": "ai",
+        "response_metadata": {"token_usage": {"prompt_tokens": 500, "completion_tokens": 500}},
+    }
+    new1 = {
+        "type": "ai",
+        "response_metadata": {
+            "model_name": "gpt-4o",
+            "token_usage": {"prompt_tokens": 100, "completion_tokens": 30},
+        },
+    }
+    new2 = {
+        "type": "ai",
+        "response_metadata": {
+            "model_name": "gpt-4o",
+            "token_usage": {
+                "prompt_tokens": 200,
+                "completion_tokens": 60,
+                "completion_tokens_details": {"reasoning_tokens": 15},
+            },
+        },
+    }
+    ctx = _ctx(
+        post_values={"messages": [old, new1, new2]},
+        pre_values={"messages": [old]},
+    )
+    result = openai_usage_extractor(ctx)
+    assert result is not None
+    assert result.prompt_tokens == 300  # 100 + 200
+    assert result.completion_tokens == 90  # 30 + 60
+    assert result.reasoning_tokens == 15
+
+
+def test_adr012_missing_pre_values_treats_all_as_new() -> None:
+    """Graceful fallback when pre_values has no messages key (e.g. initial step)."""
+    new1 = _FakeAIMessage(usage_metadata={"input_tokens": 10, "output_tokens": 5})
+    new2 = _FakeAIMessage(usage_metadata={"input_tokens": 20, "output_tokens": 7})
+    ctx = _ctx(
+        post_values={"messages": [new1, new2]},
+        pre_values={},  # no messages key at all
+    )
+    result = aimessage_usage_extractor(ctx)
+    assert result is not None
+    assert result.prompt_tokens == 30
+    assert result.completion_tokens == 12
 
 
 # ---------------------------------------------------------------------------

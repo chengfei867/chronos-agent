@@ -104,11 +104,42 @@ def _msg_field(msg: Any, key: str) -> Any:
     return getattr(msg, key, None)
 
 
+def _new_messages(ctx: UsageContext) -> list[Any]:
+    """Return messages appended during this node's execution (ADR-012).
+
+    A single graph node may invoke the LLM multiple times (e.g. a
+    ``create_react_agent`` subgraph collapsed into one swarm-level node).
+    Each such call appends its own ``AIMessage`` to the message list. To
+    account for **all** of them we diff ``post_values["messages"]`` against
+    ``pre_values["messages"]``: anything past the pre-length is new.
+
+    This is preferable to scanning all of ``post_values["messages"]``
+    because on subsequent turns the history is cumulative and we would
+    double-count usage from earlier nodes' messages.
+
+    Returns ``[]`` if the pre/post shapes don't line up (not a list, or
+    post is shorter than pre).
+    """
+    post = ctx.post_values.get("messages")
+    if not isinstance(post, list):
+        return []
+    pre = ctx.pre_values.get("messages")
+    pre_len = len(pre) if isinstance(pre, list) else 0
+    if len(post) <= pre_len:
+        return []
+    return list(post[pre_len:])
+
+
 def aimessage_usage_extractor(ctx: UsageContext) -> UsageResult | None:
     """Best-effort extractor for LangChain ``AIMessage.usage_metadata``.
 
-    Walks ``ctx.post_values["messages"]`` from the tail looking for the newest
-    message with a ``usage_metadata`` field shaped like::
+    Sums usage across **every** new ``AIMessage`` appended during this node's
+    execution (see :func:`_new_messages` and ADR-012). A single node may
+    invoke the LLM more than once (e.g. a ``create_react_agent`` subgraph
+    collapsed into one swarm node); reporting only the last call's usage
+    would silently under-count tokens.
+
+    Each new message's ``usage_metadata`` is expected to be shaped like::
 
         {"input_tokens": int, "output_tokens": int,
          "output_token_details": {"reasoning": int}, ...}
@@ -117,44 +148,43 @@ def aimessage_usage_extractor(ctx: UsageContext) -> UsageResult | None:
     messages (see ADR-011) because both shapes are read through
     :func:`_msg_field`.
 
-    Returns ``None`` if no matching message is found. Does **not** compute
-    cost - callers who want cost should wrap this extractor and add their
-    own pricing table.
-
-    Users with custom state shapes should write their own extractor; this
-    one covers the stock ``MessagesState`` / ``add_messages`` pattern.
+    Returns ``None`` if no new message carries a ``usage_metadata`` block -
+    normal for non-LLM nodes. Does **not** compute cost - callers who want
+    cost should wrap this extractor and add their own pricing table.
     """
-    messages = ctx.post_values.get("messages")
-    if not isinstance(messages, list):
-        return None
+    prompt = 0
+    completion = 0
+    reasoning = 0
+    model_name: str | None = None
+    hit = False
 
-    for msg in reversed(messages):
+    for msg in _new_messages(ctx):
         meta = _msg_field(msg, "usage_metadata")
         if not isinstance(meta, dict):
             continue
-
-        prompt = int(meta.get("input_tokens", 0) or 0)
-        completion = int(meta.get("output_tokens", 0) or 0)
-
-        reasoning = 0
+        hit = True
+        prompt += int(meta.get("input_tokens", 0) or 0)
+        completion += int(meta.get("output_tokens", 0) or 0)
         details = meta.get("output_token_details")
         if isinstance(details, dict):
-            reasoning = int(details.get("reasoning", 0) or 0)
-
+            reasoning += int(details.get("reasoning", 0) or 0)
+        # Pick up model_name from the last message that has one.
         resp_meta = _msg_field(msg, "response_metadata")
-        model_name = None
         if isinstance(resp_meta, dict):
-            model_name = resp_meta.get("model_name") or resp_meta.get("model")
+            candidate = resp_meta.get("model_name") or resp_meta.get("model")
+            if isinstance(candidate, str):
+                model_name = candidate
 
-        return UsageResult(
-            prompt_tokens=prompt,
-            completion_tokens=completion,
-            reasoning_tokens=reasoning,
-            cost_usd_cents=None,
-            model_name=model_name,
-        )
+    if not hit:
+        return None
 
-    return None
+    return UsageResult(
+        prompt_tokens=prompt,
+        completion_tokens=completion,
+        reasoning_tokens=reasoning,
+        cost_usd_cents=None,
+        model_name=model_name,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -167,9 +197,11 @@ def _latest_message_with_response_metadata_key(
 ) -> tuple[Any, dict[str, Any]] | None:
     """Return the newest message whose ``response_metadata[key]`` is a dict.
 
-    Common helper for the native Anthropic / OpenAI extractors - they only
-    differ in which key they look for under ``response_metadata``. Works on
-    both pydantic message objects and dict-coerced messages (ADR-011).
+    .. deprecated:: 0.1.4
+        Superseded by the multi-message accumulation loop in the stock
+        extractors (ADR-012). Retained as internal helper in case
+        downstream users wrote custom extractors against it - the helper
+        itself is still correct for "find the last match" semantics.
     """
     messages = ctx.post_values.get("messages")
     if not isinstance(messages, list):
@@ -188,6 +220,12 @@ def _latest_message_with_response_metadata_key(
 def anthropic_usage_extractor(ctx: UsageContext) -> UsageResult | None:
     """Extractor for ``AIMessage.response_metadata["usage"]`` (Anthropic-shaped).
 
+    Sums usage across **every** new ``AIMessage`` appended during this
+    node's execution (see :func:`_new_messages` and ADR-012). This matters
+    for nodes that wrap a multi-step agent loop (e.g. ``create_react_agent``
+    inside a swarm), where a single node-level step can issue several LLM
+    calls, each producing its own Anthropic usage block.
+
     Reads the token counts emitted by ``langchain_anthropic.ChatAnthropic``
     and, more generally, any message that carries an Anthropic-style usage
     block under ``response_metadata["usage"]``. Field names match
@@ -204,28 +242,35 @@ def anthropic_usage_extractor(ctx: UsageContext) -> UsageResult | None:
     (Cost differentials - cache-create is +25%, cache-read is -90% - are the
     user's pricing-table concern per ADR-009.)
 
-    Returns ``None`` if no message carries a usage block - normal for
+    Returns ``None`` if no new message carries a usage block - normal for
     non-LLM nodes.
     """
-    found = _latest_message_with_response_metadata_key(ctx, "usage")
-    if found is None:
+    prompt = 0
+    completion = 0
+    model_name: str | None = None
+    hit = False
+
+    for msg in _new_messages(ctx):
+        meta = _msg_field(msg, "response_metadata")
+        if not isinstance(meta, dict):
+            continue
+        usage = meta.get("usage")
+        if not isinstance(usage, dict):
+            continue
+        hit = True
+        prompt += int(usage.get("input_tokens", 0) or 0)
+        prompt += int(usage.get("cache_creation_input_tokens", 0) or 0)
+        prompt += int(usage.get("cache_read_input_tokens", 0) or 0)
+        completion += int(usage.get("output_tokens", 0) or 0)
+        candidate = meta.get("model") or meta.get("model_name")
+        if isinstance(candidate, str):
+            model_name = candidate
+
+    if not hit:
         return None
 
-    _msg, meta = found
-    usage = meta["usage"]  # guaranteed dict by helper
-    assert isinstance(usage, dict)
-
-    base_input = int(usage.get("input_tokens", 0) or 0)
-    cache_create = int(usage.get("cache_creation_input_tokens", 0) or 0)
-    cache_read = int(usage.get("cache_read_input_tokens", 0) or 0)
-    completion = int(usage.get("output_tokens", 0) or 0)
-
-    model_name = meta.get("model") or meta.get("model_name")
-    if not isinstance(model_name, str):
-        model_name = None
-
     return UsageResult(
-        prompt_tokens=base_input + cache_create + cache_read,
+        prompt_tokens=prompt,
         completion_tokens=completion,
         reasoning_tokens=0,
         cost_usd_cents=None,
@@ -240,6 +285,12 @@ def anthropic_usage_extractor(ctx: UsageContext) -> UsageResult | None:
 
 def openai_usage_extractor(ctx: UsageContext) -> UsageResult | None:
     """Extractor for ``AIMessage.response_metadata["token_usage"]`` (OpenAI-shaped).
+
+    Sums usage across **every** new ``AIMessage`` appended during this
+    node's execution (see :func:`_new_messages` and ADR-012). This matters
+    for nodes that wrap a multi-step agent loop (e.g. ``create_react_agent``
+    inside a swarm), where a single node-level step can issue several LLM
+    calls, each producing its own OpenAI usage block.
 
     Reads the usage block emitted by ``langchain_openai.ChatOpenAI`` and,
     more generally, any message carrying an OpenAI-style usage block under
@@ -258,28 +309,34 @@ def openai_usage_extractor(ctx: UsageContext) -> UsageResult | None:
     completion count rather than subtracting it, so the invariant
     ``prompt_tokens + completion_tokens == total_tokens`` is preserved.
 
-    Returns ``None`` if no message carries a token_usage block - normal for
-    non-LLM nodes.
+    Returns ``None`` if no new message carries a token_usage block - normal
+    for non-LLM nodes.
     """
-    found = _latest_message_with_response_metadata_key(ctx, "token_usage")
-    if found is None:
-        return None
-
-    _msg, meta = found
-    token_usage = meta["token_usage"]  # guaranteed dict by helper
-    assert isinstance(token_usage, dict)
-
-    prompt = int(token_usage.get("prompt_tokens", 0) or 0)
-    completion = int(token_usage.get("completion_tokens", 0) or 0)
-
+    prompt = 0
+    completion = 0
     reasoning = 0
-    details = token_usage.get("completion_tokens_details")
-    if isinstance(details, dict):
-        reasoning = int(details.get("reasoning_tokens", 0) or 0)
+    model_name: str | None = None
+    hit = False
 
-    model_name = meta.get("model_name") or meta.get("model")
-    if not isinstance(model_name, str):
-        model_name = None
+    for msg in _new_messages(ctx):
+        meta = _msg_field(msg, "response_metadata")
+        if not isinstance(meta, dict):
+            continue
+        token_usage = meta.get("token_usage")
+        if not isinstance(token_usage, dict):
+            continue
+        hit = True
+        prompt += int(token_usage.get("prompt_tokens", 0) or 0)
+        completion += int(token_usage.get("completion_tokens", 0) or 0)
+        details = token_usage.get("completion_tokens_details")
+        if isinstance(details, dict):
+            reasoning += int(details.get("reasoning_tokens", 0) or 0)
+        candidate = meta.get("model_name") or meta.get("model")
+        if isinstance(candidate, str):
+            model_name = candidate
+
+    if not hit:
+        return None
 
     return UsageResult(
         prompt_tokens=prompt,
