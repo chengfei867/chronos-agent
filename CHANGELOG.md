@@ -4,7 +4,39 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
-_Nothing yet — R14 will decide._
+_Nothing yet — R17 will decide._
+
+---
+
+## [0.1.3] — 2026-04-23 (Round 14 + Round 15 + Round 16)
+
+**Theme**: Three-extractor family + Anthropic prompt caching fidelity. The `usage_extractor` hook shipped in v0.1.2 now has first-class convenience implementations for the two most common LLM SDKs alongside the LangChain-standard one — and the interior CLI was split up so further growth stays tractable.
+
+### Added (Round 15) — native Anthropic / OpenAI usage extractors (ADR-010)
+- `chronos.adapters.langgraph_usage.anthropic_usage_extractor` — reads `AIMessage.response_metadata["usage"]` (the shape Anthropic's SDK produces); folds `cache_creation_input_tokens` + `cache_read_input_tokens` into `prompt_tokens`. (Anthropic's API reports cache tokens **separately** from `input_tokens`; forgetting to sum them under-reports prompt usage by 10-100× when prompt caching is on.)
+- `chronos.adapters.langgraph_usage.openai_usage_extractor` — reads `AIMessage.response_metadata["token_usage"]` (OpenAI Chat Completions shape); captures `completion_tokens_details.reasoning_tokens` as a sub-detail so `prompt_tokens + completion_tokens == total_tokens` stays invariant (o1 / o3 models).
+- Both new extractors implement the existing `UsageExtractor` Protocol from ADR-009 — **zero** protocol change, pure additive feature. Cross-provider composition via the documented `anthropic or openai or aimessage` short-circuit pattern.
+- Duck-typed: no hard dependency on the `anthropic` or `openai` SDK packages (users without them can still use the extractors).
+- ADR-010 — native usage extractors design (chose sibling extractors over extending `aimessage_usage_extractor` / automatic cascade / hard-dep typed responses).
+- 21 new unit tests: 8 anthropic + 7 openai + 3 composition pattern. Totals: **236/236 pass, 94% coverage**; `langgraph_usage.py` at 100%.
+- Docs: `docs/getting-started.md` §4b rewritten with three-extractor family; `docs/cli-reference.md` token-usage section gets an extractor comparison table.
+
+### Refactored (Round 14) — CLI file split
+- `src/chronos/cli/__init__.py`: **848 → 348 lines (-59%)**, command groups split into sibling modules.
+- New shared helpers: `cli/_common.py` (DB open + serialise + shared `console`) and `cli/_usage.py` (usage summary dataclass).
+- Per-command impl modules: `cli/runs.py`, `cli/forks.py`, `cli/diff.py`; joining the already-split `cli/replay.py` and `cli/fork.py`. All expose `*_command(console, open_store_fn, ...)` with DI — pattern frozen for future commands.
+- `__init__.py` now only does typer app registration + thin wrappers. **Zero** test changes required — the refactor is validated by the existing suite staying green.
+- No new ADR (pure refactor). No version bump at the time (bundled into v0.1.3).
+
+### Added (Round 16) — v0.1.3 release cut
+- Version bumped `0.1.2` → `0.1.3` in `src/chronos/__init__.py` and `pyproject.toml`.
+- CLI status line updated: `"Phase 1 M1.11 — usage extractor hook + native Anthropic/OpenAI adapters, v0.1.3"`.
+- Git tag `v0.1.3` pushed to `origin` (private repo, gh-proxy.com mirror).
+- No code changes this round — pure release packaging for R14 + R15 work.
+
+### Notes
+- No schema changes. `UsageExtractor` Protocol from ADR-009 unchanged — this release proves the protocol accommodates multiple implementations cleanly.
+- M1.11 milestone kept (R15 is extension of the same capability, not a new milestone).
 
 ---
 

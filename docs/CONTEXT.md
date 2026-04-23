@@ -147,26 +147,22 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
-**截至 Round 15 结束 (2026-04-23 北京下午 16:48 起, 用户交互轮)**
+**截至 Round 16 结束 (2026-04-23 北京下午 17:28 起, 用户交互轮) — v0.1.3 已 tag**
 
-- Round: **15 完成** (R11 M1.10 fork CLI + v0.1.1 tag → R12 M1.11 usage extractor → R13 cut v0.1.2 tag → R14 CLI 文件拆分 → **R15 Anthropic/OpenAI native usage extractors**)
-- 最近 progress doc: `progress/2026-04-23-round-15.md` ← **下一轮的你必读**; R14 在 `progress/2026-04-23-round-14.md`
-- 当前阶段: **Phase 1 MVP + 四动词 CLI 闭环 + token/cost 可视化 (三提取器全家桶)**
-- 最新 ADR: `ADR-010-native-usage-extractors.md` (Accepted, R15) — 新增 anthropic / openai 两个 convenience extractor, 不改 ADR-009 协议
-- 最新 tag: **v0.1.2** (R13 cut; R15 纯 additive feature, 未 bump)
+- Round: **16 完成** (R11 M1.10 fork CLI + v0.1.1 tag → R12 M1.11 usage extractor → R13 cut v0.1.2 → R14 CLI 文件拆分 → R15 Anthropic/OpenAI native extractors + ADR-010 → **R16 cut v0.1.3 release**)
+- 最近 progress doc: `progress/2026-04-23-round-16.md` ← **下一轮的你必读**; R15 在 `progress/2026-04-23-round-15.md`
+- 当前阶段: **Phase 1 MVP + 四动词 CLI 闭环 + token/cost 三提取器全家桶 (v0.1.3 tag)**
+- 最新 ADR: `ADR-010-native-usage-extractors.md` (Accepted, R15)
+- 最新 tag: **v0.1.3** (R16 cut; CHANGELOG 段头为 "R14+R15+R16")
 - Blocked items: 无
-- 测试状态: **236/236 pass, 94% coverage, ruff + mypy clean** (+20 tests vs R14: 8 anthropic + 7 openai + 3 composition; `langgraph_usage.py` 100% cov)
-- CLI 表面 (v0.1.2 最终态, R15 无变): 见 R13 清单
-- **Adapter API** (R15 新增):
-  - `chronos.adapters.langgraph_usage.anthropic_usage_extractor` — 读 `response_metadata["usage"]`, 折叠 cache tokens 到 prompt
-  - `chronos.adapters.langgraph_usage.openai_usage_extractor` — 读 `response_metadata["token_usage"]`, 捕获 reasoning tokens (o1/o3)
-  - 两者都实现现有 `UsageExtractor` Protocol, 不改协议
-- **Schema 字段** / **Examples** / **CLI**: 与 R14 完全一致
-- **新验证事实 (R15)**:
-  - **Anthropic prompt caching 计账**: `cache_creation_input_tokens` + `cache_read_input_tokens` 必须 **加到** `prompt_tokens` 里 (Anthropic API 把它们和 `input_tokens` 分开报; 手写 extractor 的头号坑)。成本差异 (+25% / −90%) 留给用户 pricing table, Chronos 只记 token 数
-  - **OpenAI reasoning tokens**: `completion_tokens_details.reasoning_tokens` 是 `completion_tokens` 的 **子字段** (API 已经把 reasoning 折进 completion), 所以不能再从 completion 里减。我们把 reasoning 作为 sub-detail 并列, 保留 `prompt+completion==total` 不变量
-  - **Duck typing 原则**: 不 import `anthropic` / `openai` SDK (dev venv 里根本没装), 按字段名读 dict 就行 — 用户不用装这些包也能用 extractor
-  - **Cross-provider 组合**: `lambda ctx: anthropic(ctx) or openai(ctx) or aimessage(ctx)` — 三行 short-circuit, 文档和 3 个测试验证过
+- 测试状态: **236/236 pass, 94% coverage, ruff + mypy clean** (与 R15 持平, R16 零 test 改动)
+- CLI 表面 (v0.1.3): 与 v0.1.2 同 (R14 纯 refactor, R15 纯 adapter 层新增, R16 纯 release), `chronos info` 状态行 = "Phase 1 M1.11 — usage extractor hook + native Anthropic/OpenAI adapters, v0.1.3"
+- **Adapter API** (R15): `aimessage_usage_extractor` / `anthropic_usage_extractor` / `openai_usage_extractor` 三件套; 所有实现同 `UsageExtractor` Protocol
+- **Schema 字段** / **Examples** / **CLI 模块形状 (R14)**: 与前几轮一致
+- **新验证事实 (R16)**:
+  - **M milestone naming discipline**: 不是每次 version bump 都要 bump M. R15 是 M1.11 能力的直接扩展 → M1.11 保留, 用 CLI 状态行文字反映增量 ("+ native Anthropic/OpenAI adapters"). 避免 M 编号膨胀, 只在真的新 milestone 时递增
+  - **多轮 bundle 进一次 release 的命名**: CHANGELOG 段头用 "Round A + Round B + Round C" (这次是 R14+R15+R16). R13 的 R12+R13 是先例, R16 的三轮 bundle 是自然延伸
+  - **R13 release pattern 已可复用**: bump `__version__` → bump `pyproject.toml::project.version` → 改 CLI 状态行 → CHANGELOG `[Unreleased]` → `[x.y.z]` → tag → push. 全程 1 轮, 零 test 改动
 - 旧事实 (仍生效, 不重复):
   - GitHub push 只有 `gh-proxy.com`
   - LangGraph 1.1.9 record/fork/diff 全链路 OK
@@ -179,6 +175,9 @@ chronos-agent/
   - **progress doc 每轮必写**
   - **`ForkPlan` schema 是 v0.1.1 对外契约** — 字段增删要 bump `chronos_fork_plan_version` + 写 ADR
   - **ADR-009 usage extractor 协议是 v0.1.2 对外契约** — `UsageExtractor` 签名 / `UsageContext` / `UsageResult` 字段 / 失败容忍语义都冻结, 改动要新 ADR
+  - **Anthropic prompt caching 计账** (R15): `cache_creation_input_tokens` + `cache_read_input_tokens` 必须加到 `prompt_tokens`
+  - **OpenAI reasoning tokens 语义** (R15): `completion_tokens_details.reasoning_tokens` 是 completion 的子字段, 不减
+  - **Duck typing 原则** (R15): extractor 不 import SDK, 按字段名读 dict
   - **CLI 模块形状 (R14 确立)**: `cli/__init__.py` 只管 typer apps + thin wrappers, 每个 subcommand 实现模块暴露 `*_command(console, open_store_fn, ...)`. 新命令照抄
 
 ## Cron 窗口门控 (2026-04-22 用户指令)
@@ -197,23 +196,7 @@ if not (0 <= beijing_hour <= 11):
 **例外**: 用户手动触发/手动说"继续跑"可以不看窗口 (Round 3/4 就是这种情况)。
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 16 候选** (R15 ship native Anthropic/OpenAI usage extractors + ADR-010):
-
-### R13 实际产出 (2026-04-23 北京下午 16:08 起, 用户交互轮)
-- ✅ `src/chronos/__init__.py::__version__` `0.1.1` → `0.1.2`
-- ✅ `pyproject.toml::project.version` `0.1.1` → `0.1.2`
-- ✅ `cli/__init__.py::info` 状态行刷新为 "Phase 1 M1.11 — usage extractor hook, v0.1.2"
-- ✅ `CHANGELOG.md` `[Unreleased]` → `[0.1.2] — 2026-04-23 (Round 12 + Round 13)`, 新加 theme 句 + R13 子段
-- ✅ `git tag -a v0.1.2` + push origin via gh-proxy.com
-- ✅ 验证全绿: ruff / format / mypy / pytest 216/216 / dogfood 18/18 / `chronos info` 报 0.1.2
-
-### R14 实际产出 (2026-04-23 北京中午 ~12:00 起, 用户交互轮) — 纯 refactor
-- ✅ `cli/__init__.py` **848 → 348 行 (-59%)**, 按命令组拆分
-- ✅ 新建 `cli/_common.py` (129) / `cli/_usage.py` (109) — 共享 helpers
-- ✅ 新建 `cli/runs.py` (167) / `cli/forks.py` (87) / `cli/diff.py` (217) — 统一 `*_command(...)` + DI `console` / `open_store_fn` 形状
-- ✅ `cli/replay.py` / `cli/fork.py` 不动 — R11/之前已是这个形状, R14 只把剩下的对齐
-- ✅ 验证全绿: ruff / format / mypy / pytest **216/216** / dogfood **18/18** / **零 test 修改** (行为等价最好证据)
-- ✅ 版本不动 (pure refactor, v0.1.2 tag 稳定; 无新 ADR)
+**Round 17 候选** (R16 cut v0.1.3 — R14 refactor + R15 ADR-010 extractors 打包):
 
 ### R15 实际产出 (2026-04-23 北京下午 16:48 起, 用户交互轮) — 推荐选项 A 落地
 - ✅ `src/chronos/adapters/langgraph_usage.py` 新增 2 个 extractor + 1 个内部 helper (+140 LOC)
@@ -226,53 +209,64 @@ if not (0 <= beijing_hour <= 11):
 - ✅ `docs/getting-started.md` §4b 重写: 三提取器全家桶 + `combined` 组合示例
 - ✅ `docs/cli-reference.md` token-usage 段重写: extractor 对比表
 - ✅ 全绿: ruff / format / mypy / pytest **236/236 94% cov** / dogfood **18/18**; `langgraph_usage.py` 100% cov
-- ✅ 版本不动 (additive feature, v0.1.2 稳定; 留给 R16 可能的 v0.1.3 release cut)
+- ✅ 版本不动 (additive feature, v0.1.2 稳定; 留给 R16 cut v0.1.3)
 
-### 选项 R16-A (推荐): v0.1.3 release cut
-- 干净的 release 收尾: bump `__version__` / `pyproject.toml::project.version` → 0.1.3
-- `CHANGELOG.md` `[Unreleased]` → `[0.1.3] — 2026-04-23 (Round 15)`, theme 句强调 "three-extractor family + Anthropic prompt caching fidelity"
-- `cli/__init__.py::info` 状态行更新 (M1.11 → M1.12 或保持 M1.11 extended, 思考一下)
-- `git tag -a v0.1.3` + push
-- 规模: 与 R13 相同的 release 流程, 1 轮能 ship
+### R16 实际产出 (2026-04-23 北京下午 17:28 起, 用户交互轮) — release cut
+- ✅ `src/chronos/__init__.py::__version__` `0.1.2` → `0.1.3`
+- ✅ `pyproject.toml::project.version` `0.1.2` → `0.1.3`
+- ✅ `cli/__init__.py::info` 状态行 → "Phase 1 M1.11 — usage extractor hook + native Anthropic/OpenAI adapters, v0.1.3"
+- ✅ `CHANGELOG.md` `[Unreleased]` → `[0.1.3] — 2026-04-23 (Round 14 + Round 15 + Round 16)`, theme "Three-extractor family + Anthropic prompt caching fidelity", 三个 sub-section (R14 refactor / R15 extractors / R16 release cut)
+- ✅ `git tag -a v0.1.3` + push origin via gh-proxy.com
+- ✅ 验证全绿: ruff / format / mypy / pytest 236/236 / dogfood 18/18 / `chronos info` 报 0.1.3
+- ✅ M1.11 milestone 保留 (R15 是 M1.11 能力的直接扩展, 不 bump M1.12)
+- ✅ 零代码逻辑改动 (纯 release packaging)
 
-### 选项 R16-B: fork execution engine — 让 `chronos fork run` 真正跑起来
+### 选项 R17-A: Fork execution engine (M2.1) — 让 `chronos fork run` 真正跑起来
 - ⚠️ ADR-008 现在只到 "plan + consume in user code" 就停了; 自动执行是 Phase 1.5 → Phase 2 之间的桥
 - 要新 ADR (ADR-011) 定义 "what is a safe automated fork execution", 需要 sandbox / timeout / budget 三件套
-- **不建议 cron 轮自启** — 要改 ADR-008 frozen 决策, 必须用户点头
+- **需要用户显式 sign-off** — 改 ADR-008 frozen 决策
+- 价值最高 (项目最大卖点 beyond "better logger"), 但风险和 scope 也最大
 
-### 选项 R16-C: LangSmith tracer callback extractor
-- LangChain 的第三条 usage-accounting 路径 (另两条: `usage_metadata` / `response_metadata`)
+### 选项 R17-B: LangSmith tracer callback extractor
+- LangChain 的第三条 usage-accounting 路径 (另两条: `usage_metadata` / `response_metadata`, R12/R15 已覆盖)
 - 作用域比 R15 更窄 (单 provider), 测试矩阵约等量
-- 低风险但价值也低 (大多数用户已经被 R15 三提取器覆盖), 除非用户有特定 LangSmith 场景, 不是优先项
+- 低风险低戏剧性的 additive feature, 1 轮可完成
+- **Fallback 选项** — R17-A 用户不点头时的后备
 
-### 选项 R16-D: AutoGen adapter (Phase 2 正式启动)
+### 选项 R17-C: AutoGen adapter (Phase 2 正式启动)
 - ⚠️ **仍需用户点头**才能做 — R10 试过被抓回, 硬红线
-- **必须新 ADR** (ADR-011) AutoGen 状态模型 → Chronos NodeKind 映射
+- **必须新 ADR** (ADR-011+) AutoGen 状态模型 → Chronos NodeKind 映射
 
-### 选项 R16-E: Web UI skeleton
+### 选项 R17-D: Web UI skeleton
 - 大承诺, 一轮起不了步; **不建议 cron 轮自启**
 
-**R16 倾向**: **选项 A** (v0.1.3 release cut). 和 R13 同构的短轮; 把 R15 的 native extractors 正式打包进 tag 里. 选项 D 的 Phase 2 仍等用户显式授权.
+### 选项 R17-E: 更多 tech debt 清理
+- `replay.py` 391 行 / `fork.py` 367 行, 内部 helpers 还可以进一步抽 (但没到必须切的程度)
 
-**硬约束 (延续, R10-R15 再次强调)**:
+**R17 倾向**: **选项 A (if user signs off) / 选项 B (fallback)**.
+- A 解锁真正的 Phase 2 进度, 是项目最大价值点, 但需要用户显式授权 fork automated execution
+- B 是零戏剧性的 1 轮 ship, 补全 LangChain 三条路径的最后一条
+
+**硬约束 (延续, R10-R16 再次强调)**:
 - ❌ 不开始写 Web UI (除非用户点头)
 - ❌ **不加 AutoGen/CrewAI adapter** — R10 试过被抓回, 硬红线, 除非用户**显式**说启动 Phase 2
 - ❌ 不改 SQLite schema
 - ❌ 不动 v0.1.1 frozen 的 API 签名 (record/replay/fork/diff/fork plan CLI 命令 + `ForkPlan` schema v1)
-- ❌ **不改 ADR-009 `UsageExtractor` Protocol** — R15 只是新增实现, 协议本身和 v0.1.2 冻结的一致 (`UsageExtractor` 签名、`UsageContext` / `UsageResult` 字段、失败容忍语义)
+- ❌ **不改 ADR-009 `UsageExtractor` Protocol** — 协议本身和 v0.1.2 冻结的一致 (`UsageExtractor` 签名、`UsageContext` / `UsageResult` 字段、失败容忍语义)
 - ❌ **不动 R14 确立的 CLI 模块形状** (除非补充模式): subcommand 实现模块应该暴露 `*_command(...)` 并接受 DI; 新命令应该照抄这个模式, 别搞新的
-- ✅ 任何新功能 → 新 ADR (下一个编号 **ADR-011**; ADR-010 已用于 R15 native extractors)
+- ✅ 任何新功能 → 新 ADR (下一个编号 **ADR-011**)
 - ✅ spike / ADR 先行纪律 8 战 8 胜 (R12 ADR-009 + R15 ADR-010 加分), 继续
 - ✅ **progress doc 每轮末必写 + commit + push**
 - ✅ **动 deps / pyproject.toml 前先读 CONTEXT.md 第 3 节和本节硬约束**
 - ✅ 断言时间用 `TZ='Asia/Shanghai' date` 或 `curl -sI https://www.baidu.com | grep -i '^date:'`, 别信 session 时间
 - ✅ cron 实际节奏: **every 180m (3h)**; **白天用户手动交互, 晚上交给 cron**
 - ✅ **`ForkPlan` schema 是 v0.1.1 对外契约** — 字段增删要 bump `chronos_fork_plan_version` + 写 ADR
-- ✅ **version bump 检查单** (R13 新增): 改 `__version__` 时 grep `v0.1.<prev>` / `M1.<prev>` 确保 CLI 状态行 / 文档 / test fixture 里没有旧版本残留; `pyproject.toml::project.version` 必须同步
+- ✅ **version bump 检查单** (R13 新增, R16 再验证): 改 `__version__` 时 grep 旧 `v0.1.<prev>` / `M1.<prev>` 确保 live 文件无残留 (historical progress docs 保留历史描述是正确的); `pyproject.toml::project.version` + CLI 状态行必须同步
+- ✅ **M milestone naming** (R16 新增): 不是每次 version bump 都要 bump M. 同一能力的扩展继续沿用原 M 编号, 只有真的新 milestone 才递增
 
 ---
 
-*Last updated by Round 15 agent (2026-04-23 北京下午 16:48 起, native Anthropic/OpenAI usage extractors + ADR-010)*
+*Last updated by Round 16 agent (2026-04-23 北京下午 17:28 起, v0.1.3 release cut)*
 
 
 ## 7. 文档索引 (当你需要深入某个主题)
