@@ -147,23 +147,24 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
-**截至 Round 26 结束 (2026-04-23 CST 中午, 用户交互轮) — ADR-016 (Adapter interface) 落地 + roadmap.md 大修 (对齐 R1-R25 实际); ADR-014 R1 契约半成品绿灯 (实现半需 R28+)**
+**截至 Round 27 结束 (2026-04-23 CST 中午, 用户交互轮) — ADR-014 R4 (multi-framework risks doc) 落地; Phase 2 entry 契约/文档侧 3/4 criteria 全绿, 只剩 R1 impl + R3 dogfood (R28-R29 合并做)**
 
-- Round: **26 完成** (documentation round — ADR + roadmap refresh, 零代码改动)
-- 最近 progress doc: `progress/2026-04-23-round-26.md` ← **下一轮必读**
-- 当前阶段: **Phase 1 ✅ closed on paper + v0.1.6 cut + ADR-014 (Phase 2 entry) 状态: R1 ✅ contract (ADR-016) / ❌ impl, R2 ✅ (ADR-015), R3 ❌ (还要 multi-adapter dogfood), R4 ❌ (risks doc)**
-- 最新 ADR: **ADR-016 (R26)** — Adapter interface (3 Protocols: RecorderProtocol / AdapterProtocol / NodeIdentityResolver)
-- 最新 tag: **v0.1.6** (未变; R26 无 version bump, documentation round)
+- Round: **27 完成** (research doc round — 1 research note 落地, 零代码, 零 ADR)
+- 最近 progress doc: `progress/2026-04-23-round-27.md` ← **下一轮必读**
+- 当前阶段: **Phase 1 ✅ closed + v0.1.6 cut + ADR-014 Phase 2 entry: R1 contract ✅ / impl ❌ (R28-R29), R2 ✅ (R25), R3 ❌ (R28-R29), R4 ✅ (R27)**
+- 最新 ADR: **ADR-016 (R26)** — Adapter interface (未变; R27 是 research note 不是 ADR)
+- 最新 research doc: **`docs/research/multi-framework-risks.md` (R27)** — 6 risks R-1..R-6, 每个 3-段结构
+- 最新 tag: **v0.1.6** (未变; R27 无 version bump)
 - Blocked items: 无
-- 测试状态: **264/264 pass, 93% coverage**; `FORCE_COLOR=1` 下也 264/264 pass
-- CLI 表面: 同 v0.1.6, 未变
-- **R26 产出**:
-  - `docs/decisions/ADR-016-adapter-interface.md` (~15 KB, Accepted): 3 Protocols + 2 dataclass 复用 + 5 个 rejected alternatives. `RecorderProtocol` 描述 record/fork CM 生命周期 5 条 invariant (含原子性/幂等性/AdapterError 唯一性); `AdapterProtocol` 描述模块级插件形状 (`build_recorder` + `name` + `version_constraint` + `**adapter_specific`); `NodeIdentityResolver` 为 Phase 2 adapter 预留 node_name 派生钩子. 不改代码, **契约半满足 ADR-014 R1**
-  - **roadmap.md 大修**: M1.1/M1.2/M1.3/M1.7/M1.8/M1.9 checkbox 全部对齐 actual (之前 18 轮没刷, 反映的是 R7 时的视角); Phase 1 加 "actual 25+ rounds, 技术债重偿" 复盘说明; Phase 2 用 ADR-014 四条 criteria 替换模糊的 "AutoGen adapter (ADR-005 on adapter interface)" bullet (ADR-005 编号早已被 fork semantics 占用, 是 stale reference); footer 加 "drift 检测到立即刷" 规则 (吃一堑长一智)
-  - (待跟进) CHANGELOG `[Unreleased]` 加 `### Added` ADR-016 + `### Changed` roadmap alignment
-  - `progress/2026-04-23-round-26.md`
-- **R26 为什么同时做 ADR-016 + roadmap 大修**: 用户的"每次干完活看一眼 roadmap"指令触发 reality check — 发现 roadmap.md 的 checkbox 状态停留在 R7 视角 (Phase 1 未完成但已 v0.1.6; M1.4 还写 "usage deferred to M2" 但 ADR-009/010/011/012/015 已落; Phase 2 "ADR-005 adapter interface" 实际该是 ADR-016). drift 已成 ADR-014 警告的那种病症, 必须随 ADR-016 一起修
-- **ADR-014 四条必须 criteria 当前状态** (R26 后): **R1 ⚠️ 契约 ✅ / 实现 ❌** (ADR-016 定契约 R26, 实现需 ≥1 non-LangGraph adapter — 目标 R28-R29), **R2 ✅** (ADR-015), **R3 ❌** (三次 dogfood 都是 canonical, 需 adapter 双 CI), **R4 ❌** (risks doc, 目标 R27). **→ R27 (R4) → R28-R29 (R1 impl + R3) → Phase 2 R30 开**
+- 测试状态: **264/264 pass, 93% coverage** (零代码改动, 沿用 R26 最终状态)
+- CLI 表面: 同 v0.1.6
+- **R27 产出**:
+  - `docs/research/multi-framework-risks.md` (~14 KB): 6 risks — **R-1** 事件模型 drift (Medium, ADR-016 owner); **R-2** fork primitive 不可通用 (**High**, ADR-016 owner, Phase 2 红线: core 不碰 checkpointer); **R-3** usage 计量缺口 (Medium, ADR-015 owner, R28-R29 CI 双 dogfood 证据); **R-4** 异步 vs 同步 (Medium, 推迟 ADR-017 到 AutoGen PR 时触发); **R-5** 跨框架 replay 不保证 (Low, Phase 3, R28-R29 给 `chronos replay` 加 adapter guard); **R-6** 副作用策略 (Low, Phase 3, 现状 `fork plan --emit python` stub 即是正确答案). 含 Phase 2 action delta 表 + review cadence (下一 adapter 落地时每 risk 加 verdict 段)
+  - (待跟进) CHANGELOG `[Unreleased]` 加 `### Added (Round 27)` research doc 条目
+  - `progress/2026-04-23-round-27.md`
+- **R27 为什么不是 ADR**: ADR-014 R4 原文要求 "**written risks doc** with mitigations" — research note 是对的体裁. Risks 里有**候选 ADR-017** (async) + 隐含的 Phase 3 side-effects ADR-019, 但都不在 R27 scope. Research > ADR 的好处: 写活文档, 可在后续 adapter 落地时加 verdict 段, 不需要走 ADR 的 Accepted/Superseded 生命周期
+- **ADR-014 四条必须 criteria 当前状态** (R27 后): **R1 ⚠️ 契约 ✅ / impl ❌** (R28-R29), **R2 ✅** (R25), **R3 ❌** (R28-R29 合并), **R4 ✅ (R27)**. **3/4 contract/doc 侧 green → Phase 2 R30 开; R28-R29 是 impl/evidence round**
+- **R26 bundle 回顾 (仍有效)**: ADR-016 (adapter interface 3 Protocols) + roadmap.md 18 轮 drift 大修
 - **R25 bundle 回顾 (仍有效)**: ADR-015 (extractor contract v2) + 四面包屑
 - **R24 bundle 回顾 (仍有效)**: ADR-014 (Phase 2 entry checklist) + FORCE_COLOR conftest 修复
 - 旧事实 (仍生效, 不重复):
@@ -179,6 +180,7 @@ chronos-agent/
   - **`ForkPlan` schema 是 v0.1.1 对外契约**
   - **Extractor contract v2 (ADR-015) 是 v0.1.2+ 对外契约** (ADR-009/010/011/012 是历史决策 context)
   - **Adapter interface (ADR-016) 是 v0.2.0 对外契约** (R26; Phase 2 adapter 作者必读)
+  - **Multi-framework risks (R27 research doc) 是 v0.2.0 前必读 Phase 2 gotchas 清单**
   - **Anthropic prompt caching 计账** (R15, ADR-015 Layer 5): cache_creation + cache_read 加到 prompt_tokens
   - **OpenAI reasoning tokens 语义** (R15, ADR-015 Layer 5): reasoning 是 completion 子字段, 不减
   - **Duck typing 原则** (R15, ADR-015 Layer 5): extractor 不 import SDK
@@ -196,6 +198,7 @@ chronos-agent/
   - **测试环境 color 污染 (R24 确立)**: shell `FORCE_COLOR=1` 会让 rich 的 ANSI 输出打断 `CliRunner` stdout-assert; `tests/conftest.py` autouse fixture 同时清 env + rebind 两个模块级 `console`
   - **ADR consolidation 模式 (R25 确立)**: 当多个 ADR 通过 evolution 定义一个概念时, 写一个新 consolidation ADR + 在 predecessor 头部加 "Consolidated into: ADR-X" 面包屑, 保留历史决策 context 同时提供单一 source-of-truth
   - **Roadmap drift 自检 (R26 确立)**: 每轮收工前对一眼 `docs/roadmap.md`, 发现 checkbox 状态落后实际 (>5 轮未刷) 就立即刷. ADR-014 的"Phase 2 前必修"警告针对的就是这种 doc/reality divergence
+  - **Research doc > ADR (R27 确立)**: 当 deliverable 是 "risks with mitigations" 或 "gotchas cheat sheet" 这类活内容, 用 `docs/research/*.md` 而不是 ADR — ADR 有 Accepted/Superseded lifecycle, 活文档写起来别扭. 建议每 research doc 末尾有 "review cadence" 段说明何时追加 verdict
 
 ## Cron 窗口门控 (2026-04-22 用户指令)
 
@@ -213,37 +216,40 @@ if not (0 <= beijing_hour <= 11):
 **例外**: 用户手动触发/手动说"继续跑"可以不看窗口 (Round 3/4 就是这种情况)。
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 27 候选 — R26 关了 R1 契约半, 下一个最有价值的是 R4 (risks doc), 把 Phase 2 entry 推进到 contract/doc 全齐; R1 impl + R3 dogfood 留给 R28-R29 合并做**
+**Round 28 候选 — R27 关了 R4 (risks doc), ADR-014 Phase 2 entry 契约/文档侧 3/4 green. 下一步是 R1 impl + R3 dogfood 合并做 (R28-R29), 把 Phase 2 entry 推到 4/4**
 
-### R27 候选 (按 ADR-014 非绑定优先级排序, 下一轮挑一个做)
+### R28 候选 (按 ADR-014 非绑定优先级排序, 下一轮挑一个做)
 
-**R27 = ADR-014 criterion R4 (最推荐)**: 写 `docs/research/multi-framework-risks.md`
-- 前置: R26 ✅ (ADR-016 定了 adapter 表面, 知道框架间差异在哪)
-- 输入: ADR-016 的 "What actually varies across frameworks" 表 (LangGraph vs AutoGen vs CrewAI 的 6 轴) + ADR-015 Layer 4/5 的 portability matrix + 过去三次 dogfood 发现的 bug pattern
-- 输出: `docs/research/multi-framework-risks.md` (~8-12 KB, research doc not ADR — ADR-014 R4 原文 "written risks doc with mitigations") 包含:
-  - **R-1**: 事件模型不一致 (LangGraph 快照 vs AutoGen 消息 vs CrewAI 任务) — 抽象 leak 点在 `NodeIdentityResolver`
-  - **R-2**: Fork 语义不可通用 (LangGraph `update_state(as_node=)` 依赖 checkpointer; AutoGen 无 checkpointer 概念) — mitigation: 每个 adapter 自定 seed 策略, ADR-016 `fork()` 只要求"从 parent state_after + overrides 续跑", 不限手段
-  - **R-3**: Usage 计量缺口 (LangGraph callbacks 全, AutoGen `ChatResult.usage` 偶缺, CrewAI 需 per-task 挂钩) — mitigation: ADR-015 Layer 1 允许 `UsageResult=None`, Layer 4 处理 multi-call 缺口
-  - **R-4**: 异步 vs 同步 (AutoGen async-first, LangGraph sync 主流) — mitigation: R27 决定是否 ADR-017 拓展 `AsyncRecorderProtocol`
-  - **R-5**: 确定性回放 (LangGraph checkpointer 决定性 ≠ AutoGen agent seed 决定性) — Phase 3 问题, R27 只 flag
-  - **R-6**: 侧效 tool 策略 (Phase 3 ADR-006 范畴, R27 只 flag)
-- 每个 R-x 必须有: 3-sentence 描述 + mitigation + "哪个 ADR/Phase 负责解决"
-- 预期: 1 轮纯研究 doc, 无代码, ~8-12 KB
+**R28 = ADR-014 criterion R1 impl (最推荐, 和 R29 R3 合并规划)**: 写 non-LangGraph reference adapter
+- 前置: R26 ✅ (ADR-016 契约), R27 ✅ (risks doc 告知 Phase 2 红线), 知道坑在哪再动手
+- 输入: ADR-016 3 Protocols 的精确签名 + R27 R-2 的 "fork postcondition, 不限机制" + R-1 "event model 有差异是特性不是 bug"
+- 输出: `src/chronos/adapters/linear/` — **纯 Python linear-pipeline adapter, 零外依赖** (不是 AutoGen/CrewAI, 那些引入 uv 依赖触 ADR-014 红线). ~150-250 行, 含:
+  - `class LinearRuntime` — 一个简单的 `[(node_name, callable)]` 列表, run 一遍走到底
+  - `class LinearRecorder` — 实现 `RecorderProtocol.record` 和 `.fork`. record 只需把每个 node 的 `state_before/after` 写 `Node` 行; fork 更简单 — 重新执行 pipeline 从 `at_node_id` 起, 用 `overrides` 覆盖 state
+  - 20+ 单测覆盖: record 3 节点, record + error, fork + overrides, fork 不支持 (验 `AdapterError`)
+- **reference adapter 为什么选 linear 不选 AutoGen**: (1) ADR-014 红线 (Phase 2 前不 `uv add autogen`); (2) linear 零依赖, CI 跑得快; (3) R27 R-1 说要挑 *divergent event model* 的 adapter — linear 其实是 LangGraph 的简化版, event model 是一样的. **这是 R28 的妥协: 先把 Protocol 工程可填性证了, AutoGen 真正的 event-model 分叉留 Phase 2 正式开后做**. R27 R-1 mitigation 段要 append 一句 "R28 用 linear 是工程妥协, 真正的 event-model divergence 要等 AutoGen"
+- 预期: 纯代码轮, 1 轮 (~200 行 adapter + 20 测试 + 无文档), 零 ADR, 零 research doc. 不碰 release
 
-**R28-R29 候选 = ADR-014 criterion R1 impl + R3 dogfood 合并做**: Phase-2 reference adapter + CI double-dogfood
-- 前置: R27 ✅ (risks doc) 完成, 知道坑在哪再动手
-- 输入: ADR-016 (契约) + 一个**最小可能**的 non-LangGraph "adapter" — top pick: **纯 Python linear-pipeline adapter** (没外依赖, 内存状态, 3-5 node). 理由: AutoGen 引入新 uv 依赖 (ADR-014 红线), linear-pipeline 零依赖也能证 `RecorderProtocol` 可被 non-LangGraph 实现填, 且把 CI 双 adapter dogfood 打通
-- 输出: (R28) `src/chronos/adapters/linear/` 实现 `RecorderProtocol`, 20+ 测试; (R29) dogfood 脚本 `progress/dogfood-r29-double-adapter.md` 展示 record → fork plan emit → fork plan exec 在 LangGraph 和 linear 两个 adapter 上都绿, CI 跑这个脚本
-- 合并做的理由: R1 impl 没 R3 dogfood 就不是真的 satisfied (ADR-014 明确 R1 "behind a feature flag + tested"); 分两轮做省 context 切换
+**R29 候选 = ADR-014 criterion R3 (双 adapter CI dogfood)**: 证明 adapter interface 实际可用
+- 前置: R28 ✅ (linear adapter 落地)
+- 输入: R28 的 `LinearRecorder` + 现有 `LangGraphRecorder`
+- 输出:
+  - `tests/integration/test_dual_adapter_dogfood.py`: 跑同一 record → fork plan → fork plan exec 流程在两个 adapter 上. assert: run/fork 行, node count 一致, usage 字段存在 (linear 的 LLM mock 给假 usage)
+  - `progress/dogfood-r29-double-adapter.md`: 案例研究, 描述两个 adapter 在哪里表现相同, 在哪里表现不同 (linear 没 checkpointer 概念, fork 直接重跑 pipeline — 证 R-2 mitigation 可行)
+  - 可能需要 `docs/research/multi-framework-risks.md` 末尾加 "R28-R29 verdict 段": 每个 R-x 标 ✅ 确认 / ❌ 证伪 / 🆕 发现新 risk
+- 合并 R1+R3 的理由: R1 "behind feature flag + tested" 没 R3 就不完整; 分两轮做省 context 切换
 
-**R30 候选 = Phase 2 正式开**: CONTEXT.md §4 refresh + 贴 Phase 2 red lines + AutoGen adapter 第一个 commit
+**R30 候选 = Phase 2 正式开**: v0.2.0-alpha cut + AutoGen adapter 第一个 commit
 - 前置: R27 + R28 + R29 全 ✅
-- CONTEXT.md §4 重写 Phase 2 red lines (Web UI 不得 mutate 已录 run; 第三个 adapter 必须通过 ADR-016 interface; AutoGen 引入作 optional extras dependency)
+- 产出 1: v0.2.0-alpha release cut (release pattern skill) — bundle R24+R25+R26+R27+R28+R29. CHANGELOG header "Phase 2 entry: adapter interface stable, reference adapter, CI dual-dogfood, risks documented"
+- 产出 2: CONTEXT.md §4 重写 Phase 2 red lines (Web UI 不得 mutate 已录 run; 第三个 adapter 必须通过 ADR-016 interface; AutoGen 作 optional extras dependency)
+- 产出 3: `uv add --optional autogen autogen-agentchat` + `src/chronos/adapters/autogen/__init__.py` 第一个 `NotImplementedError` 占位 + ADR-017 (若 R28 中发现 async 确实需要)
 
-**R27-prime (若 R27 中途发现 ADR-016 有 gap)**: 修 ADR-016
-- 写 risks doc 时可能发现某个 risk 在 ADR-016 已覆盖但描述不清 (e.g., async 这条). 回头修 ADR-016 而不是硬顶
+**R28-prime (若 R28 中途发现 ADR-016 有 gap)**: 修 ADR-016
+- 写 linear adapter 时可能发现某个 Protocol 字段在现实中对不上. 回头修 ADR-016 而不是硬顶
+- 触发信号: "我不得不给 `RecorderProtocol` 加新参数才能让 linear 用" — 那就是 ADR-016 漏了, 补进去
 
-### R26 非目标 (继承并扩展)
+### R27 非目标 (继承并扩展)
 
 - ❌ execute-fork 实现 (ADR-013 冻结, 未解除)
 - ❌ `uv add autogen-agentchat` (ADR-014 R1 impl/R3/R4 未满足, Phase 2 未开)

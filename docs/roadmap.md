@@ -140,7 +140,7 @@ the plan-artifact `fork plan emit → edit → fork plan exec` loop is the shipp
 - **R1** — Adapter interface as a typed `Protocol`, ≥1 non-LangGraph reference implementation behind a feature flag. *Contract:* ✅ ADR-016 (R26). *Implementation:* pending (target R28–R29).
 - **R2** — Extractor contract formalised. ✅ ADR-015 (R25).
 - **R3** — Dogfood triple (record → fork plan emit → fork plan exec) green on LangGraph *and* the Phase-2 reference adapter, in CI. ⏳ pending (blocked on R1 impl).
-- **R4** — Written "what breaks at multi-framework boundary" risks doc with mitigations. ⏳ pending (target R27).
+- **R4** — Written "what breaks at multi-framework boundary" risks doc with mitigations. ✅ R27 (`docs/research/multi-framework-risks.md`, 6 risks × description+evidence+mitigation+owner).
 
 ### Key milestones
 - [ ] Phase-2 reference adapter (e.g. AutoGen or a minimal linear-pipeline adapter) conforming to ADR-016 `RecorderProtocol` (satisfies ADR-014 R1 *implementation* half)
