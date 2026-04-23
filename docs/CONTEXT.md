@@ -147,23 +147,25 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
-**截至 Round 21 结束 (2026-04-23 20:20 CST, 用户交互轮) — v0.1.4 保持; ADR-013 landed; Node.model alias landed; [Unreleased] 攒段**
+**截至 Round 22 结束 (2026-04-23 晚 CST, 用户交互轮) — v0.1.5 cut (R21+R22 bundle); ADR-013 landed + alt C shipped; [Unreleased] 空**
 
-- Round: **21 完成** (R19 v0.1.4 release → R20 dogfood #3 bigtool + findings → **R21 ADR-013 + Node.model alias + 3 guardrail tests**)
-- 最近 progress doc: `progress/2026-04-23-round-21.md` ← **下一轮必读**; R20 在 `progress/2026-04-23-round-20.md`
-- 当前阶段: **Phase 1 + 三轮 dogfood + ADR-013 边界明确 + DX polish landed; [Unreleased] 攒 R21 内容等后续 release cut**
-- 最新 ADR: **ADR-013 (R21) — fork auto-execution stays frozen, 三轮 dogfood 证据**
-- 最新 tag: v0.1.4 (不动)
+- Round: **22 完成** (R20 dogfood #3 bigtool → R21 ADR-013 + Node.model alias → **R22 `fork plan --emit python` + v0.1.5 cut**)
+- 最近 progress doc: `progress/2026-04-23-round-22.md` ← **下一轮必读**; R21 在 `progress/2026-04-23-round-21.md`
+- 当前阶段: **Phase 1 + 三轮 dogfood + ADR-013 边界明确 + ADR-013 alt C shipped (`--emit python`) + v0.1.5 cut; `[Unreleased]` 空等 R23**
+- 最新 ADR: **ADR-013 (R21) — fork auto-execution stays frozen, 三轮 dogfood 证据** (R22 alt C 兑现)
+- 最新 tag: **v0.1.5** (R21+R22 bundle, annotated)
 - Blocked items: 无
-- 测试状态: **250/250 pass, 93% coverage** (R20 247 → R21 250, 新增 3 个 Node.model + Usage guardrail 测试)
-- CLI 表面: 未变
-- **R21 产出 (ADR + 小 API 加法)**:
-  - `docs/decisions/ADR-013-fork-auto-execution-stay-frozen.md` (新, Accepted)
-  - `src/chronos/core/models.py`: `Usage` 加 cross-ref docstring; `Node.usage` 字段加 inline docstring; `Node.model` property alias (+~30 LOC)
-  - `tests/unit/test_models.py`: 3 个新测试 (property 正路径 + null-safety + `Usage.model_name` 不存在 guardrail)
-  - `CHANGELOG.md`: `[Unreleased]` 新增 R21 段
-  - `progress/2026-04-23-round-21.md`
-- **R21 不 bump 版本的理由**: 改动太小 (~30 LOC + 1 ADR), v0.1.4 刚 cut 6 小时, 攒到下一轮有实质内容再 cut v0.1.5
+- 测试状态: **260/260 pass, 93% coverage** (R21 250 → R22 260, 新增 7 unit + 3 CLI `to_python` 测试)
+- CLI 表面: `chronos fork plan <run_id> --emit python|json`; `--emit python` 默认写 `./fork_stub.py`; 默认 `--emit json` 保持不变
+- **R22 产出 (deferred alt C 兑现 + v0.1.5 release)**:
+  - `src/chronos/fork_plan.py`: `ForkPlan.to_python(*, recorder_var, graph_var) -> str` 新 public API (+85 LOC)
+  - `src/chronos/cli/fork.py` + `src/chronos/cli/__init__.py`: `--emit` 选项 wired 到 `fork_plan_command`
+  - `tests/unit/test_fork_plan.py`: +7 unit tests
+  - `tests/unit/test_fork_cli.py`: +3 CLI E2E tests
+  - `CHANGELOG.md`: `[Unreleased]` 清空, `[0.1.5] — 2026-04-23 (Round 21 + Round 22)` 三段 (R22 Added + R21 Added + R21 Documentation + Tests)
+  - `__version__=0.1.5`, `pyproject.toml::version=0.1.5`, CLI 状态行 `Phase 1 M1.12`
+  - `progress/2026-04-23-round-22.md`
+- **R22 bundle-with-R21 的理由**: R21 的 `Node.model` 已在 `[Unreleased]` 攒一轮, R22 的 `--emit python` 是 ADR-013 alt C 的兑现故事完整, 两个 DX 加法一起 cut v0.1.5 有内聚主题
 - **ADR-008 boundary 官方冻结** (ADR-013 formalizes): 三轮 dogfood × 三种正交 topology × 0 execute-fork 需求; trigger conditions 明确; 可逆但需要新证据
 - **Dogfood topology 三角定型**: R17 centralized / R18 decentralized / R20 single-agent+meta-tool
 - 旧事实 (仍生效, 不重复):
@@ -205,47 +207,55 @@ if not (0 <= beijing_hour <= 11):
 **例外**: 用户手动触发/手动说"继续跑"可以不看窗口 (Round 3/4 就是这种情况)。
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 22 候选 — R21 把 ADR-013 和 F2 都落了, R22 视野重新打开**
+**Round 23 候选 — R22 把 ADR-013 alt C (`--emit python`) 做了并 cut v0.1.5, 下一步是"验 + 扩"**
 
-### R22 选项 (按优先级排序, 下一轮挑一个做)
+### R23 选项 (按优先级排序, 下一轮挑一个做)
 
-**R22-A (最推荐)**: `chronos fork emit-python` — ADR-013 deferred alt C
-- 背景: ADR-013 明确冻结 execute-fork, 但 deferred alt C 是个真正的中间路径: **Chronos 生成一段可粘贴的 Python 代码, 用户粘贴进自己的 graph 调用里就能完成 fork**. 不跨 execute-fork 边界, 但填了 "JSON-only 太裸" 的 DX gap
-- 输入: 一个 `ForkPlan` 对象 (已有的 v0.1.1 契约)
-- 输出: 一段 Python stdout (或文件), 含 `from chronos import ForkPlan; plan = ForkPlan(...)` + `# paste into your graph.invoke(...) call` 示范
-- 新 CLI 动词: `chronos fork emit-python <fork_id>` (加在 fork 子命令下)
-- 预期改动: ~50-80 LOC + 5-8 tests; 可选 bump v0.1.5 or 攒
-- **用户价值可感知**: 第一个 "让 fork 真的能用起来而不用读文档" 的改进
+**R23-A (最推荐)**: `--emit python` 实战验证 — 用 R17/R18/R20 三个老 dogfood workspace 之一, 真正 `chronos fork plan --emit python` 生成 stub, 手填 `TODO(user)`, 跑通 fork 子运行
+- 背景: R22 unit+CLI E2E 都绿, 但 "stub 真的能跑" 只在想象里验证过. 这是第一次 "在怒气中用它"
+- 输入: 挑一个现成 dogfood (建议 R17 supervisor, 因为拓扑最简单)
+- 产出: 一个可复用的 "fork-via-emit-python" case study 文档 (`docs/case-studies/` 下加一篇) + 任何发现的小 bug/DX 摩擦
+- 顺手完成 R22-C leftover (R17/R18 脚本改用 `n.model`)
+- 成功条件: fork 子运行跑通, 或明确记录为什么跑不通 (这本身也是有价值的反馈)
+- 预期: ~半轮-1 轮, 产出依赖发现的摩擦数量
 
-**R22-B**: Phase 2 spike — AutoGen adapter 一轮试水
-- ⚠️ R10 红线: Phase 2 之前不碰 AutoGen. R22 起 Phase 1 MVP 已稳定 + ADR-013 冻结 fork + dogfood 三轮完成, 可以动了
+**R23-B**: Phase 2 spike — AutoGen adapter 一轮试水
+- ⚠️ R10 红线: Phase 2 之前不碰 AutoGen. R22 起 Phase 1 MVP 已稳定 + ADR-013 冻结 fork + dogfood 三轮完成 + v0.1.5 cut, 可以动了
 - 目标: 不是完整 AutoGen adapter, 是写 `src/chronos/adapters/autogen.py` 最小 `AutoGenRecorder.record()` context manager + 1 个 minimal example
 - 验证 `Recorder` 协议是否真的 framework-agnostic, 暴露哪些 protocol 漏洞
 - 时间盒子: 1 轮; 不成就写 lessons, 不硬推
 - 成功条件: 能在 AutoGen 2-agent 对话上抓出至少 2 个 node, token count 合理
+- 副作用: 给 `--emit python` 生成 stub 里的 `recorder_var` 示例加一个 AutoGen 变体
 
-**R22-C (选做, 低优先)**: R21-C leftover — R17/R18 老 dogfood 脚本用 `n.model` 替换 `u.model_name`
-- 改 2 个历史脚本, 演示新 API, ~5 min
-- 如果做 R22-A 或 R22-B 时 "顺手" 做了更好; 独立做一轮不划算
+**R23-C (选做, 低优先)**: `chronos fork emit-python <path-to-plan.json>` 独立子命令
+- R22 明确把 standalone subcommand 判为 YAGNI (design 笔记在 `progress/2026-04-23-round-22.md` 里)
+- R23-A 实战如果真的遇到 "我已经有 plan.json, 现在想换成 python" 的场景, 再做; 否则继续 YAGNI
 
-### R22 非目标
+### R23 非目标
 - ❌ execute-fork 实现 (ADR-013 冻结)
-- ❌ 第四轮 dogfood (三轮已够, 除非外部用户要求)
-- ❌ v0.1.5 cut 除非 R22-A 或 R22-B 产出够大
+- ❌ 第四轮盲目 dogfood (R23-A 是 "验证 R22 能用", 不是新 dogfood)
+- ❌ v0.1.6 cut 除非 R23-B 产出够大或 R23-A 发现并修了真 bug
 
-### Release strategy for R22+
-- `[Unreleased]` 现在有 R21 的 `Node.model` + ADR-013 两段
-- R22 如果做 R22-A 产出一个 CLI 动词, 值得 cut v0.1.5
-- R22 如果做 R22-B (Phase 2 spike), 通常**不** cut, 留给 Phase 2 M2.1 里再打包
-- 继续用 R13/R16/R19 肌肉记忆的 7 步 release pattern
+### Release strategy for R23+
+- `[Unreleased]` 现在是空的
+- R23-A 如果只是 case study + 小 bug fix, 攒到下一轮
+- R23-B 如果 Phase 2 spike 成功, 通常**不** cut, 留给 Phase 2 M2.1 里再打包
+- 继续用 R13/R16/R19/R22 肌肉记忆的 7 步 release pattern
 
 ---
+
+
+
+### 旧 R22 计划 (已完成, 存档)
+
+- ~~R22-A `chronos fork plan --emit python`~~ ✅ done (ForkPlan.to_python + CLI `--emit`, 10 tests, v0.1.5 cut)
+- ~~R22-C R21 leftover (老脚本 `n.model`)~~ → 推到 R23-A 顺手做
 
 ### 旧 R21 计划 (已完成, 存档)
 
 - ~~R21-A 写 ADR-013~~ ✅ done (Accepted)
 - ~~R21-B 加 Node.model + docstring cross-ref~~ ✅ done (+~30 LOC, 3 tests)
-- ~~R21-C 修老脚本~~ → 推到 R22 (可选)
+- ~~R21-C 修老脚本~~ → 推到 R22 (可选) → 再推到 R23
 
 ---
 

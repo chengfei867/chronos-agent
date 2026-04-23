@@ -96,8 +96,8 @@ def info() -> None:
     """Print environment diagnostics."""
     console.print(f"[bold]chronos[/bold] {__version__}")
     console.print(
-        "Status: pre-alpha (Phase 1 M1.11 — usage extractor hook "
-        "+ native Anthropic/OpenAI adapters + multi-LLM-per-node accumulation, v0.1.4)"
+        "Status: pre-alpha (Phase 1 M1.12 -- Node.model alias + "
+        "fork plan --emit python (ADR-013 alt C), v0.1.5)"
     )
     console.print(
         "Commands: [green]runs list/show, forks show, diff, replay, fork plan[/green] "
@@ -306,6 +306,14 @@ def fork_plan_cmd(
         "--json",
         help="Emit plan JSON to stdout instead of writing a file (no preview).",
     ),
+    emit: str = typer.Option(
+        "json",
+        "--emit",
+        help=(
+            "Output format: 'json' (default, writes fork_plan.json) or "
+            "'python' (writes a pastable fork_stub.py, ADR-013 alt C)."
+        ),
+    ),
     allow_new_keys: bool = typer.Option(
         False,
         "--allow-new-keys",
@@ -340,6 +348,7 @@ def fork_plan_cmd(
         tags=tags,
         out=out,
         as_json=as_json,
+        emit=emit,
         allow_new_keys=allow_new_keys,
         db=db,
         open_store_fn=_open_store,

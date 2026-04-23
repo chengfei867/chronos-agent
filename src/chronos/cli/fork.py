@@ -291,12 +291,24 @@ def fork_plan_command(
     tags: list[str],
     out: Path | None,
     as_json: bool,
+    emit: str,
     allow_new_keys: bool,
     db: Path | None,
     open_store_fn: Any,
     console: Console,
 ) -> None:
-    """Entry point for ``chronos fork plan``."""
+    """Entry point for ``chronos fork plan``.
+
+    ``emit`` selects the output format:
+
+    - ``"json"`` (default): write a JSON artifact via :meth:`ForkPlan.dump`.
+    - ``"python"``: write a self-contained Python stub via
+      :meth:`ForkPlan.to_python`. ADR-013 deferred alternative C.
+
+    ``as_json`` (the ``--json`` flag) is the back-compat shortcut for
+    ``emit="json"`` emitted to stdout instead of a file. When both are set,
+    ``as_json`` wins for back-compat.
+    """
     store = open_store_fn(db)
     try:
         parent_run = store.get_run(run_id)
@@ -336,12 +348,38 @@ def fork_plan_command(
         tags=tags,
     )
 
-    # --json: emit to stdout, no preview, no file.
+    # --json: emit to stdout, no preview, no file (back-compat shortcut).
     if as_json:
         console.print_json(plan.to_json())
         return
 
-    # Default: write to file, then preview.
+    # Emit Python stub (ADR-013 alt C).
+    if emit == "python":
+        out_path = out if out is not None else Path("fork_stub.py")
+        out_path = Path(out_path).expanduser()
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(plan.to_python(), encoding="utf-8")
+        render_plan_preview(
+            plan,
+            parent_run,
+            parent_node,
+            warnings,
+            console,
+            out_path=out_path,
+        )
+        console.print(
+            f"[green]paste-ready Python stub written to[/] [bold]{out_path}[/]; "
+            "edit the two TODO(user) blocks and run."
+        )
+        return
+
+    if emit != "json":
+        console.print(
+            f"[red]error:[/] unknown --emit value: {emit!r} (expected 'json' or 'python')"
+        )
+        raise typer.Exit(code=1)
+
+    # Default: write JSON to file, then preview.
     out_path = out if out is not None else Path("fork_plan.json")
     written = plan.dump(out_path)
     render_plan_preview(

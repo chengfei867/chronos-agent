@@ -4,16 +4,35 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
+_Nothing yet — R23 will decide._
+
+---
+
+## [0.1.5] — 2026-04-23 (Round 21 + Round 22)
+
+**Theme**: ADR-013 landed + ADR-013 deferred alt C shipped. After three rounds of dogfood weak-consistent evidence (R17/R18/R20), Chronos formally freezes `fork=JSON-only` (ADR-013), then ships the middle-ground path the evidence suggested: `chronos fork plan --emit python` generates a self-contained, pastable stub that inlines fork kwargs as Python literals. No execute-fork crossed.
+
+### Added (Round 22) — `fork plan --emit python`
+- New CLI option: `chronos fork plan <run_id> ... --emit python` writes a paste-ready Python stub (default `./fork_stub.py`, override with `--out`). Default `--emit json` unchanged.
+- New public API: `ForkPlan.to_python(*, recorder_var="recorder", graph_var="graph") -> str` renders the plan as valid Python 3.11+ source. Callable from user code without going through the CLI.
+- Stub includes: provenance docstring (parent_run_id, parent_node, chronos_version, generated_at); two `TODO(user)` markers for Recorder + graph construction; fork kwargs inlined as Python literals (no JSON file dependency at runtime); `graph.invoke(None, {"configurable": {"thread_id": ...}})` call sample; final `print(f"fork child run: {ref.run_id}")`.
+- 10 new tests: 7 unit (valid Python, inlined kwargs, TODO markers, provenance, custom variable names, no-reason placeholder, trailing-newline contract) + 3 CLI (end-to-end stub file, default filename, invalid format error).
+- Implements ADR-013 deferred alternative C: middle ground between raw JSON (too bare) and execute-fork (ADR-008 rejected, ADR-013 frozen).
+
 ### Added (Round 21) — `Node.model` convenience property
 - New read-only property `Node.model` returns `self.model_name`. Shorter, canonical form. Prefer `node.model` in user code.
 - Docstring cross-refs added to `Usage` class and `Node.usage` field, explicitly calling out that `model_name` is **not** a `Usage` field — it lives on `Node`. Addresses R20 Finding #2 (three independent dogfood scripts wrote `node.usage.model_name` and got `None`).
 - 3 new tests guard the property + enforce the guardrail that `Usage.model_name` stays rejected (ADR-013 affirmation).
-- No schema change, no version bump, additive only.
 
 ### Documentation (Round 21) — ADR-013 (fork auto-execution: stay frozen)
 - ADR-013 formalizes the stop-thinking-about-it decision on execute-fork, based on R17+R18+R20 three-round weak-consistent dogfood evidence (zero execute-fork demand across supervisor / swarm / bigtool topologies).
 - Affirms ADR-008 "fork=JSON-only" boundary; documents explicit trigger conditions for reopening.
 - Third-party case study: `docs/case-studies/langgraph-bigtool.md` (R20 dogfood #3).
+
+### Tests
+- 250 → 260 (+10).
+- Coverage: 93% (unchanged).
+- `src/chronos/fork_plan.py` coverage: 99% (was 99%).
 
 ---
 

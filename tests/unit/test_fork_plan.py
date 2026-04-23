@@ -220,3 +220,89 @@ def test_plan_from_dict_rejects_bad_tags() -> None:
                 "tags": ["ok", 42],
             }
         )
+
+
+# ---------------------------------------------------------------------------
+# ForkPlan.to_python -- ADR-013 alt C, pastable Python stub
+# ---------------------------------------------------------------------------
+
+
+def _sample_plan() -> ForkPlan:
+    return ForkPlan(
+        parent_run_id="run-abc123",
+        parent_node_id="node-xyz",
+        parent_node_name="research",
+        parent_node_index=3,
+        child_thread_id="thread-fork-001",
+        overrides={"research": "use Bing", "max_results": 5},
+        reason="try cheaper search",
+        tags=["experiment", "cost-reduction"],
+    )
+
+
+def test_to_python_is_valid_python_source() -> None:
+    """Generated stub must compile under Python 3.11+."""
+    src = _sample_plan().to_python()
+    compile(src, "<generated>", "exec")
+
+
+def test_to_python_inlines_fork_kwargs() -> None:
+    """Stub must inline every recorder_kwargs() field as a Python literal."""
+    plan = _sample_plan()
+    src = plan.to_python()
+    kwargs = plan.recorder_kwargs()
+    # Inlined kwargs appear as ``key=repr(value),`` -- check each key shows up.
+    for key in kwargs:
+        assert f"{key}=" in src, f"missing kwarg: {key}"
+    # Sanity: the stub must NOT fall back to reading the JSON file.
+    assert "load_plan" not in src
+    assert ".json" not in src
+
+
+def test_to_python_contains_todo_user_markers() -> None:
+    """Two TODO(user) blocks must be present so the user knows what to wire."""
+    src = _sample_plan().to_python()
+    assert src.count("TODO(user)") >= 2
+
+
+def test_to_python_includes_provenance_header() -> None:
+    """Docstring header must carry plan provenance for audit."""
+    plan = _sample_plan()
+    src = plan.to_python()
+    assert plan.parent_run_id in src
+    assert plan.child_thread_id in src
+    assert plan.chronos_version in src
+    assert plan.generated_at in src
+
+
+def test_to_python_custom_variable_names() -> None:
+    """recorder_var / graph_var let the caller match their own code."""
+    src = _sample_plan().to_python(recorder_var="rec", graph_var="my_graph")
+    assert "rec.fork(" in src
+    assert "my_graph," in src
+    assert "my_graph.invoke(" in src
+    # Default names should NOT appear when overridden.
+    assert "recorder.fork(" not in src
+
+
+def test_to_python_handles_no_reason() -> None:
+    """reason=None must not raise and must produce a visible placeholder."""
+    plan = ForkPlan(
+        parent_run_id="run-x",
+        parent_node_id="node-y",
+        parent_node_name="n",
+        parent_node_index=0,
+        child_thread_id="t",
+        overrides={},
+        reason=None,
+    )
+    src = plan.to_python()
+    compile(src, "<generated>", "exec")
+    assert "(no reason provided)" in src
+
+
+def test_to_python_ends_with_single_newline() -> None:
+    """Safe-to-pipe contract: exactly one trailing newline."""
+    src = _sample_plan().to_python()
+    assert src.endswith("\n")
+    assert not src.endswith("\n\n")

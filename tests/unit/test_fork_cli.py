@@ -596,3 +596,94 @@ def test_cli_fork_plan_roundtrip_feeds_recorder_kwargs(seeded_db: Path, tmp_path
     }
     assert kwargs["child_thread_id"] == "custom-thread"
     assert kwargs["overrides"] == {"research": "v2"}
+
+
+# ---------------------------------------------------------------------------
+# --emit python (R22 / ADR-013 alt C)
+# ---------------------------------------------------------------------------
+
+
+def test_cli_fork_plan_emit_python_writes_valid_stub(seeded_db: Path, tmp_path: Path) -> None:
+    """--emit python writes a fork_stub.py that compiles."""
+    out = tmp_path / "fork_stub.py"
+    result = runner.invoke(
+        app,
+        [
+            "--",
+            "fork",
+            "plan",
+            "r1",
+            "--at-node",
+            "research",
+            "--override",
+            "research=override-value",
+            "--emit",
+            "python",
+            "--out",
+            str(out),
+            "--db",
+            str(seeded_db),
+        ],
+    )
+    assert result.exit_code == 0, result.stdout
+    assert out.exists()
+    src = out.read_text(encoding="utf-8")
+    # Must compile under Python 3.11+.
+    compile(src, str(out), "exec")
+    # Must include the fork kwargs inline, not reference a JSON file.
+    assert "parent_run_id=" in src
+    assert "at_node_id=" in src
+    assert "TODO(user)" in src
+    # Stdout should advertise the paste-ready stub.
+    assert "paste-ready Python stub written to" in result.stdout
+
+
+def test_cli_fork_plan_emit_python_default_filename(seeded_db: Path, tmp_path: Path) -> None:
+    """Without --out, --emit python defaults to ./fork_stub.py (cwd-relative)."""
+    import os
+
+    cwd = os.getcwd()
+    try:
+        os.chdir(tmp_path)
+        result = runner.invoke(
+            app,
+            [
+                "--",
+                "fork",
+                "plan",
+                "r1",
+                "--at-node",
+                "research",
+                "--emit",
+                "python",
+                "--db",
+                str(seeded_db),
+            ],
+        )
+    finally:
+        os.chdir(cwd)
+    assert result.exit_code == 0, result.stdout
+    assert (tmp_path / "fork_stub.py").exists()
+
+
+def test_cli_fork_plan_emit_invalid_format_errors(seeded_db: Path, tmp_path: Path) -> None:
+    """--emit with an unknown value must exit with a clear error."""
+    result = runner.invoke(
+        app,
+        [
+            "--",
+            "fork",
+            "plan",
+            "r1",
+            "--at-node",
+            "research",
+            "--emit",
+            "yaml",
+            "--out",
+            str(tmp_path / "out"),
+            "--db",
+            str(seeded_db),
+        ],
+    )
+    assert result.exit_code == 1
+    assert "unknown --emit value" in result.stdout
