@@ -147,27 +147,25 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
-**截至 Round 19 结束 (2026-04-23 晚间, 用户交互轮) — v0.1.4 tagged + pushed**
+**截至 Round 20 结束 (2026-04-23 20:00 CST, 用户交互轮) — v0.1.4 保持; 三轮 dogfood 完成; ADR-008 evidence-complete**
 
-- Round: **19 完成** (R17 第一次 dogfood → R18 第二次 dogfood + ADR-012 → **R19 cut v0.1.4 release: R17+R18 bundle**)
-- 最近 progress doc: `progress/2026-04-23-round-19.md` ← **下一轮的你必读**; R18 在 `progress/2026-04-23-round-18.md`
-- 当前阶段: **Phase 1 MVP + 四动词 CLI 闭环 + token/cost 三提取器全家桶 + 两次真实世界 dogfood 案例 + v0.1.4 tag**
-- 最新 ADR: `ADR-012-multi-llm-per-node-usage.md` (Accepted, R18)
-- 最新 tag: **v0.1.4** (R19 cut, R17+R18 bundle — dogfood-driven token fidelity fixes)
+- Round: **20 完成** (R17 dogfood #1 supervisor → R18 dogfood #2 swarm + ADR-012 → R19 v0.1.4 release → **R20 dogfood #3 bigtool + F2 DX finding + ADR-008 三轮证据收齐**)
+- 最近 progress doc: `progress/2026-04-23-round-20.md` ← **下一轮必读**; R19 在 `progress/2026-04-23-round-19.md`
+- 当前阶段: **Phase 1 MVP + 三轮 dogfood 完成 + 三 extractor 全家桶 + v0.1.4 tag; R21 将写 ADR-013 + 修 F2 DX wart**
+- 最新 ADR: `ADR-012-multi-llm-per-node-usage.md` (R18); **ADR-013 pending (R21 写)**
+- 最新 tag: **v0.1.4** (R19 cut; R20 零 code 改动, 不 bump)
 - Blocked items: 无
-- 测试状态: **247/247 pass, 93% coverage, ruff + format clean**
-- CLI 表面: 未变 (R19 纯 release packaging)
-- **R19 产出 (纯 release cut, 零 code 改动)**:
-  - `__version__` / `pyproject.toml` 0.1.3 → 0.1.4
-  - CLI 状态行追加 `"+ multi-LLM-per-node accumulation, v0.1.4"`
-  - CHANGELOG `[0.1.4]` 段完整写入 (Theme / Fixed R18 / Fixed R17 / Numbers / Notes)
-  - `git tag v0.1.4` + push (main + tag 都走 gh-proxy.com)
-- **Release pattern 第 3 次无意外复用**: R13 (v0.1.2) → R16 (v0.1.3) → R19 (v0.1.4). 7 步流程已成肌肉记忆
-- **R18 核心 dogfood 发现仍生效** (R17/R18/R19 三轮合起来):
-  - 三 extractor "last AIMessage wins" 语义已废弃, 改为 diff + sum all new AIMessages (ADR-012)
-  - swarm Bob 节点真实 token 2291+213, R17 supervisor research_expert 1957+283 (小幅精度提升)
-  - `UsageContext.pre_values` 自 R15 暴露后 R18 才用上
-- **ADR-008 boundary evidence**: R17 + R18 两轮 dogfood = 0 execute-fork 需求. R20 再做第三轮可以形式化 "lift/stay frozen" 决策
+- 测试状态: **247/247 pass, 93% coverage, ruff + format clean** (R20 未改代码)
+- CLI 表面: 未变
+- **R20 产出 (纯 dogfood + 决策, 零 Chronos code 改动)**:
+  - `docs/case-studies/langgraph-bigtool.md` (6.3 KB, dogfood #3 案例)
+  - `progress/2026-04-23-round-20.md` (6.4 KB, 含 ADR-013 action items 草稿)
+  - `/workspace/chronos-dogfood/bigtool/` sandbox (dogfood.db + baseline 脚本)
+- **R20 两个 finding**:
+  - **F1 (upstream, 非 Chronos)**: `langgraph-bigtool 0.0.3` × `langgraph 1.1.9` 不兼容, `ToolNode.inject_tool_args` 改成 `_inject_tool_args`; 本地 monkey-patch 才能跑. 文档化, 不下 PR
+  - **F2 (Chronos DX wart)**: `model_name` 在 `Node.model_name`, 不在 `Node.usage.model_name`. R17/R18/R20 三份 dogfood 脚本都写错了, 证明是真实认知摩擦. 修方案: docstrings + `Node.model` property alias. R21 做
+- **ADR-008 三轮 dogfood 全部 0 execute-fork 需求** = weak-consistent-across-topologies 证据已齐. R21 写 ADR-013 形式化 "fork=JSON-only 保持冻结" 决策
+- **Dogfood topology 三角**: R17 centralized router (supervisor) / R18 decentralized handoff (swarm) / R20 single-agent + meta-tool (bigtool) — 三轴覆盖. 每轮都独立暴露不同 surface
 - 旧事实 (仍生效, 不重复):
   - GitHub push 只有 `gh-proxy.com`
   - LangGraph 1.1.9 record/fork/diff 全链路 OK
@@ -178,15 +176,16 @@ chronos-agent/
   - JSON 模式走 stdlib `print(json.dumps(...))` 不走 rich Console
   - `SqliteStore.open()` 静默建文件, 读命令守 `Path.exists()`
   - **progress doc 每轮必写**
-  - **`ForkPlan` schema 是 v0.1.1 对外契约** — 字段增删要 bump `chronos_fork_plan_version` + 写 ADR
-  - **ADR-009 usage extractor 协议是 v0.1.2 对外契约** — 失败容忍语义冻结; ADR-012 扩展了"累加语义"但不改签名
-  - **Anthropic prompt caching 计账** (R15): `cache_creation_input_tokens` + `cache_read_input_tokens` 必须加到 `prompt_tokens`
-  - **OpenAI reasoning tokens 语义** (R15): `completion_tokens_details.reasoning_tokens` 是 completion 的子字段, 不减
-  - **Duck typing 原则** (R15): extractor 不 import SDK, 按字段名读 dict
-  - **CLI 模块形状 (R14 确立)**: `cli/__init__.py` 只管 typer apps + thin wrappers, 每个 subcommand 实现模块暴露 `*_command(console, open_store_fn, ...)`. 新命令照抄
-  - **OneAPI 配方 (R17/R18 确立)**: `model="Claude Opus 4.7"`, **不传 temperature**, 响应恒包装饰性 error 字段忽略, `UV_INDEX_URL=aliyun`
-  - **M milestone naming / multi-round bundle**: R17 + R18 + R19 证明 bug fix 不 bump M; release cut 单独一轮打包多个前轮; CHANGELOG 段头 "Round A + Round B"
-  - **Release pattern (R13/R16/R19 三次验证)**: bump `__version__` → `pyproject.toml::version` → CLI 状态行 → CHANGELOG `[Unreleased]→[x.y.z]` → 全绿验证 → commit → tag `-a` → push main + push tag. 纯 release 0 code 改动
+  - **`ForkPlan` schema 是 v0.1.1 对外契约**
+  - **ADR-009 usage extractor 协议是 v0.1.2 对外契约**
+  - **Anthropic prompt caching 计账** (R15): cache_creation + cache_read 加到 prompt_tokens
+  - **OpenAI reasoning tokens 语义** (R15): reasoning 是 completion 子字段, 不减
+  - **Duck typing 原则** (R15): extractor 不 import SDK
+  - **CLI 模块形状 (R14 确立)**: subcommand 实现模块暴露 `*_command(console, open_store_fn, ...)`
+  - **OneAPI 配方 (R17/R18 确立)**: `model="Claude Opus 4.7"`, 不传 temperature, 响应恒包装饰性 error 字段忽略, UV_INDEX_URL=aliyun
+  - **M milestone naming / multi-round bundle**: bug fix 不 bump M; release cut 单独一轮打包多个前轮
+  - **Release pattern (R13/R16/R19 三次验证)**: bump version → pyproject → CLI 状态行 → CHANGELOG → 全绿 → commit → tag -a → push main+tag
+  - **Dogfood script 陷阱 (R20 确立)**: `model_name` 在 `Node.model_name` 不是 `Node.usage.model_name` — 三份脚本踩过坑; R21 前写脚本直接用 `n.model_name`
 
 ## Cron 窗口门控 (2026-04-22 用户指令)
 
@@ -203,6 +202,50 @@ if not (0 <= beijing_hour <= 11):
 或 agent prompt 里直接让它自检。
 **例外**: 用户手动触发/手动说"继续跑"可以不看窗口 (Round 3/4 就是这种情况)。
 ## 6. 下一轮该做什么 (Next Round TODO)
+
+**Round 21 — 落地 R20 两大产出: ADR-013 + F2 修 (R20 写出了结论, R21 把它兑现成代码 + 文档)**
+
+### R21 核心目标 (推荐落地, 低 scope 高信号)
+
+**R21-A (必做)**: 写 ADR-013 — "Fork auto-execution: stay frozen"
+- 输入: R17 + R18 + R20 三轮 dogfood, 全 0 execute-fork 需求
+- 输出: `docs/decisions/ADR-013-fork-auto-execution-stay-frozen.md`
+- Status: **Accepted**
+- 内容要点:
+  - 证据类型: weak-consistent-across-topologies (单用户 × 单 LLM backend × 三 graph shape)
+  - 决策: ADR-008 的 "fork=JSON-only" 边界**保持冻结**
+  - Non-goal: 不是永久禁止 execute-fork, 而是 "无证据表明这是下一步要建的"
+  - 后续触发条件: 有外部用户写 issue 要求 auto-execute, 或新的 dogfood topology 暴露 JSON-only 的硬边界
+- 不改代码, 纯 ADR 文档
+
+**R21-B (必做)**: 修 F2 DX wart — `Node.model_name` 认知摩擦
+- 低成本路径 (推荐):
+  1. 给 `Usage` 类加 docstring cross-ref: "model_name is NOT here; see Node.model_name"
+  2. 给 `Node.usage` 字段加 docstring cross-ref 同上
+  3. 加 `Node.model` read-only property = alias for `Node.model_name` (让 `n.model` 也能用)
+- **不改 schema** (移 model_name 到 Usage 是破坏性改动, 拒绝)
+- +2-3 tests: property alias 返回正确值; 读写语义一致
+- 预期改动 <20 LOC
+
+**R21-C (选做, 可省)**: 修 R17 + R18 dogfood 脚本里的 `getattr(u, "model_name")` bug
+- 历史 dogfood 工件, 不是对外表面
+- 如果 R21-B 加了 `Node.model` alias, 可以顺手把 dogfood 脚本改成 `n.model` 示范新 API
+- 改或不改取决于时间
+
+### R21 release strategy
+- R21-A 纯 ADR, 不 bump
+- R21-B 加 property, **技术上是对外表面加法**, 但 `Node.model` 只是 alias, 不改既有字段 → **加法, 非破坏**
+- 可以等 R22 + R23 攒一两个小改动再 cut v0.1.5, 或 R21 自己 cut — 用户决定
+- **Release pattern 已肌肉记忆 (R13/R16/R19 三次验证)**: bump version → pyproject → CLI 状态行 → CHANGELOG → 全绿 → commit → tag -a → push main+tag
+
+### R21 非目标 (明确不做)
+- ❌ 开始 Phase 2 (AutoGen/CrewAI adapter) — 仍在 Phase 1.5, 等 ADR-013 落定
+- ❌ 第四轮 dogfood — 三轮已够; 再做一轮边际效益低, 除非有外部用户要求特定 topology
+- ❌ execute-fork 实现 — ADR-013 明确冻结
+
+### 旧 R17 候选 (历史存档, 已实现或已过时, 下面保留作参考)
+
+---
 
 **Round 17 候选** (R16 cut v0.1.3 — R14 refactor + R15 ADR-010 extractors 打包):
 
