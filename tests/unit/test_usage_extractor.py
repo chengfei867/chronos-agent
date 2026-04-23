@@ -31,6 +31,8 @@ from chronos.adapters.langgraph_usage import (
     UsageContext,
     UsageResult,
     aimessage_usage_extractor,
+    anthropic_usage_extractor,
+    openai_usage_extractor,
 )
 from chronos.cli import app
 from chronos.core.models import Node, NodeKind, Run, RunStatus, Usage
@@ -142,6 +144,256 @@ def test_aimessage_extractor_missing_details_tolerated() -> None:
     result = aimessage_usage_extractor(_ctx({"messages": [msg]}))
     assert result is not None
     assert result.reasoning_tokens == 0
+
+
+# ---------------------------------------------------------------------------
+# anthropic_usage_extractor (ADR-010)
+# ---------------------------------------------------------------------------
+
+
+def test_anthropic_extractor_happy_path() -> None:
+    msg = _FakeAIMessage(
+        response_metadata={
+            "usage": {"input_tokens": 100, "output_tokens": 50},
+            "model": "claude-3-5-sonnet-20241022",
+        }
+    )
+    result = anthropic_usage_extractor(_ctx({"messages": [msg]}))
+    assert result is not None
+    assert result.prompt_tokens == 100
+    assert result.completion_tokens == 50
+    assert result.reasoning_tokens == 0
+    assert result.model_name == "claude-3-5-sonnet-20241022"
+    assert result.cost_usd_cents is None
+
+
+def test_anthropic_extractor_folds_cache_create_and_read_into_prompt() -> None:
+    # Prompt caching: 100 fresh + 2000 cache-created + 500 cache-read = 2600 prompt.
+    msg = _FakeAIMessage(
+        response_metadata={
+            "usage": {
+                "input_tokens": 100,
+                "output_tokens": 75,
+                "cache_creation_input_tokens": 2000,
+                "cache_read_input_tokens": 500,
+            },
+            "model": "claude-sonnet-4",
+        }
+    )
+    result = anthropic_usage_extractor(_ctx({"messages": [msg]}))
+    assert result is not None
+    assert result.prompt_tokens == 2600
+    assert result.completion_tokens == 75
+
+
+def test_anthropic_extractor_no_messages() -> None:
+    assert anthropic_usage_extractor(_ctx({})) is None
+    assert anthropic_usage_extractor(_ctx({"messages": "not a list"})) is None
+
+
+def test_anthropic_extractor_no_response_metadata() -> None:
+    msg = _FakeAIMessage(response_metadata=None)
+    assert anthropic_usage_extractor(_ctx({"messages": [msg]})) is None
+
+
+def test_anthropic_extractor_no_usage_key_returns_none() -> None:
+    # response_metadata present but no "usage" key — shouldn't match.
+    msg = _FakeAIMessage(response_metadata={"model": "claude-3", "stop_reason": "end_turn"})
+    assert anthropic_usage_extractor(_ctx({"messages": [msg]})) is None
+
+
+def test_anthropic_extractor_usage_not_dict_returns_none() -> None:
+    # Defensive: some adapters might stash a non-dict under usage.
+    msg = _FakeAIMessage(response_metadata={"usage": "bogus"})
+    assert anthropic_usage_extractor(_ctx({"messages": [msg]})) is None
+
+
+def test_anthropic_extractor_malformed_values_coerced() -> None:
+    # None values in the usage dict should be treated as 0, not raise.
+    msg = _FakeAIMessage(
+        response_metadata={
+            "usage": {
+                "input_tokens": None,
+                "output_tokens": 42,
+                "cache_creation_input_tokens": None,
+            }
+        }
+    )
+    result = anthropic_usage_extractor(_ctx({"messages": [msg]}))
+    assert result is not None
+    assert result.prompt_tokens == 0
+    assert result.completion_tokens == 42
+
+
+def test_anthropic_extractor_model_name_fallback_to_model_name_key() -> None:
+    # Some wrappers surface "model_name" instead of "model".
+    msg = _FakeAIMessage(
+        response_metadata={
+            "usage": {"input_tokens": 1, "output_tokens": 1},
+            "model_name": "claude-opus-4",
+        }
+    )
+    result = anthropic_usage_extractor(_ctx({"messages": [msg]}))
+    assert result is not None
+    assert result.model_name == "claude-opus-4"
+
+
+def test_anthropic_extractor_picks_newest_with_usage() -> None:
+    m_old = _FakeAIMessage(response_metadata={"usage": {"input_tokens": 1, "output_tokens": 1}})
+    m_new = _FakeAIMessage(response_metadata={"usage": {"input_tokens": 99, "output_tokens": 77}})
+    result = anthropic_usage_extractor(_ctx({"messages": [m_old, m_new]}))
+    assert result is not None
+    assert result.prompt_tokens == 99
+    assert result.completion_tokens == 77
+
+
+# ---------------------------------------------------------------------------
+# openai_usage_extractor (ADR-010)
+# ---------------------------------------------------------------------------
+
+
+def test_openai_extractor_happy_path() -> None:
+    msg = _FakeAIMessage(
+        response_metadata={
+            "token_usage": {
+                "prompt_tokens": 120,
+                "completion_tokens": 60,
+                "total_tokens": 180,
+            },
+            "model_name": "gpt-4o-mini",
+        }
+    )
+    result = openai_usage_extractor(_ctx({"messages": [msg]}))
+    assert result is not None
+    assert result.prompt_tokens == 120
+    assert result.completion_tokens == 60
+    assert result.reasoning_tokens == 0
+    assert result.model_name == "gpt-4o-mini"
+    assert result.cost_usd_cents is None
+
+
+def test_openai_extractor_captures_reasoning_tokens() -> None:
+    # o1/o3: reasoning_tokens is a sub-detail of completion (already folded in).
+    msg = _FakeAIMessage(
+        response_metadata={
+            "token_usage": {
+                "prompt_tokens": 50,
+                "completion_tokens": 300,  # 300 already includes the 250 reasoning
+                "total_tokens": 350,
+                "completion_tokens_details": {"reasoning_tokens": 250},
+            },
+            "model_name": "o1-mini",
+        }
+    )
+    result = openai_usage_extractor(_ctx({"messages": [msg]}))
+    assert result is not None
+    # Completion is NOT reduced — we preserve prompt + completion == total.
+    assert result.prompt_tokens == 50
+    assert result.completion_tokens == 300
+    assert result.reasoning_tokens == 250
+
+
+def test_openai_extractor_no_messages() -> None:
+    assert openai_usage_extractor(_ctx({})) is None
+    assert openai_usage_extractor(_ctx({"messages": "not a list"})) is None
+
+
+def test_openai_extractor_no_response_metadata() -> None:
+    msg = _FakeAIMessage(response_metadata=None)
+    assert openai_usage_extractor(_ctx({"messages": [msg]})) is None
+
+
+def test_openai_extractor_no_token_usage_key_returns_none() -> None:
+    msg = _FakeAIMessage(response_metadata={"model_name": "gpt-4o", "finish_reason": "stop"})
+    assert openai_usage_extractor(_ctx({"messages": [msg]})) is None
+
+
+def test_openai_extractor_token_usage_not_dict_returns_none() -> None:
+    msg = _FakeAIMessage(response_metadata={"token_usage": 42})
+    assert openai_usage_extractor(_ctx({"messages": [msg]})) is None
+
+
+def test_openai_extractor_malformed_completion_details_tolerated() -> None:
+    # completion_tokens_details present but non-dict — don't crash.
+    msg = _FakeAIMessage(
+        response_metadata={
+            "token_usage": {
+                "prompt_tokens": 10,
+                "completion_tokens": 5,
+                "completion_tokens_details": "bogus",
+            }
+        }
+    )
+    result = openai_usage_extractor(_ctx({"messages": [msg]}))
+    assert result is not None
+    assert result.reasoning_tokens == 0
+
+
+def test_openai_extractor_model_fallback_to_model_key() -> None:
+    msg = _FakeAIMessage(
+        response_metadata={
+            "token_usage": {"prompt_tokens": 1, "completion_tokens": 1},
+            "model": "gpt-4.1",
+        }
+    )
+    result = openai_usage_extractor(_ctx({"messages": [msg]}))
+    assert result is not None
+    assert result.model_name == "gpt-4.1"
+
+
+# ---------------------------------------------------------------------------
+# Composed fallback (Anthropic → OpenAI → AIMessage) — doc test for ADR-010
+# ---------------------------------------------------------------------------
+
+
+def test_composed_extractor_chain_anthropic_wins() -> None:
+    """Users with mixed providers compose the three extractors."""
+
+    def composed(ctx: UsageContext) -> UsageResult | None:
+        return (
+            anthropic_usage_extractor(ctx)
+            or openai_usage_extractor(ctx)
+            or aimessage_usage_extractor(ctx)
+        )
+
+    msg = _FakeAIMessage(response_metadata={"usage": {"input_tokens": 10, "output_tokens": 5}})
+    result = composed(_ctx({"messages": [msg]}))
+    assert result is not None
+    assert result.prompt_tokens == 10
+
+
+def test_composed_extractor_chain_openai_wins_when_no_anthropic() -> None:
+    def composed(ctx: UsageContext) -> UsageResult | None:
+        return (
+            anthropic_usage_extractor(ctx)
+            or openai_usage_extractor(ctx)
+            or aimessage_usage_extractor(ctx)
+        )
+
+    msg = _FakeAIMessage(
+        response_metadata={"token_usage": {"prompt_tokens": 7, "completion_tokens": 3}}
+    )
+    result = composed(_ctx({"messages": [msg]}))
+    assert result is not None
+    assert result.prompt_tokens == 7
+    assert result.completion_tokens == 3
+
+
+def test_composed_extractor_chain_aimessage_fallback() -> None:
+    def composed(ctx: UsageContext) -> UsageResult | None:
+        return (
+            anthropic_usage_extractor(ctx)
+            or openai_usage_extractor(ctx)
+            or aimessage_usage_extractor(ctx)
+        )
+
+    msg = _FakeAIMessage(
+        usage_metadata={"input_tokens": 11, "output_tokens": 22},
+    )
+    result = composed(_ctx({"messages": [msg]}))
+    assert result is not None
+    assert result.prompt_tokens == 11
+    assert result.completion_tokens == 22
 
 
 # ---------------------------------------------------------------------------

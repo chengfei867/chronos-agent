@@ -127,9 +127,143 @@ def aimessage_usage_extractor(ctx: UsageContext) -> UsageResult | None:
     return None
 
 
+# ---------------------------------------------------------------------------
+# Native Anthropic extractor (ADR-010)
+# ---------------------------------------------------------------------------
+
+
+def _latest_message_with_response_metadata_key(
+    ctx: UsageContext, key: str
+) -> tuple[Any, dict[str, Any]] | None:
+    """Return the newest message whose ``response_metadata[key]`` is a dict.
+
+    Common helper for the native Anthropic / OpenAI extractors — they only
+    differ in which key they look for under ``response_metadata``.
+    """
+    messages = ctx.post_values.get("messages")
+    if not isinstance(messages, list):
+        return None
+
+    for msg in reversed(messages):
+        meta = getattr(msg, "response_metadata", None)
+        if not isinstance(meta, dict):
+            continue
+        payload = meta.get(key)
+        if isinstance(payload, dict):
+            return msg, meta
+    return None
+
+
+def anthropic_usage_extractor(ctx: UsageContext) -> UsageResult | None:
+    """Extractor for ``AIMessage.response_metadata["usage"]`` (Anthropic-shaped).
+
+    Reads the token counts emitted by ``langchain_anthropic.ChatAnthropic``
+    and, more generally, any message that carries an Anthropic-style usage
+    block under ``response_metadata["usage"]``. Field names match
+    ``anthropic.types.Usage``::
+
+        {"input_tokens": int,
+         "output_tokens": int,
+         "cache_creation_input_tokens": int,   # optional, prompt caching
+         "cache_read_input_tokens": int}       # optional, prompt caching
+
+    Cache-creation and cache-read counts are **added into** ``prompt_tokens``
+    because Anthropic reports them separately from ``input_tokens``. This
+    gives a single number the user can multiply by price-per-prompt-token.
+    (Cost differentials - cache-create is +25%, cache-read is -90% - are the
+    user's pricing-table concern per ADR-009.)
+
+    Returns ``None`` if no message carries a usage block — normal for
+    non-LLM nodes.
+    """
+    found = _latest_message_with_response_metadata_key(ctx, "usage")
+    if found is None:
+        return None
+
+    _msg, meta = found
+    usage = meta["usage"]  # guaranteed dict by helper
+    assert isinstance(usage, dict)
+
+    base_input = int(usage.get("input_tokens", 0) or 0)
+    cache_create = int(usage.get("cache_creation_input_tokens", 0) or 0)
+    cache_read = int(usage.get("cache_read_input_tokens", 0) or 0)
+    completion = int(usage.get("output_tokens", 0) or 0)
+
+    model_name = meta.get("model") or meta.get("model_name")
+    if not isinstance(model_name, str):
+        model_name = None
+
+    return UsageResult(
+        prompt_tokens=base_input + cache_create + cache_read,
+        completion_tokens=completion,
+        reasoning_tokens=0,
+        cost_usd_cents=None,
+        model_name=model_name,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Native OpenAI extractor (ADR-010)
+# ---------------------------------------------------------------------------
+
+
+def openai_usage_extractor(ctx: UsageContext) -> UsageResult | None:
+    """Extractor for ``AIMessage.response_metadata["token_usage"]`` (OpenAI-shaped).
+
+    Reads the usage block emitted by ``langchain_openai.ChatOpenAI`` and,
+    more generally, any message carrying an OpenAI-style usage block under
+    ``response_metadata["token_usage"]``. Field names match
+    ``openai.types.CompletionUsage``::
+
+        {"prompt_tokens": int,
+         "completion_tokens": int,
+         "total_tokens": int,
+         "completion_tokens_details": {"reasoning_tokens": int},  # o1/o3
+         "prompt_tokens_details": {"cached_tokens": int}}         # discount
+
+    Unlike Anthropic, OpenAI **already folds** cached prompt tokens into
+    ``prompt_tokens`` and reasoning tokens into ``completion_tokens``. We
+    therefore surface ``reasoning_tokens`` as a sub-detail alongside the
+    completion count rather than subtracting it, so the invariant
+    ``prompt_tokens + completion_tokens == total_tokens`` is preserved.
+
+    Returns ``None`` if no message carries a token_usage block — normal for
+    non-LLM nodes.
+    """
+    found = _latest_message_with_response_metadata_key(ctx, "token_usage")
+    if found is None:
+        return None
+
+    _msg, meta = found
+    token_usage = meta["token_usage"]  # guaranteed dict by helper
+    assert isinstance(token_usage, dict)
+
+    prompt = int(token_usage.get("prompt_tokens", 0) or 0)
+    completion = int(token_usage.get("completion_tokens", 0) or 0)
+
+    reasoning = 0
+    details = token_usage.get("completion_tokens_details")
+    if isinstance(details, dict):
+        reasoning = int(details.get("reasoning_tokens", 0) or 0)
+
+    model_name = meta.get("model_name") or meta.get("model")
+    if not isinstance(model_name, str):
+        model_name = None
+
+    return UsageResult(
+        prompt_tokens=prompt,
+        completion_tokens=completion,
+        reasoning_tokens=reasoning,
+        cost_usd_cents=None,
+        model_name=model_name,
+    )
+
+
 __all__ = [
     "UsageContext",
     "UsageExtractor",
     "UsageResult",
     "aimessage_usage_extractor",
+    "anthropic_usage_extractor",
+    "openai_usage_extractor",
 ]

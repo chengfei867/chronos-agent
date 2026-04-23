@@ -195,22 +195,43 @@ chronos fork plan 2d8ba237-... \
 
 ---
 
-## Token usage & cost tracking (ADR-009)
+## Token usage & cost tracking (ADR-009, ADR-010)
 
-Chronos stores per-node `usage` (prompt/completion tokens, model name) and `cost_usd_cents` in the SQLite schema. These fields only populate if you supply a `usage_extractor` when constructing the adapter:
+Chronos stores per-node `usage` (prompt/completion tokens, model name) and `cost_usd_cents` in the SQLite schema. These fields only populate if you supply a `usage_extractor` when constructing the adapter. Three batteries are included, one per common LangChain path:
 
 ```python
 from chronos.adapters import LangGraphRecorder
-from chronos.adapters.langgraph_usage import aimessage_usage_extractor
+from chronos.adapters.langgraph_usage import (
+    aimessage_usage_extractor,      # AIMessage.usage_metadata (LC 0.3+ standard)
+    anthropic_usage_extractor,      # response_metadata["usage"]  (ChatAnthropic)
+    openai_usage_extractor,         # response_metadata["token_usage"] (ChatOpenAI)
+)
 
 recorder = LangGraphRecorder(
     store,
     kind_map=NODE_KIND_MAP,
-    usage_extractor=aimessage_usage_extractor,  # reads AIMessage.usage_metadata
+    usage_extractor=anthropic_usage_extractor,
 )
 ```
 
-The shipped `aimessage_usage_extractor` handles the common LangChain case (`AIMessage.usage_metadata` / `response_metadata`). For custom providers or offline meters, write your own:
+| Extractor | Reads from | Handles |
+|-----------|------------|---------|
+| `aimessage_usage_extractor` | `AIMessage.usage_metadata` | LangChain 0.3+ standard shape; `output_token_details.reasoning` |
+| `anthropic_usage_extractor` | `response_metadata["usage"]` | Anthropic shape; folds `cache_creation_input_tokens` + `cache_read_input_tokens` into `prompt_tokens` |
+| `openai_usage_extractor` | `response_metadata["token_usage"]` | OpenAI shape; surfaces `completion_tokens_details.reasoning_tokens` for o1/o3 |
+
+For mixed providers, compose them with `or`:
+
+```python
+def combined(ctx):
+    return (
+        anthropic_usage_extractor(ctx)
+        or openai_usage_extractor(ctx)
+        or aimessage_usage_extractor(ctx)
+    )
+```
+
+For custom providers or offline meters, write your own:
 
 ```python
 from chronos.adapters.langgraph_usage import UsageContext, UsageResult
@@ -221,7 +242,7 @@ def my_extractor(ctx: UsageContext) -> UsageResult | None:
     return UsageResult(prompt_tokens=..., completion_tokens=..., cost_usd_cents=..., model_name=...)
 ```
 
-Extractor errors never break capture — any raise is logged at WARNING and the node stores `usage=None`. See [ADR-009](decisions/ADR-009-usage-extractor-hook.md) for the full protocol.
+Extractor errors never break capture — any raise is logged at WARNING and the node stores `usage=None`. See [ADR-009](decisions/ADR-009-usage-extractor-hook.md) for the protocol and [ADR-010](decisions/ADR-010-native-usage-extractors.md) for the native extractors' field mappings.
 
 **Surface in CLI:**
 - `chronos runs show <id>` — total-usage line + per-node inline tokens.

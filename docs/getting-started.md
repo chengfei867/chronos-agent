@@ -147,17 +147,34 @@ chronos diff <parent> <child> --db chronos.db
 
 ## 4b. Track token usage and cost
 
-Chronos can record per-node prompt/completion tokens and USD cost — opt in by passing a `usage_extractor`. For standard LangChain `AIMessage` outputs the battery is included:
+Chronos can record per-node prompt/completion tokens and USD cost — opt in by passing a `usage_extractor`. Three convenience extractors ship out of the box, one per common LangChain path:
 
 ```python
-from chronos.adapters.langgraph_usage import aimessage_usage_extractor
+from chronos.adapters.langgraph_usage import (
+    aimessage_usage_extractor,      # AIMessage.usage_metadata (LangChain 0.3+ standard)
+    anthropic_usage_extractor,      # response_metadata["usage"] (ChatAnthropic)
+    openai_usage_extractor,         # response_metadata["token_usage"] (ChatOpenAI)
+)
 
+# Single provider — just pick the matching one:
 recorder = LangGraphRecorder(
     store,
     kind_map={"plan": NodeKind.LLM, "tool": NodeKind.TOOL},
-    usage_extractor=aimessage_usage_extractor,
+    usage_extractor=anthropic_usage_extractor,
 )
+
+# Mixed providers — compose the three with ``or``:
+def combined(ctx):
+    return (
+        anthropic_usage_extractor(ctx)
+        or openai_usage_extractor(ctx)
+        or aimessage_usage_extractor(ctx)
+    )
+
+recorder = LangGraphRecorder(store, kind_map={...}, usage_extractor=combined)
 ```
+
+The Anthropic extractor correctly folds `cache_creation_input_tokens` and `cache_read_input_tokens` into `prompt_tokens` (prompt caching); the OpenAI extractor surfaces `reasoning_tokens` from `completion_tokens_details` for o1/o3 models.
 
 Then three new CLI surfaces light up:
 
@@ -167,7 +184,7 @@ chronos runs show <run_id> --db chronos.db         # total + per-node inline tok
 chronos diff <a> <b> --db chronos.db --show-usage  # A vs B vs Δ cost table
 ```
 
-See [ADR-009](decisions/ADR-009-usage-extractor-hook.md) for custom extractors and failure semantics.
+See [ADR-009](decisions/ADR-009-usage-extractor-hook.md) for the hook protocol and failure semantics, and [ADR-010](decisions/ADR-010-native-usage-extractors.md) for the native Anthropic/OpenAI extractors' field mappings.
 
 ---
 
