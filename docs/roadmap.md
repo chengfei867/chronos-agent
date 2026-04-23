@@ -27,46 +27,54 @@
 
 ---
 
-## Phase 1 — v0.1 MVP "Single-agent Record & Replay"
+## Phase 1 — v0.1 MVP "Single-agent Record & Replay" ✅ COMPLETE (shipped through R25; current tag `v0.1.6`)
 
 **Goal**: First working end-to-end demo — record a LangGraph agent, list runs, inspect a node, replay (read-only).
 
 **Estimated duration**: 6–10 rounds (~2-4 days wall-time)
+**Actual**: 25+ rounds. Phase 1 overran the estimate because we (a) pulled forward usage extraction from Phase 2 (ADR-009 → ADR-015), (b) stabilised via three dogfood rounds (R17/R18), (c) reshaped the fork CLI (ADR-008 plan-artifact, ADR-013 exec-frozen), and (d) spent R24–R26 formalising the contracts (ADR-014 entry criteria, ADR-015 extractor contract, ADR-016 adapter interface) before opening Phase 2. The overrun is deliberate technical debt repayment — each extension is traceable to an ADR.
+
+**Phase 1 → Phase 2 gate**: open iff ADR-014's four entry criteria are green. See Phase 2 section below for current status.
 
 ### Milestones
 
-#### M1.1 — PoC Spikes (1 round)
-- [ ] Spike 1: LangGraph 5-node agent, checkpointer-based state capture
-- [ ] Spike 2: Restore from checkpoint with prompt swap, re-execute
-- [ ] Spike 3: Structural diff of two runs
-- [ ] Write `progress/spikes-result.md` — any spike failure triggers ADR
+#### M1.1 — PoC Spikes (1 round) ✅ DONE (Rounds 1–2)
+- [x] Spike 1: LangGraph 5-node agent, checkpointer-based state capture
+- [x] Spike 2: Restore from checkpoint with prompt swap, re-execute
+- [x] Spike 3: Structural diff of two runs
+- [x] Spike outcomes documented in `progress/2026-04-22-round-1.md` and `round-2.md`
+      (the original plan called for `spikes-result.md` — merged into per-round progress docs instead)
 
-**Exit criteria**: All 3 spikes pass on a toy LangGraph agent.
+**Exit criteria**: All 3 spikes pass on a toy LangGraph agent. ✅
 
-#### M1.2 — Project skeleton (1 round)
-- [ ] `pyproject.toml` + `uv`-based env
-- [ ] `src/chronos/` layout (`core`, `adapters`, `cli`, `store`)
-- [ ] Ruff + pytest + mypy configured
-- [ ] GitHub Actions CI (lint + test on push)
-- [ ] `make` or `just` dev commands
+#### M1.2 — Project skeleton (1 round) ✅ DONE (Round 3)
+- [x] `pyproject.toml` + `uv`-based env
+- [x] `src/chronos/` layout (`core`, `adapters`, `cli`, `store`, `api`)
+- [x] Ruff + pytest + mypy configured
+- [x] GitHub Actions CI (`.github/workflows/ci.yml` — lint + test on push)
+- [ ] `make` / `just` dev commands (not shipped; `uv run` covers the gap — de-scoped)
 
-**Exit criteria**: `uv run pytest` green on empty scaffold; CI green.
+**Exit criteria**: `uv run pytest` green on empty scaffold; CI green. ✅
 
-#### M1.3 — Canonical schema + SQLite store (1–2 rounds)
-- [ ] `chronos.store` module with SQLite schema from `architecture.md`
-- [ ] Pydantic models for `Run`, `Node`, `Fork`, `Tag`
-- [ ] Migrations approach (simple versioned SQL scripts)
-- [ ] Unit tests for schema + CRUD
-- [ ] ADR-002: trace schema versioning
+#### M1.3 — Canonical schema + SQLite store (1–2 rounds) ✅ DONE (Round 3)
+- [x] `chronos.store` module with SQLite schema from `architecture.md`
+- [x] Pydantic models for `Run`, `Node`, `Fork`, `Tag`
+- [x] Migrations approach (versioned SQL in `chronos.store.schema`)
+- [x] Unit tests for schema + CRUD
+- [x] ADR-003: SQLite schema (covers what "trace schema versioning" was meant to be)
 
-**Exit criteria**: Can write and read arbitrary canonical events.
+**Exit criteria**: Can write and read arbitrary canonical events. ✅
 
-#### M1.4 — LangGraph adapter (2 rounds) ✅ DONE (Round 4)
+#### M1.4 — LangGraph adapter (2 rounds) ✅ DONE (Round 4, extended through Round 25)
 - [x] `chronos.adapters.langgraph` module
-- [x] Callback integration capturing LLM calls + tool calls (state snapshots via checkpointer — LLM call granularity deferred to M2 when LangGraph exposes usage)
+- [x] Callback integration capturing LLM calls + tool calls via checkpointer snapshots
 - [x] Checkpointer bridge for state snapshots
 - [x] Integration test: record a 5-node LangGraph agent, verify all events persisted
-- [x] ADR-004: snapshot→node mapping algorithm (side-effect policy deferred to Phase 2)
+- [x] ADR-004: snapshot→node mapping algorithm
+- [x] **Usage extraction** (originally deferred to M2, delivered in Phase 1 ahead of schedule):
+      ADR-009 (`usage_extractor` hook), ADR-010 (native extractors),
+      ADR-011 (`_jsonable` boundary), ADR-012 (multi-LLM-per-node), consolidated into
+      ADR-015 (extractor contract v2, R25).
 
 **Exit criteria**: Recording a LangGraph run captures >95% of meaningful events. ✅
 
@@ -90,30 +98,35 @@
 
 **Exit criteria**: Users can inspect any recorded run or fork from the terminal without writing Python. ✅
 
-#### M1.7 — Replay (read-only) (1 round)
-- [ ] `chronos replay <run_id>` — step through nodes interactively in TUI
-- [ ] Keyboard controls: space/→ = next, ← = previous, q = quit
-- [ ] Use `rich` or `textual` for TUI
+#### M1.7 — Replay (read-only) (1 round) ✅ DONE (Round ~8, stabilised through R17 dogfood)
+- [x] `chronos replay <run_id>` — step through nodes interactively in TUI
+- [x] Keyboard controls: space/→ = next, ← = previous, q = quit
+- [x] Use `rich` for TUI (ADR-007 picked `rich.Live` over `textual` — see ADR-007)
 
-**Exit criteria**: Replay a 20-node run smoothly.
+**Exit criteria**: Replay a 20-node run smoothly. ✅
 
-#### M1.8 — Diff (structural) + `chronos fork` CLI (2 rounds) — DIFF PART ✅ DONE (Round 7)
+#### M1.8 — Diff (structural) + `chronos fork` CLI (2 rounds) ✅ DONE
 - [x] `chronos diff <run_A> <run_B>` — structural alignment by node name (Round 7)
 - [x] Summary output + `--verbose` full node-by-node (Round 7)
-- [ ] `chronos fork <run> --at <node> --set-state k=v` — CLI wrapper on M1.5 primitive (deferred — needs ADR-008 on CLI vs library split, see R7 progress doc option C)
-- [x] Unit tests on known diff fixtures + CLI tests (Round 7, 30 new tests)
+- [x] `chronos fork plan` — plan-artifact approach instead of `--set-state` (Round ~21, ADR-008)
+      with `--emit python` code generation (Round 22, ADR-013 keeps exec frozen as JSON-only)
+- [x] Unit tests on known diff fixtures + CLI tests (Round 7, 30 tests)
 - [x] ADR-006: diff alignment algorithm (Round 7, Accepted)
+- [x] ADR-008: fork CLI plan-artifact (R21)
+- [x] ADR-013: fork auto-execution stays frozen (R22)
 
-**Exit criteria**: Meaningful diff of two related runs + CLI-driven fork workflow (Alex's story 1 end-to-end).
+**Exit criteria**: Meaningful diff of two related runs + CLI-driven fork workflow (Alex's story 1 end-to-end). ✅
+(**Note**: the original `--set-state k=v` one-shot form was rejected in R21;
+the plan-artifact `fork plan emit → edit → fork plan exec` loop is the shipped interface.)
 
-#### M1.9 — Documentation + Release (1 round)
-- [ ] `docs/getting-started.md` — install + first run in 5 minutes
-- [ ] `docs/cli-reference.md` — all commands
-- [ ] `examples/` — 2 sample agents
-- [ ] Update README with real install instructions
-- [ ] Tag `v0.1.0`
+#### M1.9 — Documentation + Release (1 round) ✅ DONE (v0.1.0 tagged Round ~9; currently at v0.1.6)
+- [x] `docs/getting-started.md` — install + first run in 5 minutes
+- [x] `docs/cli-reference.md` — all commands
+- [x] `examples/` — sample agents
+- [x] Update README with real install instructions
+- [x] Tag `v0.1.0` through `v0.1.6` (see `CHANGELOG.md`)
 
-**v0.1 exit criteria**: Alex's story (cost regression detection in 5 minutes) is end-to-end walkable using only the CLI.
+**v0.1 exit criteria**: Alex's story (cost regression detection in 5 minutes) is end-to-end walkable using only the CLI. ✅
 
 ---
 
@@ -123,8 +136,14 @@
 
 **Estimated duration**: 10–15 rounds
 
+**Gated by ADR-014 entry criteria** (all four must be green before any Phase-2 code lands):
+- **R1** — Adapter interface as a typed `Protocol`, ≥1 non-LangGraph reference implementation behind a feature flag. *Contract:* ✅ ADR-016 (R26). *Implementation:* pending (target R28–R29).
+- **R2** — Extractor contract formalised. ✅ ADR-015 (R25).
+- **R3** — Dogfood triple (record → fork plan emit → fork plan exec) green on LangGraph *and* the Phase-2 reference adapter, in CI. ⏳ pending (blocked on R1 impl).
+- **R4** — Written "what breaks at multi-framework boundary" risks doc with mitigations. ⏳ pending (target R27).
+
 ### Key milestones
-- [ ] AutoGen adapter (ADR-005 on adapter interface)
+- [ ] Phase-2 reference adapter (e.g. AutoGen or a minimal linear-pipeline adapter) conforming to ADR-016 `RecorderProtocol` (satisfies ADR-014 R1 *implementation* half)
 - [ ] Multi-agent reasoning tree representation (concurrent lanes)
 - [ ] Local HTTP API (`chronos.api.server`)
 - [ ] Web UI basics: reasoning tree viewer (ReactFlow), run list, diff viewer
@@ -192,4 +211,4 @@ Each phase ends with:
 
 ---
 
-*Document owner: Hermes Agent. Roadmap is revisited at end of every phase.*
+*Document owner: Hermes Agent. Roadmap is revisited at end of every phase **and whenever drift is detected mid-phase** (lesson from R26: ~18 rounds elapsed between last roadmap refresh and first reality check).*
