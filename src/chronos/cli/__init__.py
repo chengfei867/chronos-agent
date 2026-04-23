@@ -1,4 +1,4 @@
-"""Chronos CLI — entry point and read-side commands.
+"""Chronos CLI — entry point and command registration.
 
 v0.1 scope: read-only inspection of runs, nodes, and forks (`runs`, `forks
 show`, `diff`, `replay`), plus `fork plan` which emits a portable plan
@@ -9,10 +9,11 @@ Command surface::
 
     chronos --version
     chronos info
-    chronos runs list [--db PATH] [--limit N] [--json]
+    chronos runs list [--db PATH] [--limit N] [--json] [--with-usage]
     chronos runs show <run_id> [--db PATH] [--json]
     chronos forks show <fork_id> [--db PATH] [--json]
     chronos diff <run_a> <run_b> [--db PATH] [--json] [--verbose] [--full]
+        [--show-usage]
     chronos replay <run_id> [--db PATH] [--no-interactive]
     chronos fork plan <run_id> (--at-node N | --at-index K | --at-node-id ID)
         [--override k=v]... [--override-json JSON] [--child-thread-id T]
@@ -21,25 +22,22 @@ Command surface::
 
 All commands honour ``CHRONOS_DB`` env var as a fallback for ``--db``, and
 default to ``./chronos.db`` if neither is set.
+
+Module layout (R14 split):
+- ``_common.py`` / ``_usage.py``  — shared helpers (DB open, serialise, usage)
+- ``runs.py`` / ``forks.py`` / ``diff.py`` / ``replay.py`` / ``fork.py``
+  — one implementation module per command group, each exposing a
+  ``*_command(...)`` function called from the thin typer wrappers below.
 """
 
 from __future__ import annotations
 
-import json
-import os
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 import typer
-from rich.console import Console
-from rich.table import Table
-from rich.tree import Tree
 
 from chronos import __version__
-from chronos.core.diff import DiffReport, DiffRunNotFoundError, diff_runs
-from chronos.core.models import Fork, Node, Run
-from chronos.store.sqlite import SqliteStore
+from chronos.cli._common import _open_store, console
 
 app = typer.Typer(
     name="chronos",
@@ -66,203 +64,6 @@ fork_app = typer.Typer(
 app.add_typer(runs_app, name="runs")
 app.add_typer(forks_app, name="forks")
 app.add_typer(fork_app, name="fork")
-
-console = Console()
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-_DEFAULT_DB = "chronos.db"
-
-
-def _resolve_db_path(db: Path | None) -> Path:
-    """Resolve DB path: CLI flag > env var > cwd default."""
-    if db is not None:
-        return db
-    env = os.environ.get("CHRONOS_DB")
-    if env:
-        return Path(env)
-    return Path(_DEFAULT_DB)
-
-
-def _open_store(db: Path | None) -> SqliteStore:
-    """Open store, exiting with a friendly error if the file is missing.
-
-    We deliberately do NOT auto-create the file for read commands — creating
-    an empty DB on ``runs list`` in the wrong directory is a silent footgun.
-    Writers (adapters) are the only callers allowed to initialise a DB.
-    """
-    path = _resolve_db_path(db)
-    if not path.exists():
-        console.print(
-            f"[red]error:[/] chronos DB not found at [bold]{path}[/]. "
-            "Set --db or CHRONOS_DB, or record a run first."
-        )
-        raise typer.Exit(code=2)
-    try:
-        return SqliteStore.open(path)
-    except Exception as exc:  # pragma: no cover — defensive
-        console.print(f"[red]error:[/] failed to open {path}: {exc}")
-        raise typer.Exit(code=2) from exc
-
-
-def _truncate(s: str, n: int) -> str:
-    return s if len(s) <= n else s[: n - 1] + "…"
-
-
-# ---------------------------------------------------------------------------
-# Usage summaries (ADR-009)
-# ---------------------------------------------------------------------------
-
-
-@dataclass
-class _RunUsageSummary:
-    """Aggregated usage across a run's nodes for table rendering."""
-
-    nodes_with_usage: int = 0
-    prompt_tokens: int = 0
-    completion_tokens: int = 0
-    reasoning_tokens: int = 0
-    cost_usd_cents: int = 0
-    any_cost: bool = False
-
-    @property
-    def total_tokens(self) -> int:
-        return self.prompt_tokens + self.completion_tokens + self.reasoning_tokens
-
-    def tokens_cell(self) -> str:
-        if self.nodes_with_usage == 0:
-            return "[dim]—[/]"
-        return str(self.total_tokens)
-
-    def cost_cell(self) -> str:
-        if not self.any_cost:
-            return "[dim]—[/]"
-        return str(self.cost_usd_cents)
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "nodes_with_usage": self.nodes_with_usage,
-            "prompt_tokens": self.prompt_tokens,
-            "completion_tokens": self.completion_tokens,
-            "reasoning_tokens": self.reasoning_tokens,
-            "total_tokens": self.total_tokens,
-            "cost_usd_cents": self.cost_usd_cents if self.any_cost else None,
-        }
-
-
-def _summarise_usage(nodes: list[Node]) -> _RunUsageSummary:
-    summ = _RunUsageSummary()
-    for n in nodes:
-        if n.usage is None:
-            continue
-        summ.nodes_with_usage += 1
-        summ.prompt_tokens += n.usage.prompt_tokens
-        summ.completion_tokens += n.usage.completion_tokens
-        summ.reasoning_tokens += n.usage.reasoning_tokens
-        if n.cost_usd_cents is not None:
-            summ.any_cost = True
-            summ.cost_usd_cents += n.cost_usd_cents
-    return summ
-
-
-def _sum_usage(nodes: list[Node]) -> _RunUsageSummary | None:
-    summ = _summarise_usage(nodes)
-    return summ if summ.nodes_with_usage > 0 else None
-
-
-def _fmt_usage_inline(summ: _RunUsageSummary) -> str:
-    parts = [
-        f"{summ.prompt_tokens} prompt",
-        f"{summ.completion_tokens} completion",
-    ]
-    if summ.reasoning_tokens:
-        parts.append(f"{summ.reasoning_tokens} reasoning")
-    parts.append(f"= [bold]{summ.total_tokens}[/] tokens")
-    if summ.any_cost:
-        parts.append(f"[bold]{summ.cost_usd_cents}¢[/]")
-    parts.append(f"across {summ.nodes_with_usage} node(s)")
-    return ", ".join(parts)
-
-
-def _fmt_node_usage(node: Node) -> str:
-    assert node.usage is not None
-    u = node.usage
-    parts = [f"{u.prompt_tokens}+{u.completion_tokens}"]
-    if u.reasoning_tokens:
-        parts.append(f"(+{u.reasoning_tokens} reasoning)")
-    parts.append(f"= {u.prompt_tokens + u.completion_tokens + u.reasoning_tokens} tokens")
-    if node.cost_usd_cents is not None:
-        parts.append(f"{node.cost_usd_cents}¢")
-    if node.model_name:
-        parts.append(f"[dim]{node.model_name}[/]")
-    return " ".join(parts)
-
-
-def _run_to_dict(run: Run) -> dict[str, Any]:
-    return {
-        "id": run.id,
-        "adapter": run.adapter,
-        "adapter_thread_id": run.adapter_thread_id,
-        "status": run.status.value,
-        "started_at": run.started_at.isoformat(),
-        "ended_at": run.ended_at.isoformat() if run.ended_at else None,
-        "task_description": run.task_description,
-        "tags": run.tags,
-        "metadata": run.metadata,
-        "initial_state": run.initial_state,
-        "final_state": run.final_state,
-    }
-
-
-def _node_to_dict(node: Node) -> dict[str, Any]:
-    return {
-        "id": node.id,
-        "run_id": node.run_id,
-        "step_index": node.step_index,
-        "node_name": node.node_name,
-        "kind": node.kind.value,
-        "parent_node_id": node.parent_node_id,
-        "started_at": node.started_at.isoformat(),
-        "ended_at": node.ended_at.isoformat() if node.ended_at else None,
-        "state_after": node.state_after,
-        "model_name": node.model_name,
-        "tool_name": node.tool_name,
-        "error_message": node.error_message,
-        "usage": (
-            {
-                "prompt_tokens": node.usage.prompt_tokens,
-                "completion_tokens": node.usage.completion_tokens,
-                "reasoning_tokens": node.usage.reasoning_tokens,
-            }
-            if node.usage is not None
-            else None
-        ),
-        "cost_usd_cents": node.cost_usd_cents,
-        "metadata": node.metadata,
-    }
-
-
-def _fork_to_dict(fork: Fork) -> dict[str, Any]:
-    return {
-        "id": fork.id,
-        "parent_run_id": fork.parent_run_id,
-        "parent_node_id": fork.parent_node_id,
-        "child_run_id": fork.child_run_id,
-        "created_at": fork.created_at.isoformat(),
-        "edited_fields": fork.edited_fields,
-        "reason": fork.reason,
-    }
-
-
-def _emit_json(payload: Any) -> None:
-    # Use plain ``print`` (not the Rich console) so the output is a clean JSON
-    # document consumable by jq / scripts. Rich would otherwise wrap at the
-    # terminal width.
-    print(json.dumps(payload, indent=2, default=str))
 
 
 # ---------------------------------------------------------------------------
@@ -351,58 +152,16 @@ def runs_list(
     ),
 ) -> None:
     """List recorded runs (most recent first)."""
-    store = _open_store(db)
-    try:
-        runs = store.list_runs(limit=limit)
-        usage_by_run: dict[str, _RunUsageSummary] = {}
-        if with_usage:
-            for r in runs:
-                nodes = store.get_nodes_for_run(r.id)
-                usage_by_run[r.id] = _summarise_usage(nodes)
-    finally:
-        store.close()
+    from chronos.cli.runs import runs_list_command
 
-    if json_out:
-        payload = [_run_to_dict(r) for r in runs]
-        if with_usage:
-            for item, r in zip(payload, runs, strict=True):
-                item["usage_summary"] = usage_by_run[r.id].to_dict()
-        _emit_json(payload)
-        return
-
-    if not runs:
-        console.print("[yellow]no runs recorded yet[/]")
-        return
-
-    table = Table(
-        title=f"Runs ({len(runs)})",
-        show_lines=False,
-        header_style="bold cyan",
+    runs_list_command(
+        db=db,
+        limit=limit,
+        json_out=json_out,
+        with_usage=with_usage,
+        open_store_fn=_open_store,
+        console=console,
     )
-    table.add_column("id", style="cyan", no_wrap=True)
-    table.add_column("adapter")
-    table.add_column("thread")
-    table.add_column("status")
-    table.add_column("started_at")
-    if with_usage:
-        table.add_column("tokens", justify="right")
-        table.add_column("cost ¢", justify="right")
-    table.add_column("task", overflow="fold")
-    for r in runs:
-        row = [
-            r.id,
-            r.adapter,
-            r.adapter_thread_id,
-            r.status.value,
-            r.started_at.isoformat(timespec="seconds"),
-        ]
-        if with_usage:
-            summ = usage_by_run[r.id]
-            row.append(summ.tokens_cell())
-            row.append(summ.cost_cell())
-        row.append(_truncate(r.task_description or "", 80))
-        table.add_row(*row)
-    console.print(table)
 
 
 @runs_app.command("show")
@@ -414,63 +173,15 @@ def runs_show(
     json_out: bool = typer.Option(False, "--json", help="Emit JSON instead of a tree."),
 ) -> None:
     """Show one run, including its node tree."""
-    store = _open_store(db)
-    try:
-        run = store.get_run(run_id)
-        if run is None:
-            console.print(f"[red]error:[/] no such run: [bold]{run_id}[/]")
-            raise typer.Exit(code=1)
-        nodes = store.get_nodes_for_run(run_id)
-        fork = store.get_fork_for_child(run_id)
-    finally:
-        store.close()
+    from chronos.cli.runs import runs_show_command
 
-    if json_out:
-        _emit_json(
-            {
-                "run": _run_to_dict(run),
-                "nodes": [_node_to_dict(n) for n in nodes],
-                "fork_of": _fork_to_dict(fork) if fork else None,
-            }
-        )
-        return
-
-    header = (
-        f"[bold cyan]{run.id}[/] "
-        f"[dim]({run.adapter}/{run.adapter_thread_id})[/] "
-        f"[yellow]{run.status.value}[/]"
+    runs_show_command(
+        run_id=run_id,
+        db=db,
+        json_out=json_out,
+        open_store_fn=_open_store,
+        console=console,
     )
-    root = Tree(header)
-    root.add(f"task: {run.task_description or '-'}")
-    root.add(
-        f"started: {run.started_at.isoformat(timespec='seconds')}"
-        + (f"    ended: {run.ended_at.isoformat(timespec='seconds')}" if run.ended_at else "")
-    )
-    if run.tags:
-        root.add(f"tags: {', '.join(run.tags)}")
-    if fork is not None:
-        root.add(
-            f"[magenta]forked from[/] {fork.parent_run_id} @ node {fork.parent_node_id} "
-            f"[dim](fork {fork.id})[/]"
-        )
-    nlist = root.add(f"nodes ({len(nodes)})")
-    total_usage = _sum_usage(nodes)
-    if total_usage is not None:
-        root.add(f"[bold]total usage:[/] {_fmt_usage_inline(total_usage)}")
-    for n in nodes:
-        label = (
-            f"[{n.step_index}] [green]{n.node_name}[/] [dim]{n.kind.value}[/] [dim cyan]{n.id}[/]"
-        )
-        nnode = nlist.add(label)
-        if n.parent_node_id:
-            nnode.add(f"[dim]parent: {n.parent_node_id}[/]")
-        if n.tool_name:
-            nnode.add(f"tool: {n.tool_name}")
-        if n.usage is not None:
-            nnode.add(f"[yellow]usage:[/] {_fmt_node_usage(n)}")
-        if n.error_message:
-            nnode.add(f"[red]error: {_truncate(n.error_message, 120)}[/]")
-    console.print(root)
 
 
 # ---------------------------------------------------------------------------
@@ -487,197 +198,20 @@ def forks_show(
     json_out: bool = typer.Option(False, "--json", help="Emit JSON instead of a tree."),
 ) -> None:
     """Show a fork: parent run + fork point + overrides + child run summary."""
-    store = _open_store(db)
-    try:
-        fork = store.get_fork(fork_id)
-        if fork is None:
-            console.print(f"[red]error:[/] no such fork: [bold]{fork_id}[/]")
-            raise typer.Exit(code=1)
-        parent = store.get_run(fork.parent_run_id)
-        child = store.get_run(fork.child_run_id)
-        child_nodes = store.get_nodes_for_run(fork.child_run_id) if child else []
-    finally:
-        store.close()
+    from chronos.cli.forks import forks_show_command
 
-    if json_out:
-        _emit_json(
-            {
-                "fork": _fork_to_dict(fork),
-                "parent_run": _run_to_dict(parent) if parent else None,
-                "child_run": _run_to_dict(child) if child else None,
-                "child_nodes": [_node_to_dict(n) for n in child_nodes],
-            }
-        )
-        return
-
-    root = Tree(f"[bold magenta]Fork[/] {fork.id}")
-    root.add(
-        f"created: {fork.created_at.isoformat(timespec='seconds')}    reason: {fork.reason or '-'}"
+    forks_show_command(
+        fork_id=fork_id,
+        db=db,
+        json_out=json_out,
+        open_store_fn=_open_store,
+        console=console,
     )
-    pnode = root.add(f"[cyan]parent[/] {fork.parent_run_id} @ node {fork.parent_node_id}")
-    if parent is not None:
-        pnode.add(f"task: {parent.task_description or '-'}")
-        pnode.add(f"status: {parent.status.value}")
-    else:
-        pnode.add("[red]parent run not found in DB[/]")
-
-    cnode = root.add(f"[green]child[/] {fork.child_run_id}")
-    if child is not None:
-        cnode.add(f"task: {child.task_description or '-'}")
-        cnode.add(f"status: {child.status.value}    nodes: {len(child_nodes)}")
-        if child_nodes:
-            nlist = cnode.add("downstream")
-            for n in child_nodes:
-                nlist.add(f"[{n.step_index}] [green]{n.node_name}[/] [dim]{n.kind.value} {n.id}[/]")
-    else:
-        cnode.add("[red]child run not found in DB[/]")
-
-    edits = root.add(f"[yellow]edited_fields[/] ({len(fork.edited_fields)})")
-    if not fork.edited_fields:
-        edits.add("[dim]<none — pure replay>[/]")
-    for k, v in fork.edited_fields.items():
-        v_repr = repr(v)
-        edits.add(f"[bold]{k}[/] = {_truncate(v_repr, 120)}")
-    console.print(root)
 
 
 # ---------------------------------------------------------------------------
 # `chronos diff`
 # ---------------------------------------------------------------------------
-
-
-_TAG_STYLE = {
-    "equal": "dim",
-    "changed": "yellow",
-    "added": "green",
-    "removed": "red",
-}
-_TAG_SYMBOL = {
-    "equal": "=",
-    "changed": "~",
-    "added": "+",
-    "removed": "-",
-}
-
-
-def _render_diff_table(report: DiffReport, verbose: bool) -> Table:
-    table = Table(
-        title=(
-            f"Diff {report.run_a.id} → {report.run_b.id}"
-            + (" (downstream of fork)" if report.restricted_to_downstream else "")
-        ),
-        show_lines=verbose,
-        header_style="bold cyan",
-    )
-    table.add_column("", no_wrap=True, width=2)
-    table.add_column("tag", no_wrap=True)
-    table.add_column("node_name", overflow="fold")
-    table.add_column("a (step)", no_wrap=True)
-    table.add_column("b (step)", no_wrap=True)
-    table.add_column("details", overflow="fold")
-
-    for e in report.entries:
-        style = _TAG_STYLE[e.tag]
-        sym = _TAG_SYMBOL[e.tag]
-        a_step = str(e.a.step_index) if e.a else "—"
-        b_step = str(e.b.step_index) if e.b else "—"
-        details = ""
-        if e.tag == "changed" and e.state_diff is not None:
-            parts: list[str] = []
-            if e.state_diff.added_keys:
-                parts.append(f"+{','.join(e.state_diff.added_keys)}")
-            if e.state_diff.removed_keys:
-                parts.append(f"-{','.join(e.state_diff.removed_keys)}")
-            if e.state_diff.changed_keys:
-                parts.append(f"~{','.join(e.state_diff.changed_keys.keys())}")
-            details = "  ".join(parts)
-            if verbose and e.state_diff.changed_keys:
-                long_bits = []
-                for k, ab in e.state_diff.changed_keys.items():
-                    long_bits.append(
-                        f"{k}: {_truncate(repr(ab['a']), 60)} → {_truncate(repr(ab['b']), 60)}"
-                    )
-                details += "\n" + "\n".join(long_bits)
-        table.add_row(
-            f"[{style}]{sym}[/]",
-            f"[{style}]{e.tag}[/]",
-            e.node_name,
-            a_step,
-            b_step,
-            details,
-        )
-    return table
-
-
-def _render_usage_compare(
-    usage_a: _RunUsageSummary | None, usage_b: _RunUsageSummary | None
-) -> None:
-    """Render a side-by-side token/cost comparison for `diff --show-usage`."""
-    if (usage_a is None or usage_a.nodes_with_usage == 0) and (
-        usage_b is None or usage_b.nodes_with_usage == 0
-    ):
-        console.print("[dim]usage: no usage recorded on either side.[/]")
-        return
-
-    t = Table(title="Usage comparison (A vs B)", header_style="bold cyan")
-    t.add_column("metric")
-    t.add_column("A", justify="right")
-    t.add_column("B", justify="right")
-    t.add_column("Δ (B − A)", justify="right")  # noqa: RUF001
-
-    def _cell(v: int) -> str:
-        return str(v)
-
-    def _delta(a: int, b: int) -> str:
-        d = b - a
-        if d == 0:
-            return "[dim]0[/]"
-        colour = "green" if d < 0 else "red"
-        sign = "+" if d > 0 else ""
-        return f"[{colour}]{sign}{d}[/]"
-
-    a = usage_a or _RunUsageSummary()
-    b = usage_b or _RunUsageSummary()
-
-    t.add_row(
-        "prompt",
-        _cell(a.prompt_tokens),
-        _cell(b.prompt_tokens),
-        _delta(a.prompt_tokens, b.prompt_tokens),
-    )
-    t.add_row(
-        "completion",
-        _cell(a.completion_tokens),
-        _cell(b.completion_tokens),
-        _delta(a.completion_tokens, b.completion_tokens),
-    )
-    if a.reasoning_tokens or b.reasoning_tokens:
-        t.add_row(
-            "reasoning",
-            _cell(a.reasoning_tokens),
-            _cell(b.reasoning_tokens),
-            _delta(a.reasoning_tokens, b.reasoning_tokens),
-        )
-    t.add_row(
-        "[bold]total tokens[/]",
-        f"[bold]{a.total_tokens}[/]",
-        f"[bold]{b.total_tokens}[/]",
-        _delta(a.total_tokens, b.total_tokens),
-    )
-    if a.any_cost or b.any_cost:
-        t.add_row(
-            "[bold]cost ¢[/]",
-            f"[bold]{a.cost_usd_cents if a.any_cost else '—'}[/]",
-            f"[bold]{b.cost_usd_cents if b.any_cost else '—'}[/]",
-            _delta(a.cost_usd_cents, b.cost_usd_cents),
-        )
-    t.add_row(
-        "nodes w/ usage",
-        _cell(a.nodes_with_usage),
-        _cell(b.nodes_with_usage),
-        _delta(a.nodes_with_usage, b.nodes_with_usage),
-    )
-    console.print(t)
 
 
 @app.command()
@@ -707,53 +241,19 @@ def diff(
     ),
 ) -> None:
     """Structural diff of two recorded runs (ADR-006 alignment)."""
-    store = _open_store(db)
-    try:
-        try:
-            report = diff_runs(store, run_a, run_b, restrict_to_downstream=not full)
-        except DiffRunNotFoundError as exc:
-            console.print(f"[red]error:[/] no such run: [bold]{exc.run_id}[/]")
-            raise typer.Exit(code=1) from exc
-        usage_a: _RunUsageSummary | None = None
-        usage_b: _RunUsageSummary | None = None
-        if show_usage:
-            usage_a = _summarise_usage(store.get_nodes_for_run(run_a))
-            usage_b = _summarise_usage(store.get_nodes_for_run(run_b))
-    finally:
-        store.close()
+    from chronos.cli.diff import diff_command
 
-    if json_out:
-        payload = report.to_dict()
-        if show_usage:
-            payload["usage"] = {
-                "a": usage_a.to_dict() if usage_a else None,
-                "b": usage_b.to_dict() if usage_b else None,
-                "delta_tokens": (
-                    (usage_b.total_tokens if usage_b else 0)
-                    - (usage_a.total_tokens if usage_a else 0)
-                ),
-            }
-        _emit_json(payload)
-        return
-
-    summary = report.summary
-    if report.fork is not None and report.restricted_to_downstream:
-        console.print(
-            f"[magenta]B is forked from A @ node[/] "
-            f"[bold]{report.fork_point_node_name}[/] "
-            f"[dim](fork {report.fork.id})[/] — diffing downstream only. "
-            "Use --full for full-run diff."
-        )
-    console.print(_render_diff_table(report, verbose=verbose))
-    console.print(
-        "[bold]summary[/]: "
-        f"[dim]{summary['equal']} equal[/]  "
-        f"[yellow]{summary['changed']} changed[/]  "
-        f"[green]{summary['added']} added[/]  "
-        f"[red]{summary['removed']} removed[/]"
+    diff_command(
+        run_a=run_a,
+        run_b=run_b,
+        db=db,
+        json_out=json_out,
+        verbose=verbose,
+        full=full,
+        show_usage=show_usage,
+        open_store_fn=_open_store,
+        console=console,
     )
-    if show_usage:
-        _render_usage_compare(usage_a, usage_b)
 
 
 # ---------------------------------------------------------------------------
