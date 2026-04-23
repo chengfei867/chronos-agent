@@ -147,26 +147,27 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
-**截至 Round 18 结束 (2026-04-23 下午, 用户交互轮) — 第二次 dogfood 产出 ADR-012 + 真 token bug 修复, 准备 cut v0.1.4**
+**截至 Round 19 结束 (2026-04-23 晚间, 用户交互轮) — v0.1.4 tagged + pushed**
 
-- Round: **18 完成** (R17 第一次 dogfood on supervisor → **R18 第二次 dogfood: langgraph-swarm-py + ADR-012 multi-LLM-per-node token accumulation fix**)
-- 最近 progress doc: `progress/2026-04-23-round-18.md` ← **下一轮的你必读**; R17 在 `progress/2026-04-23-round-17.md`
-- 当前阶段: **Phase 1 MVP + 四动词 CLI 闭环 + token/cost 三提取器全家桶 + 两次真实世界 dogfood 案例 (R17 supervisor + R18 swarm)**
-- 最新 ADR: **`ADR-012-multi-llm-per-node-usage.md`** (Accepted, R18) — extractors 现在 diff pre→post 累加所有新 AIMessage; 扩展 ADR-009 契约
-- 最新 tag: v0.1.3 (R16 cut); **v0.1.4 待 cut — R17+R18 bundle, 主内容 = 真实 dogfood 发现的静默 token undercount bug 修复**
+- Round: **19 完成** (R17 第一次 dogfood → R18 第二次 dogfood + ADR-012 → **R19 cut v0.1.4 release: R17+R18 bundle**)
+- 最近 progress doc: `progress/2026-04-23-round-19.md` ← **下一轮的你必读**; R18 在 `progress/2026-04-23-round-18.md`
+- 当前阶段: **Phase 1 MVP + 四动词 CLI 闭环 + token/cost 三提取器全家桶 + 两次真实世界 dogfood 案例 + v0.1.4 tag**
+- 最新 ADR: `ADR-012-multi-llm-per-node-usage.md` (Accepted, R18)
+- 最新 tag: **v0.1.4** (R19 cut, R17+R18 bundle — dogfood-driven token fidelity fixes)
 - Blocked items: 无
-- 测试状态: **247/247 pass, 93% coverage, ruff + format clean** (R18 +5 ADR-012 regression tests, 2 旧 test 改名 in-place)
-- CLI 表面: 未变 (R18 纯 adapter 层修复, 同 R17)
-- **R18 最关键发现 (dogfood-only bug)**:
-  - 三 extractor 之前用 "last AIMessage wins" 语义 → multi-LLM-per-node 节点 (swarm 里 `create_react_agent` 子图嵌入父 swarm 作为单个 super-step) 会**静默漏 30-50% token**
-  - Fix = ADR-012: `_new_messages(ctx)` 用 `pre_values`/`post_values` diff 出新消息, 累加所有 AIMessage usage; `UsageContext.pre_values` 自 R15/ADR-011 暴露但之前没用, R18 让它 earn its keep
-  - 同样的 bug 在 R17 supervisor dogfood 里是 latent 的 (每个 react_agent 那次刚好只做 1 次 LLM call), R18 swarm 触发了
-  - 修复后重跑 R17 dogfood: research_expert 1755+271 → 1957+283 (之前也有小幅 undercount, 没人发现), 其余全一致 — 无回归
-- **R18 dogfood 数据**: swarm Alice(1118+96) → Bob(**2291+213**, 修前 1222+99) → Alice(3193+235), 答案 $1.0125T 正确
-- **R18 非 bug 发现 (文档即可)**:
-  - `create_handoff_tool` 产生普通 tool_call (`transfer_to_*`) — langgraph-swarm 设计如此, 不是特殊事件
-  - `Node` 没 `state_before` 字段, 需要 walk 前一节点的 `state_after` — 3 行代码够用, 不改 schema (存储翻倍不值)
-- **ADR-008 boundary evidence**: R17 + R18 两轮 dogfood 都没出现 "execute forked plan" 需求 — 用户 (包括我自己作为 dogfood 者) 只想**读** fork, 不想再跑. 边界继续 frozen, 2 轮弱一致证据
+- 测试状态: **247/247 pass, 93% coverage, ruff + format clean**
+- CLI 表面: 未变 (R19 纯 release packaging)
+- **R19 产出 (纯 release cut, 零 code 改动)**:
+  - `__version__` / `pyproject.toml` 0.1.3 → 0.1.4
+  - CLI 状态行追加 `"+ multi-LLM-per-node accumulation, v0.1.4"`
+  - CHANGELOG `[0.1.4]` 段完整写入 (Theme / Fixed R18 / Fixed R17 / Numbers / Notes)
+  - `git tag v0.1.4` + push (main + tag 都走 gh-proxy.com)
+- **Release pattern 第 3 次无意外复用**: R13 (v0.1.2) → R16 (v0.1.3) → R19 (v0.1.4). 7 步流程已成肌肉记忆
+- **R18 核心 dogfood 发现仍生效** (R17/R18/R19 三轮合起来):
+  - 三 extractor "last AIMessage wins" 语义已废弃, 改为 diff + sum all new AIMessages (ADR-012)
+  - swarm Bob 节点真实 token 2291+213, R17 supervisor research_expert 1957+283 (小幅精度提升)
+  - `UsageContext.pre_values` 自 R15 暴露后 R18 才用上
+- **ADR-008 boundary evidence**: R17 + R18 两轮 dogfood = 0 execute-fork 需求. R20 再做第三轮可以形式化 "lift/stay frozen" 决策
 - 旧事实 (仍生效, 不重复):
   - GitHub push 只有 `gh-proxy.com`
   - LangGraph 1.1.9 record/fork/diff 全链路 OK
@@ -183,8 +184,9 @@ chronos-agent/
   - **OpenAI reasoning tokens 语义** (R15): `completion_tokens_details.reasoning_tokens` 是 completion 的子字段, 不减
   - **Duck typing 原则** (R15): extractor 不 import SDK, 按字段名读 dict
   - **CLI 模块形状 (R14 确立)**: `cli/__init__.py` 只管 typer apps + thin wrappers, 每个 subcommand 实现模块暴露 `*_command(console, open_store_fn, ...)`. 新命令照抄
-  - **OneAPI 配方 (R17 确立, R18 复用成功)**: `model="Claude Opus 4.7"` (display form, 带空格), **不传 temperature**, 响应恒包装饰性 error 字段忽略, `UV_INDEX_URL=aliyun`
-  - **M milestone naming / multi-round bundle**: 同前; R18 不 bump M (extractor fix 是 R15 M1.11 能力的 bug fix, 不是新 milestone)
+  - **OneAPI 配方 (R17/R18 确立)**: `model="Claude Opus 4.7"`, **不传 temperature**, 响应恒包装饰性 error 字段忽略, `UV_INDEX_URL=aliyun`
+  - **M milestone naming / multi-round bundle**: R17 + R18 + R19 证明 bug fix 不 bump M; release cut 单独一轮打包多个前轮; CHANGELOG 段头 "Round A + Round B"
+  - **Release pattern (R13/R16/R19 三次验证)**: bump `__version__` → `pyproject.toml::version` → CLI 状态行 → CHANGELOG `[Unreleased]→[x.y.z]` → 全绿验证 → commit → tag `-a` → push main + push tag. 纯 release 0 code 改动
 
 ## Cron 窗口门控 (2026-04-22 用户指令)
 
