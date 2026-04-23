@@ -235,6 +235,7 @@ def render_plan_preview(
     console: Console,
     *,
     out_path: Path | None,
+    emit: str = "json",
 ) -> None:
     """Print a human-readable preview of a plan before/after writing it."""
     state_after = parent_node.state_after or {}
@@ -268,9 +269,14 @@ def render_plan_preview(
         console.print(f"  [yellow]warning:[/] {w}")
     if out_path is not None:
         console.print(f"\n  [dim]written to[/] [bold]{out_path}[/]")
-        console.print(
-            "  [dim]consume in code with[/] [cyan]from chronos.fork_plan import load_plan[/]"
-        )
+        if emit == "python":
+            console.print(
+                f"  [dim]fill the two TODO(user) blocks, then[/] [cyan]python {out_path.name}[/]"
+            )
+        else:
+            console.print(
+                "  [dim]consume in code with[/] [cyan]from chronos.fork_plan import load_plan[/]"
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -366,10 +372,7 @@ def fork_plan_command(
             warnings,
             console,
             out_path=out_path,
-        )
-        console.print(
-            f"[green]paste-ready Python stub written to[/] [bold]{out_path}[/]; "
-            "edit the two TODO(user) blocks and run."
+            emit="python",
         )
         return
 

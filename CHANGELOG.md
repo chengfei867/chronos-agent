@@ -4,7 +4,20 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
-_Nothing yet — R23 will decide._
+### Fixed (Round 23-A) — `fork plan --emit python` stub executability
+
+Dogfood of R22 against the R17 supervisor baseline (`chronos-dogfood/supervisor`) exposed three bugs that slipped past R22 because tests only `compile()`-checked the generated stub, never `exec`-ed it. All three are fixed with regression tests that actually run the stub:
+
+- Stub used `ref.run_id`, but `ForkRef` exposes `child_run_id` (plus `fork_id`, `node_ids`). Any real execution of the stub would `AttributeError` at the final print line. Now correctly uses `ref.child_run_id`.
+- Final `print(...)` was placed *inside* the `with recorder.fork(...)` block, but `ForkRef` fields are populated on context-manager **exit** — so the print always fired before population and printed `None`. Print moved below the `with` block with a comment explaining the lifecycle.
+- Example import/construction comments suggested `from chronos.store.sqlite import SqliteStore` + `SqliteStore("..."); store.open()`, neither of which is the public API. Corrected to `from chronos.store import SqliteStore` + `SqliteStore.open(path)` context-manager idiom (matches how `chronos-dogfood/supervisor/dogfood_baseline.py` actually opens its store).
+- CLI `render_plan_preview` previously printed the same `consume in code with from chronos.fork_plan import load_plan` hint for both `--emit json` and `--emit python`. Now emit-aware: the python path tells users to fill the two `TODO(user)` blocks and `python <stub>`.
+
+### Tests
+
+- `test_fork_plan.py` gained 3 regression tests (22 → 25): one actually `exec`s the stub with a mocked recorder + graph and asserts the print line reaches stdout with the correct value; two assert the comment/import and field-name invariants at source level.
+- `test_fork_cli.py` assertion for the stale "paste-ready Python stub written to" message replaced with the new preview-based hint check.
+- Full suite: **263 / 263 pass, 93% coverage**, ruff/format/mypy all green.
 
 ---
 

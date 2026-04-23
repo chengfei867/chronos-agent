@@ -147,27 +147,26 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
-**截至 Round 22 结束 (2026-04-23 晚 CST, 用户交互轮) — v0.1.5 cut (R21+R22 bundle); ADR-013 landed + alt C shipped; [Unreleased] 空**
+**截至 Round 23-A 结束 (2026-04-23 晚 CST, 用户交互轮) — R22 `--emit python` 过 E2E 实战; 发现并修 3 个 R22 stub bug; `[Unreleased]` 已填 Fixed 段等 R23 剩余两步**
 
-- Round: **22 完成** (R20 dogfood #3 bigtool → R21 ADR-013 + Node.model alias → **R22 `fork plan --emit python` + v0.1.5 cut**)
-- 最近 progress doc: `progress/2026-04-23-round-22.md` ← **下一轮必读**; R21 在 `progress/2026-04-23-round-21.md`
-- 当前阶段: **Phase 1 + 三轮 dogfood + ADR-013 边界明确 + ADR-013 alt C shipped (`--emit python`) + v0.1.5 cut; `[Unreleased]` 空等 R23**
-- 最新 ADR: **ADR-013 (R21) — fork auto-execution stays frozen, 三轮 dogfood 证据** (R22 alt C 兑现)
-- 最新 tag: **v0.1.5** (R21+R22 bundle, annotated)
+- Round: **23-A 完成** (R22 `--emit python` 生成 + v0.1.5 cut → **R23-A dogfood 验证 + bug 修复**)
+- 最近 progress doc: `progress/2026-04-23-round-23a.md` ← **下一轮必读**; R22 在 `progress/2026-04-23-round-22.md`
+- 当前阶段: **Phase 1 + 三轮 dogfood + ADR-013 冻结 + ADR-013 alt C shipped + v0.1.5 cut + R22 stub 经实战验证 (3 bug 已修); `[Unreleased]` 含 R23-A Fixed 段等 R23-B/C**
+- 最新 ADR: **ADR-013 (R21)** — 未变
+- 最新 tag: **v0.1.5** (R21+R22 bundle) — 未变; R23 各步攒进 `[Unreleased]` 直到 R23-C 完成再 cut v0.1.6
 - Blocked items: 无
-- 测试状态: **260/260 pass, 93% coverage** (R21 250 → R22 260, 新增 7 unit + 3 CLI `to_python` 测试)
-- CLI 表面: `chronos fork plan <run_id> --emit python|json`; `--emit python` 默认写 `./fork_stub.py`; 默认 `--emit json` 保持不变
-- **R22 产出 (deferred alt C 兑现 + v0.1.5 release)**:
-  - `src/chronos/fork_plan.py`: `ForkPlan.to_python(*, recorder_var, graph_var) -> str` 新 public API (+85 LOC)
-  - `src/chronos/cli/fork.py` + `src/chronos/cli/__init__.py`: `--emit` 选项 wired 到 `fork_plan_command`
-  - `tests/unit/test_fork_plan.py`: +7 unit tests
-  - `tests/unit/test_fork_cli.py`: +3 CLI E2E tests
-  - `CHANGELOG.md`: `[Unreleased]` 清空, `[0.1.5] — 2026-04-23 (Round 21 + Round 22)` 三段 (R22 Added + R21 Added + R21 Documentation + Tests)
-  - `__version__=0.1.5`, `pyproject.toml::version=0.1.5`, CLI 状态行 `Phase 1 M1.12`
-  - `progress/2026-04-23-round-22.md`
-- **R22 bundle-with-R21 的理由**: R21 的 `Node.model` 已在 `[Unreleased]` 攒一轮, R22 的 `--emit python` 是 ADR-013 alt C 的兑现故事完整, 两个 DX 加法一起 cut v0.1.5 有内聚主题
-- **ADR-008 boundary 官方冻结** (ADR-013 formalizes): 三轮 dogfood × 三种正交 topology × 0 execute-fork 需求; trigger conditions 明确; 可逆但需要新证据
-- **Dogfood topology 三角定型**: R17 centralized / R18 decentralized / R20 single-agent+meta-tool
+- 测试状态: **263/263 pass, 93% coverage** (R22 260 → R23-A +3 regression tests)
+- CLI 表面: 未变 (`chronos fork plan <run_id> --emit python|json`); 但 python 路径的 stub 模板和 preview hint 已改
+- **R23-A 产出 (R22 bug fixes + E2E 实战)**:
+  - `src/chronos/fork_plan.py`: `to_python()` 模板修 3 处 — `ref.run_id` → `ref.child_run_id`; `print(...)` 移出 `with` 块 + 注释说明 lifecycle; 示例 import 改成 `from chronos.store import SqliteStore` + `SqliteStore.open(path)` CM
+  - `src/chronos/cli/fork.py`: `render_plan_preview` 加 `emit="json"/"python"` kwarg; python 路径提示不同 (告诉用户填 TODO + `python <stub>`); 删掉多余的 trailing status line
+  - `tests/unit/test_fork_plan.py`: +3 regression tests (22 → 25), 其一真 `exec` stub 验证 child_run_id 打印; 另两个 text-level 守卫
+  - `tests/unit/test_fork_cli.py`: 1 断言更新 (旧 "paste-ready..." 字符串已删)
+  - `CHANGELOG.md`: `[Unreleased]::Fixed (Round 23-A)` 段
+  - `progress/2026-04-23-round-23a.md`
+- **R23-A 实战结果**: `chronos fork plan ... --emit python` 生成 stub → 填 2 个 TODO(user) → `python fork_stub_filled.py` → 新 child run `16ca0fa5-cbec-418b-bd47-7a9546048b01` + fork `f6b36f40-82c3-45d8-9386-5b8a4e7b393c` 入库. 工作流通
+- **R23-A DX 发现 (待 R23-B/C 决定)**: `graph.invoke(None, {thread_id})` 只有在 graph 配了**持久化且跨 run 共享**的 checkpointer 时才续跑; R17 `build_supervisor_app()` 的 `InMemorySaver` 每次 import 是新实例 → child run 有 fork 记录但 `node_ids=[]`. 不是 Chronos bug, 是 LangGraph 语义, 但 stub/help/docs 都没说. R23-C 决定: 加 stub TODO 块 (B1-lite) vs. docs-only (B2)
+- **R22 dogfood artifacts**: `/workspace/chronos-dogfood/supervisor/` 下新增 `fork_stub.py` + `fork_stub_filled.py`; `dogfood.db` 多了一个 R23-A child run
 - 旧事实 (仍生效, 不重复):
   - GitHub push 只有 `gh-proxy.com`
   - LangGraph 1.1.9 record/fork/diff 全链路 OK
@@ -186,10 +185,13 @@ chronos-agent/
   - **CLI 模块形状 (R14 确立)**: subcommand 实现模块暴露 `*_command(console, open_store_fn, ...)`
   - **OneAPI 配方 (R17/R18 确立)**: `model="Claude Opus 4.7"`, 不传 temperature, 响应恒包装饰性 error 字段忽略, UV_INDEX_URL=aliyun
   - **M milestone naming / multi-round bundle**: bug fix 不 bump M; release cut 单独一轮打包多个前轮
-  - **Release pattern (R13/R16/R19 三次验证)**: bump version → pyproject → CLI 状态行 → CHANGELOG → 全绿 → commit → tag -a → push main+tag
-  - **Dogfood script 陷阱 (R20 确立 / R21 修)**: `model_name` 在 `Node.model_name` 不是 `Node.usage.model_name`; **R21 起推荐 `n.model` 短形式**
-  - **Em-dash (U+2014) / U+2212 minus 被 ruff RUF001 禁** (R21 又踩一次 — 肌肉记忆写进来)
-  - **Pydantic v2 field-level docstring**: 字段注解行下方 `"""..."""` 即是该字段的 docstring (R21 实际用了, 确认 ruff/mypy 不反对)
+  - **Release pattern (R13/R16/R19/R22 四次验证)**: bump version → pyproject → CLI 状态行 → CHANGELOG → 全绿 → commit → tag -a → push main+tag
+  - **Dogfood script 陷阱**: `model_name` 在 `Node.model_name`; **R21 起推荐 `n.model` 短形式**
+  - **Em-dash (U+2014) / U+2212 minus 被 ruff RUF001 禁**
+  - **Pydantic v2 field-level docstring**: 字段注解行下方 `"""..."""` 即是 docstring
+  - **R22 教训 (R23-A 实战确认)**: 代码生成类测试必须 `compile()` **并** `exec()`, 否则 field-name typo / lifecycle 顺序错误会漏
+  - **ForkRef 字段**: `child_run_id`, `fork_id`, `node_ids` — 仅在 CM **exit** 后填 (R22 生成器首版踩过)
+  - **SqliteStore 公开 API**: `SqliteStore.open(path)` classmethod 用作 CM (不是 `SqliteStore(path)`, 也不是 `from chronos.store.sqlite import SqliteStore` — 公开入口在 `chronos.store`)
 
 ## Cron 窗口门控 (2026-04-22 用户指令)
 
@@ -207,40 +209,56 @@ if not (0 <= beijing_hour <= 11):
 **例外**: 用户手动触发/手动说"继续跑"可以不看窗口 (Round 3/4 就是这种情况)。
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 23 候选 — R22 把 ADR-013 alt C (`--emit python`) 做了并 cut v0.1.5, 下一步是"验 + 扩"**
+**Round 23-B/C 候选 — R23-A 搞定了 dogfood + bug fix, 还差 case study 和 checkpointer 陷阱决策; 到齐再 cut v0.1.6**
 
-### R23 选项 (按优先级排序, 下一轮挑一个做)
+### R23 剩余步 (按优先级排序, 下一轮挑一个做)
 
-**R23-A (最推荐)**: `--emit python` 实战验证 — 用 R17/R18/R20 三个老 dogfood workspace 之一, 真正 `chronos fork plan --emit python` 生成 stub, 手填 `TODO(user)`, 跑通 fork 子运行
-- 背景: R22 unit+CLI E2E 都绿, 但 "stub 真的能跑" 只在想象里验证过. 这是第一次 "在怒气中用它"
-- 输入: 挑一个现成 dogfood (建议 R17 supervisor, 因为拓扑最简单)
-- 产出: 一个可复用的 "fork-via-emit-python" case study 文档 (`docs/case-studies/` 下加一篇) + 任何发现的小 bug/DX 摩擦
-- 顺手完成 R22-C leftover (R17/R18 脚本改用 `n.model`)
-- 成功条件: fork 子运行跑通, 或明确记录为什么跑不通 (这本身也是有价值的反馈)
-- 预期: ~半轮-1 轮, 产出依赖发现的摩擦数量
+**R23-B (最推荐, 独立, 不阻塞)**: 写 `docs/case-studies/fork-via-emit-python.md`
+- 输入: `progress/2026-04-23-round-23a.md` 里的完整流程 + `/workspace/chronos-dogfood/supervisor/fork_stub_filled.py` 作为参考脚本
+- 结构建议: (1) 场景 (反事实 debugging 动机) (2) `chronos fork plan --emit python` 生成 → 检查 → 填 → 跑 的 happy path (3) **checkpointer 陷阱**: 为什么 `graph.invoke(None, {thread_id})` 需要持久化 checkpointer + 正确的 `SqliteSaver` snippet (4) R23-A 跑出来的真 run id 作 evidence (5) 回头看: ADR-008 + ADR-013 冻结的背后逻辑被这个陷阱再次佐证
+- 成功条件: 一个自包含的 tutorial, 用户照着走能跑通; 顺带给 Chronos 的文档仓补一块最大的空白
+- 预期: 半轮-1 轮
 
-**R23-B**: Phase 2 spike — AutoGen adapter 一轮试水
-- ⚠️ R10 红线: Phase 2 之前不碰 AutoGen. R22 起 Phase 1 MVP 已稳定 + ADR-013 冻结 fork + dogfood 三轮完成 + v0.1.5 cut, 可以动了
-- 目标: 不是完整 AutoGen adapter, 是写 `src/chronos/adapters/autogen.py` 最小 `AutoGenRecorder.record()` context manager + 1 个 minimal example
-- 验证 `Recorder` 协议是否真的 framework-agnostic, 暴露哪些 protocol 漏洞
-- 时间盒子: 1 轮; 不成就写 lessons, 不硬推
-- 成功条件: 能在 AutoGen 2-agent 对话上抓出至少 2 个 node, token count 合理
-- 副作用: 给 `--emit python` 生成 stub 里的 `recorder_var` 示例加一个 AutoGen 变体
+**R23-C (推荐, 短)**: 决定 stub 的 checkpointer 提示加不加
+- 选项 B1-lite: stub 加第三个 `TODO(user)` 注释块 (2-3 行: "ensure the graph was compiled with a checkpointer that persists across runs, e.g. `SqliteSaver.from_conn_string(...)`"; 不加实际代码, 只加 comment)
+- 选项 B2: 不改 stub, 把提示写进 `chronos fork --help` epilog + case study (R23-B 已经 cover)
+- 默认建议: B1-lite + B2 一起; stub 的认知负担已经不大, 一条 comment 行不痛, 可以少一个文档依赖
+- 实现后: CHANGELOG `[Unreleased]::Fixed` 续一行 + 测试 (1 text-level invariant)
 
-**R23-C (选做, 低优先)**: `chronos fork emit-python <path-to-plan.json>` 独立子命令
-- R22 明确把 standalone subcommand 判为 YAGNI (design 笔记在 `progress/2026-04-23-round-22.md` 里)
-- R23-A 实战如果真的遇到 "我已经有 plan.json, 现在想换成 python" 的场景, 再做; 否则继续 YAGNI
+**R23-D (R23-B + R23-C 都做完后)**: cut v0.1.6
+- 内容: R23-A (3 bug fixes) + R23-C (stub hint) + R23-B (docs 不参与 version bump 但可以在 CHANGELOG 提)
+- 按 R13/R16/R19/R22 四次验证的 7 步 release pattern
+- 同时把 release pattern 正式写成 skill (`software-development/chronos-release-cut`? 或 `github/version-cut`?) — 四次重复已够明显
+
+**R23-E (选做, 低优先)**: Phase 2 spike (AutoGen adapter)
+- R10 红线已具备松动条件 (Phase 1 稳 + ADR-013 冻 + dogfood 三轮 + v0.1.5 cut), 但 R23-A 刚发现 checkpointer DX 陷阱, 建议 Phase 2 之前先把 R23-B/C 闭环再动
+- 时间盒 1 轮; 目标最小 `AutoGenRecorder.record()` + 1 example + 暴露 Recorder 协议漏洞
+
+**R22-C (一直 leftover, 超低优先)**: R17/R18 脚本改用 `Node.model` 短形式
+- R23-A 走 R17 脚本时验证了老形式还工作, 非紧急
+- 见到下一次再改的时候顺手办
 
 ### R23 非目标
-- ❌ execute-fork 实现 (ADR-013 冻结)
-- ❌ 第四轮盲目 dogfood (R23-A 是 "验证 R22 能用", 不是新 dogfood)
-- ❌ v0.1.6 cut 除非 R23-B 产出够大或 R23-A 发现并修了真 bug
 
-### Release strategy for R23+
-- `[Unreleased]` 现在是空的
-- R23-A 如果只是 case study + 小 bug fix, 攒到下一轮
-- R23-B 如果 Phase 2 spike 成功, 通常**不** cut, 留给 Phase 2 M2.1 里再打包
-- 继续用 R13/R16/R19/R22 肌肉记忆的 7 步 release pattern
+- ❌ execute-fork 实现 (ADR-013 冻结)
+- ❌ 第四轮 dogfood (R23 系列不新做 dogfood; R23-A 已在老 workspace 上验完了)
+- ❌ v0.1.6 cut 在 R23-B/C 前
+
+### Release strategy
+
+- `[Unreleased]` 已含 R23-A Fixed 段
+- R23-C 完成再续一条 Fixed 段 (stub hint)
+- R23-B 是 docs-only, 不阻塞 version cut, 可以在 R23-B 完成之后直接 cut 或与 R23-C 一起 cut
+
+---
+
+### 旧 R23-A 计划 (已完成, 存档)
+
+- ✅ 生成 stub, 发现 3 个 R22 bug
+- ✅ 修 bug + 加 3 个 regression 测试 (exec-based)
+- ✅ E2E 跑通: child run `16ca0fa5...` + fork `f6b36f40...` 入库
+- ✅ DX 发现: checkpointer 陷阱 (交 R23-C 决定)
+- ✅ progress doc: `progress/2026-04-23-round-23a.md`
 
 ---
 

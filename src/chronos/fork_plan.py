@@ -166,12 +166,13 @@ two TODO(user) blocks below is your step.
 # TODO(user): import your Recorder and construct it against your SqliteStore.
 # Example (LangGraph adapter):
 #
-#     from chronos.store.sqlite import SqliteStore
-#     from chronos.adapters.langgraph import LangGraphRecorder
+#     from chronos.store import SqliteStore
+#     from chronos.adapters import LangGraphRecorder
 #
-#     store = SqliteStore("chronos.db")
-#     store.open()
-#     {recorder_var} = LangGraphRecorder(store=store)
+#     with SqliteStore.open("chronos.db") as store:
+#         {recorder_var} = LangGraphRecorder(store)
+#         # ... the ``with {recorder_var}.fork(...)`` block below goes here,
+#         # inside the ``with SqliteStore.open(...)`` scope.
 
 # TODO(user): build or import your compiled LangGraph ``{graph_var}`` here.
 # It must be the same graph (same nodes, same edges) as the parent run.
@@ -185,7 +186,10 @@ with {recorder_var}.fork(
         None,
         {{"configurable": {{"thread_id": {child_thread_repr}}}}},
     )
-    print(f"fork child run: {{ref.run_id}}")
+
+# ForkRef fields (``child_run_id``, ``fork_id``, ``node_ids``) are populated
+# on context-manager *exit*, so read them after the ``with`` block.
+print(f"fork child run: {{ref.child_run_id}}")
 '''
 
     def dump(self, path: str | Path, *, indent: int = 2) -> Path:

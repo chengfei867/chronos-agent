@@ -306,3 +306,115 @@ def test_to_python_ends_with_single_newline() -> None:
     src = _sample_plan().to_python()
     assert src.endswith("\n")
     assert not src.endswith("\n\n")
+
+
+# --- R23-A regression tests: stub must be executable, not just compilable ---
+
+
+def test_to_python_executable_with_mocked_recorder_and_graph() -> None:
+    """R23-A regression: the generated stub must *run*, not just compile.
+
+    We exec the stub with a mock recorder (context-manager returning a
+    ForkRef-shaped object) and a mock graph (no-op .invoke). This guards
+    against field-name typos in the ``ref.XXX`` access at the end of the
+    stub. Regression for R22 bug where stub used ``ref.run_id`` but
+    ForkRef exposes ``child_run_id``.
+    """
+    from contextlib import contextmanager
+    from dataclasses import dataclass
+
+    @dataclass
+    class _FakeForkRef:
+        # Must carry at minimum the fields the stub touches after exit.
+        child_run_id: str | None = None
+        fork_id: str | None = None
+        node_ids: list[str] | None = None
+
+    class _FakeRecorder:
+        def __init__(self) -> None:
+            self.fork_calls: list[dict] = []
+
+        @contextmanager
+        def fork(self, graph, **kwargs):
+            self.fork_calls.append(kwargs)
+            ref = _FakeForkRef()
+            yield ref
+            # After yield: populate as the real recorder does.
+            ref.child_run_id = "fake-child-run-id"
+
+    class _FakeGraph:
+        def __init__(self) -> None:
+            self.invocations: list[tuple] = []
+
+        def invoke(self, state, cfg):
+            self.invocations.append((state, cfg))
+            return {}
+
+    plan = _sample_plan()
+    src = plan.to_python()
+
+    # Capture printed output from the stub.
+    import io
+    import sys
+
+    stub_globals: dict = {
+        "recorder": _FakeRecorder(),
+        "graph": _FakeGraph(),
+    }
+    buf = io.StringIO()
+    old_stdout, sys.stdout = sys.stdout, buf
+    try:
+        exec(compile(src, "<generated>", "exec"), stub_globals)
+    finally:
+        sys.stdout = old_stdout
+
+    # Recorder.fork was called with every recorder_kwargs value.
+    rec = stub_globals["recorder"]
+    assert len(rec.fork_calls) == 1
+    kwargs = rec.fork_calls[0]
+    for k, v in plan.recorder_kwargs().items():
+        assert kwargs[k] == v, f"fork kwarg {k!r} mismatch"
+
+    # Graph.invoke called once with (None, {configurable: {thread_id: ...}}).
+    gr = stub_globals["graph"]
+    assert len(gr.invocations) == 1
+    state, cfg = gr.invocations[0]
+    assert state is None
+    assert cfg == {"configurable": {"thread_id": plan.child_thread_id}}
+
+    # Print line actually reached and used the correct ForkRef field.
+    assert "fake-child-run-id" in buf.getvalue(), (
+        f"stub print line did not reach/fire or used wrong field; captured={buf.getvalue()!r}"
+    )
+
+
+def test_to_python_example_comments_use_real_import_paths() -> None:
+    """R23-A regression: the commented-out example must use real public paths.
+
+    R22 first draft suggested ``from chronos.store.sqlite import SqliteStore``
+    and ``SqliteStore("..."); store.open()`` which are both wrong. The
+    public API lives at ``chronos.store`` and ``chronos.adapters``, and the
+    store is opened via the ``SqliteStore.open(path)`` classmethod used as a
+    context manager.
+    """
+    src = _sample_plan().to_python()
+    # Public import paths.
+    assert "from chronos.store import SqliteStore" in src
+    assert "from chronos.adapters import LangGraphRecorder" in src
+    # Correct open idiom.
+    assert "SqliteStore.open(" in src
+    # Buggy patterns must NOT appear.
+    assert "chronos.store.sqlite" not in src
+    assert "chronos.adapters.langgraph" not in src
+    assert "store.open()" not in src  # bare method call -- not the idiom
+
+
+def test_to_python_uses_child_run_id_not_run_id() -> None:
+    """R23-A regression guard: ``ref.run_id`` is not a valid ForkRef field.
+
+    ForkRef has ``child_run_id``, ``fork_id``, ``node_ids``. Any stub that
+    references ``ref.run_id`` will AttributeError at the print line.
+    """
+    src = _sample_plan().to_python()
+    assert "ref.child_run_id" in src
+    assert "ref.run_id" not in src

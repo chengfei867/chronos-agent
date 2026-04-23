@@ -634,8 +634,9 @@ def test_cli_fork_plan_emit_python_writes_valid_stub(seeded_db: Path, tmp_path: 
     assert "parent_run_id=" in src
     assert "at_node_id=" in src
     assert "TODO(user)" in src
-    # Stdout should advertise the paste-ready stub.
-    assert "paste-ready Python stub written to" in result.stdout
+    # Preview should confirm stub was written + hint how to run it.
+    assert str(out) in result.stdout or out.name in result.stdout
+    assert "fill the two TODO(user) blocks" in result.stdout
 
 
 def test_cli_fork_plan_emit_python_default_filename(seeded_db: Path, tmp_path: Path) -> None:
