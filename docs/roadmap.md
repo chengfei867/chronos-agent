@@ -137,13 +137,13 @@ the plan-artifact `fork plan emit → edit → fork plan exec` loop is the shipp
 **Estimated duration**: 10–15 rounds
 
 **Gated by ADR-014 entry criteria** (all four must be green before any Phase-2 code lands):
-- **R1** — Adapter interface as a typed `Protocol`, ≥1 non-LangGraph reference implementation behind a feature flag. *Contract:* ✅ ADR-016 (R26). *Implementation:* pending (target R28–R29).
+- **R1** — Adapter interface as a typed `Protocol`, ≥1 non-LangGraph reference implementation behind a feature flag. *Contract:* ✅ ADR-016 (R26). *Implementation:* ✅ R28 (`src/chronos/adapters/linear/`, zero-dep linear-pipeline reference adapter, 25 unit tests, structural conformance to `LangGraphRecorder` public shape).
 - **R2** — Extractor contract formalised. ✅ ADR-015 (R25).
-- **R3** — Dogfood triple (record → fork plan emit → fork plan exec) green on LangGraph *and* the Phase-2 reference adapter, in CI. ⏳ pending (blocked on R1 impl).
+- **R3** — Dogfood triple (record → fork plan emit → fork plan exec) green on LangGraph *and* the Phase-2 reference adapter, in CI. ⏳ pending (target R29, now unblocked).
 - **R4** — Written "what breaks at multi-framework boundary" risks doc with mitigations. ✅ R27 (`docs/research/multi-framework-risks.md`, 6 risks × description+evidence+mitigation+owner).
 
 ### Key milestones
-- [ ] Phase-2 reference adapter (e.g. AutoGen or a minimal linear-pipeline adapter) conforming to ADR-016 `RecorderProtocol` (satisfies ADR-014 R1 *implementation* half)
+- [x] Phase-2 reference adapter (linear-pipeline adapter conforming to ADR-016 `RecorderProtocol`, R28 — satisfies ADR-014 R1 *implementation* half)
 - [ ] Multi-agent reasoning tree representation (concurrent lanes)
 - [ ] Local HTTP API (`chronos.api.server`)
 - [ ] Web UI basics: reasoning tree viewer (ReactFlow), run list, diff viewer
