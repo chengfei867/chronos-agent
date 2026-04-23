@@ -2,6 +2,9 @@
 
 Status: accepted
 Date: 2026-04-23 (Round 17)
+Consolidated into: ADR-015 (R25) — the `_jsonable` serialization boundary
+is now Layer 3 of the framework-agnostic contract. This ADR remains the
+historical record for the R17 decision.
 
 ## Context
 

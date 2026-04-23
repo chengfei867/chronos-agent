@@ -4,6 +4,9 @@
 - **Date:** 2026-04-23
 - **Round:** R18 (langgraph-swarm-py dogfood)
 - **Supersedes:** extends ADR-009 (usage extractor contract)
+- **Consolidated into:** ADR-015 (R25) — the delta-accumulation rule is now
+  Layer 4 of the framework-agnostic contract. This ADR remains the
+  historical record for the R18 decision.
 - **Related:** ADR-011 (UsageContext)
 
 ## Context

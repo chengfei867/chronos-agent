@@ -4,6 +4,14 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added (Round 25)
+
+- **ADR-015 — Extractor Contract v2 (Framework-Agnostic Consolidation)** (`docs/decisions/ADR-015-extractor-contract-v2.md`, ~17 KB, Accepted). Consolidates ADR-009 (R12 hook), ADR-010 (R15 native extractors), ADR-011 (R17 serialization boundary), ADR-012 (R18 multi-LLM-per-node) into a single five-layer contract: **Layer 1** data shape (`UsageContext` / `UsageResult` frozen dataclasses, framework-agnostic invariant); **Layer 2** protocol & lifecycle (six lifecycle invariants including "a buggy extractor must NEVER abort a recording"); **Layer 3** serialization boundary (recursive pydantic→dict `_jsonable` algorithm, invariant across all adapters); **Layer 4** multi-call-per-node delta-accumulation policy (invariant; slicing SHAPE is framework-specific); **Layer 5** convenience extractor naming + provider field-mapping tables (Anthropic / OpenAI / LangChain std) + duck-typing rule + `cost_usd_cents = None` default. Includes a framework-portability matrix showing exactly which layers AutoGen / CrewAI adapters must honor verbatim vs. specialize. Resolves ADR-014 R2 ✅ (1/4 Phase 2 entry criteria now green).
+
+### Changed (Round 25) — ADR breadcrumbs
+
+- `ADR-009-usage-extractor-hook.md`, `ADR-010-native-usage-extractors.md`, `ADR-011-state-serialization-boundary.md`, `ADR-012-multi-llm-per-node-usage.md` each gain a `Consolidated into: ADR-015 (R25)` header line pointing future readers at the authoritative spec while preserving the original decision context. No content changes to the predecessor ADRs beyond the breadcrumb — they remain the historical record for *why* each layer of the contract was adopted.
+
 ### Added (Round 24)
 
 - **ADR-014 — Phase 2 Entry Criteria** (`docs/decisions/ADR-014-phase-2-entry-criteria.md`). Formalises when Phase 2 (AutoGen adapter, Web UI, multi-agent lanes) is allowed to begin. Four **required** criteria: R1 adapter interface frozen (with ADR + one non-trivial change implementable without touching `chronos.core.*`), R2 extractor contract v2 consolidated into a single ADR, R3 one *adversarial* LangGraph dogfood (candidate: `.astream_events` streaming, explicitly flagged untested in R17 case study), R4 `docs/CONTEXT.md` §4 refreshed for Phase-2 operational red lines. Three **optional** confidence-raisers: O1 second LLM backend exercised, O2 external user signal, O3 performance baseline. All four required are ❌ as of R24 — non-binding work breakdown puts Phase 2 opening around R29. Ties back to R10 near-miss (agent caught itself mid-`uv add autogen-agentchat` under "自由发挥") by replacing vibe-based discipline with a falsifiable checklist.

@@ -4,6 +4,9 @@
 **Date**: 2026-04-23 (Round 12)
 **Supersedes**: —
 **Superseded by**: —
+**Consolidated into**: ADR-015 (R25) — framework-agnostic contract v2. This
+ADR remains the historical record for the R12 decision; new adapter authors
+should read ADR-015 as the authoritative spec.
 **Related**: ADR-003 (schema), ADR-004 (langgraph mapping), ADR-006 (diff alignment)
 
 ---

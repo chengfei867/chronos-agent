@@ -4,6 +4,9 @@
 **Date**: 2026-04-23 (Round 15)
 **Supersedes**: —
 **Superseded by**: —
+**Consolidated into**: ADR-015 (R25) — provider-specific field mappings
+are absorbed into Layer 5 of the v2 contract. This ADR remains the
+historical record for the R15 decision.
 **Related**: ADR-009 (usage extractor hook)
 
 ---
