@@ -137,3 +137,52 @@ With this document written, ADR-014 criteria status becomes:
 This doc is not frozen. When R28-R29 lands, each risk gets a **verdict paragraph** appended: did the reference adapter confirm the risk, refute it, or surface a new one? R-4 specifically will get its ADR-017 link inserted the first time an async adapter is attempted.
 
 If any Phase 2 PR triggers a risk not on this list, add R-7 / R-8 / … with the same three-paragraph structure rather than editing existing entries.
+
+---
+
+## R29 verdict — dual-adapter dogfood results
+
+_Appended 2026-04-23 after R28 shipped the linear reference adapter and R29 ran the dual-adapter dogfood in `tests/integration/test_dual_adapter_dogfood.py`._
+
+The R29 dogfood runs the same four-step research→draft→critique→polish pipeline on **both** the LangGraph and Linear adapters through a `FakeLLM`, then asserts equivalence at the persisted-store level (Run + Node + Fork rows read back from a fresh `SqliteStore` handle). Three scenarios, one per risk.
+
+### R-1 — Event-model drift → ⚠️ **partially confirmed (true test deferred to AutoGen)**
+
+**What the test shows**: LangGraph's checkpoint-snapshot walk (`get_state_history`) and Linear's inline step iteration produce identical persisted shape — 1 Run + 4 Node rows in sequential `parent_node_id` chain, `state_after["final"]` populated, `RunStatus.COMPLETED`.
+
+**What the test does NOT show**: Linear *is* a LangGraph-shaped simplification by construction (discrete step → state snapshot per ADR-016 design). True event-model divergence (AutoGen's message-passing / group chat) is not exercised here. R-1 remains the primary R30+ risk when the AutoGen adapter is attempted; the current green signal only proves that the persisted shape is _achievable_, not that it's _universal_.
+
+**Severity updated**: Medium → Medium (unchanged). Keep R-1 on the radar for AutoGen.
+
+### R-2 — Fork primitive not portable → ✅ **confirmed sufficient**
+
+**What the test shows**: Scenario B forks both adapters at the `research` node with `{"research": "HIJACKED-research"}` override, and asserts that on both sides the child Run's first node has `state_after["research"] == "HIJACKED-research"`. LangGraph uses checkpointer-based `update_state(as_node=...) + invoke(None, …)`; Linear re-executes from the override point. Two radically different mechanisms, one equivalent postcondition.
+
+**Verdict**: ADR-016's **postcondition-only** fork contract is the correct abstraction. Mechanism portability was never the goal; observational portability at the stored-artifact level is, and it holds.
+
+**Severity updated**: High → **Medium-Low**. The red line was "fork must not leak into core" and was already enforced in R26 ADR-016. R29 proves the interface is actually fillable by a non-checkpointer-based adapter. This risk is effectively *resolved* for Phase 2; it only returns if a later framework has no way to reproduce a prior state at all (e.g. pure streaming agents without state reification), which is an R-7-shaped future risk, not R-2.
+
+### R-3 — Usage metering gaps → ⚠️ **API parity achieved, real-LLM testing still future**
+
+**What the test shows**: Scenario C wires up the LangGraph adapter with a deterministic `usage_extractor` callback and the Linear adapter with a matching `__chronos_usage__` state-key hint, using the **same** sha256-derived token formula on both sides. Both adapters persist `Node.usage` with identical `prompt_tokens` and `completion_tokens` on all four nodes.
+
+**R29 fix surfaced**: The Linear adapter in R28 only accepted `dict`-shape usage hints; running the dogfood exposed the asymmetry against LangGraph's `UsageResult` dataclass. R29 patched `src/chronos/adapters/linear/recorder.py` to accept `dict | Usage | UsageResult` (duck-typed to avoid a hard dep from the zero-dep linear adapter on `langgraph_usage.py`). The docstring §"Usage metering" was updated to reflect all three accepted shapes. **This is a real API gap that only dual-adapter testing would have caught** — a secondary win of ADR-014 R3.
+
+**Severity updated**: Medium → Medium (unchanged). The mechanism difference (callback vs. state key) is real; the persisted shape is now proven identical. Real-LLM provider parity (OpenAI vs. Anthropic vs. AutoGen group chat) is still future work, tracked under R30+ per the existing summary-table row.
+
+### R-4, R-5, R-6 — unchanged
+
+Not exercised by R29; they remain deferred exactly as the summary table already records.
+
+### New risks surfaced: none
+
+No R-7 discovered. The dogfood's failure modes along the way (field name `parent_node_id` vs. `parent_id`; `UsageResult` field shape vs. `Usage` field shape; Linear adapter accepting only `dict`) were all either test-author mistakes or a real-but-narrow API gap — not architectural surprises.
+
+### ADR-014 checklist delta
+
+- **R1** — Contract ✅ (R26) / Impl ✅ (R28)
+- **R2** — ✅ (R25)
+- **R3** — **✅ (R29 this section)**
+- **R4** — ✅ (R27)
+
+**All 4/4 Phase-2 entry criteria green.** Phase 2 opens at R30 as `v0.2.0-alpha`.

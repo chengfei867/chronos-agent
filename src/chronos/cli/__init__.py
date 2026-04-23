@@ -96,8 +96,9 @@ def info() -> None:
     """Print environment diagnostics."""
     console.print(f"[bold]chronos[/bold] {__version__}")
     console.print(
-        "Status: pre-alpha (Phase 1 M1.12 -- Node.model alias + "
-        "fork plan --emit python (ADR-013 alt C), v0.1.6)"
+        "Status: Phase 2 entry -- adapter interface stable (ADR-016), "
+        "reference Linear adapter, dual-adapter CI dogfood "
+        "(ADR-014 4/4 green), v0.2.0a0"
     )
     console.print(
         "Commands: [green]runs list/show, forks show, diff, replay, fork plan[/green] "

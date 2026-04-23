@@ -147,26 +147,32 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
-**截至 Round 28 结束 (2026-04-23 CST 中午, 用户交互轮) — ADR-014 R1 impl (linear reference adapter) 落地; Phase 2 entry 4/4 criteria 在契约 + impl 侧均 green, 只剩 R3 CI dogfood (R29 做)**
+**截至 Round 30 结束 (2026-04-24 CST 凌晨 cron 轮) — v0.2.0-alpha cut 🎉 Phase 2 formally entered**
 
-- Round: **28 完成** (code round — 新 adapter + 25 测试, 零 ADR, 零 research doc)
-- 最近 progress doc: `progress/2026-04-23-round-28.md` ← **下一轮必读**
-- 当前阶段: **Phase 1 ✅ closed + v0.1.6 cut + ADR-014 Phase 2 entry: R1 契约 ✅ (R26) + impl ✅ (R28), R2 ✅ (R25), R3 ❌ (R29), R4 ✅ (R27)**
+- Round: **30 完成** (release cut — v0.2.0a0 tagged)
+- 最近 progress doc: `progress/2026-04-24-round-30.md` ← **下一轮必读**
+- 当前阶段: **Phase 2 entry ✅ (v0.2.0a0)** — ADR-014 4/4 criteria green, 适配器合同/实现/双 dogfood/风险文档全在位, 现在可以真做 AutoGen adapter
 - 最新 ADR: **ADR-016 (R26)** — Adapter interface (未变)
-- 最新 research doc: **`docs/research/multi-framework-risks.md` (R27)** — R-1 段待 R29 追加 verdict (linear adapter 用同 event-model 是妥协, 真 divergence 要等 AutoGen)
-- 最新 tag: **v0.1.6** (未变; R28 无 version bump)
+- 最新 research doc: `docs/research/multi-framework-risks.md` (R27 + R29 verdict)
+- 最新 tag: **v0.2.0a0** (R30 cut) — `__version__` / `pyproject.toml::version` / CLI 状态行三同步
 - Blocked items: 无
-- 测试状态: **289/289 pass, 94% coverage** (+25 测试, +1% 总 coverage)
-- CLI 表面: 同 v0.1.6 (R28 纯库内部, 无 CLI 变化)
-- **R28 产出**:
-  - `src/chronos/adapters/linear/__init__.py` (~30 行 re-export)
-  - `src/chronos/adapters/linear/recorder.py` (~385 行) — `LinearRuntime` dataclass + `LinearRecorder` 实现 ADR-016 RecorderProtocol. 零外部依赖. Usage hint 通过 state dict 里的 `__chronos_usage__` key 传递 (adapter pop 出来放 `Node.usage`, 保持 state diff 干净). Fork 语义: validate → seed (parent.state_after + overrides) → 重跑 `runtime.steps[at_node_index+1:]` → 持久化 Run+Nodes+Fork 一个事务
-  - `tests/unit/test_adapter_linear.py` (25 tests): `TestLinearRuntime` (4) + `TestRecordHappy` (7) + `TestRecordErrors` (2) + `TestFork` (8) + `TestProtocolConformance` (4). 100% 覆盖 happy/error/fork/conformance 四象限
-  - 结构性 Protocol 一致性用 `inspect.signature` 比对 `LinearRecorder.record`/`.fork` 和 `LangGraphRecorder` 的 kwargs 交集 — 即 ADR-016 "Python Protocols 是结构性" 的运行期等价检查
-- **R28 为什么不是 ADR**: 只是填现有 Protocol (ADR-016), 没新决策. ADR-016 rollout step 2 ("`adapter/protocols.py` 抽 `RunRef`/`ForkRef`") **仍未做** — 是 pre-existing tech debt, 不在 R28 scope, R30 release cut 前再考虑是否合并到某 clean-up ADR
-- **ADR-014 四条必须 criteria 当前状态** (R28 后): **R1 ✅ (契约 R26 + impl R28 双 green)**, **R2 ✅** (R25), **R3 ❌** (R29 合并做), **R4 ✅ (R27)**. **3/4 green, 只差 R3 dogfood**
-- **R27 bundle 回顾 (仍有效)**: multi-framework risks doc (6 risks R-1..R-6)
-- **R26 bundle 回顾 (仍有效)**: ADR-016 (adapter interface 3 Protocols) + roadmap.md 18 轮 drift 大修
+- 测试状态: **293/293 pass** (94% coverage)
+- CLI 表面: 未变 (R30 纯 release packaging) — `chronos info` 状态行更新为 "Phase 2 entry -- adapter interface stable (ADR-016), reference Linear adapter, dual-adapter CI dogfood (ADR-014 4/4 green), v0.2.0a0"
+- **R30 产出**:
+  - `src/chronos/__init__.py::__version__` `0.1.6` → `0.2.0a0`
+  - `pyproject.toml::version` `0.1.6` → `0.2.0a0`
+  - `src/chronos/cli/__init__.py::info` 状态行重写 (Phase 1 M1.12 pre-alpha → Phase 2 entry)
+  - `CHANGELOG.md` `[Unreleased]` → `[0.2.0a0] — 2026-04-24 (Round 24-30)`, release section + 新空白 `[Unreleased]` for R31
+  - `tests/unit/test_cli.py::test_cli_info` 更新断言 (`pre-alpha` → `chronos` + `phase 2`)
+  - `src/chronos/adapters/linear/recorder.py` bug fix (R29 遗留): Usage 只接受 3 token 字段, 把 `model_name` / `cost_usd_cents` 提到 Node 上 — mypy 不过是 R29 没跑 mypy 留下的, R30 顺手修掉
+  - `git tag -a v0.2.0a0` + push main + tag (via gh-proxy.com)
+- **R30 为什么不是 ADR**: 纯 release packaging + R29 遗留 mypy 修复, 无新决策
+- **ADR-014 四条 criteria (R29 后仍绿)**: R1 ✅ + R2 ✅ + R3 ✅ + R4 ✅ — 4/4 全绿, Phase 2 opened by v0.2.0a0 tag
+- **R30 意外发现 (value-add)**: R29 CHANGELOG 声明了 "all existing tests unchanged", 但 R29 没跑 mypy, 结果 linear recorder 里的 `cost_usd_cents` / `model_name` 误当成 `Usage` 字段, mypy 会炸. 教训 (已更新到旧事实): **release cut step 5 full verify 仍然有价值 — 它 caught 了 R29 的 silent mypy bug**
+- **R29 bundle 回顾 (仍有效)**: dual adapter dogfood + linear usage-hint API 泛化 (修好后)
+- **R28 bundle 回顾 (仍有效)**: linear reference adapter + 25 unit tests
+- **R27 bundle 回顾 (仍有效)**: multi-framework risks doc (6 risks + R29 verdict)
+- **R26 bundle 回顾 (仍有效)**: ADR-016 (adapter interface 3 Protocols) + roadmap drift 大修
 - **R25 bundle 回顾 (仍有效)**: ADR-015 (extractor contract v2) + 四面包屑
 - **R24 bundle 回顾 (仍有效)**: ADR-014 (Phase 2 entry checklist) + FORCE_COLOR conftest 修复
 - 旧事实 (仍生效, 不重复):
@@ -189,18 +195,20 @@ chronos-agent/
   - **CLI 模块形状 (R14 确立)**: subcommand 实现模块暴露 `*_command(console, open_store_fn, ...)`
   - **OneAPI 配方 (R17/R18 确立)**: `model="Claude Opus 4.7"`, 不传 temperature, 响应恒包装饰性 error 字段忽略, UV_INDEX_URL=aliyun
   - **M milestone naming / multi-round bundle**: bug fix 不 bump M; release cut 单独一轮打包多个前轮
-  - **Release pattern (R13/R16/R19/R22/R23 五次验证 — 已成 skill `chronos-release-pattern`)**: bump version → pyproject → CLI 状态行 → CHANGELOG → 全绿 → commit → tag -a → push main+tag
+  - **Release pattern (R13/R16/R19/R22/R23/R30 六次验证 — skill `chronos-release-pattern`)**: bump version → pyproject → CLI 状态行 → CHANGELOG → 全绿 → commit → tag -a → push main+tag
   - **Dogfood script 陷阱**: `model_name` 在 `Node.model_name`; **R21 起推荐 `n.model` 短形式**
   - **Em-dash (U+2014) / U+2212 minus 被 ruff RUF001 禁** (仅 py 源码, md 文档 OK)
   - **Pydantic v2 field-level docstring**: 字段注解行下方 `"""..."""` 即是 docstring
-  - **代码生成类测试必须 `compile()` + `exec()`** (R22 教训, R23-A 实战确认): 只 compile 会漏 field-name typo / lifecycle ordering / placeholder 默认值
+  - **代码生成类测试必须 `compile()` + `exec()`** (R22 教训)
   - **ForkRef 字段**: `child_run_id`, `fork_id`, `node_ids` — 仅在 CM **exit** 后填
   - **SqliteStore 公开 API**: `SqliteStore.open(path)` classmethod 用作 CM
   - **LangGraph fork 语义 (R23-A 确立)**: `graph.invoke(None, {thread_id})` 续跑要求持久化且跨 run 共享的 checkpointer (`SqliteSaver.from_conn_string(...)`), 不是 per-factory-call 新 `InMemorySaver`
   - **测试环境 color 污染 (R24 确立)**: shell `FORCE_COLOR=1` 会让 rich 的 ANSI 输出打断 `CliRunner` stdout-assert; `tests/conftest.py` autouse fixture 同时清 env + rebind 两个模块级 `console`
-  - **ADR consolidation 模式 (R25 确立)**: 当多个 ADR 通过 evolution 定义一个概念时, 写一个新 consolidation ADR + 在 predecessor 头部加 "Consolidated into: ADR-X" 面包屑, 保留历史决策 context 同时提供单一 source-of-truth
-  - **Roadmap drift 自检 (R26 确立)**: 每轮收工前对一眼 `docs/roadmap.md`, 发现 checkbox 状态落后实际 (>5 轮未刷) 就立即刷. ADR-014 的"Phase 2 前必修"警告针对的就是这种 doc/reality divergence
-  - **Research doc > ADR (R27 确立)**: 当 deliverable 是 "risks with mitigations" 或 "gotchas cheat sheet" 这类活内容, 用 `docs/research/*.md` 而不是 ADR — ADR 有 Accepted/Superseded lifecycle, 活文档写起来别扭. 建议每 research doc 末尾有 "review cadence" 段说明何时追加 verdict
+  - **ADR consolidation 模式 (R25 确立)**: 多个 ADR 通过 evolution 定义一个概念时, 写新 consolidation ADR + 在 predecessor 头部加 "Consolidated into: ADR-X" 面包屑
+  - **Roadmap drift 自检 (R26 确立)**: 每轮收工前对一眼 `docs/roadmap.md`
+  - **Research doc > ADR (R27 确立)**: 活内容用 `docs/research/*.md`
+  - **Usage 字段边界 (R30 确立)**: `core.models.Usage` 只有 `prompt_tokens` / `completion_tokens` / `reasoning_tokens`; `model_name` / `cost_usd_cents` 在 `Node` 上. 任何 adapter 从 UsageResult-shape 对象往 `Usage(**hint)` 塞都要先 pop 这两个字段. Mypy 会 catch, 但 R29 把 mypy 漏了, R30 补上
+  - **Release cut step 5 价值 (R30 确立)**: `ruff + format + mypy + pytest` 四件套里 **mypy 是最便宜的救命网** — pytest 能过但 mypy 不过的情况在 R29→R30 过渡真发生了
 
 ## Cron 窗口门控 (2026-04-22 用户指令)
 
@@ -216,46 +224,78 @@ if not (0 <= beijing_hour <= 11):
 ```
 或 agent prompt 里直接让它自检。
 **例外**: 用户手动触发/手动说"继续跑"可以不看窗口 (Round 3/4 就是这种情况)。
+
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 29 候选 — R28 关了 R1 impl (linear reference adapter 289/289 green). ADR-014 Phase 2 entry 契约/文档/impl 三侧 3/4 green, 只剩 R3 dogfood. R29 做完就能开 R30 Phase 2**
+**Round 31 候选 — v0.2.0-alpha 已 tag, Phase 2 formally opened. R31 是第一个真正的 Phase 2 工作轮**
 
-### R29 候选 (按 ADR-014 非绑定优先级排序, 下一轮挑一个做)
+### R31-A (推荐): ADR-016 rollout step 2 — extract `src/chronos/adapters/protocols.py`
 
-**R29 = ADR-014 criterion R3 (双 adapter CI dogfood, 最推荐)**: 证明 ADR-016 interface 实际可用 / 闭合 Phase 2 entry
-- 前置: R26 ✅ (ADR-016 契约), R28 ✅ (linear impl). 现在有两个 conformant adapter (LangGraph 真实 + Linear reference)
-- 输入: `LinearRecorder` + `LangGraphRecorder` + 现有 `chronos fork plan` + `chronos replay` CLI
-- 输出:
-  - `tests/integration/test_dual_adapter_dogfood.py` (~250-350 行): 三个测试用例, 每个跑 `record → fork plan emit → fork plan exec (或等价 re-record)` 在两个 adapter 上, 断言结构不变 (run 行, node count, fork lineage, state_after 可比). Linear 侧用 mock LLM step 产生假 `__chronos_usage__`; LangGraph 侧用现有 OneAPI 配方或 fake callback
-  - `progress/dogfood-r29-double-adapter.md`: 案例研究. 结构: 跑同一剧本两次, 列两列对比表, "相同 ✓ / 不同 (为什么) ⚠️". 聚焦 R27 R-1 R-2 R-3 三个 risks: 事件模型分叉怎么表现 / fork 没 checkpointer 怎么处理 / usage 字段兼容性
-  - `docs/research/multi-framework-risks.md` 末尾加 "R29 verdict 段": 每个 R-x 标 ✅ 确认 / ❌ 证伪 / 🆕 发现新 risk / ⚠️ 部分确认 + 一句话依据. **R-1 预期 ⚠️** (linear 是 LangGraph 简化版, 没真正验到 event-model divergence, 仍需 AutoGen); **R-2 预期 ✅** (linear 没 checkpointer, fork 重跑 pipeline 成功证 postcondition 可达); **R-3 预期 ⚠️** (linear LLM mock 的 usage 能落库但语义薄)
-- 预期: 集成测试 + 1 progress doc + research doc verdict 追加. 1 轮, 不碰 release, 不新 ADR
+- 前置: R30 v0.2.0a0 tagged ✅
+- 预估: 0.5-1 轮
+- 产出: 
+  - `src/chronos/adapters/protocols.py` 抽出 `RunRef` / `ForkRef` dataclasses + `RecorderProtocol` / `AdapterProtocol` / `NodeIdentityResolver` 三个 Protocol (目前散落在 `langgraph.py` 和 `linear/recorder.py`)
+  - `langgraph.py` 和 `linear/recorder.py` 从 `protocols.py` re-import, 保持向后兼容 (保留旧名称作 re-export)
+  - `tests/unit/test_adapter_protocols.py` 加契约一致性测试 (已有 protocol conformance 测试在 test_adapter_linear.py, 抽到新文件或保留)
+- 价值: 清掉 R28 L4 记的 pre-existing tech debt; 在真正开始写 AutoGen adapter 之前保证 Protocol 定义在一个地方
+- 非目标: 不改 Protocol 签名 (那是 ADR-017 级别的事)
 
-**R30 候选 = Phase 2 正式开**: v0.2.0-alpha cut + AutoGen adapter 第一个 commit (ADR-016 rollout step 2-3 合并做)
-- 前置: R29 ✅ (R3 dogfood 绿)
-- 产出 1: **ADR-016 rollout step 2+3**: 新建 `src/chronos/adapters/protocols.py` 抽 `RunRef`/`ForkRef` + 3 个 Protocol, `langgraph.py`/`linear/recorder.py` re-import, 写 `cast(RecorderProtocol, ...)` 显式 smoke test. 这是 ADR-016 rollout 里一直没做的 cleanup, R30 一并清
-- 产出 2: v0.2.0-alpha release cut (release pattern skill) — bundle R24+R25+R26+R27+R28+R29+R30-cleanup. CHANGELOG header "Phase 2 entry: adapter interface stable, reference adapter, CI dual-dogfood, risks documented, Protocol file abstracted"
-- 产出 3: CONTEXT.md §4 重写 Phase 2 red lines (Web UI 不得 mutate 已录 run; 第三个 adapter 必须通过 ADR-016 interface; AutoGen 作 optional extras dependency)
-- 产出 4: `uv add --optional autogen autogen-agentchat` + `src/chronos/adapters/autogen/__init__.py` 第一个 `NotImplementedError` 占位 + ADR-017 (若 R29 dogfood 中发现 async 确实需要, 否则推迟)
+### R31-B (次选): AutoGen adapter 首 commit
 
-**R29-prime (若 R29 中途发现 ADR-016 漏洞)**: 修 ADR-016
-- 写 dogfood 时可能发现某个 Protocol 契约在双 adapter 间不一致 (e.g., "failed shell Run 要不要持久化" 两个 adapter 现在一致但没写在 ADR). 回头把 ADR-016 §Decision 加一句, 而不是硬顶
-- 触发信号: "两个 adapter 在某行为上不同, 但 ADR-016 没明说谁对" — 那就是契约漏洞, ADR-017 或直接 in-place 修 ADR-016 (加 "Errata 2026-04-23" 块)
+- 前置: R30 ✅ (v0.2.0a0 tag)
+- 预估: 1-2 轮 (可能触发 ADR-017 async)
+- 产出: `uv add --optional autogen autogen-agentchat` + `src/chronos/adapters/autogen/__init__.py` 占位 + `AutoGenRecorder.record()` 半边跑通一个 minimal group chat
+- 非目标: fork + CI dual dogfood (留 R32+)
+- 预期风险: 第一次真正压测 R-1 (event-model drift) 和 R-4 (async); 很可能触发 ADR-017 async Protocol hierarchy
+- **推荐先做 R31-A 再 R31-B**: protocols.py 抽干净再加第三个 adapter, 省得写完 AutoGen 还要 refactor
 
-### R28 非目标 (继承并扩展)
+### R31-C (fallback): 小修小补 + documentation round
+
+- 如果 R31-A / R31-B 都不顺, 就清 roadmap + 写一份 migration guide for v0.2.0-alpha (from v0.1.x users)
+- 低戏剧性, 1 轮完工
+
+### R31 非目标 (继承)
 
 - ❌ execute-fork 实现 (ADR-013 冻结, 未解除)
-- ❌ `uv add autogen-agentchat` (ADR-014 R3 尚未满足, Phase 2 未正式开)
-- ❌ Web UI 任何代码
-- ❌ v0.1.7 cut 在 R29 产出前 — 想把 R24+R25+R26+R27+R28+R29(+R30-cleanup) bundle 成 v0.2.0-alpha (真 Phase 2 entry release)
+- ❌ Web UI 任何代码 (Phase 2 red line, CONTEXT.md §4 明确登记)
+- ❌ 破坏性改动 ADR-015 / ADR-016 Protocol 签名 (v0.2.x 合同已稳)
 
 ### Release strategy
 
-- `[Unreleased]` R24 (ADR-014 + conftest) + R25 (ADR-015 + 面包屑) 已积; R26 即将加 `### Added` ADR-016 + `### Changed` roadmap.md
-- 下一个 cut 建议: R29 完成后 (Phase 2 reference adapter + CI 双 dogfood 都绿), bundle 成 **v0.2.0-alpha.1** — 标志 Phase 2 开. 到时再从 `[Unreleased]` 抽出 R24-R29 所有内容
+- `[Unreleased]` 现在空白 (R31 placeholder)
+- v0.2.0-alpha 是 alpha, **欢迎下一个 bump 是 v0.2.0b0 或 v0.2.0rc0** (先 autogen 半边 → beta → 全绿 → rc → 0.2.0 final)
 - 按 `chronos-release-pattern` skill 走 7 步
 
 ---
+
+### 旧 R30 计划 (已完成, 存档)
+
+- ✅ CHANGELOG `[Unreleased]` → `[0.2.0a0]` with R24+R25+R26+R27+R28+R29+R30 bundle + new empty `[Unreleased]`
+- ✅ `__version__` / `pyproject.toml::version` / CLI 状态行三同步 bump `0.1.6` → `0.2.0a0`
+- ✅ `test_cli_info` 断言更新 (pre-alpha → phase 2)
+- ✅ Linear recorder R29 遗留 mypy bug 修 (`Usage` 字段边界)
+- ✅ 全绿: ruff / format / mypy / pytest 293/293 94% / `chronos --version` `0.2.0a0`
+- ✅ `progress/2026-04-24-round-30.md` + CONTEXT.md §5/§6 更新
+- ✅ commit + `git tag -a v0.2.0a0` + push main + tag
+
+### 旧 R29 计划 (已完成, 存档)
+
+- ✅ 读 LangGraph adapter + 现有 integration tests 结构
+- ✅ 落 3 个 scenarios (record / fork-with-override / usage) × 2 adapters
+- ✅ `tests/integration/test_dual_adapter_dogfood.py` (540 行, 4 测试, 293/293 绿)
+- ✅ 发现并修 Linear adapter usage-hint API gap (dict-only → `dict | Usage | UsageResult`)
+- ✅ `docs/research/multi-framework-risks.md` 末尾加 "R29 verdict" (~80 行)
+- ✅ `progress/2026-04-23-round-29.md` + CONTEXT.md §5/§6 + CHANGELOG + roadmap R3 flip
+- ✅ commit + push
+
+### 旧 R28 计划 (已完成, 存档)
+
+- ✅ 扫 `LangGraphRecorder` 接口 + `RecorderProtocol` 契约
+- ✅ 写 `src/chronos/adapters/linear/__init__.py` + `recorder.py` (~385 行) 实现 ADR-016 RecorderProtocol
+- ✅ `tests/unit/test_adapter_linear.py` (25 tests, 99% coverage on new module)
+- ✅ 结构性 Protocol 一致性用 `inspect.signature` 跑通
+- ✅ CONTEXT.md §5/§6 + CHANGELOG [Unreleased] + roadmap R1 impl flip + progress doc
+- ✅ commit + push (50ef486)
 
 ### 旧 R26 计划 (已完成, 存档)
 

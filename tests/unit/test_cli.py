@@ -150,7 +150,11 @@ def test_cli_version() -> None:
 def test_cli_info() -> None:
     result = runner.invoke(app, ["info"])
     assert result.exit_code == 0
-    assert "pre-alpha" in result.stdout.lower()
+    # v0.2.0a0 / Phase 2 entry — status line was updated in R30 release cut.
+    # Assert on stable tokens: the "chronos" program name + the "phase 2"
+    # marker. Don't pin the exact version string; other tests cover that.
+    assert "chronos" in result.stdout.lower()
+    assert "phase 2" in result.stdout.lower()
 
 
 def test_cli_help_default() -> None:

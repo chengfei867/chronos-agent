@@ -113,13 +113,22 @@ class LinearRecorder:
 
     Usage metering:
         A step function MAY place a ``__chronos_usage__`` key in the
-        state dict it returns with a dict matching the
-        :class:`~chronos.core.models.Usage` schema
-        (``{"prompt_tokens": int, "completion_tokens": int,
-        "reasoning_tokens": int}``). If present, the key is popped out
-        of ``state_after`` (to keep diffs clean) and attached to the
-        node's ``usage`` field. If absent, ``node.usage`` is ``None`` —
-        matching ADR-015 Layer 1 (UsageResult MAY be None).
+        state dict it returns. Three shapes are accepted for parity
+        with the LangGraph adapter's ADR-015 UsageResult contract:
+
+        - ``dict`` matching :class:`~chronos.core.models.Usage`
+          (``{"prompt_tokens": int, "completion_tokens": int,
+          "reasoning_tokens": int, ...}``)
+        - A :class:`~chronos.core.models.Usage` instance
+        - A duck-typed object exposing ``prompt_tokens`` /
+          ``completion_tokens`` / ``reasoning_tokens`` attrs (e.g.
+          the adapter-layer ``UsageResult`` dataclass — imported via
+          duck typing to avoid creating a hard dep from this zero-dep
+          adapter onto the langgraph usage module)
+
+        If present, the key is popped out of ``state_after`` (to keep
+        diffs clean) and attached to the node's ``usage`` field. If
+        absent, ``node.usage`` is ``None`` — matching ADR-015 Layer 1.
 
     Args:
         store: Persistence target.
@@ -339,11 +348,47 @@ class LinearRecorder:
                 )
 
             # Extract optional usage hint (Layer-4-ish per-node coercion).
+            # Accepts three shapes for parity with the LangGraph adapter's
+            # ADR-015 UsageResult contract:
+            #   - dict: unpacked into Usage(...) (only the 3 token fields are
+            #     valid kwargs on core.models.Usage; extras like model_name /
+            #     cost_usd_cents are lifted onto Node separately below)
+            #   - Usage: used as-is (core model, already persisted shape)
+            #   - UsageResult: adapter-layer dataclass (imported lazily to
+            #     avoid a hard dependency on the langgraph usage module from
+            #     this zero-dep adapter)
             usage_obj: Usage | None = None
+            hint_model_name: str | None = None
+            hint_cost_usd_cents: int | None = None
             post_copy = dict(post_state)
             usage_hint = post_copy.pop("__chronos_usage__", None)
-            if isinstance(usage_hint, dict):
-                usage_obj = Usage(**usage_hint)
+            if usage_hint is not None:
+                if isinstance(usage_hint, Usage):
+                    usage_obj = usage_hint
+                elif isinstance(usage_hint, dict):
+                    # core.models.Usage only accepts the 3 token fields;
+                    # lift model_name / cost_usd_cents onto the Node instead.
+                    hint = dict(usage_hint)
+                    hint_model_name = hint.pop("model_name", None)
+                    hint_cost_usd_cents = hint.pop("cost_usd_cents", None)
+                    try:
+                        usage_obj = Usage(**hint)
+                    except (TypeError, ValueError):
+                        usage_obj = None
+                else:
+                    # Duck-typed: assume it has prompt_tokens / completion_tokens.
+                    # Matches UsageResult without importing it.
+                    try:
+                        usage_obj = Usage(
+                            prompt_tokens=int(getattr(usage_hint, "prompt_tokens", 0)),
+                            completion_tokens=int(getattr(usage_hint, "completion_tokens", 0)),
+                            reasoning_tokens=int(getattr(usage_hint, "reasoning_tokens", 0)),
+                        )
+                        hint_model_name = getattr(usage_hint, "model_name", None)
+                        hint_cost_usd_cents = getattr(usage_hint, "cost_usd_cents", None)
+                    except (TypeError, ValueError):
+                        # Malformed hint — skip rather than crash the run.
+                        usage_obj = None
 
             kind = runtime.kind_map.get(name, NodeKind.FN)
 
@@ -357,7 +402,9 @@ class LinearRecorder:
                 started_at=node_started_at,
                 ended_at=node_ended_at,
                 state_after=post_copy,
+                model_name=hint_model_name,
                 usage=usage_obj,
+                cost_usd_cents=hint_cost_usd_cents,
                 metadata={"adapter": self._adapter_name, "linear_step": step_cursor},
             )
             nodes.append(node)
