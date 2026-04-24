@@ -89,6 +89,16 @@ class SqliteStore:
             str(path),
             detect_types=sqlite3.PARSE_DECLTYPES,
             isolation_level=None,  # autocommit; we manage tx explicitly
+            # Allow the connection to be used from FastAPI worker threads.
+            # Starlette/FastAPI run sync endpoints in a threadpool, so the
+            # Local HTTP API (R34-A) dispatches store calls off the main
+            # thread. SQLite itself is thread-safe in serialized mode
+            # (the default on modern builds) and we hold a single shared
+            # connection in autocommit + explicit ``transaction()`` ctx,
+            # so the Python-side ``check_same_thread`` guard is safe to
+            # disable here. This is a ``sqlite3``-module-level check, not
+            # a SQLite-engine check. See ADR pending (R34).
+            check_same_thread=False,
         )
         conn.execute("PRAGMA foreign_keys = ON")
         store = cls(conn)
@@ -293,6 +303,20 @@ class SqliteStore:
             "SELECT * FROM forks WHERE child_run_id = ?", (child_run_id,)
         ).fetchone()
         return _row_to_fork(row) if row else None
+
+    def get_forks_for_parent(self, parent_run_id: str) -> list[Fork]:
+        """All forks whose parent run is ``parent_run_id``, oldest first.
+
+        Added in R34 for the Local HTTP API's ``/runs/{id}/tree`` endpoint,
+        which needs to enumerate child branches of a given run to render
+        the reasoning tree. Mirrors :meth:`get_fork_for_child` on the other
+        side of the fork relation.
+        """
+        rows = self._conn.execute(
+            "SELECT * FROM forks WHERE parent_run_id = ? ORDER BY created_at ASC",
+            (parent_run_id,),
+        ).fetchall()
+        return [_row_to_fork(r) for r in rows]
 
 
 # -----------------------------------------------------------------

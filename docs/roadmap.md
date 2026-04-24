@@ -146,7 +146,7 @@ the plan-artifact `fork plan emit → edit → fork plan exec` loop is the shipp
 - [x] Phase-2 reference adapter (linear-pipeline adapter conforming to ADR-016 `RecorderProtocol`, R28 — satisfies ADR-014 R1 *implementation* half)
 - [x] AutoGen adapter (record-only, ADR-017 sync-wrap strategy, R33 — `src/chronos/adapters/autogen/`, 10 unit tests, structural `RecorderProtocol` conformance. Fork deferred to Phase 3 per ADR-017 §Decision.)
 - [ ] Multi-agent reasoning tree representation (concurrent lanes)
-- [ ] Local HTTP API (`chronos.api.server`)
+- [x] Local HTTP API (`chronos.api.server`, R34-A — FastAPI `build_app(store)` factory with 6 endpoints: `GET /healthz`, `GET /runs`, `GET /runs/{id}`, `GET /runs/{id}/nodes`, `GET /runs/{id}/forks`, `GET /runs/{id}/tree` (neutral reasoning-tree shape with sequential + cross-run fork edges); 17 unit tests; `[project.optional-dependencies].web` group added. `chronos web` command in R34-B.)
 - [ ] Web UI basics: reasoning tree viewer (ReactFlow), run list, diff viewer
 - [ ] `chronos web` command launches local server + opens browser
 - [ ] Fork-batch capability for Sam's (persona) counterfactual research

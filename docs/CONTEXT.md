@@ -147,31 +147,35 @@
    147|
 ## 5. 当前状态 (Current State)
 
-**截至 Round 33 结束 (2026-04-24 CST 上午 user-driven) — AutoGen adapter (record-only) 首 commit 上线, ADR-017 sync-wrap 策略拍板**
+**截至 Round 34-A 结束 (2026-04-24 CST 中午, user-driven) — Local HTTP API 上线, Web UI demo 链的后端基石就位**
 
-- Round: **33 完成** (AutoGen adapter record-only + ADR-017)
-- 最近 progress doc: `progress/2026-04-24-round-33.md` ← **下一轮必读**
-- **战略定位锁死 (R33 用户确认)**: 目标是 **GitHub 爆款开源项目**, 不是 SaaS 产品. 底层能力 + DX + 文档到位, 不做多用户/托管. 这个定位直接驱动了 ADR-017 选 Path A (sync wrap) 而非 Path B (async Protocol 家族) — DX > 架构优雅.
-- 当前阶段: **Phase 2 in-flight** — v0.2.0a0 released (R30); R31 (canonical protocols) + R32 (module-level instances) + R33 (AutoGen adapter) 都在 `[Unreleased]`. 3 个 adapter 都已有 module-level `AdapterProtocol` instance.
-- 最新 ADR: **ADR-017 (R33)** — AutoGen sync-wrap 策略, 明确拒绝 async Protocol 家族
-- 最新 research doc: `docs/research/multi-framework-risks.md` (R27 + R29 verdict) — R-4 async 风险已被 ADR-017 化解
-- 最新 tag: **v0.2.0a0** (R30 cut); `[Unreleased]` 现在叠了 R31 + R32 + R33 三段
+- Round: **34-A 完成** (Local HTTP API — 6 个 FastAPI 端点 over SqliteStore, neutral reasoning-tree shape)
+- 最近 progress doc: `progress/2026-04-24-round-34.md` ← **下一轮必读**
+- **战略定位 (R33 用户锁死, 本轮继续)**: **GitHub 爆款开源项目**, 不是 SaaS. 底层能力 + DX + 文档到位即可, 不做多用户 / 托管. R34-A 的端点设计全部遵循此红线 (no auth, no CORS, no pagination beyond `limit`, no streaming).
+- 当前阶段: **Phase 2 in-flight** — v0.2.0a0 released (R30); `[Unreleased]` 叠了 R31 + R32 + R33 + **R34-A** 四段
+- 最新 ADR: **ADR-017 (R33)** — AutoGen sync-wrap 策略 (R34-A 无新 ADR, 设计决策写进 `server.py` 模块 docstring + progress doc)
+- 最新 research doc: `docs/research/multi-framework-risks.md` (R27 + R29)
+- 最新 tag: **v0.2.0a0** (R30 cut); 下一 release 候选: R34-A+R34-B 一起打 **v0.2.0b0** (Web API 是 beta 的自然主题)
 - Blocked items: 无
-- 测试状态: **346/346 pass** (+10 new tests in `test_adapter_autogen.py`; mypy strict clean on 24 src files; ruff + format clean)
-- CLI 表面: 未变 (R33 纯增量, 新 import `from chronos.adapters import autogen_adapter, AutoGenRecorder`)
-- **R33 产出 (本轮)**:
-  - `docs/decisions/ADR-017-autogen-adapter-sync-wrap.md` (~9.6 KB) — 决策 sync wrap 策略, 3-min spike 证明 `asyncio.run(team.run(...))` 返回完整 `TaskResult.messages` 足够建 Node 树; 四条否决 Path B 的理由以 DX 为首; rollback plan 明确 v0.3 可升级 `AsyncRecorderProtocol` 作 superset
-  - `src/chronos/adapters/autogen/__init__.py` — `_AutoGenAdapter` class + `autogen_adapter = _AutoGenAdapter()` singleton. `name="autogen"`, `version_constraint=">=0.7,<0.8"`. `build_recorder()` 对 `usage_extractor` 非 None 抛 `AdapterError` (AutoGen 读 `models_usage` 不走 ADR-015 callback 桥); 接受 `adapter_name` via `**adapter_specific`; 未知 kwarg 抛 `AdapterError` (沿用 R32 Linear 模式)
-  - `src/chronos/adapters/autogen/recorder.py` (~380 LOC) — `AutoGenRecorder` 实现 `RecorderProtocol`. `record()` sync CM yield 一个加挂 `submit_result` 方法的 `RunRef`; 用户 `asyncio.run(team.run(...))` 后调 `ref.submit_result(result)` (主路径) 或靠 `runtime.messages` fallback (副路径); CM exit 时 walk `TaskResult.messages` 建 Node, 每个 Node 的 `state_after = {"messages": [...cumulative...]}`. `fork()` 抛 `AdapterError("...See ADR-017 §Decision")` 结构性满足 Protocol 但不实现.
-  - Message → NodeKind 映射: `TextMessage(source=user)` → `FN`, `TextMessage(source=assistant)` → `LLM`, `ToolCall*` → `TOOL`, `HandoffMessage` → `ROUTER`, `StopMessage` → `END`. Kind map merge-over-default, 用户只覆盖想要改的.
-  - `tests/unit/test_adapter_autogen.py` (+10 tests) — duck-typed `_StubMessage`/`_StubTaskResult`/`_StubTeam`, **不 import autogen_agentchat**. 覆盖: submit_result / fallback / usage / 异常 / fork NotImpl / Protocol 一致性 / factory channel 校验
-  - `src/chronos/adapters/__init__.py` 扩展暴露 `AutoGenRecorder` + `autogen_adapter`
-  - `pyproject.toml` `[project.optional-dependencies].autogen` 新增 `autogen-agentchat>=0.7,<0.8` + `autogen-ext`
-  - `docs/roadmap.md` Phase 2 milestones 新增 `[x] AutoGen adapter (record-only, ADR-017...)`
-- **R33 关键 bug 修复 (新旧事实)**: `SqliteStore.put_run()` 用 `INSERT OR REPLACE`, SQLite 实现是 "DELETE-then-INSERT"; `nodes.run_id ON DELETE CASCADE` 意味着**同一事务里 `put_run()` 第二次会 cascade 删掉所有 Node 行**. 首次 impl 按 LangGraph 风格 write-RUNNING → insert-nodes → write-COMPLETED 直接零 Node. 修复: 事务外算好 final_state + 序列化消息列表, 事务内 put_run 恰好一次为 COMPLETED, 再 insert nodes. **教训**: 未来 adapter 永远不要同一事务里 put_run 两次; 如需中途更新 status, 加一个 `update_run_status()` 不 cascade 的 store 方法.
-- **R33 战略原则确立 (新旧事实)**: 遇到"框架 API 和 Chronos Protocol 不匹配"的岔口, **先花 3 分钟 spike 验证假设是否真硬** 再决定是否动 Protocol. 本轮 spike 证明 async-first 的"硬"只是 API 表面不是架构, `asyncio.run()` 一行能 bridge, 避免了引入 `AsyncRecorderProtocol` 家族的 2x ADR/invariant 成本.
-- **R32 产出 (上一轮, 回顾)**: module-level `langgraph_adapter` / `linear_adapter` singletons + 21 tests
-- **R31 产出 (上上轮, 回顾)**: canonical `protocols.py` + 22 tests
+- 测试状态: **363/363 pass** (+17 new tests in `test_api_server.py`; mypy strict clean on 26 src files; ruff + format clean)
+- CLI 表面: 未变 (R34-A 纯后端; `chronos web` 命令是 R34-B 的事); 新 import `from chronos.api import build_app`
+- **R34-A 产出 (本轮)**:
+  - `src/chronos/api/server.py` (~230 LOC) — `build_app(store: SqliteStore) -> FastAPI` 工厂. 6 个端点: `GET /healthz` (status + schema_version); `GET /runs?limit=N` (1 ≤ limit ≤ 1000, 否则 422); `GET /runs/{id}` (run + 有序 nodes, 404 if missing); `GET /runs/{id}/nodes` (仅 nodes, 404-strict on run); `GET /runs/{id}/forks` (本 run 作为 parent 的所有 forks, 叶子 run 返 200+count=0 不 404); `GET /runs/{id}/tree` (**contract endpoint** — neutral reasoning-tree shape). 响应统一用 `pydantic.model_dump(mode="json")` 自动处理 datetime/StrEnum.
+  - `src/chronos/api/__init__.py` — re-export `build_app`
+  - `src/chronos/store/sqlite.py` 两改: (1) 新方法 `get_forks_for_parent(parent_run_id) -> list[Fork]` 镜像 `get_fork_for_child`; (2) `SqliteStore.open()` 在 `sqlite3.connect()` 加 `check_same_thread=False` (Python 层 guard; SQLite 引擎 serialized-thread-safe, 我们单连接 autocommit + 显式 `transaction()` CM, 安全). 新加 10 行 inline comment 说明 rationale.
+  - `tests/unit/test_api_server.py` (+17 tests) — 真 temp-file `SqliteStore` 播种 two-run fork 场景 (parent 3 nodes → fork → child 2 nodes), 全部 6 个端点 × happy/404 轴覆盖, 无 mock. `build_app` factory isolation 单测 (两 app 两 store 不串).
+  - `pyproject.toml`: `[project.optional-dependencies].web` = `fastapi>=0.110`, `uvicorn[standard]>=0.30`, `httpx>=0.27`. mypy override 为 `fastapi.* / starlette.* / uvicorn.* / httpx.*` 全部 `ignore_missing_imports=true` (web extra 非必装).
+  - `CHANGELOG.md` / `docs/roadmap.md` — R34-A 段 + roadmap 勾 `[x] Local HTTP API`
+- **R34-A 关键设计决策**:
+  - **Neutral tree shape, not ReactFlow-specific** — `/tree` 返 `{run_id, nodes, edges, child_runs}`, edges 两种 kind (`sequential` 同 run parent-child, `fork` 跨 run), 子 run 无 node 时 `to: null` 让前端画 "unresolved branch". ReactFlow/Mermaid/D3/Cytoscape 都能消费.
+  - **Sync handlers + `check_same_thread=False`** > `async def` handlers. 前者是 FastAPI+SQLite idiom (thread pool 吞 blocking I/O 不阻 loop); 后者会把 sqlite 读阻塞在 event loop 上.
+  - **`build_app(store)` factory, no module-level `app`** — 每次新实例, 防 "全局 app + 全局 state" 反模式. 测试 `test_build_app_binds_distinct_stores` 显式断两 app 不串.
+- **R34-A 教训 (新旧事实)**:
+  - **Post-compaction CHANGELOG drift 必自检**: 上一窗口合并/重启时已经在 CHANGELOG 写了 R34-A entries 描述 4 endpoints + ReactFlow shape + `async def` + `ASGITransport`; 本窗口实现的是 6 endpoints + neutral shape + sync `def` + `TestClient` + `check_same_thread=False`. 不对齐就 commit = 文档和代码两张脸. **规则**: 每次从 context compaction 恢复后先 `git diff` 对比代码事实, 不是 summary 事实.
+  - **SQLite `check_same_thread` 只有 FastAPI 读到 store 那一刻才暴露**. 纯 `build_app()` 构造 + route 列表 check 都过, 第一个真读 store 的 endpoint 测试才 raise. 规则: 至少有一个端到端 endpoint-hits-store 测试再宣布 harness 可用.
+- **R33 产出 (上一轮, 回顾)**: AutoGen adapter record-only + ADR-017 sync-wrap
+- **R32 产出 (上上轮, 回顾)**: module-level `langgraph_adapter` / `linear_adapter` singletons
+- **R31 产出 (上上上轮, 回顾)**: canonical `protocols.py`
 - **R30 bundle 回顾 (仍有效)**: v0.2.0a0 release cut
 - **R29 bundle 回顾 (仍有效)**: dual adapter dogfood
 - **R28 bundle 回顾 (仍有效)**: linear reference adapter
@@ -191,14 +195,14 @@
   - **progress doc 每轮必写**
   - **`ForkPlan` schema 是 v0.1.1 对外契约**
   - **Extractor contract v2 (ADR-015) 是 v0.1.2+ 对外契约**
-  - **Adapter interface (ADR-016) 是 v0.2.0 对外契约** (R26 决策, R31 canonical `protocols.py`, R32 module-level instances, R33 AutoGen 实现)
-  - **AutoGen sync-wrap (ADR-017) 是 AutoGen adapter 的永久架构原则** (R33); 未来 Async superset 只能作为严格超集, 不可破坏 sync Protocol
-  - **Multi-framework risks (R27 research doc) 是 v0.2.0 前必读 Phase 2 gotchas 清单** (R-4 async 已被 ADR-017 化解)
-  - **Anthropic prompt caching 计账** (R15, ADR-015 Layer 5): cache_creation + cache_read 加到 prompt_tokens
-  - **OpenAI reasoning tokens 语义** (R15, ADR-015 Layer 5): reasoning 是 completion 子字段, 不减
-  - **Duck typing 原则** (R15, ADR-015 Layer 5): extractor 不 import SDK
+  - **Adapter interface (ADR-016) 是 v0.2.0 对外契约** (R26 决策, R31 canonical `protocols.py`, R32 module-level instances, R33 AutoGen 实现, **R34-A 无侵犯**)
+  - **AutoGen sync-wrap (ADR-017) 是 AutoGen adapter 永久架构原则** (R33)
+  - **Multi-framework risks (R27 research doc) 仍是 Phase 2 必读 gotchas**
+  - **Anthropic prompt caching 计账** (R15, ADR-015 Layer 5)
+  - **OpenAI reasoning tokens 语义** (R15, ADR-015 Layer 5)
+  - **Duck typing 原则** (R15, ADR-015 Layer 5)
   - **CLI 模块形状 (R14 确立)**: subcommand 实现模块暴露 `*_command(console, open_store_fn, ...)`
-  - **OneAPI 配方 (R17/R18 确立)**: `model="Claude Opus 4.7"`, 不传 temperature, 响应恒包装饰性 error 字段忽略, UV_INDEX_URL=aliyun
+  - **OneAPI 配方 (R17/R18 确立)**: `model="Claude Opus 4.7"`, 不传 temperature, UV_INDEX_URL=aliyun
   - **M milestone naming / multi-round bundle**: bug fix 不 bump M; release cut 单独一轮打包多个前轮
   - **Release pattern (R13/R16/R19/R22/R23/R30 六次验证 — skill `chronos-release-pattern`)**
   - **Dogfood script 陷阱**: `model_name` 在 `Node.model_name`; **R21 起推荐 `n.model` 短形式**
@@ -212,47 +216,54 @@
   - **ADR consolidation 模式 (R25 确立)**: consolidation ADR + predecessor 头面包屑
   - **Roadmap drift 自检 (R26 确立)**: 每轮收工前对一眼 `docs/roadmap.md`
   - **Research doc > ADR (R27 确立)**: 活内容用 `docs/research/*.md`
-  - **Usage 字段边界 (R30 确立)**: `core.models.Usage` 只有 3 个 token 字段; `model_name` / `cost_usd_cents` 在 `Node` 上
+  - **Usage 字段边界 (R30 确立)**: `core.models.Usage` 只有 3 个 token 字段
   - **Release cut step 5 价值 (R30 确立)**: mypy 是最便宜的救命网
-  - **Module re-export + mypy strict (R31 确立)**: 当模块 A 从 `protocols.py` import `X` 并被模块 B 再次 re-export 时, mypy strict 要求 A 模块自己加 `__all__` 显式列出 `X`
-  - **AdapterProtocol build_recorder() 不适用 kwarg 处理 (R32 确立)**: 非活通道必须 `AdapterError` + 指路, 不能静默忽略
-  - **SQLite `INSERT OR REPLACE` + `ON DELETE CASCADE` 陷阱 (R33 确立)**: `put_run()` 第二次会 cascade 删掉所有 Node. 同事务内 `put_run()` 只能 1 次. 如需 mid-flight status 更新, 加非 cascade 的 `update_run_status()`.
-  - **假设硬度先 spike 再决策 (R33 确立)**: 遇到"框架 API 和 Chronos Protocol 不匹配"岔口, 3 分钟 minimal spike 验证硬度后再决定是否动 Protocol. 本轮用这套路避免了引入 `AsyncRecorderProtocol` 家族.
+  - **Module re-export + mypy strict (R31 确立)**: A 模块 import + B re-export 时 A 要 `__all__` 显式列出
+  - **AdapterProtocol build_recorder() 不适用 kwarg (R32 确立)**: 非活通道必须 `AdapterError` + 指路
+  - **SQLite `INSERT OR REPLACE` + `ON DELETE CASCADE` 陷阱 (R33 确立)**: `put_run()` 第二次会 cascade 删 nodes
+  - **假设硬度先 spike 再决策 (R33 确立)**: 3 分钟 minimal spike 后再决定是否动 Protocol
+  - **SQLite `check_same_thread=False` 安全条件 (R34-A 确立)**: 单连接 + autocommit + 显式 `transaction()` CM + 只 FastAPI 读才开; SQLite 引擎自身 serialized-thread-safe, Python 层 guard 是 belt-and-suspenders
+  - **API shape 框架中立原则 (R34-A 确立)**: `/tree` 等 contract 端点 shape 不 bake-in 任何前端框架 (ReactFlow/Mermaid/D3...), 让前端做 transform. 否则一张 JPEG 锁死一个 viewer.
+  - **Post-compaction diff 自检 (R34-A 确立)**: context compaction 重启后, CHANGELOG / progress doc / code 的 "plan" 和 "reality" 可能脱钩. 每次先 `git diff` 看代码真相再 commit.
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 34 候选 — OSS 爆款定位下, Web UI demo 链是最高价值**
+**Round 34-B 候选 — `chronos web` 命令 + Web UI demo 链的最后一公里**
 
-战略视角: 用户 R33 明确"GitHub 爆款 OSS 项目, 底层能力好 + DX 好即可". 5 分钟装完能看到自己 agent 的 reasoning tree = 最强安利话术. 三个 adapter 已经齐了, 现在缺的是"看得见"的这条链.
+战略视角: R33 用户定调 OSS 爆款定位. R34-A 后端已出活, "看得见 reasoning tree" 这条链只差两步: (1) `chronos web` 一键启动, (2) ReactFlow 前端吃 `/runs/{id}/tree`. 5 分钟 `pip install chronos-agent[web] && chronos agent-run ... && chronos web` 看到树 = README GIF 的主角 = 星星引擎.
 
-### R34-A (强推): Local HTTP API — `chronos.api.server`
+### R34-B (强推): `chronos web` CLI 命令
 
-- 前置: R33 ✅ (3 个 adapter 已 live, store 层已稳)
-- 预估: 1 轮
+- 前置: R34-A ✅ (build_app 已稳; pyproject web extra 已加)
+- 预估: 0.5-1 轮
 - 产出:
-  - `src/chronos/api/server.py` — FastAPI app. 端点最小集: `GET /runs` / `GET /runs/{id}` / `GET /runs/{id}/nodes` / `GET /runs/{id}/tree` (reasoning tree JSON, ReactFlow-friendly shape)
-  - `uv add --optional web fastapi uvicorn` (optional dep)
-  - 单元测试: `httpx.AsyncClient` + `TestClient`, 覆盖所有端点 happy + 404
-  - **不做**: auth / CORS / pagination / streaming — 本地工具不需要
-- 价值: Web UI 的必要前提; `chronos web` 命令的后端
-- 风险: 低 (纯读 SqliteStore, 已知 API)
+  - `src/chronos/cli/web.py` — Typer subcommand `chronos web [--db PATH] [--port N] [--no-browser] [--host HOST]`. 打开 `SqliteStore`, `build_app(store)`, 调 `uvicorn.run()`. 可选 `webbrowser.open()`.
+  - CLI 集成点: `src/chronos/cli/__init__.py` 注册新子命令, 更新 help
+  - 单元测试: `tests/unit/test_cli_web.py` — mock `uvicorn.Server` (不真 bind 端口, 测 arg wiring + DB 打开正确 + 不存在 DB 友好报错)
+  - `README.md` quickstart 段落加 `chronos web` 示例
+- 价值: **"5-min quickstart" 的最后一步**; 不需要前端也能用 curl + HTTPie 看树
+- 风险: 低 (uvicorn API 稳定; CLI pattern 已有 6 个先例)
+- 潜在坑: port 冲突 (默认 8127 或类似小众端口避让); Windows `webbrowser.open` 行为差异 (暂不管, Linux/mac 优先)
 
-### R34-B (并行候选): `chronos web` 命令 + ReactFlow viewer 占位
+### R34-C (强推, R34-B 后): ReactFlow 前端 MVP
 
-- 前置: 不严格要求 R34-A, 可用 fixture data 先搭前端壳
-- 预估: 1-2 轮
+- 前置: R34-A ✅ + R34-B ✅
+- 预估: 2-3 轮 (前端工作量大)
 - 产出:
-  - `src/chronos/cli/web.py` — `chronos web` subcommand, launch uvicorn + 打开浏览器
-  - `src/chronos/api/static/` — 最小 React + ReactFlow SPA, 读 `/runs/{id}/tree` 画 reasoning tree
-- 价值: **这就是 README 里那张 GIF 的主角**; OSS 爆款安利点
-- 风险: 中 (前端涉及 bundler, 可能需要 `uv add --optional web ...` + vite)
+  - `frontend/` 新目录 (或独立 repo chronos-web?); Vite + React + TypeScript + ReactFlow
+  - 最小功能: run list sidebar + 选 run 后中间画 reasoning tree + 点 node 看 state_after JSON
+  - build 产物 inline 进 `src/chronos/api/static/` (pyproject `[tool.hatch.build.targets.wheel].force-include` 带上)
+  - `server.py` mount `StaticFiles(directory="static")` on `/`
+  - E2E 手测: 跑 LangGraph adapter 出 run → `chronos web` → 浏览器看树
+- 价值: **README GIF 主角**
+- 风险: 中 (前端 toolchain 在沙箱环境里可能不顺; 可能需要独立 repo 手动 build 后 vendor 产物进 chronos); 数据量大时 ReactFlow 性能 (暂不管, 后期再优)
+- **开工前必讨论**: 前端要不要放同仓? 放同仓包袱大, 独立仓口碑营销分散; 倾向同仓 vendor 构建产物.
 
-### R34-C (可延): AutoGen integration dogfood — 真 Team.run() 跑通
+### R34-D (可延): AutoGen real-world dogfood
 
 - 预估: 0.5 轮
-- 产出: `tests/integration/test_autogen_real.py` 标 `@pytest.mark.slow`, 用 OneAPI 跑一个 2-agent group chat, 断 Node 树形态
-- 价值: 验证 R33 stub 测试 match 真相; 补 dogfood triple R3 criterion 的 AutoGen 半边 (但因 fork 没实现, 这个三元组还是不完整, 只能算 "record triple")
-- 风险: 低; 如果失败说明 stub 偏离真相, 需要回去改 recorder
+- 产出: `tests/integration/test_autogen_real.py` 标 `@pytest.mark.slow`, OneAPI 跑真 2-agent group chat, 断 Node 树形态
+- 价值: 补 "record triple" criterion 的 AutoGen 半边
 
 ### R34 非目标 (继承)
 
@@ -260,14 +271,15 @@
 - ❌ AutoGen fork (ADR-017 §Decision 明确 Phase 3 候选)
 - ❌ 多用户 / auth / 托管 — **用户 R33 明确战略红线**
 - ❌ 破坏性改动 ADR-015 / ADR-016 / ADR-017 合同
+- ❌ 给 Local HTTP API 加 CORS / WebSocket / 写端点 — **R34-A 明确战略范围红线**
 
 ### Release strategy
 
-- `[Unreleased]` 现在叠了 R31 + R32 + R33 三个 Added/Changed/Tests 段
-- 下一个 release 建议: R34-A 落完 → cut v0.2.0b0 (Web API 是 beta 自然主题), 或 R34-A+B 一起 cut v0.2.0b0
+- `[Unreleased]` 现叠 R31 + R32 + R33 + R34-A 四段
+- 下一 release: **R34-A + R34-B + R34-C 一起 cut v0.2.0b0** ("Web UI beta" 是自然 milestone). R34-D 不 block.
 - 按 `chronos-release-pattern` skill 走 7 步
 
-**推荐**: R34-A (Local HTTP API). 是 Web UI demo 链的后端基石, 1 轮能出活, 风险最低.
+**推荐**: 直接干 R34-B. 0.5-1 轮出活, 把 "后端装好了但没 CLI 启动方式" 的尴尬 gap 补掉, 之后再启动 R34-C 前端。如果用户想要 "一次性把能见的都见到", 也可以 R34-B + R34-C 并行规划但 B 先 ship.
 
 ## Cron 窗口门控 (2026-04-22 用户指令)
 

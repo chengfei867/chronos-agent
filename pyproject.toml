@@ -42,6 +42,11 @@ autogen = [
     "autogen-agentchat>=0.7.5",
     "autogen-ext>=0.7.5",
 ]
+web = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.30",
+    "httpx>=0.27",  # needed by starlette.testclient for unit tests
+]
 
 [project.scripts]
 chronos = "chronos.cli:app"
@@ -106,6 +111,14 @@ show_error_codes = true
 
 [[tool.mypy.overrides]]
 module = "langgraph.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# The web optional extra is not always installed in every dev environment
+# (CI vs. local minimal). When it is absent mypy can't find stubs for
+# fastapi/starlette/uvicorn/httpx — treat them as missing-is-ok so the
+# base suite still type-checks green without the extra.
+module = ["fastapi.*", "starlette.*", "uvicorn.*", "httpx.*"]
 ignore_missing_imports = true
 
 # ---------- Pytest ----------
