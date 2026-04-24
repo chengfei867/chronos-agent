@@ -28,9 +28,14 @@ uv sync
 # Record a baseline + fork with a swapped prompt + show the diff.
 uv run python examples/linear_pipeline.py
 
-# Follow the printed CLI instructions to inspect the runs:
+# Inspect the runs from the CLI:
 chronos runs list --db examples/chronos.db
 chronos diff <PARENT_ID> <CHILD_ID> --db examples/chronos.db
+
+# Or browse them in your browser (install the web extra once):
+uv pip install 'chronos-agent[web]'
+chronos web --db examples/chronos.db
+# → http://127.0.0.1:8765 opens automatically
 ```
 
 See [`docs/getting-started.md`](./docs/getting-started.md) for the full walkthrough and [`docs/cli-reference.md`](./docs/cli-reference.md) for every command.
@@ -90,6 +95,11 @@ uv run python examples/linear_pipeline.py
 
 chronos runs list --db examples/chronos.db
 chronos diff <PARENT_ID> <CHILD_ID> --db examples/chronos.db
+
+# 浏览器里看推理树（首次运行先装 web extra）：
+uv pip install 'chronos-agent[web]'
+chronos web --db examples/chronos.db
+# → 浏览器自动打开 http://127.0.0.1:8765
 ```
 
 详细见 [`docs/getting-started.md`](./docs/getting-started.md) 和 [`docs/cli-reference.md`](./docs/cli-reference.md)。

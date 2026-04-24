@@ -52,7 +52,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 
 from chronos.core.models import SCHEMA_VERSION, Fork, Node, Run
 
@@ -160,6 +160,83 @@ def _assemble_tree(
 
 
 # ---------------------------------------------------------------------------
+# Landing page HTML
+# ---------------------------------------------------------------------------
+
+# Static HTML served at ``/`` — kept as a module constant rather than a
+# template file so the whole API is one self-contained ``server.py`` and
+# packaging stays trivial (no ``package_data`` wiring needed). When R34-C
+# adds a real React/Vue viewer we'll mount it under a separate prefix and
+# leave this landing page as a fallback for people who hit the root.
+_INDEX_HTML = """<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Chronos Agent — Local</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root { color-scheme: dark; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #0d1117; color: #c9d1d9;
+    max-width: 720px; margin: 4rem auto; padding: 0 1.5rem;
+    line-height: 1.6;
+  }
+  h1 { color: #f0f6fc; font-weight: 600; letter-spacing: -0.02em; }
+  code, kbd { background: #161b22; padding: 2px 6px; border-radius: 4px;
+              font-size: 0.9em; color: #79c0ff; }
+  a { color: #58a6ff; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  ul { padding-left: 1.2rem; }
+  li { margin: 0.4rem 0; }
+  .muted { color: #8b949e; font-size: 0.9em; }
+  .pill { display: inline-block; background: #1f6feb33; color: #79c0ff;
+          padding: 2px 10px; border-radius: 999px; font-size: 0.8em;
+          margin-left: 0.5rem; vertical-align: middle; }
+</style>
+</head>
+<body>
+  <h1>Chronos Agent <span class="pill">local api</span></h1>
+  <p class="muted">
+    Read-only HTTP surface over your recorded runs.
+    A real visual frontend ships in a later round — for now, poke the API directly.
+  </p>
+
+  <h2>Endpoints</h2>
+  <ul>
+    <li><a href="/runs"><code>GET /runs</code></a> — list recorded runs (most recent first)</li>
+    <li><code>GET /runs/{run_id}</code> — one run + its nodes</li>
+    <li><code>GET /runs/{run_id}/nodes</code> — nodes only</li>
+    <li><code>GET /runs/{run_id}/forks</code> — forks where this run is the parent</li>
+    <li><code>GET /runs/{run_id}/tree</code> — neutral reasoning tree (nodes + edges + child runs)</li>
+    <li><a href="/healthz"><code>GET /healthz</code></a> — liveness + schema version</li>
+  </ul>
+
+  <h2>Interactive docs</h2>
+  <ul>
+    <li><a href="/docs">Swagger UI</a> — try endpoints in-browser</li>
+    <li><a href="/redoc">ReDoc</a> — reference-style docs</li>
+  </ul>
+
+  <h2>CLI</h2>
+  <p>All HTTP endpoints have a CLI equivalent:</p>
+  <ul>
+    <li><code>chronos runs list</code></li>
+    <li><code>chronos runs show &lt;run_id&gt;</code></li>
+    <li><code>chronos replay &lt;run_id&gt;</code> — interactive TUI walker</li>
+    <li><code>chronos diff &lt;run_a&gt; &lt;run_b&gt;</code></li>
+  </ul>
+
+  <p class="muted">
+    Stop the server with <kbd>Ctrl-C</kbd>. Source:
+    <a href="https://github.com/chengfei867/chronos-agent">chengfei867/chronos-agent</a>.
+  </p>
+</body>
+</html>
+"""
+
+
+# ---------------------------------------------------------------------------
 # App factory
 # ---------------------------------------------------------------------------
 
@@ -184,6 +261,19 @@ def build_app(store: SqliteStore) -> FastAPI:
             "loopback only."
         ),
     )
+
+    @app.get("/", response_class=HTMLResponse, include_in_schema=False)
+    def index() -> str:
+        """Minimal landing page — a 'you are here' map until R34-C ships a real UI.
+
+        Intentionally single-file HTML with no external assets and no JS build
+        step. The goal is: when someone runs ``chronos web`` and a browser
+        tab pops open, they see SOMETHING immediately that explains how to
+        poke at the API (``/runs``, ``/docs``) and confirms the server is
+        bound to the right database. Dark palette matches the README so
+        screenshots look cohesive.
+        """
+        return _INDEX_HTML
 
     @app.get("/healthz")
     def healthz() -> dict[str, Any]:

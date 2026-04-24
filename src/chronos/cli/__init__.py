@@ -9,6 +9,7 @@ Command surface::
 
     chronos --version
     chronos info
+    chronos web [--host HOST] [--port N] [--db PATH] [--no-browser]
     chronos runs list [--db PATH] [--limit N] [--json] [--with-usage]
     chronos runs show <run_id> [--db PATH] [--json]
     chronos forks show <fork_id> [--db PATH] [--json]
@@ -101,8 +102,58 @@ def info() -> None:
         "(ADR-014 4/4 green), v0.2.0a0"
     )
     console.print(
-        "Commands: [green]runs list/show, forks show, diff, replay, fork plan[/green] "
+        "Commands: [green]runs list/show, forks show, diff, replay, fork plan, web[/green] "
         "available; [dim]record[/dim] [yellow](adapter-level only)[/yellow]"
+    )
+
+
+@app.command("web")
+def web_cmd(
+    host: str = typer.Option(
+        "127.0.0.1",
+        "--host",
+        help="Bind address. Default is loopback — don't expose to a network.",
+    ),
+    port: int = typer.Option(
+        8765,
+        "--port",
+        "-p",
+        min=1,
+        max=65535,
+        help="TCP port to serve on.",
+    ),
+    db: Path | None = typer.Option(
+        None, "--db", help="Path to chronos.db (overrides $CHRONOS_DB)."
+    ),
+    no_browser: bool = typer.Option(
+        False,
+        "--no-browser",
+        help="Don't auto-open a browser tab (useful on headless hosts or over SSH).",
+    ),
+) -> None:
+    """Serve the local HTTP API and open the viewer in your browser.
+
+    Starts a local FastAPI server (read-only, loopback-only) backed by your
+    ``chronos.db`` and opens a browser tab at the landing page. From there
+    you can hit ``/runs``, ``/runs/{id}/tree``, and ``/docs`` (Swagger UI).
+
+    Install the ``[web]`` extra once: ``uv pip install 'chronos-agent[web]'``.
+
+    Example::
+
+        chronos web                    # default: 127.0.0.1:8765
+        chronos web --port 9000        # custom port
+        chronos web --no-browser       # don't auto-open a tab (SSH/headless)
+    """
+    from chronos.cli.web import web_command
+
+    web_command(
+        host=host,
+        port=port,
+        db=db,
+        no_browser=no_browser,
+        open_store_fn=_open_store,
+        console=console,
     )
 
 

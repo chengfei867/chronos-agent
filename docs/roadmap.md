@@ -148,7 +148,7 @@ the plan-artifact `fork plan emit → edit → fork plan exec` loop is the shipp
 - [ ] Multi-agent reasoning tree representation (concurrent lanes)
 - [x] Local HTTP API (`chronos.api.server`, R34-A — FastAPI `build_app(store)` factory with 6 endpoints: `GET /healthz`, `GET /runs`, `GET /runs/{id}`, `GET /runs/{id}/nodes`, `GET /runs/{id}/forks`, `GET /runs/{id}/tree` (neutral reasoning-tree shape with sequential + cross-run fork edges); 17 unit tests; `[project.optional-dependencies].web` group added. `chronos web` command in R34-B.)
 - [ ] Web UI basics: reasoning tree viewer (ReactFlow), run list, diff viewer
-- [ ] `chronos web` command launches local server + opens browser
+- [x] `chronos web` command launches local server + opens browser (R34-B — `src/chronos/cli/web.py`, `web_command(host, port, db, no_browser)` with lazy uvicorn import, DI-injectable `run_server_fn` / `open_browser_fn` for testability, `threading.Timer(1.0)` delayed browser-open after uvicorn binds. Dark-themed `/` landing page in `server.py` (zero-JS, zero-build) linking to `/runs` / `/docs` / `/healthz`. 8 unit tests. Bilingual README + `docs/cli-reference.md` updated.)
 - [ ] Fork-batch capability for Sam's (persona) counterfactual research
 - [ ] Tag v0.2.0
 

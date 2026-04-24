@@ -25,6 +25,47 @@ chronos info
 
 ---
 
+## `chronos web`
+
+Serve the local HTTP API and open a browser tab pointed at it. The fastest path from "I recorded some runs" to "I can see them" — no frontend build step, no config. Requires the optional `[web]` extra (`uv pip install 'chronos-agent[web]'`).
+
+```bash
+chronos web [--host HOST] [-p PORT] [--db PATH] [--no-browser]
+```
+
+| Flag            | Default         | Meaning                                                           |
+|-----------------|-----------------|-------------------------------------------------------------------|
+| `--host HOST`   | `127.0.0.1`     | Bind address. Keep on loopback — there is no auth.                |
+| `-p`, `--port`  | `8765`          | TCP port.                                                         |
+| `--db PATH`     | `./chronos.db` or `$CHRONOS_DB` | Path to the Chronos DB.                           |
+| `--no-browser`  | off             | Don't auto-open a tab. Use on headless hosts / over SSH tunnels.  |
+
+Opens a dark-themed landing page at `/` that links to:
+- `/runs` — list of recorded runs (JSON)
+- `/runs/{id}` / `/runs/{id}/nodes` / `/runs/{id}/forks` / `/runs/{id}/tree` — per-run endpoints
+- `/docs` — Swagger UI (interactive API console)
+- `/healthz` — liveness + schema version
+
+Stop the server with `Ctrl-C`.
+
+Example:
+
+```bash
+chronos web --db examples/chronos.db
+# → http://127.0.0.1:8765 opens in your browser
+```
+
+Over SSH, forward the port and skip the auto-open:
+
+```bash
+# on the server
+chronos web --no-browser
+# on your laptop
+ssh -L 8765:127.0.0.1:8765 remote.host  # then open http://localhost:8765
+```
+
+---
+
 ## `chronos runs list`
 
 List recorded runs, most recent first.
