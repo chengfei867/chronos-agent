@@ -4,6 +4,10 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
+_Nothing yet — R35 will decide._
+
+## [0.2.0b0] — 2026-04-24 (Round 31 + Round 32 + Round 33 + Round 34-A + Round 34-B + Round 34-C)
+
 ### Added (Round 34-C)
 
 - **ReactFlow viewer bundle — `frontend/`** (~500 LOC TSX + CSS, 108KB gzipped after build). New self-contained Vite + React 19 + TypeScript 5 + `@xyflow/react` v12 SPA under `frontend/` with two routes: `#/` lists recorded runs in a clickable table (ID, adapter, status tag, relative-time, task description), and `#/runs/<run_id>` renders the reasoning tree as a ReactFlow DAG (sequential edges solid, cross-run fork edges dashed with a `child_run_id` label), plus a side drawer `NodeDetails` that reveals identity / tool_input / tool_output / usage + cost / error / state_after / metadata / timestamps when a node is clicked. Hash-routing (not HTML5 history) so no server-side rewrite is needed — the FastAPI mount is pure static serving. Custom node renderer per `NodeKind` (`llm`, `tool`, `fn`, `router`, `fork`, `end`) with colored kind-badge + derived `previewOf(node)` that hunts through `tool_output → tool_input → state_after → metadata` for the first conventional string key (`text` / `answer` / `output` / `result` / `content`) so a useful 36-char preview shows on the canvas without demanding a dedicated `content_preview` field on the API contract (neutral tree stays minimal). Dark palette matches the R34-B landing page and the README (`#0d1117` background, `#58a6ff` accents) so screenshots look cohesive across surfaces.

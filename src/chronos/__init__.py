@@ -8,6 +8,6 @@ Public API: v0.1.x series is stable for the four-verb CLI loop
 (record/replay/fork plan/diff) and the `ForkPlan` JSON schema v1.
 """
 
-__version__ = "0.2.0a0"
+__version__ = "0.2.0b0"
 
 __all__ = ["__version__"]
