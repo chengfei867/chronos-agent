@@ -8,17 +8,28 @@ import HelpDrawer from "./components/HelpDrawer";
 import Landing from "./pages/Landing";
 import RunList from "./pages/RunList";
 import TreeView from "./pages/TreeView";
+import DiffView from "./pages/DiffView";
 import OnboardingTour from "./components/OnboardingTour";
 
 type Route =
   | { name: "landing" }
   | { name: "runs" }
-  | { name: "tree"; runId: string };
+  | { name: "tree"; runId: string }
+  | { name: "diff"; runAId: string; runBId: string };
 
 function parseHash(): Route {
   const h = window.location.hash.replace(/^#/, "");
   if (!h || h === "/") return { name: "runs" };
   if (h === "/home") return { name: "landing" };
+  // /runs/<a>/diff/<b> must be matched before /runs/<id>
+  const diffMatch = h.match(/^\/runs\/([^/]+)\/diff\/([^/]+)$/);
+  if (diffMatch) {
+    return {
+      name: "diff",
+      runAId: decodeURIComponent(diffMatch[1]),
+      runBId: decodeURIComponent(diffMatch[2]),
+    };
+  }
   const m = h.match(/^\/runs\/([^/]+)$/);
   if (m) return { name: "tree", runId: decodeURIComponent(m[1]) };
   return { name: "runs" };
@@ -45,6 +56,14 @@ export default function App() {
         return <RunList key="runs" />;
       case "tree":
         return <TreeView key={`tree-${route.runId}`} runId={route.runId} />;
+      case "diff":
+        return (
+          <DiffView
+            key={`diff-${route.runAId}-${route.runBId}`}
+            runAId={route.runAId}
+            runBId={route.runBId}
+          />
+        );
     }
   }, [route, openHelp]);
 
@@ -54,10 +73,14 @@ export default function App() {
         currentRoute={route.name}
         onHelpClick={openHelp}
       />
-      <Layout.Content className="chr-content">
+      <Layout.Content className={`chr-content chr-content--${route.name}`}>
         <AnimatePresence mode="wait">
           <motion.div
-            key={route.name + ("runId" in route ? route.runId : "")}
+            key={
+              route.name +
+              ("runId" in route ? route.runId : "") +
+              ("runAId" in route ? `${route.runAId}-${route.runBId}` : "")
+            }
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}

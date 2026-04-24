@@ -31,24 +31,34 @@ const KIND_ROWS: { kind: NodeKind; color: string; Icon: LucideIcon }[] = [
   { kind: "end", color: "#8b949e", Icon: Flag },
 ];
 
-export default function Legend({ showLanes }: { showLanes?: boolean }) {
+export default function Legend({
+  showLanes,
+  showDiff,
+}: {
+  showLanes?: boolean;
+  showDiff?: boolean;
+}) {
   const { t } = useTranslation();
+  // Diff mode has many sections (kinds + edges + diff) so start collapsed
+  // to avoid covering the narrow side-by-side graph panels on small screens.
+  const lsKey = showDiff ? `${LS_KEY}.diff` : LS_KEY;
+  const defaultExpanded = !showDiff;
   const [expanded, setExpanded] = useState<boolean>(() => {
     try {
-      const stored = localStorage.getItem(LS_KEY);
-      return stored === null ? true : stored === "1";
+      const stored = localStorage.getItem(lsKey);
+      return stored === null ? defaultExpanded : stored === "1";
     } catch {
-      return true;
+      return defaultExpanded;
     }
   });
 
   useEffect(() => {
     try {
-      localStorage.setItem(LS_KEY, expanded ? "1" : "0");
+      localStorage.setItem(lsKey, expanded ? "1" : "0");
     } catch {
       /* ignore quota / privacy-mode failures */
     }
-  }, [expanded]);
+  }, [expanded, lsKey]);
 
   return (
     <Card
@@ -201,6 +211,56 @@ export default function Legend({ showLanes }: { showLanes?: boolean }) {
               >
                 {t("legend.lanesBody")}
               </Typography.Paragraph>
+            </div>
+          )}
+
+          {showDiff && (
+            <div>
+              <Typography.Text
+                type="secondary"
+                style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5 }}
+              >
+                {t("legend.diff")}
+              </Typography.Text>
+              <div style={{ marginTop: 4, display: "grid", gap: 4 }}>
+                {[
+                  { tag: "same", color: "#8b949e" },
+                  { tag: "changed", color: "#d29922" },
+                  { tag: "added", color: "#3fb950" },
+                  { tag: "missing", color: "#f85149" },
+                ].map(({ tag, color }) => (
+                  <div
+                    key={tag}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      fontSize: 11,
+                    }}
+                  >
+                    <span
+                      style={{
+                        display: "inline-block",
+                        width: 14,
+                        height: 14,
+                        borderRadius: 3,
+                        background: `${color}33`,
+                        border: `1.5px solid ${color}`,
+                        flexShrink: 0,
+                      }}
+                    />
+                    <Typography.Text style={{ fontSize: 11 }}>
+                      {t(`legend.diffTag.${tag}`)}
+                    </Typography.Text>
+                    <Typography.Text
+                      type="secondary"
+                      style={{ fontSize: 10, marginLeft: "auto" }}
+                    >
+                      {t(`legend.diffHint.${tag}`)}
+                    </Typography.Text>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </Space>

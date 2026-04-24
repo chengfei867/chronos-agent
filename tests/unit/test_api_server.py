@@ -732,3 +732,95 @@ def test_tree_include_descendants_cycle_protection(tmp_path: Path) -> None:
         tree = _assemble_tree_with_descendants(store, a_id)
         assert set(tree["descendant_run_ids"]) == {a_id, b_id}
         assert len(tree["descendant_run_ids"]) == 2  # no duplicates
+
+
+# ---------------------------------------------------------------------------
+# /runs/compare?a=...&b=... — R39-A diff endpoint
+#
+# Shape: wraps chronos.core.diff.DiffReport.to_dict() and bundles both runs'
+# reasoning trees (same shape as /runs/{id}/tree) so a frontend can render
+# side-by-side ReactFlow graphs without a second round-trip per run.
+# ---------------------------------------------------------------------------
+
+
+def test_compare_happy_path_returns_diff_report_and_both_trees(
+    scenario: tuple[SqliteStore, dict[str, str]],
+    client: TestClient,
+) -> None:
+    _, ids = scenario
+    resp = client.get(
+        "/runs/compare",
+        params={"a": ids["parent_run"], "b": ids["child_run"]},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+
+    # Diff block (from DiffReport.to_dict)
+    assert "diff" in body
+    diff = body["diff"]
+    assert diff["run_a"]["id"] == ids["parent_run"]
+    assert diff["run_b"]["id"] == ids["child_run"]
+    assert "entries" in diff and isinstance(diff["entries"], list)
+    assert "summary" in diff
+    # parent→child is a fork relationship in this scenario → fork_of populated
+    assert diff["fork_of"] is not None
+    assert diff["fork_of"]["parent_run_id"] == ids["parent_run"]
+    assert diff["restricted_to_downstream"] is True
+
+    # Both trees included so frontend renders without extra requests.
+    assert "tree_a" in body and body["tree_a"]["run_id"] == ids["parent_run"]
+    assert "tree_b" in body and body["tree_b"]["run_id"] == ids["child_run"]
+    # Tree shape mirrors /runs/{id}/tree — same keys.
+    for tree in (body["tree_a"], body["tree_b"]):
+        assert set(tree.keys()) >= {"run_id", "nodes", "edges", "child_runs"}
+
+
+def test_compare_supports_restrict_to_downstream_false(
+    scenario: tuple[SqliteStore, dict[str, str]],
+    client: TestClient,
+) -> None:
+    _, ids = scenario
+    resp = client.get(
+        "/runs/compare",
+        params={
+            "a": ids["parent_run"],
+            "b": ids["child_run"],
+            "restrict_to_downstream": "false",
+        },
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["diff"]["restricted_to_downstream"] is False
+
+
+def test_compare_404_when_a_missing(client: TestClient) -> None:
+    resp = client.get("/runs/compare", params={"a": _uuid(), "b": _uuid()})
+    assert resp.status_code == 404
+    assert "not found" in resp.json()["detail"].lower()
+
+
+def test_compare_404_when_b_missing(
+    scenario: tuple[SqliteStore, dict[str, str]],
+    client: TestClient,
+) -> None:
+    _, ids = scenario
+    resp = client.get("/runs/compare", params={"a": ids["parent_run"], "b": _uuid()})
+    assert resp.status_code == 404
+
+
+def test_compare_400_when_a_equals_b(
+    scenario: tuple[SqliteStore, dict[str, str]],
+    client: TestClient,
+) -> None:
+    _, ids = scenario
+    resp = client.get(
+        "/runs/compare",
+        params={"a": ids["parent_run"], "b": ids["parent_run"]},
+    )
+    assert resp.status_code == 400
+
+
+def test_compare_missing_query_params_422(client: TestClient) -> None:
+    # FastAPI's Query() required default → 422 on missing params
+    resp = client.get("/runs/compare")
+    assert resp.status_code == 422

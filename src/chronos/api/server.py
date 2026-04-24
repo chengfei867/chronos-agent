@@ -29,6 +29,10 @@ Endpoints
 ``GET /runs/{run_id}/tree`` — neutral tree: nodes + sequential edges
     (parent_node_id links) + fork edges (cross-run) + child_runs summary.
 ``GET /runs/{run_id}/forks`` — forks where this run is the parent.
+``GET /runs/compare?a=X&b=Y`` — R39-A: structural diff (from
+    :func:`chronos.core.diff.diff_runs`) plus both runs' trees in one
+    response, so a diff viewer can render side-by-side ReactFlow graphs
+    without a second round-trip per run.
 
 All endpoints return 404 (not 200 with ``null``) when the run doesn't exist,
 so a viewer can distinguish "no such run" from "run exists but has no nodes".
@@ -56,6 +60,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from chronos.core.diff import DiffRunNotFoundError, diff_runs
 from chronos.core.models import SCHEMA_VERSION, Fork, Node, Run
 
 if TYPE_CHECKING:
@@ -414,6 +419,45 @@ def build_app(store: SqliteStore) -> FastAPI:
     ) -> dict[str, Any]:
         runs = store.list_runs(limit=limit)
         return {"runs": [_run_to_dict(r) for r in runs], "count": len(runs)}
+
+    # /runs/compare MUST be registered before /runs/{run_id}, otherwise
+    # FastAPI treats the literal "compare" as a run_id and the diff
+    # endpoint is shadowed → 404. This ordering is load-bearing; adding
+    # new literal /runs/<word> routes below this point is fine, but do
+    # not move this handler after get_run(run_id).
+    @app.get("/runs/compare")
+    def compare_runs(
+        a: str = Query(..., description="run_id of the 'before' run"),
+        b: str = Query(..., description="run_id of the 'after' run"),
+        restrict_to_downstream: bool = Query(
+            True,
+            description=(
+                "When b is a forked child of a, skip the shared prefix "
+                "(nodes up to the fork point on a) — they're definitionally "
+                "identical. Set false for an apples-to-apples full-run "
+                "comparison."
+            ),
+        ),
+    ) -> dict[str, Any]:
+        if a == b:
+            raise HTTPException(status_code=400, detail="Cannot compare a run with itself")
+        try:
+            report = diff_runs(store, a, b, restrict_to_downstream=restrict_to_downstream)
+        except DiffRunNotFoundError as exc:
+            raise HTTPException(status_code=404, detail=f"Run not found: {exc.run_id}") from exc
+
+        # Bundle both trees so the frontend renders side-by-side without
+        # two extra round-trips. Shape matches /runs/{id}/tree exactly.
+        def _tree_for(run_id: str) -> dict[str, Any]:
+            nodes = store.get_nodes_for_run(run_id)
+            forks = store.get_forks_for_parent(run_id)
+            return _assemble_tree(store, run_id, nodes, forks)
+
+        return {
+            "diff": report.to_dict(),
+            "tree_a": _tree_for(a),
+            "tree_b": _tree_for(b),
+        }
 
     @app.get("/runs/{run_id}")
     def get_run(run_id: str) -> dict[str, Any]:

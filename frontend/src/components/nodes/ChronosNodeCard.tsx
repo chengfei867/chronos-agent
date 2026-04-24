@@ -38,11 +38,15 @@ interface ChronosNodeData {
   isPlaying?: boolean;
   isPlayed?: boolean;
   isSelected?: boolean;
+  /** R39-A diff mode: when set, tints the card border to convey diff status. */
+  diffStatus?: "equal" | "changed" | "added" | "removed";
+  /** R39-A diff mode: when true, this node is currently highlighted via alignment list click. */
+  diffFocused?: boolean;
 }
 
 export default function ChronosNodeCard({ data, selected }: NodeProps) {
   const { t } = useTranslation();
-  const { node, isPlaying, isPlayed } = (data as unknown) as ChronosNodeData;
+  const { node, isPlaying, isPlayed, diffStatus, diffFocused } = (data as unknown) as ChronosNodeData;
   const color = KIND_COLORS[node.kind];
   const icon = KIND_ICONS[node.kind];
   const kindLabel = t(`nodeKind.${node.kind}`, { defaultValue: node.kind });
@@ -54,6 +58,8 @@ export default function ChronosNodeCard({ data, selected }: NodeProps) {
     isPlaying ? "is-playing" : "",
     isPlayed ? "is-played" : "",
     hasError ? "has-error" : "",
+    diffStatus ? `chr-node-card--diff-${diffStatus}` : "",
+    diffFocused ? "chr-node-card--diff-focused" : "",
   ].filter(Boolean).join(" ");
 
   return (
