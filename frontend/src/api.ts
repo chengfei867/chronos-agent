@@ -10,7 +10,14 @@
 // - No retry, no cache, no timeout. Single-user local tool — if the server
 //   is down, the user sees the error and fixes it themselves.
 
-import type { Tree, RunsResponse, Run, Node, Fork } from "./types";
+import type {
+  Tree,
+  RunsResponse,
+  Run,
+  Node,
+  Fork,
+  CompareResponse,
+} from "./types";
 
 const BASE = ""; // same-origin
 
@@ -55,4 +62,17 @@ export async function fetchForks(
   return getJSON<{ forks: Fork[]; count: number }>(
     `/runs/${encodeURIComponent(runId)}/forks`,
   );
+}
+
+export async function fetchCompare(
+  runAId: string,
+  runBId: string,
+  restrictToDownstream: boolean = true,
+): Promise<CompareResponse> {
+  const params = new URLSearchParams({
+    a: runAId,
+    b: runBId,
+    restrict_to_downstream: String(restrictToDownstream),
+  });
+  return getJSON<CompareResponse>(`/runs/compare?${params.toString()}`);
 }

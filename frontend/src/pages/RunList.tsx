@@ -1,5 +1,6 @@
 // Runs page — AntD Table with status badges, adapter tag, click-to-drill.
 // Supports text search + framework filter. Explanatory empty state for new users.
+// R39-A: row selection (max 2) + Compare action to jump to /runs/<a>/diff/<b>.
 import { useEffect, useMemo, useState } from "react";
 import {
   Table,
@@ -13,11 +14,13 @@ import {
   Alert,
   Skeleton,
   Tooltip,
+  Button,
+  message,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
-import { Search as SearchIcon } from "lucide-react";
+import { Search as SearchIcon, GitCompare } from "lucide-react";
 import { fetchRuns } from "../api";
 import type { Run, RunStatus } from "../types";
 import ConceptTip from "../components/ConceptTip";
@@ -53,6 +56,8 @@ export default function RunList() {
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [adapterFilter, setAdapterFilter] = useState<string>("all");
+  const [selected, setSelected] = useState<string[]>([]);
+  const [messageApi, contextHolder] = message.useMessage();
 
   useEffect(() => {
     let cancelled = false;
@@ -147,6 +152,25 @@ export default function RunList() {
     window.location.hash = `#/runs/${encodeURIComponent(run.id)}`;
   };
 
+  const handleCompare = () => {
+    if (selected.length !== 2) {
+      messageApi.warning(t("diff.selectTwoShort"));
+      return;
+    }
+    const [a, b] = selected;
+    window.location.hash = `#/runs/${encodeURIComponent(a)}/diff/${encodeURIComponent(b)}`;
+  };
+
+  const onSelectChange = (keys: React.Key[]) => {
+    // Cap at 2 — if user selects a 3rd, drop the oldest.
+    const next = keys.map(String);
+    if (next.length > 2) {
+      setSelected(next.slice(-2));
+    } else {
+      setSelected(next);
+    }
+  };
+
   return (
     <motion.div
       className="chr-page"
@@ -154,6 +178,7 @@ export default function RunList() {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
+      {contextHolder}
       <div className="chr-page-head">
         <Title level={3} style={{ margin: 0 }}>
           {t("runs.title")}
@@ -181,6 +206,23 @@ export default function RunList() {
             ...adapters.map((a) => ({ value: a, label: a })),
           ]}
         />
+        <Tooltip
+          title={
+            selected.length === 2
+              ? undefined
+              : t("diff.selectTwoHint")
+          }
+        >
+          <Button
+            type="primary"
+            icon={<GitCompare size={14} />}
+            disabled={selected.length !== 2}
+            onClick={handleCompare}
+          >
+            {t("diff.compareButton")}
+            {selected.length > 0 && ` (${selected.length}/2)`}
+          </Button>
+        </Tooltip>
       </Space>
 
       {error && (
@@ -200,9 +242,21 @@ export default function RunList() {
           rowKey="id"
           dataSource={filtered}
           columns={columns}
+          rowSelection={{
+            type: "checkbox",
+            selectedRowKeys: selected,
+            onChange: onSelectChange,
+            columnTitle: t("diff.selectionColumn"),
+            columnWidth: 60,
+          }}
           pagination={{ pageSize: 20, showSizeChanger: false, hideOnSinglePage: true }}
           onRow={(record) => ({
-            onClick: () => handleRowClick(record),
+            onClick: (e) => {
+              // Don't navigate when clicking the selection checkbox column
+              const target = e.target as HTMLElement;
+              if (target.closest(".ant-table-selection-column")) return;
+              handleRowClick(record);
+            },
             style: { cursor: "pointer" },
           })}
           locale={{

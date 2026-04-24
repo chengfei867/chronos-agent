@@ -12,7 +12,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { ThemeContext } from "../theme";
 
-type RouteName = "landing" | "runs" | "tree";
+type RouteName = "landing" | "runs" | "tree" | "diff";
 
 export default function AppHeader({
   currentRoute,
@@ -59,8 +59,8 @@ export default function AppHeader({
 
       <Space size="small" wrap>
         <Button
-          type={currentRoute === "runs" || currentRoute === "tree" ? "primary" : "text"}
-          ghost={currentRoute === "runs" || currentRoute === "tree"}
+          type={currentRoute === "runs" || currentRoute === "tree" || currentRoute === "diff" ? "primary" : "text"}
+          ghost={currentRoute === "runs" || currentRoute === "tree" || currentRoute === "diff"}
           onClick={goRuns}
           id="tour-anchor-runs"
         >

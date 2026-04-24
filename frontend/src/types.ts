@@ -100,6 +100,68 @@ export interface RunSummary {
   started_at: string;
 }
 
+// ---------------------------------------------------------------------------
+// Diff / compare shapes — mirror chronos.core.diff (ADR-006) +
+// chronos.api.server /runs/compare wrapper. See src/chronos/core/diff.py.
+// ---------------------------------------------------------------------------
+
+export type DiffTag = "equal" | "changed" | "added" | "removed";
+
+export interface DiffStateDiff {
+  added_keys: string[];
+  removed_keys: string[];
+  /** changed_keys[key] = {a: <value in run A>, b: <value in run B>} */
+  changed_keys: Record<string, { a: unknown; b: unknown }>;
+}
+
+export interface DiffNodeBrief {
+  id: string;
+  run_id: string;
+  step_index: number;
+  node_name: string;
+  kind: NodeKind;
+  state_after: Record<string, unknown>;
+}
+
+export interface DiffEntry {
+  tag: DiffTag;
+  node_name: string;
+  a: DiffNodeBrief | null;
+  b: DiffNodeBrief | null;
+  state_diff: DiffStateDiff | null;
+}
+
+export interface DiffRunBrief {
+  id: string;
+  adapter: string;
+  status: RunStatus;
+  task_description: string | null;
+}
+
+export interface DiffForkInfo {
+  id: string;
+  parent_run_id: string;
+  parent_node_id: string;
+  parent_node_name: string | null;
+  edited_fields: Record<string, unknown>;
+  reason: string;
+}
+
+export interface DiffReport {
+  run_a: DiffRunBrief;
+  run_b: DiffRunBrief;
+  fork_of: DiffForkInfo | null;
+  restricted_to_downstream: boolean;
+  entries: DiffEntry[];
+  summary: { equal: number; changed: number; added: number; removed: number };
+}
+
+export interface CompareResponse {
+  diff: DiffReport;
+  tree_a: Tree;
+  tree_b: Tree;
+}
+
 export interface RunsResponse {
   runs: Run[];
   count: number;
