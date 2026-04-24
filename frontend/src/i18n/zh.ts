@@ -104,7 +104,36 @@ export default {
     runsInTree: "共 {{count}} 个 Run",
     laneRoot: "根 Run",
     laneFork: "分叉 Run",
+    edgeFrom: {
+      from: "起点",
+      to: "终点",
+      sequential: "顺序连线: {{from}} → {{to}}",
+      fork: "分叉连线: 从 {{from}} 分叉出新时间线 ({{to}})",
+    },
+    edgeTypeFork: "分叉连线",
+    edgeTypeSequential: "顺序连线",
+    edgeForkExplain:
+      "分叉 = 从父 Run 的某个节点开始一条新的时间线 (子 Run). 原 Run 不变, 子 Run 可独立重跑.",
+    edgeSequentialExplain: "顺序 = Agent 执行时从一个 Node 推进到下一个 Node, 同属一条时间线.",
     clickHint: "点击节点查看详细信息",
+    edgeSelectedHint: "已选中一条连线 — 详情见画布左上。",
+  },
+  legend: {
+    title: "图例",
+    nodeKinds: "节点类型",
+    edges: "连线",
+    lanes: "泳道布局",
+    edgeSequential: "顺序执行",
+    edgeFork: "分叉到新时间线",
+    lanesBody: "每条横向泳道是一个 Run。跨泳道的虚线连线意思是「从这一步分叉到另一条替代时间线」。",
+    kindHint: {
+      llm: "调用大模型思考",
+      tool: "调用外部工具",
+      fn: "普通函数处理",
+      router: "根据结果分支",
+      fork: "产生新时间线",
+      end: "运行结束",
+    },
   },
   nodeDetails: {
     title: "节点详情",
@@ -175,6 +204,18 @@ export default {
       thread: {
         title: "Thread (会话线程)",
         body: "很多 Agent 框架用 thread_id 标识持续对话. Chronos 记录这个 ID, 方便你把一次 run 和底层框架的会话对应起来.",
+      },
+      step: {
+        title: "Step (步骤)",
+        body: "当前时光机的播放位置. 拖动/点击时间轴, 可以逐步回看 Agent 在这一步之前做了什么, 之后做了什么.",
+      },
+      framework: {
+        title: "Framework (框架)",
+        body: "这次 Run 背后的 Agent 框架. Chronos 通过对应的 Adapter 抓取它的每次调用, 例如 langgraph / linear / autogen.",
+      },
+      timeline: {
+        title: "Timeline (时间线)",
+        body: "一条 Run 的完整执行路径. 原始 Run 是主时间线, 从中 Fork 出来的子 Run 属于另一条平行时间线, 互不影响.",
       },
     },
     howToUse: {

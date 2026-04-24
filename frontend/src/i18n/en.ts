@@ -105,7 +105,37 @@ export default {
     runsInTree: "{{count}} runs",
     laneRoot: "Root run",
     laneFork: "Forked run",
+    edgeFrom: {
+      from: "From",
+      to: "To",
+      sequential: "Sequential edge: {{from}} → {{to}}",
+      fork: "Fork edge: branched from {{from}} into a new timeline ({{to}})",
+    },
+    edgeTypeFork: "Fork edge",
+    edgeTypeSequential: "Sequential edge",
+    edgeForkExplain:
+      "Fork = a new timeline (child Run) branched from one node of the parent Run. Parent remains unchanged; child can be replayed independently.",
+    edgeSequentialExplain:
+      "Sequential = the agent stepping from one node to the next within the same timeline.",
     clickHint: "Click a node to inspect it",
+    edgeSelectedHint: "An edge is selected — see details at the top-left of the canvas.",
+  },
+  legend: {
+    title: "Legend",
+    nodeKinds: "Node kinds",
+    edges: "Edges",
+    lanes: "Lane layout",
+    edgeSequential: "Sequential step",
+    edgeFork: "Fork to an alternate timeline",
+    lanesBody: "Each horizontal lane is one Run. Dashed cross-lane edges mean \"branched from this step into a parallel timeline\".",
+    kindHint: {
+      llm: "Calls an LLM",
+      tool: "Invokes a tool",
+      fn: "Plain function",
+      router: "Branches on result",
+      fork: "Spawns a timeline",
+      end: "Run finished",
+    },
   },
   nodeDetails: {
     title: "Node Details",
@@ -176,6 +206,18 @@ export default {
       thread: {
         title: "Thread",
         body: "Many agent frameworks use a thread_id to track ongoing conversations. Chronos records it so you can map a run back to the framework's session.",
+      },
+      step: {
+        title: "Step",
+        body: "The current position of the time-machine playhead. Drag or click the timeline to replay what the agent did before and after this step.",
+      },
+      framework: {
+        title: "Framework",
+        body: "The agent framework behind this run. Chronos captures its calls via the matching Adapter — e.g. langgraph / linear / autogen.",
+      },
+      timeline: {
+        title: "Timeline",
+        body: "The full execution path of one run. The original run is the main timeline; any fork creates a parallel timeline that doesn't affect the original.",
       },
     },
     howToUse: {
