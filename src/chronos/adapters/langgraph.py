@@ -34,11 +34,11 @@ import logging
 import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from chronos.adapters.langgraph_usage import UsageContext, UsageExtractor, UsageResult
+from chronos.adapters.protocols import AdapterError, ForkRef, RunRef
 from chronos.core.models import Fork, Node, NodeKind, Run, RunStatus, Usage
 
 if TYPE_CHECKING:
@@ -48,50 +48,13 @@ _usage_log = logging.getLogger("chronos.adapters.langgraph.usage")
 
 
 # ---------------------------------------------------------------------------
-# Exceptions
+# Exceptions and references
 # ---------------------------------------------------------------------------
-
-
-class AdapterError(RuntimeError):
-    """Raised when the LangGraph snapshot structure doesn't match expectations.
-
-    Usually indicates a LangGraph version drift — the spike 4 / spike 5 shape
-    we depend on may have changed. Re-run the spikes and update the ADRs if so.
-    """
-
-
-# ---------------------------------------------------------------------------
-# References returned to user code
-# ---------------------------------------------------------------------------
-
-
-@dataclass
-class RunRef:
-    """Mutable handle returned from :meth:`LangGraphRecorder.record`.
-
-    Populated on context-manager exit: ``run_id`` becomes the UUID of the
-    persisted Run, ``node_ids`` lists the persisted Nodes in step order.
-    """
-
-    thread_id: str
-    run_id: str | None = None
-    node_ids: list[str] = field(default_factory=list)
-
-
-@dataclass
-class ForkRef:
-    """Mutable handle returned from :meth:`LangGraphRecorder.fork`.
-
-    Populated on context-manager exit with the child Run's id, the Fork
-    record id, and the persisted child-side Node ids.
-    """
-
-    parent_run_id: str
-    at_node_id: str
-    child_thread_id: str
-    child_run_id: str | None = None
-    fork_id: str | None = None
-    node_ids: list[str] = field(default_factory=list)
+#
+# ``AdapterError`` / ``RunRef`` / ``ForkRef`` moved to
+# ``chronos.adapters.protocols`` in R31-A (ADR-016 rollout step 2). They are
+# re-exported from this module unchanged for backward compatibility — any
+# existing code importing from ``chronos.adapters.langgraph`` keeps working.
 
 
 # ---------------------------------------------------------------------------

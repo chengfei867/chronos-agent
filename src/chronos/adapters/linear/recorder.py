@@ -20,20 +20,17 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
+from chronos.adapters.protocols import AdapterError, ForkRef, RunRef
 from chronos.core.models import Fork, Node, NodeKind, Run, RunStatus, Usage
 from chronos.store import SqliteStore
 
 # ---------------------------------------------------------------------------
-# Public errors + references (mirror LangGraphRecorder API shape)
+# Public errors + references
 # ---------------------------------------------------------------------------
-
-
-class AdapterError(RuntimeError):
-    """Raised when the linear runtime / recorder invariants are violated.
-
-    Mirrors the LangGraphRecorder semantics: the only legal framework-leak
-    exception per the ADR-016 RecorderProtocol lifecycle invariants.
-    """
+#
+# ``AdapterError`` / ``RunRef`` / ``ForkRef`` moved to
+# ``chronos.adapters.protocols`` in R31-A (ADR-016 rollout step 2). They are
+# re-exported from this module unchanged for backward compatibility.
 
 
 StepFn = Callable[[dict[str, Any]], dict[str, Any]]
@@ -70,32 +67,6 @@ class LinearRuntime:
             if name == node_name:
                 return i
         raise AdapterError(f"node_name={node_name!r} not in LinearRuntime")
-
-
-@dataclass
-class RunRef:
-    """Mutable handle returned from :meth:`LinearRecorder.record`.
-
-    Populated on context-manager exit; mirrors LangGraphRecorder's RunRef
-    so higher-level code that consumes either adapter sees a uniform
-    shape (ADR-016 RecorderProtocol contract).
-    """
-
-    thread_id: str
-    run_id: str | None = None
-    node_ids: list[str] = field(default_factory=list)
-
-
-@dataclass
-class ForkRef:
-    """Mutable handle returned from :meth:`LinearRecorder.fork`."""
-
-    parent_run_id: str
-    at_node_id: str
-    child_thread_id: str
-    child_run_id: str | None = None
-    fork_id: str | None = None
-    node_ids: list[str] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -490,3 +461,13 @@ class LinearRecorder:
 
 def _utcnow() -> datetime:
     return datetime.now(UTC)
+
+
+__all__ = [
+    "AdapterError",
+    "ForkRef",
+    "LinearRecorder",
+    "LinearRuntime",
+    "RunRef",
+    "StepFn",
+]

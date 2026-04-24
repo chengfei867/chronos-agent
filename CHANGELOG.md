@@ -4,7 +4,13 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
-_Nothing yet — R31 will decide._
+### Changed (Round 31)
+
+- **`src/chronos/adapters/protocols.py` introduced** (ADR-016 rollout step 2) — single canonical home for `RunRef` / `ForkRef` / `AdapterError` dataclasses and the three documented ADR-016 Protocols (`RecorderProtocol`, `AdapterProtocol`, `NodeIdentityResolver`). All three Protocols carry `@runtime_checkable` for cheap `isinstance()` smoke tests; real signature-level conformance is still verified by the existing `inspect.signature` tests in `tests/unit/test_adapter_linear.py`. **Strictly additive / backward-compatible**: `chronos.adapters.langgraph` and `chronos.adapters.linear.recorder` now re-import `RunRef` / `ForkRef` / `AdapterError` from the new module and re-export them unchanged; any existing import path (`from chronos.adapters.langgraph import RunRef`, `from chronos.adapters.linear import AdapterError`, etc.) keeps working. The top-level `chronos.adapters` package now also exposes the three Protocols + the shared dataclasses/error for direct import. Eliminates the R28 L4 pre-existing tech-debt ticket (two parallel `RunRef` / `ForkRef` / `AdapterError` class hierarchies) before the AutoGen adapter lands and adds a third.
+
+### Added (Round 31)
+
+- **`tests/unit/test_adapter_protocols.py`** (~220 LOC, 22 tests). Four test classes covering: (1) **canonical-identity** — `lg_mod.RunRef is RunRef`, `lin_mod.ForkRef is ForkRef`, `lg_mod.AdapterError is AdapterError` and `lin_mod.AdapterError is AdapterError` via literal `is` identity assertions, plus cross-adapter `isinstance` compatibility; (2) **dataclass-shape** — default field values, `node_ids` list is not shared between instances (`default_factory` correctness), `ForkRef` requires positional args; (3) **Protocol conformance** — `LangGraphRecorder` / `LinearRecorder` pass `isinstance(x, RecorderProtocol)` via `@runtime_checkable`, duck-typed stubs satisfy `AdapterProtocol` and `NodeIdentityResolver`, `cast(RecorderProtocol, rec)` smoke test exercises ADR-016 rollout step 2's type-safety claim on both adapters; (4) **public-surface** — `protocols.__all__` is exhaustive, `chronos.adapters` package-level `__all__` advertises all seven public names (3 Protocols + 2 dataclasses + `AdapterError` + `LangGraphRecorder`).
 
 ## [0.2.0a0] — 2026-04-24 (Round 24 + Round 25 + Round 26 + Round 27 + Round 28 + Round 29 + Round 30)
 
