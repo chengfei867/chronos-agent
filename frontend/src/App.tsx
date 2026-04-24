@@ -1,69 +1,76 @@
-import { useEffect, useState, useCallback } from "react";
-import { RunList } from "./RunList";
-import { TreeView } from "./TreeView";
+// App root — hash routing, shared header/footer, page transitions.
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Layout } from "antd";
+import { AnimatePresence, motion } from "framer-motion";
+import AppHeader from "./components/AppHeader";
+import AppFooter from "./components/AppFooter";
+import HelpDrawer from "./components/HelpDrawer";
+import Landing from "./pages/Landing";
+import RunList from "./pages/RunList";
+import TreeView from "./pages/TreeView";
+import OnboardingTour from "./components/OnboardingTour";
 
-// Minimal hash-based router. Two routes:
-//   #/               — run list
-//   #/runs/<run_id>  — reasoning tree for that run
-//
-// Why hash routing instead of history API: the FastAPI server mounts this
-// SPA under /app and doesn't do HTML5-history fallback for client-side
-// routes. Hash routing keeps everything client-only with no server config.
+type Route =
+  | { name: "landing" }
+  | { name: "runs" }
+  | { name: "tree"; runId: string };
 
-type Route = { name: "list" } | { name: "run"; runId: string };
-
-function parseHash(hash: string): Route {
-  const stripped = hash.replace(/^#/, "").replace(/^\//, "");
-  if (stripped === "" || stripped === "/") return { name: "list" };
-  const m = stripped.match(/^runs\/([^/]+)$/);
-  if (m) return { name: "run", runId: decodeURIComponent(m[1]) };
-  return { name: "list" };
+function parseHash(): Route {
+  const h = window.location.hash.replace(/^#/, "");
+  if (!h || h === "/") return { name: "runs" };
+  if (h === "/home") return { name: "landing" };
+  const m = h.match(/^\/runs\/([^/]+)$/);
+  if (m) return { name: "tree", runId: decodeURIComponent(m[1]) };
+  return { name: "runs" };
 }
 
-export function App() {
-  const [route, setRoute] = useState<Route>(() => parseHash(window.location.hash));
+export default function App() {
+  const [route, setRoute] = useState<Route>(() => parseHash());
+  const [helpOpen, setHelpOpen] = useState(false);
 
   useEffect(() => {
-    const onHash = () => setRoute(parseHash(window.location.hash));
+    const onHash = () => setRoute(parseHash());
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
 
-  const openRun = useCallback((runId: string) => {
-    window.location.hash = `#/runs/${encodeURIComponent(runId)}`;
-  }, []);
+  const openHelp = useCallback(() => setHelpOpen(true), []);
+  const closeHelp = useCallback(() => setHelpOpen(false), []);
 
-  const goList = useCallback(() => {
-    window.location.hash = "#/";
-  }, []);
+  const page = useMemo(() => {
+    switch (route.name) {
+      case "landing":
+        return <Landing key="landing" openHelp={openHelp} />;
+      case "runs":
+        return <RunList key="runs" />;
+      case "tree":
+        return <TreeView key={`tree-${route.runId}`} runId={route.runId} />;
+    }
+  }, [route, openHelp]);
 
   return (
-    <div className="app-shell">
-      <header className="app-header">
-        <h1>⏱ Chronos Viewer</h1>
-        {route.name === "run" ? (
-          <>
-            <button onClick={goList} title="Back to run list">
-              ← Runs
-            </button>
-            <span className="crumb">run · {route.runId.slice(0, 12)}…</span>
-          </>
-        ) : null}
-        <div className="spacer" />
-        <a href="/" title="Back to the landing page">
-          / landing
-        </a>
-        <a href="/docs" target="_blank" rel="noreferrer">
-          /docs
-        </a>
-      </header>
-      <main className="app-body">
-        {route.name === "list" ? (
-          <RunList onOpenRun={openRun} />
-        ) : (
-          <TreeView runId={route.runId} />
-        )}
-      </main>
-    </div>
+    <Layout style={{ minHeight: "100vh" }}>
+      <AppHeader
+        currentRoute={route.name}
+        onHelpClick={openHelp}
+      />
+      <Layout.Content className="chr-content">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={route.name + ("runId" in route ? route.runId : "")}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            style={{ height: "100%" }}
+          >
+            {page}
+          </motion.div>
+        </AnimatePresence>
+      </Layout.Content>
+      <AppFooter />
+      <HelpDrawer open={helpOpen} onClose={closeHelp} />
+      <OnboardingTour onHelpClick={openHelp} />
+    </Layout>
   );
 }

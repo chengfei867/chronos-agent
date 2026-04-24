@@ -1,0 +1,140 @@
+"""Minimal seed script — inserts demo runs/nodes so the viewer has data to show
+in smoke tests. Not shipped as part of the public package.
+"""
+from __future__ import annotations
+
+import argparse
+import uuid
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+from chronos.core.models import Fork, Node, NodeKind, Run, RunStatus, Usage
+from chronos.store.sqlite import SqliteStore
+
+
+def _now(offset_sec: float = 0.0) -> datetime:
+    return datetime.now(timezone.utc) + timedelta(seconds=offset_sec)
+
+
+def seed(db_path: Path) -> None:
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    store = SqliteStore.open(db_path)
+
+    # --- Run 1: completed LangGraph task with 5 nodes ---
+    run1 = Run(
+        id=f"run_{uuid.uuid4().hex[:12]}",
+        adapter="langgraph",
+        adapter_thread_id="thread_demo_1",
+        status=RunStatus.COMPLETED,
+        started_at=_now(-600),
+        ended_at=_now(-420),
+        task_description="Plan a weekend trip to Tokyo",
+        initial_state={"destination": "Tokyo", "days": 3},
+        final_state={"itinerary": ["Shibuya", "Asakusa", "Akihabara"]},
+        tags=["demo", "travel"],
+        metadata={},
+    )
+    store.put_run(run1)
+
+    node_specs: list[tuple[NodeKind, str, str | None]] = [
+        (NodeKind.LLM, "plan_agent", "gpt-4o"),
+        (NodeKind.TOOL, "search_places", None),
+        (NodeKind.LLM, "summarize_results", "gpt-4o"),
+        (NodeKind.ROUTER, "decide_next", None),
+        (NodeKind.END, "finish", None),
+    ]
+    parent_id: str | None = None
+    for i, (kind, name, model) in enumerate(node_specs):
+        nid = f"node_{uuid.uuid4().hex[:12]}"
+        node = Node(
+            id=nid,
+            run_id=run1.id,
+            step_index=i,
+            node_name=name,
+            kind=kind,
+            parent_node_id=parent_id,
+            started_at=_now(-600 + i * 30),
+            ended_at=_now(-600 + i * 30 + 20),
+            state_after={"step": i, "last": name},
+            model_name=model,
+            usage=(
+                Usage(prompt_tokens=120 + i * 20, completion_tokens=80, total_tokens=200 + i * 20)
+                if model
+                else None
+            ),
+            cost_usd_cents=(8 + i * 2) if model else None,
+            tool_name="places_api" if kind == NodeKind.TOOL else None,
+            tool_input={"query": "things to do in tokyo"} if kind == NodeKind.TOOL else None,
+            tool_output={"results": ["Shibuya", "Asakusa"]} if kind == NodeKind.TOOL else None,
+            error_message=None,
+            metadata={},
+        )
+        store.put_node(node)
+        parent_id = nid
+
+    # --- Run 2: failed AutoGen run ---
+    run2 = Run(
+        id=f"run_{uuid.uuid4().hex[:12]}",
+        adapter="autogen",
+        adapter_thread_id="thread_demo_2",
+        status=RunStatus.FAILED,
+        started_at=_now(-300),
+        ended_at=_now(-290),
+        task_description="Scrape a login-gated page",
+        initial_state={"url": "https://example.com/private"},
+        final_state=None,
+        tags=["demo"],
+        metadata={},
+    )
+    store.put_run(run2)
+    fail_specs: list[tuple[NodeKind, str, str | None]] = [
+        (NodeKind.TOOL, "fetch_page", None),
+        (NodeKind.LLM, "classify_error", None),
+        (NodeKind.END, "fail", "401 Unauthorized"),
+    ]
+    parent_id = None
+    for i, (kind, name, err) in enumerate(fail_specs):
+        nid = f"node_{uuid.uuid4().hex[:12]}"
+        node = Node(
+            id=nid,
+            run_id=run2.id,
+            step_index=i,
+            node_name=name,
+            kind=kind,
+            parent_node_id=parent_id,
+            started_at=_now(-300 + i * 3),
+            ended_at=_now(-300 + i * 3 + 2),
+            state_after={"step": i},
+            error_message=err,
+        )
+        store.put_node(node)
+        parent_id = nid
+
+    # --- Run 3: running linear ---
+    run3 = Run(
+        id=f"run_{uuid.uuid4().hex[:12]}",
+        adapter="linear",
+        adapter_thread_id="thread_demo_3",
+        status=RunStatus.RUNNING,
+        started_at=_now(-60),
+        ended_at=None,
+        task_description="Generate a weekly status report",
+        initial_state={"team": "eng"},
+        final_state=None,
+        tags=["demo", "report"],
+        metadata={},
+    )
+    store.put_run(run3)
+
+    store.close()
+    print(f"Seeded 3 runs into {db_path}")
+    print(f"  Run 1 (completed, langgraph): {run1.id}")
+    print(f"  Run 2 (failed, autogen):     {run2.id}")
+    print(f"  Run 3 (running, linear):     {run3.id}")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--db", default="/tmp/chronos-demo.db", type=Path)
+    args = parser.parse_args()
+    seed(args.db)
