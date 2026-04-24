@@ -147,15 +147,16 @@
    147|
 ## 5. 当前状态 (Current State)
 
-**截至 Round 39-A 结束 (2026-04-25 CST 凌晨) — Diff viewer 落地, 时光机四动词补齐**
+**截至 Round 40 结束 (2026-04-25 CST 06:30) — 纯文档轮: ADR-018 取消 `chronos compare`, CONTEXT 纠偏**
 
-- Round: **39-A 完成** (PR #3 squash-merged → `6c07b1f` on main). Feature 代码是前一轮 cron slot 写完推上 branch 没来得及 merge/写 doc, 本轮负责验证 + merge + 文档.
-- 最近 progress doc: `progress/2026-04-24-round-39-a.md` (Diff viewer)
+- Round: **40 完成** — 纯文档轮, 无代码变动. 发现 CONTEXT §6 R40-A "新增 `chronos compare`" 是幽灵 TODO (`chronos diff` 早已存在且完全覆盖, 调同一 ADR-006 算法). 写 ADR-018 决定不改名/不加 alias, 正式取消 R40-A. GitHub Release `v0.2.0` 也已存在 (R38 cron 里建过), R40-B 的 release page TODO 同样取消.
+- 最近 progress doc: `progress/2026-04-25-round-40.md` (本轮 — 纯文档纠偏)
+- 最近上一份 progress doc: `progress/2026-04-24-round-39-a.md` (Diff viewer)
 - Round: 38 (上轮): cut `v0.2.0` bundling R36-D + R37.5 + R38. Release skill 第 8 次 clean 跑通.
 - 最近上一份 progress doc: `progress/2026-04-24-round-38.md` (Tree view polish + release cut)
 - **战略定位 (R33 锁死, 持续有效)**: **GitHub 爆款开源项目**, 不是 SaaS. v0.2.0 是 Web UI 主题完备的第一个正式版 — `uv pip install chronos-agent[web]==0.2.0 && chronos web` 直接看到一个组件库级打磨的推理树 viewer.
 - 当前阶段: **Phase 2 in-flight, v0.2.0 stable released** — Web UI 三轮打磨 (R36-D AntD+i18n+Tour, R37.5 多 run family tree + real-LLM smoke, R38 Legend + edge selection + ConceptTip) 形成 **"非技术读者也能看懂的时光机 viewer"** 完整叙事.
-- 最新 ADR: ADR-017 (R33, AutoGen sync-wrap). R36-D/R37.5/R38 无新 ADR.
+- 最新 ADR: **ADR-018 (R40, `compare` 叙事词 = `diff` CLI 词, 不加新 subcommand)**. 之前: ADR-017 (R33, AutoGen sync-wrap). R36-D/R37.5/R38/R39-A 无新 ADR.
 - 最新 research doc: `docs/research/multi-framework-risks.md` (R27 + R29)
 - 最新 tag: **v0.2.0** (R38 cut); 下一 release 候选: v0.3.0 (Phase 3 entry, fork 可靠性 + 沙箱) 或 v0.2.1 patch
 - Blocked items: 无
@@ -258,52 +259,59 @@
   - **PR `mergeable_state: unstable` ≠ blocked (R39-A)**: 无必需 CI checks 而已, squash merge 正常. 真卡只看 `blocked` / `dirty`.
   - **多 cron slot 交接 必写 stub progress doc (R39-A)**: 推了 branch 但没 merge 就收工, 下一 slot 先写 `progress/*-round-N-stub.md` 说明状态, 不然下 agent 从头验证浪费.
   - **ADR-006 `core.diff.align_runs` 是对外 compare 契约 (R39-A)**: `/runs/compare` 和未来 `chronos compare` CLI 都复用, 不要独立写 diff 算法.
+  - **命名不对称是健康的 (R40, ADR-018)**: `compare` 是叙事词 (README 四动词, Web UI 按钮文案), `diff` 是 CLI 词 (`chronos diff <a> <b>` 已存在, 继承 `git diff`/`diff(1)` 传统). URL 端点用 `/runs/compare`, 前端路由 `#/runs/<a>/diff/<b>`. 各 surface 用各自 register 里的词, 不统一、不 alias、不改名. **强行统一反而难用**.
+  - **幽灵 TODO 防御 (R40)**: 每轮读 CONTEXT §6 "下一轮做 X" 后, 第一件事是验证 X 是否已存在. 60 秒 `chronos --help` / `grep src/chronos/cli` / `curl api.github.com/.../releases` 比一整轮白干便宜. R40 抓到两个: `chronos compare` (其实是 `chronos diff`) + `v0.2.0 release page` (早就建好). 规则写进 ADR-018 meta-note.
+  - **GitHub Releases 状态查询走直连 (R40)**: `curl -H "Authorization: Bearer $GITHUB_TOKEN" api.github.com/repos/.../releases` 返 JSON 正常. gh-proxy 读 API 坏 (R39-A 教训). 建 release / patch release body 也走直连.
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 40 候选 — R39-A Diff viewer 已落地 main, v0.2.1 patch 凑齐剩下两件事**
+**Round 41 候选 — R40 纠偏后 v0.2.1 真实剩余工作就是包装 + 宣传**
 
-战略视角: 时光机四动词 (record / browse / fork / **compare**) 全部对用户可见. v0.2.1 patch 还差:
-1. **GitHub Release page** (v0.2.0 tag 已推但 Release 未建)
-2. **`chronos compare` CLI subcommand** (R39-C — CLI 用户也要 compare 能力)
-3. **README 截图 + dogfood pass**
+战略视角: 时光机四动词 (record / browse / fork / **compare**) 在 CLI / HTTP API / Web UI 三个 surface 全部完备 (CLI 叫 `chronos diff`, ADR-018 正式承认). v0.2.1 patch 真实剩余:
 
-### R40-A (首选): `chronos compare <run_a> <run_b>` CLI
+1. **README 截图 + narrative 同步** (R39-A DiffView 是 v0.2.1 主打卖点)
+2. **`chronos diff --help` 文案补 "the compare verb" 一行** (纯文档)
+3. **dogfood + cut v0.2.1**
 
-- 前置: R39-A ✅ (`/runs/compare` 后端 + `core.diff.align_runs` 复用契约已证)
-- 目标: 新 subcommand `chronos compare <run_a> <run_b>` 打印表格 diff (`same / changed / added / missing` 各节点一行, changed 展开 field 列表)
-- 实现: 直调 `SqliteStore` + `core.diff.align_runs`, **不经 HTTP** (CLI 要 offline 可用)
-- 模块形状继续 `*_command(console, open_store_fn, ...)` (R14 规则)
-- 测试: duck + real 双策略, 覆盖 same / changed / added / missing / fork-restrict / 404 六态, 走 Click runner `CliRunner`
-- 工期估: 0.5 轮 (diff 算法已冻, 只做 CLI 渲染)
+### R41-A (首选): README 截图 + `chronos diff` narrative 同步
 
-### R40-B (与 A 并行): GitHub Release page + README 截图
+- 用 `scripts/seed_demo.py` 建 demo DB, 跑 `chronos web` + browser tool 截 3 张 PNG:
+  1. TreeView 单 run
+  2. Multi-run family tree (R37.5 `include_descendants=true`)
+  3. **DiffView 双栏 (R39-A 新亮点, v0.2.1 主打)**
+- README 新增 "Compare two runs" 小节, 同时展示 Web UI 按钮 + `chronos diff` 命令示例
+- 把 ADR-018 的"compare 叙事 / diff CLI"映射表简化 2 行放进 README CLI section, 让 narrative → CLI 的桥在一页上看完
+- 工期估: 0.5-1 轮
 
-- `POST /repos/chengfei867/chronos-agent/releases` body 从 CHANGELOG 搬 R36-D + R37.5 + R38 段 (走直连 api.github.com, 别走 gh-proxy — R39-A 教训)
-- README 加 2-3 张 PNG: TreeView + multi-run family tree + **DiffView 双栏 (R39-A 新亮点)**. 走 `chronos web` + browser tool 截屏. 跳过 GIF.
-- vhs/asciinema 录一段 CLI demo 塞 README 尾 (可延到 v0.2.1 cut 前)
+### R41-B (并行, 5 分钟): `chronos diff` 自描述加 "compare"
 
-### R40-C (收尾): dogfood pass + cut v0.2.1
+- 改 `src/chronos/cli/__init__.py::diff()` docstring: `"""Compare two recorded runs side-by-side (the 'compare' verb — ADR-006 alignment)."""`
+- 不改任何功能, 不改测试
+- 可以和 R41-A 同一 commit
 
-- R40-A + R40-B 落地后跑一次完整 dogfood (seed demo db → TreeView → Fork → DiffView → CLI compare 全走一遍)
-- 三处 version 同步 bump 0.2.0 → 0.2.1: `src/chronos/__init__.py::__version__` / `pyproject.toml::project.version` / `src/chronos/cli/__init__.py::info` status line (**R35-A/R38 验过的坑**)
-- Tag `v0.2.1` + push + GitHub Release page
+### R41-C (收尾): dogfood + cut v0.2.1
+
+- R41-A + R41-B 落地后跑一次完整 dogfood (seed demo → TreeView → Fork → DiffView → `chronos diff` 全链路)
+- 三处 version 同步 bump 0.2.0 → 0.2.1
+- Tag `v0.2.1` + push + GitHub Release (**走直连 api.github.com, R39-A + R40 教训**, 且**建之前先 `curl .../releases` 查是否已存在**, R40 幽灵 TODO 教训)
+- v0.2.1 release body 高光: R39-A DiffView (主菜) + R40 ADR-018 命名澄清 (配菜)
 - 走 `chronos-release-pattern` skill 第 9 次
 
-### R40 非目标 (继承 R33/R39 红线)
+### R41 非目标 (继承 R33/R39/R40 红线)
 
+- ❌ 加 `chronos compare` 或任何 alias (**ADR-018 已决**)
+- ❌ 改 `chronos diff` 行为 (只改 `--help` 文案)
 - ❌ 多用户 / auth / 托管
-- ❌ 数据库 migration 框架
-- ❌ gRPC / GraphQL
-- ❌ 多 SQLite 后端 (Postgres/Turso)
-- ❌ WebSocket 实时推送
-- ❌ PyPI publish (R36-C 搁置, "发了就有 support 负担" 仍有效)
+- ❌ Phase 3 (fork 沙箱) — v0.2.1 先 cut
+- ❌ 数据库 migration 框架 / Postgres / WebSocket
+- ❌ PyPI publish (R36-C 搁置仍有效)
 - ❌ 独立写 diff 算法 (必须复用 `core.diff.align_runs`, ADR-006)
 
 ### Release strategy (v0.2.x → v0.3.0)
 
-- v0.2.1 patch = R39-A (done) + R40-A CLI compare + R40-B Release page/截图 + R40-C dogfood
+- v0.2.1 patch = R39-A DiffView (done) + R40 ADR-018 (done) + R41-A README 截图 + R41-B help 文案 + R41-C dogfood + cut
 - v0.3.0 = Phase 3 entry = fork 可靠性 + side-effect 沙箱 (roadmap §Phase 3)
+
 
 ## Cron 窗口门控 (2026-04-22 用户指令)
 
@@ -356,4 +364,4 @@ if not (0 <= beijing_hour <= 11):
 
 ---
 
-*Last updated: 2026-04-25 (CST 凌晨) by Round 39-A agent (merge PR #3 `feat/r39a-diff-viewer` + 写本轮 progress doc + section 5/6 bump; 时光机四动词补齐)*
+*Last updated: 2026-04-25 (CST 06:30) by Round 40 agent (纯文档纠偏: ADR-018 取消 `chronos compare`, CONTEXT §5/§6 同步, GitHub Release page fact 核对).*
