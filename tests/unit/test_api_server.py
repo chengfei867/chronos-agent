@@ -513,3 +513,222 @@ def test_landing_page_advertises_viewer(client: TestClient) -> None:
     assert r.status_code == 200
     assert 'href="/app/"' in r.text
     assert "Tree Viewer" in r.text
+
+
+# ---------------------------------------------------------------------------
+# /runs/{id}/tree?include_descendants=true — R37.5-B
+# ---------------------------------------------------------------------------
+
+
+def test_tree_include_descendants_merges_parent_and_child(
+    client: TestClient, scenario: tuple[SqliteStore, dict[str, str]]
+) -> None:
+    """With ``include_descendants=true``, the tree of the parent run includes
+    every node from the child run plus the fork edge.
+    """
+    _, ids = scenario
+    r = client.get(f"/runs/{ids['parent_run']}/tree", params={"include_descendants": "true"})
+    assert r.status_code == 200
+    body = r.json()
+
+    # All 5 nodes from both runs should be present.
+    node_ids = {n["id"] for n in body["nodes"]}
+    assert node_ids == {ids["n1"], ids["n2"], ids["n3"], ids["c1"], ids["c2"]}
+
+    # Every node carries its run_id tag — essential for frontend lane grouping.
+    by_id = {n["id"]: n for n in body["nodes"]}
+    assert by_id[ids["n1"]]["run_id"] == ids["parent_run"]
+    assert by_id[ids["c1"]]["run_id"] == ids["child_run"]
+
+    # descendant_run_ids lists root first, then children in DFS order.
+    assert body["descendant_run_ids"] == [ids["parent_run"], ids["child_run"]]
+
+    # run_summaries indexable by run_id with the expected keys.
+    summaries = body["run_summaries"]
+    assert set(summaries.keys()) == {ids["parent_run"], ids["child_run"]}
+    assert summaries[ids["parent_run"]]["task_description"] == "Parent run for API tests"
+    assert summaries[ids["child_run"]]["adapter"] == "langgraph"
+    assert summaries[ids["parent_run"]]["status"] == "completed"
+
+    # Fork edge has the child's first node as concrete target (not None).
+    fork_edges = [e for e in body["edges"] if e["kind"] == "fork"]
+    assert len(fork_edges) == 1
+    assert fork_edges[0]["to"] == ids["c1"]
+    assert fork_edges[0]["child_run_id"] == ids["child_run"]
+
+
+def test_tree_include_descendants_default_false_preserves_original_shape(
+    client: TestClient, scenario: tuple[SqliteStore, dict[str, str]]
+) -> None:
+    """Default behavior (no query param) must not include descendant nodes —
+    preserves backward compatibility with v0.1 / v0.2 clients.
+    """
+    _, ids = scenario
+    r = client.get(f"/runs/{ids['parent_run']}/tree")
+    assert r.status_code == 200
+    body = r.json()
+
+    node_ids = {n["id"] for n in body["nodes"]}
+    assert node_ids == {ids["n1"], ids["n2"], ids["n3"]}
+    assert "descendant_run_ids" not in body
+    assert "run_summaries" not in body
+
+
+def test_tree_include_descendants_for_leaf_run_returns_only_itself(
+    client: TestClient, scenario: tuple[SqliteStore, dict[str, str]]
+) -> None:
+    """A leaf run (no outgoing forks) + include_descendants=true returns a
+    tree containing only its own nodes, and descendant_run_ids=[leaf].
+    """
+    _, ids = scenario
+    r = client.get(f"/runs/{ids['child_run']}/tree", params={"include_descendants": "true"})
+    assert r.status_code == 200
+    body = r.json()
+
+    assert body["descendant_run_ids"] == [ids["child_run"]]
+    node_ids = {n["id"] for n in body["nodes"]}
+    assert node_ids == {ids["c1"], ids["c2"]}
+
+
+def test_tree_include_descendants_two_level_chain(tmp_path: Path) -> None:
+    """Three-generation chain (grandparent → parent → child) with
+    include_descendants=true must return all three runs' nodes.
+    """
+    db_path = tmp_path / "three_gen.db"
+    with SqliteStore.open(db_path) as store:
+        gp_id, p_id, c_id = _uuid(), _uuid(), _uuid()
+        gn, pn, cn = _uuid(), _uuid(), _uuid()
+
+        for rid, desc in ((gp_id, "grandparent"), (p_id, "parent"), (c_id, "child")):
+            store.put_run(
+                Run(
+                    id=rid,
+                    adapter="langgraph",
+                    adapter_thread_id=f"t-{desc}",
+                    status=RunStatus.COMPLETED,
+                    started_at=_now(),
+                    ended_at=_now(),
+                    task_description=desc,
+                )
+            )
+        store.put_node(Node(id=gn, run_id=gp_id, step_index=0, node_name="gp", kind=NodeKind.LLM))
+        store.put_node(
+            Node(
+                id=pn,
+                run_id=p_id,
+                step_index=0,
+                node_name="p",
+                kind=NodeKind.LLM,
+                parent_node_id=gn,
+            )
+        )
+        store.put_node(
+            Node(
+                id=cn,
+                run_id=c_id,
+                step_index=0,
+                node_name="c",
+                kind=NodeKind.LLM,
+                parent_node_id=pn,
+            )
+        )
+        store.put_fork(
+            Fork(
+                id=_uuid(),
+                parent_run_id=gp_id,
+                parent_node_id=gn,
+                child_run_id=p_id,
+                created_at=_now(),
+                edited_fields={},
+                reason="",
+            )
+        )
+        store.put_fork(
+            Fork(
+                id=_uuid(),
+                parent_run_id=p_id,
+                parent_node_id=pn,
+                child_run_id=c_id,
+                created_at=_now(),
+                edited_fields={},
+                reason="",
+            )
+        )
+
+        client = TestClient(build_app(store))
+        r = client.get(f"/runs/{gp_id}/tree", params={"include_descendants": "true"})
+        assert r.status_code == 200
+        body = r.json()
+
+        assert body["descendant_run_ids"] == [gp_id, p_id, c_id]
+        node_ids = {n["id"] for n in body["nodes"]}
+        assert node_ids == {gn, pn, cn}
+        # Two fork edges, one per generation.
+        fork_edges = [e for e in body["edges"] if e["kind"] == "fork"]
+        assert len(fork_edges) == 2
+
+
+def test_tree_include_descendants_cycle_protection(tmp_path: Path) -> None:
+    """Defensive: if a descendant set's BFS revisits a node, we must not
+    infinite-loop. We simulate this with a direct call to the internal
+    helper since schema rejects fork.parent == fork.child.
+    """
+    from chronos.api.server import _assemble_tree_with_descendants
+
+    db_path = tmp_path / "cycle.db"
+    with SqliteStore.open(db_path) as store:
+        a_id, b_id = _uuid(), _uuid()
+        an, bn = _uuid(), _uuid()
+
+        for rid, desc in ((a_id, "A"), (b_id, "B")):
+            store.put_run(
+                Run(
+                    id=rid,
+                    adapter="langgraph",
+                    adapter_thread_id=f"t-{desc}",
+                    status=RunStatus.COMPLETED,
+                    started_at=_now(),
+                    ended_at=_now(),
+                    task_description=desc,
+                )
+            )
+        store.put_node(Node(id=an, run_id=a_id, step_index=0, node_name="a", kind=NodeKind.LLM))
+        store.put_node(
+            Node(
+                id=bn,
+                run_id=b_id,
+                step_index=0,
+                node_name="b",
+                kind=NodeKind.LLM,
+                parent_node_id=an,
+            )
+        )
+        # A → B
+        store.put_fork(
+            Fork(
+                id=_uuid(),
+                parent_run_id=a_id,
+                parent_node_id=an,
+                child_run_id=b_id,
+                created_at=_now(),
+                edited_fields={},
+                reason="",
+            )
+        )
+        # B → A (would cycle; schema permits since parent_run != child_run)
+        store.put_fork(
+            Fork(
+                id=_uuid(),
+                parent_run_id=b_id,
+                parent_node_id=bn,
+                child_run_id=a_id,
+                created_at=_now(),
+                edited_fields={},
+                reason="",
+            )
+        )
+
+        # Must terminate (no hang) and visit each run exactly once.
+        tree = _assemble_tree_with_descendants(store, a_id)
+        assert set(tree["descendant_run_ids"]) == {a_id, b_id}
+        assert len(tree["descendant_run_ids"]) == 2  # no duplicates

@@ -153,11 +153,91 @@ def _assemble_tree(
             }
         )
 
+    # Tag every node dict with its run_id so frontend can group by run
+    # (for descendant trees this is essential; for single-run it's a no-op
+    # but keeping the tag unconditional simplifies the client).
+    node_dicts: list[dict[str, Any]] = []
+    for n in nodes:
+        d = _node_to_dict(n)
+        d["run_id"] = run_id
+        node_dicts.append(d)
+
     return {
         "run_id": run_id,
-        "nodes": [_node_to_dict(n) for n in nodes],
+        "nodes": node_dicts,
         "edges": edges,
         "child_runs": [_fork_to_dict(f) for f in forks],
+    }
+
+
+def _assemble_tree_with_descendants(store: SqliteStore, root_run_id: str) -> dict[str, Any]:
+    """DFS-merge the root run with every descendant via fork edges.
+
+    Returns the same shape as :func:`_assemble_tree`, but ``nodes`` covers
+    every run in the fork subtree and ``edges`` includes both the
+    sequential links inside each run AND the cross-run fork edges that
+    stitch them together.
+
+    The response grows two extra top-level fields:
+
+    * ``descendant_run_ids`` — ordered list of distinct run_ids included
+      (root first, then by DFS discovery order).
+    * ``run_summaries`` — ``{run_id: {task_description, status,
+      started_at, adapter}}`` so the frontend can render lane labels
+      without a second round-trip per run.
+
+    Cycle protection: a ``visited: set[str]`` guards against pathological
+    fork graphs (currently impossible by schema — fork.parent != child —
+    but defensive against future bulk imports / bad data).
+    """
+    visited: set[str] = set()
+    merged_nodes: list[dict[str, Any]] = []
+    merged_edges: list[dict[str, Any]] = []
+    merged_forks: list[dict[str, Any]] = []
+    descendant_ids: list[str] = []
+    run_summaries: dict[str, dict[str, Any]] = {}
+
+    stack: list[str] = [root_run_id]
+
+    while stack:
+        rid = stack.pop(0)  # BFS-ish; ordering is stable + deterministic
+        if rid in visited:
+            continue
+        visited.add(rid)
+
+        run = store.get_run(rid)
+        if run is None:
+            # Skip gracefully — a fork referencing a vanished run shouldn't
+            # 500 the viewer. Frontend just won't see its nodes.
+            continue
+
+        nodes = store.get_nodes_for_run(rid)
+        forks = store.get_forks_for_parent(rid)
+
+        subtree = _assemble_tree(store, rid, nodes, forks)
+        merged_nodes.extend(subtree["nodes"])
+        merged_edges.extend(subtree["edges"])
+        merged_forks.extend(subtree["child_runs"])
+
+        descendant_ids.append(rid)
+        run_summaries[rid] = {
+            "task_description": run.task_description,
+            "status": run.status.value if hasattr(run.status, "value") else run.status,
+            "started_at": run.started_at.isoformat() if run.started_at else None,
+            "adapter": run.adapter,
+        }
+
+        for fork in forks:
+            if fork.child_run_id not in visited:
+                stack.append(fork.child_run_id)
+
+    return {
+        "run_id": root_run_id,
+        "nodes": merged_nodes,
+        "edges": merged_edges,
+        "child_runs": merged_forks,
+        "descendant_run_ids": descendant_ids,
+        "run_summaries": run_summaries,
     }
 
 
@@ -365,13 +445,27 @@ def build_app(store: SqliteStore) -> FastAPI:
         return {"forks": [_fork_to_dict(f) for f in forks], "count": len(forks)}
 
     @app.get("/runs/{run_id}/tree")
-    def get_run_tree(run_id: str) -> JSONResponse:
+    def get_run_tree(
+        run_id: str,
+        include_descendants: bool = Query(
+            False,
+            description=(
+                "If true, DFS-merges every descendant run (reachable via fork "
+                "edges) into a single unified tree. Response gains "
+                "`descendant_run_ids` and `run_summaries` fields. Each node "
+                "dict carries its `run_id` so the frontend can group by lane."
+            ),
+        ),
+    ) -> JSONResponse:
         run = store.get_run(run_id)
         if run is None:
             raise HTTPException(status_code=404, detail=f"Run not found: {run_id}")
-        nodes = store.get_nodes_for_run(run_id)
-        forks = store.get_forks_for_parent(run_id)
-        tree = _assemble_tree(store, run_id, nodes, forks)
+        if include_descendants:
+            tree = _assemble_tree_with_descendants(store, run_id)
+        else:
+            nodes = store.get_nodes_for_run(run_id)
+            forks = store.get_forks_for_parent(run_id)
+            tree = _assemble_tree(store, run_id, nodes, forks)
         return JSONResponse(content=tree)
 
     # ------------------------------------------------------------------
