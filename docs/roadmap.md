@@ -139,7 +139,7 @@ the plan-artifact `fork plan emit → edit → fork plan exec` loop is the shipp
 **Gated by ADR-014 entry criteria** (all four must be green before any Phase-2 code lands):
 - **R1** — Adapter interface as a typed `Protocol`, ≥1 non-LangGraph reference implementation behind a feature flag. *Contract:* ✅ ADR-016 (R26). *Implementation:* ✅ R28 (`src/chronos/adapters/linear/`, zero-dep linear-pipeline reference adapter, 25 unit tests, structural conformance to `LangGraphRecorder` public shape).
 - **R2** — Extractor contract formalised. ✅ ADR-015 (R25).
-- **R3** — Dogfood triple (record → fork plan emit → fork plan exec) green on LangGraph *and* the Phase-2 reference adapter, in CI. ⏳ pending (target R29, now unblocked).
+- **R3** — Dogfood triple (record → fork plan emit → fork plan exec) green on LangGraph *and* the Phase-2 reference adapter, in CI. ✅ R29 (`tests/integration/test_dual_adapter_dogfood.py`, 4 tests, 293/293 suite green; surfaced + fixed a real `__chronos_usage__` API gap as a side-effect).
 - **R4** — Written "what breaks at multi-framework boundary" risks doc with mitigations. ✅ R27 (`docs/research/multi-framework-risks.md`, 6 risks × description+evidence+mitigation+owner).
 
 ### Key milestones
