@@ -80,11 +80,18 @@ export type TreeEdge =
       edited_fields: Record<string, unknown>;
     };
 
+export interface Lane {
+  agent_id: string;
+  node_count: number;
+  first_step_index: number;
+}
+
 export interface Tree {
   run_id: string;
   nodes: Node[];
   edges: TreeEdge[];
   child_runs: Fork[];
+  lanes: Lane[];
 }
 
 export interface RunsResponse {

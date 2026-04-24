@@ -109,6 +109,10 @@ def _assemble_tree(
                ...
            ],
            "child_runs": [<fork dict>, ...],
+           "lanes": [
+               {"agent_id": str, "node_count": int, "first_step_index": int},
+               ...
+           ],
        }
 
     Edge kinds:
@@ -118,6 +122,15 @@ def _assemble_tree(
       first node of the child run. If the child run has no nodes yet
       (e.g. still running), the edge's ``to`` is ``None`` and the frontend
       shows the fork as an unresolved branch.
+
+    Lanes (R37 — multi-agent concurrent lanes):
+
+    Derived from ``node.metadata["agent_id"]``. Single-agent adapters emit
+    ``"main"`` so single-lane runs still get ``[{"agent_id": "main", ...}]``
+    and the frontend can render lane decorations uniformly. Order is by
+    first appearance (smallest ``step_index``) — stable and deterministic.
+    Missing ``agent_id`` defaults to ``"main"`` so legacy DBs recorded before
+    the field existed render as single-lane without breaking.
 
     This shape is a strict superset of what ReactFlow needs (frontend adds
     ``position`` / ``type`` locally) and is framework-neutral — it doesn't
@@ -153,11 +166,28 @@ def _assemble_tree(
             }
         )
 
+    # Lanes — derive from node.metadata.agent_id, preserving first-appearance
+    # order so the frontend can render lanes deterministically.
+    lanes: list[dict[str, Any]] = []
+    seen_agents: dict[str, dict[str, Any]] = {}
+    for node in sorted(nodes, key=lambda n: n.step_index):
+        agent_id = str(node.metadata.get("agent_id") or "main")
+        if agent_id not in seen_agents:
+            lane_entry = {
+                "agent_id": agent_id,
+                "node_count": 0,
+                "first_step_index": node.step_index,
+            }
+            seen_agents[agent_id] = lane_entry
+            lanes.append(lane_entry)
+        seen_agents[agent_id]["node_count"] += 1
+
     return {
         "run_id": run_id,
         "nodes": [_node_to_dict(n) for n in nodes],
         "edges": edges,
         "child_runs": [_fork_to_dict(f) for f in forks],
+        "lanes": lanes,
     }
 
 

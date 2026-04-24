@@ -71,7 +71,7 @@ function InnerTree({
   const playback = usePlayback(orderedNodes.length);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const { rfNodes: baseNodes, rfEdges: baseEdges } = useMemo(
+  const { rfNodes: baseNodes, rfEdges: baseEdges, laneBands } = useMemo(
     () => treeToReactFlow(tree),
     [tree],
   );

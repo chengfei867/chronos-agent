@@ -385,6 +385,95 @@ def test_tree_404_for_unknown_run(client: TestClient) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Multi-agent concurrent lanes (R37)
+# ---------------------------------------------------------------------------
+
+
+def test_tree_lanes_single_lane_for_main_agent(
+    client: TestClient, scenario: tuple[SqliteStore, dict[str, str]]
+) -> None:
+    """Default fixture has no agent_id in metadata → falls back to 'main' → one lane."""
+    _, ids = scenario
+    resp = client.get(f"/runs/{ids['parent_run']}/tree")
+    tree = resp.json()
+    assert "lanes" in tree, "lanes field must be present in /tree response"
+    assert tree["lanes"] == [
+        {"agent_id": "main", "node_count": 3, "first_step_index": 0}
+    ]
+
+
+def test_tree_lanes_derives_from_metadata_agent_id(tmp_path: Path) -> None:
+    """When nodes carry different ``metadata.agent_id`` values, lanes reflect
+    the set of distinct agents in first-appearance order."""
+    db_path = tmp_path / "lanes.db"
+    with SqliteStore.open(db_path) as store:
+        run_id = _uuid()
+        run = Run(
+            id=run_id,
+            adapter="autogen",
+            adapter_thread_id="thread-autogen",
+            status=RunStatus.COMPLETED,
+            task_description="three agents",
+        )
+        store.put_run(run)
+        # Alice -> Bob -> Alice -> Charlie -> Bob — 3 distinct agents, Alice first.
+        prev: str | None = None
+        plan = [
+            ("alice", 0),
+            ("bob", 1),
+            ("alice", 2),
+            ("charlie", 3),
+            ("bob", 4),
+        ]
+        for agent, step in plan:
+            nid = _uuid()
+            node = Node(
+                id=nid,
+                run_id=run_id,
+                step_index=step,
+                node_name=f"{agent}:TextMessage",
+                kind=NodeKind.LLM,
+                parent_node_id=prev,
+                metadata={"agent_id": agent},
+            )
+            store.put_node(node)
+            prev = nid
+
+        app = build_app(store)
+        tc = TestClient(app)
+        resp = tc.get(f"/runs/{run_id}/tree")
+        assert resp.status_code == 200
+        lanes = resp.json()["lanes"]
+        # First-appearance order: alice (step 0), bob (step 1), charlie (step 3).
+        assert lanes == [
+            {"agent_id": "alice", "node_count": 2, "first_step_index": 0},
+            {"agent_id": "bob", "node_count": 2, "first_step_index": 1},
+            {"agent_id": "charlie", "node_count": 1, "first_step_index": 3},
+        ]
+
+
+def test_tree_lanes_empty_run_yields_empty_list(tmp_path: Path) -> None:
+    """Run with no nodes → empty lanes (not a single-item 'main' lane)."""
+    db_path = tmp_path / "empty.db"
+    with SqliteStore.open(db_path) as store:
+        run_id = _uuid()
+        store.put_run(
+            Run(
+                id=run_id,
+                adapter="linear",
+                adapter_thread_id="thread-empty",
+                status=RunStatus.RUNNING,
+                task_description="no nodes yet",
+            )
+        )
+        app = build_app(store)
+        tc = TestClient(app)
+        resp = tc.get(f"/runs/{run_id}/tree")
+        assert resp.status_code == 200
+        assert resp.json()["lanes"] == []
+
+
+# ---------------------------------------------------------------------------
 # build_app is a factory (no shared state across apps)
 # ---------------------------------------------------------------------------
 

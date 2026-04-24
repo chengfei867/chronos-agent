@@ -353,6 +353,7 @@ class AutoGenRecorder:
                     state_after={"messages": list(cumulative)},
                     model_name=(getattr(msg, "model_name", None) if usage is not None else None),
                     usage=usage,
+                    metadata={"agent_id": source},
                 )
                 self._store.put_node(node)
                 node_ids.append(node_id)

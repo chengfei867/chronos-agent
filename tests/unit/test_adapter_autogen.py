@@ -188,6 +188,17 @@ def test_record_submit_result_persists_run_and_nodes(store, sample_messages):
     for i in range(1, len(nodes)):
         assert nodes[i].parent_node_id == nodes[i - 1].id
 
+    # R37 — each node carries metadata['agent_id'] = the message's `source`
+    # so the /tree endpoint can derive multi-agent swimlanes without parsing
+    # node_name. Sample fixture has 3 distinct agents: user, assistant, calc.
+    assert [n.metadata.get("agent_id") for n in nodes] == [
+        "user",
+        "assistant",
+        "assistant",
+        "calc",
+        "assistant",
+    ]
+
 
 # ---------------------------------------------------------------------------
 # 2. Fallback path — user forgot submit_result
