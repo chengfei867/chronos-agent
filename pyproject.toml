@@ -38,6 +38,10 @@ dev = [
     "mypy>=1.10",
     "types-requests",
 ]
+autogen = [
+    "autogen-agentchat>=0.7.5",
+    "autogen-ext>=0.7.5",
+]
 
 [project.scripts]
 chronos = "chronos.cli:app"

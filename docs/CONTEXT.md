@@ -147,37 +147,38 @@
    147|
 ## 5. 当前状态 (Current State)
 
-**截至 Round 32 结束 (2026-04-24 CST 上午 cron 轮) — ADR-016 P2 首批活 instance 上线**
+**截至 Round 33 结束 (2026-04-24 CST 上午 user-driven) — AutoGen adapter (record-only) 首 commit 上线, ADR-017 sync-wrap 策略拍板**
 
-- Round: **32 完成** (module-level `AdapterProtocol` instances)
-- 最近 progress doc: `progress/2026-04-24-round-32.md` ← **下一轮必读**
-- 当前阶段: **Phase 2 in-flight** — v0.2.0a0 released (R30); R31 landed canonical `protocols.py`; R32 landed first two live `AdapterProtocol` instances (`langgraph_adapter`, `linear_adapter`). AutoGen adapter still R33 候选.
-- 最新 ADR: **ADR-016 (R26)** — R31+R32 都是 rollout 实施, 不是新决策
-- 最新 research doc: `docs/research/multi-framework-risks.md` (R27 + R29 verdict)
-- 最新 tag: **v0.2.0a0** (R30 cut); `[Unreleased]` 现在叠了 R31 + R32 两段
+- Round: **33 完成** (AutoGen adapter record-only + ADR-017)
+- 最近 progress doc: `progress/2026-04-24-round-33.md` ← **下一轮必读**
+- **战略定位锁死 (R33 用户确认)**: 目标是 **GitHub 爆款开源项目**, 不是 SaaS 产品. 底层能力 + DX + 文档到位, 不做多用户/托管. 这个定位直接驱动了 ADR-017 选 Path A (sync wrap) 而非 Path B (async Protocol 家族) — DX > 架构优雅.
+- 当前阶段: **Phase 2 in-flight** — v0.2.0a0 released (R30); R31 (canonical protocols) + R32 (module-level instances) + R33 (AutoGen adapter) 都在 `[Unreleased]`. 3 个 adapter 都已有 module-level `AdapterProtocol` instance.
+- 最新 ADR: **ADR-017 (R33)** — AutoGen sync-wrap 策略, 明确拒绝 async Protocol 家族
+- 最新 research doc: `docs/research/multi-framework-risks.md` (R27 + R29 verdict) — R-4 async 风险已被 ADR-017 化解
+- 最新 tag: **v0.2.0a0** (R30 cut); `[Unreleased]` 现在叠了 R31 + R32 + R33 三段
 - Blocked items: 无
-- 测试状态: **336/336 pass** (93% coverage; +21 new tests in `test_adapter_instances.py`, +22 from R31's `test_adapter_protocols.py`)
-- CLI 表面: 未变 (R32 纯增量, 新导出不破坏任何旧 import)
-- **R32 产出 (本轮)**:
-  - `src/chronos/adapters/langgraph.py` 末尾新增 `_LangGraphAdapter` class + `langgraph_adapter = _LangGraphAdapter()` singleton. `name="langgraph"`, `version_constraint=">=1.1,<2"`. `build_recorder(store, *, kind_map, usage_extractor, **adapter_specific)` 转发前两个 kwarg 到 `LangGraphRecorder.__init__`, 任何 `**adapter_specific` → `AdapterError` (LangGraph 作为 first-class adapter 没有框架特定构造参数).
-  - `src/chronos/adapters/linear/__init__.py` 重写为完整 module: 新增 `_LinearAdapter` class + `linear_adapter = _LinearAdapter()` singleton. `name="linear"`, `version_constraint=""` (zero-dep 允许空). `build_recorder()` 对 `kind_map` / `usage_extractor` 非 None 抛 `AdapterError` 并提示正确通道 (`LinearRuntime.kind_map` / `__chronos_usage__` state-key); 接受 `adapter_name` via `**adapter_specific`; 未知 kwarg 抛 `AdapterError`.
-  - `src/chronos/adapters/__init__.py` 重写 — 现在暴露 9 个名字 (原 7 + `langgraph_adapter` + `linear_adapter` + 顺手加 `LinearRecorder` + `LinearRuntime`).
-  - `tests/unit/test_adapter_instances.py` (+21 tests, 5 test classes): metadata 值断言 / `isinstance(x, AdapterProtocol)` / `build_recorder()` 返回 `RecorderProtocol` / LangGraph 转发+错误 / Linear 3 条错误路径 + adapter_name / package 级 re-export + 可枚举 roster
-  - CHANGELOG `[Unreleased]` 新增 R32 Added + Tests 两小段 (R31 段已在之前)
-- **R32 为什么不是 ADR**: ADR-016 §P2 早已定义 `AdapterProtocol` 的字段 + `build_recorder()` 签名. R32 只是每个 shipping adapter 填一个 instance, 属 rollout 实施非合同决策.
-- **R32 意外发现 (value-add)**: Linear adapter 的 `kind_map` 实际住在 `LinearRuntime` 而不是 `LinearRecorder` 上 — 这意味着 `AdapterProtocol.build_recorder()` 的 `kind_map` kwarg 对 Linear 是语义不通道. 选择: 不静默忽略 (会骗用户), 而是 `AdapterError` + 指路. **教训 (新旧事实)**: 未来 adapter 如果 `build_recorder()` 某个标准 kwarg 不适用, "硬抛错 + 指路" 永远比 "静默忽略" 好.
-- **R31 产出 (上一轮, 回顾)**:
-  - `src/chronos/adapters/protocols.py` (~290 LOC) — canonical home for `RunRef` / `ForkRef` / `AdapterError` + 3 个 `@runtime_checkable` Protocols
-  - `langgraph.py` / `linear/recorder.py` 删本地 dataclass 改 re-import; 后者末尾加 `__all__`
-  - `tests/unit/test_adapter_protocols.py` (+22 tests)
-- **R31 教训 (仍有效)**: mypy strict 下模块间 re-export 链要求每一层模块自己的 `__all__` 都显式列出 re-export 名字. 错误信息 `[attr-defined] does not explicitly export` 误导人以为属性不存在, 其实只是 `__all__` 没列.
-- **R30 bundle 回顾 (仍有效)**: v0.2.0a0 release cut (R24-R29 打包), 顺手修 R29 遗留 mypy bug
-- **R29 bundle 回顾 (仍有效)**: dual adapter dogfood + linear usage-hint API 泛化
-- **R28 bundle 回顾 (仍有效)**: linear reference adapter + 25 unit tests
-- **R27 bundle 回顾 (仍有效)**: multi-framework risks doc (6 risks + R29 verdict)
-- **R26 bundle 回顾 (仍有效)**: ADR-016 (adapter interface 3 Protocols) + roadmap drift 大修
-- **R25 bundle 回顾 (仍有效)**: ADR-015 (extractor contract v2) + 四面包屑
-- **R24 bundle 回顾 (仍有效)**: ADR-014 (Phase 2 entry checklist) + FORCE_COLOR conftest 修复
+- 测试状态: **346/346 pass** (+10 new tests in `test_adapter_autogen.py`; mypy strict clean on 24 src files; ruff + format clean)
+- CLI 表面: 未变 (R33 纯增量, 新 import `from chronos.adapters import autogen_adapter, AutoGenRecorder`)
+- **R33 产出 (本轮)**:
+  - `docs/decisions/ADR-017-autogen-adapter-sync-wrap.md` (~9.6 KB) — 决策 sync wrap 策略, 3-min spike 证明 `asyncio.run(team.run(...))` 返回完整 `TaskResult.messages` 足够建 Node 树; 四条否决 Path B 的理由以 DX 为首; rollback plan 明确 v0.3 可升级 `AsyncRecorderProtocol` 作 superset
+  - `src/chronos/adapters/autogen/__init__.py` — `_AutoGenAdapter` class + `autogen_adapter = _AutoGenAdapter()` singleton. `name="autogen"`, `version_constraint=">=0.7,<0.8"`. `build_recorder()` 对 `usage_extractor` 非 None 抛 `AdapterError` (AutoGen 读 `models_usage` 不走 ADR-015 callback 桥); 接受 `adapter_name` via `**adapter_specific`; 未知 kwarg 抛 `AdapterError` (沿用 R32 Linear 模式)
+  - `src/chronos/adapters/autogen/recorder.py` (~380 LOC) — `AutoGenRecorder` 实现 `RecorderProtocol`. `record()` sync CM yield 一个加挂 `submit_result` 方法的 `RunRef`; 用户 `asyncio.run(team.run(...))` 后调 `ref.submit_result(result)` (主路径) 或靠 `runtime.messages` fallback (副路径); CM exit 时 walk `TaskResult.messages` 建 Node, 每个 Node 的 `state_after = {"messages": [...cumulative...]}`. `fork()` 抛 `AdapterError("...See ADR-017 §Decision")` 结构性满足 Protocol 但不实现.
+  - Message → NodeKind 映射: `TextMessage(source=user)` → `FN`, `TextMessage(source=assistant)` → `LLM`, `ToolCall*` → `TOOL`, `HandoffMessage` → `ROUTER`, `StopMessage` → `END`. Kind map merge-over-default, 用户只覆盖想要改的.
+  - `tests/unit/test_adapter_autogen.py` (+10 tests) — duck-typed `_StubMessage`/`_StubTaskResult`/`_StubTeam`, **不 import autogen_agentchat**. 覆盖: submit_result / fallback / usage / 异常 / fork NotImpl / Protocol 一致性 / factory channel 校验
+  - `src/chronos/adapters/__init__.py` 扩展暴露 `AutoGenRecorder` + `autogen_adapter`
+  - `pyproject.toml` `[project.optional-dependencies].autogen` 新增 `autogen-agentchat>=0.7,<0.8` + `autogen-ext`
+  - `docs/roadmap.md` Phase 2 milestones 新增 `[x] AutoGen adapter (record-only, ADR-017...)`
+- **R33 关键 bug 修复 (新旧事实)**: `SqliteStore.put_run()` 用 `INSERT OR REPLACE`, SQLite 实现是 "DELETE-then-INSERT"; `nodes.run_id ON DELETE CASCADE` 意味着**同一事务里 `put_run()` 第二次会 cascade 删掉所有 Node 行**. 首次 impl 按 LangGraph 风格 write-RUNNING → insert-nodes → write-COMPLETED 直接零 Node. 修复: 事务外算好 final_state + 序列化消息列表, 事务内 put_run 恰好一次为 COMPLETED, 再 insert nodes. **教训**: 未来 adapter 永远不要同一事务里 put_run 两次; 如需中途更新 status, 加一个 `update_run_status()` 不 cascade 的 store 方法.
+- **R33 战略原则确立 (新旧事实)**: 遇到"框架 API 和 Chronos Protocol 不匹配"的岔口, **先花 3 分钟 spike 验证假设是否真硬** 再决定是否动 Protocol. 本轮 spike 证明 async-first 的"硬"只是 API 表面不是架构, `asyncio.run()` 一行能 bridge, 避免了引入 `AsyncRecorderProtocol` 家族的 2x ADR/invariant 成本.
+- **R32 产出 (上一轮, 回顾)**: module-level `langgraph_adapter` / `linear_adapter` singletons + 21 tests
+- **R31 产出 (上上轮, 回顾)**: canonical `protocols.py` + 22 tests
+- **R30 bundle 回顾 (仍有效)**: v0.2.0a0 release cut
+- **R29 bundle 回顾 (仍有效)**: dual adapter dogfood
+- **R28 bundle 回顾 (仍有效)**: linear reference adapter
+- **R27 bundle 回顾 (仍有效)**: multi-framework risks doc
+- **R26 bundle 回顾 (仍有效)**: ADR-016 adapter interface
+- **R25 bundle 回顾 (仍有效)**: ADR-015 extractor contract v2
+- **R24 bundle 回顾 (仍有效)**: ADR-014 Phase 2 entry checklist
 - 旧事实 (仍生效, 不重复):
   - GitHub push 只有 `gh-proxy.com`
   - LangGraph 1.1.9 record/fork/diff 全链路 OK
@@ -190,8 +191,9 @@
   - **progress doc 每轮必写**
   - **`ForkPlan` schema 是 v0.1.1 对外契约**
   - **Extractor contract v2 (ADR-015) 是 v0.1.2+ 对外契约**
-  - **Adapter interface (ADR-016) 是 v0.2.0 对外契约** (R26 决策, R31 实施 canonical `protocols.py`, R32 实施 module-level instances)
-  - **Multi-framework risks (R27 research doc) 是 v0.2.0 前必读 Phase 2 gotchas 清单**
+  - **Adapter interface (ADR-016) 是 v0.2.0 对外契约** (R26 决策, R31 canonical `protocols.py`, R32 module-level instances, R33 AutoGen 实现)
+  - **AutoGen sync-wrap (ADR-017) 是 AutoGen adapter 的永久架构原则** (R33); 未来 Async superset 只能作为严格超集, 不可破坏 sync Protocol
+  - **Multi-framework risks (R27 research doc) 是 v0.2.0 前必读 Phase 2 gotchas 清单** (R-4 async 已被 ADR-017 化解)
   - **Anthropic prompt caching 计账** (R15, ADR-015 Layer 5): cache_creation + cache_read 加到 prompt_tokens
   - **OpenAI reasoning tokens 语义** (R15, ADR-015 Layer 5): reasoning 是 completion 子字段, 不减
   - **Duck typing 原则** (R15, ADR-015 Layer 5): extractor 不 import SDK
@@ -212,58 +214,60 @@
   - **Research doc > ADR (R27 确立)**: 活内容用 `docs/research/*.md`
   - **Usage 字段边界 (R30 确立)**: `core.models.Usage` 只有 3 个 token 字段; `model_name` / `cost_usd_cents` 在 `Node` 上
   - **Release cut step 5 价值 (R30 确立)**: mypy 是最便宜的救命网
-  - **Module re-export + mypy strict (R31 确立)**: 当模块 A 从 `protocols.py` import `X` 并被模块 B 再次 re-export 时, mypy strict (`implicit_reexport = False` or explicit `[attr-defined]`) 要求 A 模块自己加 `__all__` 显式列出 `X`. 否则 B 里 `from A import X` 报 `[attr-defined]`. 典型表现: 错误信息说 "does not explicitly export attribute X", 实际 X 确实在 A 的 module namespace 里, 只是没被 `__all__` 声明.
-  - **AdapterProtocol build_recorder() 不适用 kwarg 处理 (R32 确立)**: 当某个 adapter 的 `build_recorder(store, *, kind_map, usage_extractor, **adapter_specific)` 里某个标准 kwarg 实际上对这个 adapter 不是活通道 (例: Linear 的 `kind_map` 活在 `LinearRuntime` 上不在 recorder 上), **必须 `AdapterError` + 指向真正的活通道**, 不能静默忽略. 静默忽略会让调用方以为生效了. 本轮 Linear adapter 3 条 error 路径都是这个模式.
+  - **Module re-export + mypy strict (R31 确立)**: 当模块 A 从 `protocols.py` import `X` 并被模块 B 再次 re-export 时, mypy strict 要求 A 模块自己加 `__all__` 显式列出 `X`
+  - **AdapterProtocol build_recorder() 不适用 kwarg 处理 (R32 确立)**: 非活通道必须 `AdapterError` + 指路, 不能静默忽略
+  - **SQLite `INSERT OR REPLACE` + `ON DELETE CASCADE` 陷阱 (R33 确立)**: `put_run()` 第二次会 cascade 删掉所有 Node. 同事务内 `put_run()` 只能 1 次. 如需 mid-flight status 更新, 加非 cascade 的 `update_run_status()`.
+  - **假设硬度先 spike 再决策 (R33 确立)**: 遇到"框架 API 和 Chronos Protocol 不匹配"岔口, 3 分钟 minimal spike 验证硬度后再决定是否动 Protocol. 本轮用这套路避免了引入 `AsyncRecorderProtocol` 家族.
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 33 候选 — 两个实体 adapter instance 已活 (R32), AutoGen 首 commit 是下一个实体重量级 ticket**
+**Round 34 候选 — OSS 爆款定位下, Web UI demo 链是最高价值**
 
-### R33-A (推荐): AutoGen adapter 首 commit — 真正的 Phase 2 第三个 adapter
+战略视角: 用户 R33 明确"GitHub 爆款 OSS 项目, 底层能力好 + DX 好即可". 5 分钟装完能看到自己 agent 的 reasoning tree = 最强安利话术. 三个 adapter 已经齐了, 现在缺的是"看得见"的这条链.
 
-- 前置: R32 ✅ (`AdapterProtocol` 有 2 个活 instance 可参照; `langgraph_adapter` / `linear_adapter` 是 `autogen_adapter` 的模板)
-- 预估: 1-2 轮 (可能触发 ADR-017 async)
+### R34-A (强推): Local HTTP API — `chronos.api.server`
+
+- 前置: R33 ✅ (3 个 adapter 已 live, store 层已稳)
+- 预估: 1 轮
 - 产出:
-  - `uv add --optional autogen autogen-agentchat` (optional dep group; 失败立即退到 R33-C)
-  - `src/chronos/adapters/autogen/__init__.py` + `recorder.py` 占位 + `AutoGenRecorder.record()` 跑通 minimal group chat (2 agent)
-  - 新 `autogen_adapter = _AutoGenAdapter()` module-level instance (照 R32 模板)
-  - 至少 1 个单元测试 (可用 stub/fake; 不依赖真 LLM)
-  - 如果碰到 async-first API 无法套用现 sync Protocol → 立即停下写 ADR-017 `AsyncRecorderProtocol` 而不是硬塞
-- 价值: 压测 R-1 (event-model drift) 和 R-4 (async); 是 v0.2.0b0 的核心卖点
-- 非目标: 本轮不做 fork + 不做 CI 三 adapter dogfood 接入
-- **安全门**: 如果 `autogen-agentchat` 装不下 / 跟 OneAPI 不兼容, 就退到 R33-B 或 R33-C
+  - `src/chronos/api/server.py` — FastAPI app. 端点最小集: `GET /runs` / `GET /runs/{id}` / `GET /runs/{id}/nodes` / `GET /runs/{id}/tree` (reasoning tree JSON, ReactFlow-friendly shape)
+  - `uv add --optional web fastapi uvicorn` (optional dep)
+  - 单元测试: `httpx.AsyncClient` + `TestClient`, 覆盖所有端点 happy + 404
+  - **不做**: auth / CORS / pagination / streaming — 本地工具不需要
+- 价值: Web UI 的必要前提; `chronos web` 命令的后端
+- 风险: 低 (纯读 SqliteStore, 已知 API)
 
-### R33-B (次选): CLI `chronos adapters list` — R32 的自然延伸
+### R34-B (并行候选): `chronos web` 命令 + ReactFlow viewer 占位
 
-- 前置: R32 ✅
-- 预估: 0.5-1 轮
+- 前置: 不严格要求 R34-A, 可用 fixture data 先搭前端壳
+- 预估: 1-2 轮
 - 产出:
-  - 新 `src/chronos/cli/adapters.py` — 暴露 `adapters_command(console, ...)` (照 R14 CLI 模块形状)
-  - 顶层枚举 `chronos.adapters` package namespace 里所有 `AdapterProtocol`-conformant 对象 (利用 `isinstance(x, AdapterProtocol)` 在 `@runtime_checkable` 下), 打印 `name / version_constraint / recorder class name` 表格
-  - JSON 模式走 `print(json.dumps(...))` (旧事实)
-  - `src/chronos/cli/__init__.py` 注册 subcommand
-  - 单元测试: `CliRunner` 断 human + JSON 输出
-- 价值: 首个 user-facing feature 验证 `AdapterProtocol` 的 "对外可枚举" 声明; 给后续 adapter registry 打底
-- 风险: 低 (纯增量 CLI)
+  - `src/chronos/cli/web.py` — `chronos web` subcommand, launch uvicorn + 打开浏览器
+  - `src/chronos/api/static/` — 最小 React + ReactFlow SPA, 读 `/runs/{id}/tree` 画 reasoning tree
+- 价值: **这就是 README 里那张 GIF 的主角**; OSS 爆款安利点
+- 风险: 中 (前端涉及 bundler, 可能需要 `uv add --optional web ...` + vite)
 
-### R33-C (fallback): Release cut v0.2.0b0 — 打包 R31 + R32
+### R34-C (可延): AutoGen integration dogfood — 真 Team.run() 跑通
 
-- 如果 R33-A/B 都不顺: 按 `chronos-release-pattern` skill 7 步打 v0.2.0b0 beta, 把 R31 + R32 的 `[Unreleased]` 内容 cut 出去
-- R31 (canonical protocols.py) + R32 (module-level instances) 是一个自然的 beta 主题 ("adapter interface live")
-- 1 轮完工
+- 预估: 0.5 轮
+- 产出: `tests/integration/test_autogen_real.py` 标 `@pytest.mark.slow`, 用 OneAPI 跑一个 2-agent group chat, 断 Node 树形态
+- 价值: 验证 R33 stub 测试 match 真相; 补 dogfood triple R3 criterion 的 AutoGen 半边 (但因 fork 没实现, 这个三元组还是不完整, 只能算 "record triple")
+- 风险: 低; 如果失败说明 stub 偏离真相, 需要回去改 recorder
 
-### R33 非目标 (继承)
+### R34 非目标 (继承)
 
-- ❌ execute-fork 实现 (ADR-013 冻结, 未解除)
-- ❌ Web UI 任何代码 (Phase 2 red line, CONTEXT.md §4 明确登记)
-- ❌ 破坏性改动 ADR-015 / ADR-016 Protocol 签名 (v0.2.x 合同已稳)
-- ❌ 改 `protocols.py` 里的 Protocol 签名 (那是 ADR-017 的事)
+- ❌ execute-fork 实现 (ADR-013 冻结未解除)
+- ❌ AutoGen fork (ADR-017 §Decision 明确 Phase 3 候选)
+- ❌ 多用户 / auth / 托管 — **用户 R33 明确战略红线**
+- ❌ 破坏性改动 ADR-015 / ADR-016 / ADR-017 合同
 
 ### Release strategy
 
-- `[Unreleased]` 现在叠了 R31 + R32 两个 Added/Changed/Tests 段
-- 下一个 release 建议: R33-A AutoGen 半边跑通 → cut v0.2.0b0; 或 R33-B/C 单独 cut v0.2.0b0
+- `[Unreleased]` 现在叠了 R31 + R32 + R33 三个 Added/Changed/Tests 段
+- 下一个 release 建议: R34-A 落完 → cut v0.2.0b0 (Web API 是 beta 自然主题), 或 R34-A+B 一起 cut v0.2.0b0
 - 按 `chronos-release-pattern` skill 走 7 步
+
+**推荐**: R34-A (Local HTTP API). 是 Web UI demo 链的后端基石, 1 轮能出活, 风险最低.
 
 ## Cron 窗口门控 (2026-04-22 用户指令)
 

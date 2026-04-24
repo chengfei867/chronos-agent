@@ -144,6 +144,7 @@ the plan-artifact `fork plan emit → edit → fork plan exec` loop is the shipp
 
 ### Key milestones
 - [x] Phase-2 reference adapter (linear-pipeline adapter conforming to ADR-016 `RecorderProtocol`, R28 — satisfies ADR-014 R1 *implementation* half)
+- [x] AutoGen adapter (record-only, ADR-017 sync-wrap strategy, R33 — `src/chronos/adapters/autogen/`, 10 unit tests, structural `RecorderProtocol` conformance. Fork deferred to Phase 3 per ADR-017 §Decision.)
 - [ ] Multi-agent reasoning tree representation (concurrent lanes)
 - [ ] Local HTTP API (`chronos.api.server`)
 - [ ] Web UI basics: reasoning tree viewer (ReactFlow), run list, diff viewer
