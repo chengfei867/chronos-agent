@@ -376,7 +376,11 @@ class LinearRecorder:
                 model_name=hint_model_name,
                 usage=usage_obj,
                 cost_usd_cents=hint_cost_usd_cents,
-                metadata={"adapter": self._adapter_name, "linear_step": step_cursor},
+                metadata={
+                    "adapter": self._adapter_name,
+                    "linear_step": step_cursor,
+                    "agent_id": "main",
+                },
             )
             nodes.append(node)
             prev_node_id = node.id

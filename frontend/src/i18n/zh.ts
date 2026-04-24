@@ -99,6 +99,11 @@ export default {
     edgeSequential: "顺序",
     edgeFork: "分叉",
     emptyTree: "这次运行没有记录任何节点",
+    showDescendants: "显示完整族谱",
+    showDescendantsTip: "把所有由当前运行派生出来的子分叉 Run 一并铺开，按上下泳道区分。适合回看「如果当时改成 X，结果会怎样」的全部分支。",
+    runsInTree: "共 {{count}} 个 Run",
+    laneRoot: "根 Run",
+    laneFork: "分叉 Run",
     clickHint: "点击节点查看详细信息",
   },
   nodeDetails: {

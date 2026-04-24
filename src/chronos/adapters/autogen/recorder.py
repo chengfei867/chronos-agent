@@ -98,7 +98,10 @@ def _serialize_message(msg: Any) -> dict[str, Any]:
     """
     if hasattr(msg, "model_dump"):
         try:
-            return dict(msg.model_dump(mode="python"))
+            # mode="json" coerces datetime/UUID/etc. to JSON-safe primitives.
+            # AutoGen 0.7 adds a `created_at: datetime` field on BaseChatMessage
+            # which broke json.dumps in put_run(). See R37.5 live-smoke debug.
+            return dict(msg.model_dump(mode="json"))
         except Exception:
             pass
     # Duck-typed fallback — pull the usual fields.
@@ -353,6 +356,7 @@ class AutoGenRecorder:
                     state_after={"messages": list(cumulative)},
                     model_name=(getattr(msg, "model_name", None) if usage is not None else None),
                     usage=usage,
+                    metadata={"agent_id": source},
                 )
                 self._store.put_node(node)
                 node_ids.append(node_id)

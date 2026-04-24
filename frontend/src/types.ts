@@ -85,6 +85,19 @@ export interface Tree {
   nodes: Node[];
   edges: TreeEdge[];
   child_runs: Fork[];
+  /** Only present on include_descendants=true responses. Root run first, then
+   * DFS-ordered descendants. */
+  descendant_run_ids?: string[];
+  /** Only present on include_descendants=true responses. Keyed by run_id. */
+  run_summaries?: Record<string, RunSummary>;
+}
+
+export interface RunSummary {
+  id: string;
+  adapter: string;
+  status: RunStatus;
+  task_description: string | null;
+  started_at: string;
 }
 
 export interface RunsResponse {

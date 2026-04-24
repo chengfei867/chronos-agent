@@ -136,6 +136,7 @@ markers = [
     "spike: marks tests as PoC spikes (may be deleted later)",
     "integration: marks tests requiring external services (LLM API)",
     "slow: marks slow tests",
+    "live: marks tests that make real LLM API calls (opt-in via CHRONOS_LIVE=1; skipped by default in CI)",
 ]
 asyncio_mode = "auto"
 

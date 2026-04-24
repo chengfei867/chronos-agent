@@ -41,8 +41,12 @@ export async function fetchRun(
   return getJSON<{ run: Run; nodes: Node[] }>(`/runs/${encodeURIComponent(runId)}`);
 }
 
-export async function fetchTree(runId: string): Promise<Tree> {
-  return getJSON<Tree>(`/runs/${encodeURIComponent(runId)}/tree`);
+export async function fetchTree(
+  runId: string,
+  includeDescendants: boolean = false,
+): Promise<Tree> {
+  const suffix = includeDescendants ? "?include_descendants=true" : "";
+  return getJSON<Tree>(`/runs/${encodeURIComponent(runId)}/tree${suffix}`);
 }
 
 export async function fetchForks(

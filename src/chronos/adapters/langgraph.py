@@ -492,6 +492,7 @@ class LangGraphRecorder:
                     "parent_checkpoint_id": _ckpt_id(pre),
                     "langgraph_task_id": getattr(task, "id", None),
                     "langgraph_step": lg_step,
+                    "agent_id": "main",
                 },
             )
             nodes.append(node)

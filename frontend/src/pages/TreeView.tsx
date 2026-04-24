@@ -6,8 +6,10 @@ import {
   Background,
   Controls,
   MiniMap,
+  Panel,
   ReactFlowProvider,
   useReactFlow,
+  useViewport,
   type Node as RFNode,
   type Edge as RFEdge,
 } from "@xyflow/react";
@@ -26,6 +28,7 @@ import {
   Empty,
   Badge,
   Statistic,
+  Switch,
 } from "antd";
 import {
   Play,
@@ -34,12 +37,13 @@ import {
   Maximize2,
   ArrowLeft,
   Info,
+  GitFork,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { fetchTree, fetchRun } from "../api";
 import type { Run, Tree } from "../types";
-import { treeToReactFlow } from "../layout";
+import { treeToReactFlow, type LaneInfo } from "../layout";
 import ChronosNodeCard from "../components/nodes/ChronosNodeCard";
 import PlaceholderNode from "../components/nodes/PlaceholderNode";
 import NodeDetails from "../components/NodeDetails";
@@ -56,22 +60,34 @@ const NODE_TYPES = {
 function InnerTree({
   tree,
   run,
+  includeDescendants,
+  onToggleDescendants,
 }: {
   tree: Tree;
   run: Run;
+  includeDescendants: boolean;
+  onToggleDescendants: (v: boolean) => void;
 }) {
   const { t, i18n } = useTranslation();
   const rf = useReactFlow();
 
+  // Nodes in the root run only — used for the "play from start" timeline so
+  // the stepper stays focused on the user-selected run even when descendant
+  // lanes are visible.
+  const rootRunNodes = useMemo(
+    () => tree.nodes.filter((n) => n.run_id === run.id),
+    [tree.nodes, run.id],
+  );
+
   const orderedNodes = useMemo(
-    () => [...tree.nodes].sort((a, b) => a.step_index - b.step_index),
-    [tree.nodes],
+    () => [...rootRunNodes].sort((a, b) => a.step_index - b.step_index),
+    [rootRunNodes],
   );
 
   const playback = usePlayback(orderedNodes.length);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const { rfNodes: baseNodes, rfEdges: baseEdges } = useMemo(
+  const { rfNodes: baseNodes, rfEdges: baseEdges, lanes } = useMemo(
     () => treeToReactFlow(tree),
     [tree],
   );
@@ -125,8 +141,8 @@ function InnerTree({
   );
 
   const selectedNode = useMemo(
-    () => orderedNodes.find((n) => n.id === selectedId) ?? null,
-    [orderedNodes, selectedId],
+    () => tree.nodes.find((n) => n.id === selectedId) ?? null,
+    [tree.nodes, selectedId],
   );
 
   // Stats for the left panel
@@ -140,6 +156,10 @@ function InnerTree({
         (sum, n) => sum + (n.cost_usd_cents ?? 0),
         0,
       ),
+    [tree.nodes],
+  );
+  const runsInTreeCount = useMemo(
+    () => new Set(tree.nodes.map((n) => n.run_id)).size,
     [tree.nodes],
   );
 
@@ -192,6 +212,40 @@ function InnerTree({
           <Button icon={<Maximize2 size={14} />} onClick={fitView}>
             {t("tree.zoomFit")}
           </Button>
+          <Tooltip title={t("tree.showDescendantsTip")}>
+            <div
+              className="chr-descendants-toggle"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "2px 10px",
+                border: "1px solid var(--border)",
+                borderRadius: 6,
+                background: includeDescendants ? "rgba(88,166,255,0.08)" : "transparent",
+              }}
+            >
+              <GitFork
+                size={14}
+                style={{
+                  color: includeDescendants ? "var(--fork)" : "var(--text-dim)",
+                }}
+              />
+              <Text style={{ fontSize: 12 }}>
+                {t("tree.showDescendants")}
+              </Text>
+              <Switch
+                size="small"
+                checked={includeDescendants}
+                onChange={onToggleDescendants}
+              />
+              {includeDescendants && runsInTreeCount > 1 && (
+                <Tag color="purple" style={{ margin: 0, fontSize: 11 }}>
+                  {t("tree.runsInTree", { count: runsInTreeCount })}
+                </Tag>
+              )}
+            </div>
+          </Tooltip>
         </Space>
       </div>
 
@@ -284,12 +338,16 @@ function InnerTree({
               nodeTypes={NODE_TYPES}
               onNodeClick={onNodeClick}
               fitView
-              fitViewOptions={{ padding: 0.2 }}
+              fitViewOptions={{ padding: 0.15, minZoom: 0.5 }}
               minZoom={0.3}
               maxZoom={2}
+              colorMode="dark"
               proOptions={{ hideAttribution: true }}
             >
               <Background gap={24} size={1} color="#30363d" />
+              {includeDescendants && lanes.length > 1 && (
+                <LaneBackground lanes={lanes} rootRunId={run.id} />
+              )}
               <Controls showInteractive={false} />
               <MiniMap
                 pannable
@@ -321,13 +379,14 @@ export default function TreeView({ runId }: { runId: string }) {
   const [run, setRun] = useState<Run | null>(null);
   const [tree, setTree] = useState<Tree | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [includeDescendants, setIncludeDescendants] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     setError(null);
     setRun(null);
     setTree(null);
-    Promise.all([fetchRun(runId), fetchTree(runId)])
+    Promise.all([fetchRun(runId), fetchTree(runId, includeDescendants)])
       .then(([runRes, treeRes]) => {
         if (cancelled) return;
         setRun(runRes.run);
@@ -339,7 +398,7 @@ export default function TreeView({ runId }: { runId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [runId]);
+  }, [runId, includeDescendants]);
 
   if (error) {
     return (
@@ -370,8 +429,84 @@ export default function TreeView({ runId }: { runId: string }) {
   return (
     <div className="chr-page chr-tree-page">
       <ReactFlowProvider>
-        <InnerTree tree={tree} run={run} />
+        <InnerTree
+          tree={tree}
+          run={run}
+          includeDescendants={includeDescendants}
+          onToggleDescendants={setIncludeDescendants}
+        />
       </ReactFlowProvider>
     </div>
+  );
+}
+
+/** Renders translucent horizontal swim-lanes behind the nodes to visually
+ * separate descendant runs. Positioned in flow-space so it pans & zooms with
+ * the graph. */
+function LaneBackground({
+  lanes,
+  rootRunId,
+}: {
+  lanes: LaneInfo[];
+  rootRunId: string;
+}) {
+  const { t } = useTranslation();
+  const { x, y, zoom } = useViewport();
+  return (
+    <Panel position="top-left" style={{ pointerEvents: "none", margin: 0 }}>
+      <div style={{ position: "relative" }}>
+        {lanes.map((lane, idx) => {
+          const isRoot = lane.runId === rootRunId;
+          // flow-space → screen-space
+          const screenX = x;
+          const screenY = y + lane.y * zoom;
+          const hue = isRoot ? "88,166,255" : (idx * 47) % 360;
+          const bg = isRoot
+            ? "rgba(88,166,255,0.04)"
+            : `hsla(${hue}, 70%, 55%, 0.06)`;
+          const borderColor = isRoot
+            ? "rgba(88,166,255,0.35)"
+            : `hsla(${hue}, 70%, 55%, 0.35)`;
+          return (
+            <div
+              key={lane.runId}
+              style={{
+                position: "absolute",
+                left: screenX - 24 * zoom,
+                top: screenY,
+                width: (lane.width + 48) * zoom,
+                height: lane.height * zoom,
+                background: bg,
+                border: `1px dashed ${borderColor}`,
+                borderRadius: 8 * zoom,
+                padding: 0,
+              }}
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  top: 6 * zoom,
+                  left: 12 * zoom,
+                  fontSize: 11 * zoom,
+                  fontFamily: "monospace",
+                  color: isRoot ? "#58a6ff" : `hsl(${hue},70%,70%)`,
+                  letterSpacing: 0.5,
+                  textTransform: "uppercase",
+                  fontWeight: 700,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {isRoot ? t("tree.laneRoot") : t("tree.laneFork")}
+                <span style={{ marginLeft: 8, opacity: 0.75, fontWeight: 500 }}>
+                  {lane.adapter ? `[${lane.adapter}] ` : ""}
+                  {lane.label.slice(0, 48)}
+                  {lane.label.length > 48 ? "…" : ""}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </Panel>
   );
 }
