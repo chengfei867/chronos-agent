@@ -147,41 +147,44 @@
    147|
 ## 5. 当前状态 (Current State)
 
-**截至 Round 34-B 结束 (2026-04-24 CST 中午, user-driven) — `chronos web` 一键启动 + 深色落地页, Web UI demo 链的前端上半段就位**
+**截至 Round 34-C 结束 (2026-04-24 CST 中午, user-driven "继续干活") — ReactFlow 前端 MVP 就位, Web UI demo 链全部打通**
 
-- Round: **34-B 完成** (`chronos web` CLI + `/` landing page). R34-A 后端 + R34-B CLI 合起来构成了 "5 分钟 quickstart" 故事链里**除浏览器可视化之外**的全部部件.
-- 最近 progress doc: `progress/2026-04-24-round-34.md` (R34-A + R34-B 两段, 371 行) ← **下一轮必读**
-- **战略定位 (R33 用户锁死, 持续有效)**: **GitHub 爆款开源项目**, 不是 SaaS. R34-B 的每个决策(depth-friendly 单命令 on-ramp, 深色落地页 palette 对齐 README, 裸装不崩 `chronos --help`)都是在服务这条线.
-- 当前阶段: **Phase 2 in-flight** — v0.2.0a0 released (R30); `[Unreleased]` 叠了 R31 + R32 + R33 + R34-A + **R34-B** 五段, 够打 v0.2.0b0 了
-- 最新 ADR: **ADR-017 (R33)** — AutoGen sync-wrap 策略 (R34-A/B 无新 ADR, 设计决策进 `web.py` module docstring + progress doc)
+- Round: **34-C 完成** (ReactFlow viewer + `/app` mount + `.gitignore` dist 白名单 + 落地页 CTA). R34-A 后端 + R34-B CLI + R34-C 前端三段合起来 = 完整 "pip install → chronos web → 浏览器看到推理树" 链条.
+- 最近 progress doc: `progress/2026-04-24-round-34.md` (R34-A + R34-B + R34-C 三段) ← **下一轮必读**
+- **战略定位 (R33 用户锁死, 持续有效)**: **GitHub 爆款开源项目**, 不是 SaaS. R34-C 的每个决策(dist/ 白名单进 git 让用户零 npm deps, `types.ts` 严格对齐 pydantic 字段, hash 路由避服务端 rewrite, 503 fallback 不掩盖问题)都是服务于 "5 分钟 quickstart" + "贡献者一看就懂" 这条线.
+- 当前阶段: **Phase 2 in-flight** — v0.2.0a0 released (R30); `[Unreleased]` 叠了 R31 + R32 + R33 + R34-A + R34-B + **R34-C** 六段, 打 v0.2.0b0 **绝对够了, 主题完整 = Web UI 全链**.
+- 最新 ADR: **ADR-017 (R33)** — AutoGen sync-wrap 策略 (R34-A/B/C 无新 ADR, 设计决策进 CHANGELOG Design 段)
 - 最新 research doc: `docs/research/multi-framework-risks.md` (R27 + R29)
-- 最新 tag: **v0.2.0a0** (R30 cut); 下一 release 候选: R34-A + R34-B (+ 可能 R34-C) 一起打 **v0.2.0b0**
+- 最新 tag: **v0.2.0a0** (R30 cut); 下一 release 候选: **v0.2.0b0** (主题 = Web UI, R34-A/B/C 三段凑齐)
 - Blocked items: 无
-- 测试状态: **371/371 pass** (+8 new tests in `test_cli_web.py`; mypy strict clean on 26 src files; ruff + format clean)
-- CLI 表面: **+1 subcommand (`chronos web`)**, 信息架构跟其他 subcommand 完全对齐 (`--db / $CHRONOS_DB / ./chronos.db` 三级回退, DI seams 一致)
-- **R34-B 产出 (本轮)**:
-  - `src/chronos/cli/web.py` (~180 LOC) — `web_command(host, port, db, no_browser, open_store_fn, console, run_server_fn=None, open_browser_fn=None)`. `_default_run_server` / `_default_open_browser` module-level wrappers 作为 DI 默认值 (测试注 spy 不装 mock lib). Lazy `import uvicorn` 在 `_default_run_server` 内, 裸装 `chronos --help` 不炸. `threading.Timer(1.0, ...)` daemon 延迟开浏览器 (uvicorn 无 after-startup hook). `webbrowser.open()` 返 `False` 时打提示不炸. Store 生命周期 `open → build_app → run_server → close()` 用 `finally` + `contextlib.suppress(Exception)` 包.
-  - `src/chronos/api/server.py` — `@app.get("/", include_in_schema=False)` + `_INDEX_HTML` module constant (~60 行 dark-theme HTML, palette 对齐 README `#0d1117`, 链出 6 个端点 + `/docs` + `/redoc` + CLI equivalents; 零外部 asset, 零 JS build step).
-  - `src/chronos/cli/__init__.py` — `@app.command("web")` wrapper + docstring command surface + `info` 命令列表同步加 `web`.
-  - `src/chronos/cli/_common.py` — `_resolve_db_path` 仍是私有名 (下划线前缀), `web.py` 直接 import 使用.
-  - `tests/unit/test_cli_web.py` (+8 tests) — `TestWebCommand` direct-call + spy DI; `TestWebCLI` CliRunner + `monkeypatch.setattr` on module-level defaults. 覆盖 default/custom host&port, browser-open timing (sleep 1.2s 等 Timer), `--no-browser` 短路, `webbrowser.open` 返 `False` 的 graceful 路径, 缺 DB → `typer.Exit`, `--help` 不需要 `[web]` extra (pin lazy-import 设计).
-  - **Live smoke**: `chronos web --db /tmp/smoke.db --port 18766 --no-browser` 起 bg process → `/healthz` → `{"status":"ok","schema_version":"0.1.0"}`, `/` → 200/2525 bytes, `/runs` → `{"runs":[],"count":0}`.
-  - `README.md` 英+中 quickstart 各加 `uv pip install 'chronos-agent[web]' && chronos web --db ...` 第三步.
-  - `docs/cli-reference.md` 加完整 `chronos web` section (flag 表 + endpoint 表 + landing page 描述 + SSH port-forward recipe for 远程).
-  - `docs/roadmap.md` 勾 `[x] chronos web command launches local server + opens browser` 并注明实现细节.
-  - `CHANGELOG.md` `[Unreleased]` 下加 R34-B Added/Design/Tests 三段.
-- **R34-B 关键设计决策**:
-  - **DI seams via optional `run_server_fn` / `open_browser_fn`** — 不引 `unittest.mock`, 跟其他 CLI 模块 (`open_store_fn`, `console`) 同款 pattern. 测试二分: 直调 (spy 注参) + CliRunner (`monkeypatch.setattr` 改 module-level defaults).
-  - **Lazy uvicorn import 在 `_default_run_server` 里**, 不在模块顶部. 裸装用户 `chronos --help` 和每个非 web 子命令都能跑; 只有 `chronos web` 被调才检查 `[web]` extra, 缺了给友好提示而不是 ImportError 栈.
-  - **不支持 `reload=True`** — uvicorn reloader spawn subprocess re-import 模块路径, closure-bound store 会丢. `chronos web` 是 inspection tool, 不是 `server.py` 的 dev server. 要 reload 的用户直接 `uvicorn your_module:create_app --factory` 自己包 —— `build_app(store)` 是 public API.
-  - **Timer(1.0) 延迟开浏览器** — uvicorn 公开 API 没有 caller-side "after startup" hook (不继承 `Server` 的话). 1 秒在 loopback bind 的经验值是够的, 测试 sleep 1.2s 等 Timer 触发再 assert spy.
-  - **Banner 自己 resolve path, 不读 `store._path`** — `SqliteStore` 没 `_path` 属性, 我们用 `_resolve_db_path(db)` 自己算一遍, banner 才能真诚显示 `$CHRONOS_DB` 或默认 cwd 回退路径.
-- **R34-B 教训 (新事实)**:
-  - **Watch-pattern 通知可能迟到**: background process 已 kill 后, `watch_patterns` 匹配的通知仍会异步到达. 规则: 看到 "Uvicorn running on ..." 类通知时先 `ss -tlnp` 确认端口是否真绑, 别条件反射去 kill.
-  - **Typer cosmetic quirk**: docstring 里带 `[web]` 这种方括号子段落会被 `--help` 输出 strip 掉 (典型 Typer rich-markup 处理). 无功能影响, 但写 CLI help 时避免在命令 surface 列表里放带 `[...]` 的词.
-- **R34-A 产出 (上一段, 回顾)**: Local HTTP API, 6 endpoints, neutral tree shape, 17 tests
-- **R33 产出 (上一轮, 回顾)**: AutoGen adapter record-only + ADR-017 sync-wrap
-- **R32 产出 (上上轮, 回顾)**: module-level `langgraph_adapter` / `linear_adapter` singletons
+- 测试状态: **375/375 pass** (+4 new tests in `test_api_server.py`; api/server.py coverage **100%**; mypy strict clean on 26 src files; ruff + format clean)
+- CLI 表面: 无新增 (仍 `+1` = `chronos web`); **URL 表面**: `/app/*` StaticFiles mount 新增
+- **R34-C 产出 (本轮)**:
+  - `frontend/` 全新子目录 (~500 LOC TSX+CSS + `package.json` + `vite.config.ts` + `tsconfig.json` + `index.html`) — Vite 8 + React 19 + TypeScript 5 + `@xyflow/react` v12.10.2 (**注意: NOT `reactflow` — 已被官方 rebrand 到 `@xyflow/react` v12**). 两路由 hash router: `#/` = RunList 表格, `#/runs/<id>` = TreeView ReactFlow canvas + NodeDetails 抽屉. `types.ts` 严格镜像后端 `model_dump(mode="json")` 字段名 (`adapter` / `adapter_thread_id` / `node_name` / `tool_name` / `tool_input` / `tool_output` / `cost_usd_cents` / `error_message` / `ended_at` / `state_after` / `metadata`). `layout.ts` BFS-by-level 布局 (220px 水平 / 140px 垂直). 深色 palette `#0d1117` / `#c9d1d9` / `#58a6ff` 对齐 R34-B 落地页.
+  - `frontend/dist/` (108KB gzipped: `index.html` + `assets/index-*.{js,css}`) **入 git** via `.gitignore` 末尾白名单 (`!frontend/dist/` + `!frontend/dist/**`; git last-match-wins 规则). `frontend/.gitignore` 只白名单 `dist/`, `node_modules/` / `.vite/` / `.tsbuildinfo` 保持忽略.
+  - `src/chronos/api/server.py` — `_find_frontend_dist()` helper (env `CHRONOS_FRONTEND_DIST` override 优先 → `<repo_root>/frontend/dist` via `__file__.parents[3]` → `None`). `build_app(store)` 结尾: 找到 → `app.mount("/app", StaticFiles(directory=..., html=True))`; 缺失 → `@app.get("/app")` + `@app.get("/app/{rest:path}")` 返 **503 + `{error: "viewer_bundle_missing", detail: "Run: cd frontend && npm install && npm run build"}`**. 落地页 `_INDEX_HTML` 头部加蓝紫渐变 "🌲 Open Tree Viewer" CTA + 次要灰色 "API Docs" 按钮.
+  - `tests/unit/test_api_server.py` (+4 tests, 17→21): `test_app_mount_serves_index_when_dist_present` (tmp_path 建假 dist, `monkeypatch.setenv`, **建 FRESH client** 因为顶层 `client` fixture 已在 monkeypatch 之前构造), `test_app_mount_returns_503_when_dist_missing` (`/app` + `/app/` + `/app/deep/nested` 全 503, REST 不受影响), `test_find_frontend_dist_resolver` (override-with-index 胜 / override-no-index None / nonexistent None), `test_landing_page_advertises_viewer` (`href="/app/"` + "Tree Viewer" 文本 regression guard).
+  - **Live E2E smoke**: 种 `/tmp/chr-smoke/s.db` (2 runs, 5 nodes, 含 tool_input/tool_output + state_after.text), 起 `chronos web --db ... --port 18766 --no-browser`, curl 9 条路径全 200: `/`, `/app/`, `/app/index.html`, `/app/assets/index-*.js`, `/runs`, `/runs/demo-run-1`, `/runs/demo-run-1/tree`, `/healthz`, `/docs`. 返的 `/app/` HTML 引用的 asset hash 与 dist 实际产物吻合.
+  - `CHANGELOG.md` `[Unreleased]` 下加 R34-C Added/Design/Tests 三段 (插在 R34-A 之前, 按倒序).
+  - `docs/roadmap.md` 勾 `[x] Web UI basics: reasoning tree viewer (ReactFlow), run list, diff viewer` (注明 diff viewer 延期, lists+tree 已 ship).
+- **R34-C 关键设计决策**:
+  - **`@xyflow/react` v12 不是 `reactflow` v11** — `reactflow` npm 包已被官方冻结在 11.11.4, 同团队 rebrand 到 `@xyflow/react` v12. Pin v12 保持支持分支, import `{ ReactFlow, Background, Controls, MiniMap } from "@xyflow/react"` + `import "@xyflow/react/dist/style.css"`.
+  - **dist/ 入 git via whitelist** — Node toolchain 只在**构建**需要, 不在**使用**需要. 用户 `uv pip install chronos-agent[web]` 装完就有 viewer, 零 npm deps. 这是 R33 "5 分钟 quickstart" thesis 的硬要求. `.gitignore` 白名单必须在文件末尾 (`git check-ignore -v` 验证过 last-match-wins).
+  - **`types.ts` 严格镜像 `model_dump(mode="json")`** — 早期草稿用了短名 (`framework` / `thread_id` / `finished_at` / `name` / `content_preview` / `extracted`) 跟后端 drift 了. R34-C 重写 `types.ts` 字段对字段镜像, 文件头加 SoT 注释指回 `src/chronos/core/models.py`.
+  - **Layout 是前端职责, 不 bake-in API** — `/tree` 合约保持 position-free, `frontend/src/layout.ts` 计算 `position: {x, y}`. 别的 viewer (d3/Cytoscape/Graphviz) 可直接吃 `/tree` JSON 不受我们布局选择污染.
+  - **Hash routing 不是 HTML5 history** — 服务端 StaticFiles 是哑挂载, 不 rewrite 未知路径回 `index.html`. Hash 路由 (`#/`, `#/runs/<id>`) 纯客户端, 避开 catch-all rewrite, 且不跟 503-on-missing-dist 冲突.
+  - **`CHRONOS_FRONTEND_DIST` env override** — 两个具体用例: (1) dev `vite dev` live server 指 out-of-tree dist, (2) packaging 把 `dist/` 塞 `site-packages/chronos/frontend/dist`. `parents[3]` fallback 有意**不**向上任意 walk, site-packages 装且无捆绑 dist 正确返 `None` → 503, 不静默找到 dev 机器上的 stale bundle.
+  - **503 失败模式显式** — REST API / `/healthz` / 落地页**不受** bundle 缺失影响. viewer 缺了也能用 CLI + API; 反过来 CLI 崩也不影响已 build 的 viewer. 解耦.
+  - **`previewOf(node)` 前端派生** — 遍历 `tool_output → tool_input → state_after → metadata` 找 `text`/`answer`/`output`/`result`/`content` 任一 string key, 截 36 字符在 canvas 显示. 这样不用在 API 合约里加 `content_preview` 这个特定前端字段 —— 合约保持 minimal.
+- **R34-C 教训 (新事实)**:
+  - **npm install 首次可能跳过 devDependencies** — 本环境 `npm install` 第一次只装 prod, `npm run build` 报 `tsc: not found`. 规则: 首次装完如果 build 工具缺, 直接 `npm install --include=dev`.
+  - **`frontend/dist/` 白名单必须 end-of-file** — `.gitignore` 规则 last-match-wins. 如果 `dist/` 在第 10 行, `!frontend/dist/` 必须在最后. 用 `git add --dry-run frontend/dist/` 验证.
+  - **Fixture + monkeypatch 时序陷阱**: 顶层 `client` fixture 在测试函数前已构造, 测试函数内 `monkeypatch.setenv("CHRONOS_FRONTEND_DIST", ...)` 之后要用新 env 建新 client, 直接用 `client` 拿到的还是旧 app.
+  - **Post-compaction frontend drift 自检**: context compaction 后 `types.ts` 和 `src/chronos/core/models.py` 字段名可能脱钩. R34-C 开头先 `grep -n "\.name\b\|framework\b\|thread_id\b" frontend/src/` 找 drift.
+- **R34-B 产出 (上一段, 回顾)**: `chronos web` CLI + 深色落地页, 8 tests
+- **R34-A 产出 (上上段, 回顾)**: Local HTTP API, 6 endpoints, neutral tree shape, 17 tests
+- **R33 产出 (回顾)**: AutoGen adapter record-only + ADR-017 sync-wrap
+- **R32 产出 (回顾)**: module-level `langgraph_adapter` / `linear_adapter` singletons
 - **R31 产出 (回顾)**: canonical `protocols.py`
 - **R30 bundle 回顾 (仍有效)**: v0.2.0a0 release cut
 - **R29 bundle 回顾 (仍有效)**: dual adapter dogfood
@@ -202,7 +205,7 @@
   - **progress doc 每轮必写**
   - **`ForkPlan` schema 是 v0.1.1 对外契约**
   - **Extractor contract v2 (ADR-015) 是 v0.1.2+ 对外契约**
-  - **Adapter interface (ADR-016) 是 v0.2.0 对外契约** (R26 决策, R31 canonical, R32 module-level instances, R33 AutoGen 实现, **R34-A/B 无侵犯**)
+  - **Adapter interface (ADR-016) 是 v0.2.0 对外契约** (R26 决策, R31 canonical, R32 module-level instances, R33 AutoGen 实现, **R34-A/B/C 无侵犯**)
   - **AutoGen sync-wrap (ADR-017) 是 AutoGen adapter 永久架构原则** (R33)
   - **Multi-framework risks (R27 research doc) 仍是 Phase 2 必读 gotchas**
   - **Anthropic prompt caching 计账** (R15, ADR-015 Layer 5)
@@ -236,54 +239,57 @@
   - **Lazy optional-extra import (R34-B 确立)**: `uv pip install pkg` (无 extra) 后 `pkg --help` 必须不炸. 重型 optional 依赖 (uvicorn/fastapi) import 延迟到真被调的命令内
   - **uvicorn browser-open timing (R34-B 确立)**: `threading.Timer(1.0, ...)` daemon 替代不存在的 after-startup hook; 1s loopback 经验足够
   - **Watch-pattern 通知异步 (R34-B 教训)**: 看到 "Uvicorn running" 类通知先查端口是否真绑
+  - **npm install devDep 跳过陷阱 (R34-C 确立)**: 首次 `npm install` 可能只装 prod, build 失败后直接 `npm install --include=dev`
+  - **`.gitignore` 白名单必须 EOF (R34-C 确立)**: last-match-wins, `git add --dry-run` 验证
+  - **Fixture + monkeypatch 时序 (R34-C 确立)**: 顶层 fixture 已在测试函数前构造, monkeypatch env 后要建 FRESH client 才生效
+  - **`@xyflow/react` v12 替代 `reactflow` v11 (R34-C 确立)**: 旧包官方 frozen, 同团队 rebrand, 新包保持支持
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 34-C 候选 — ReactFlow 前端 MVP 吃 `/runs/{id}/tree`, 让 README GIF 有主角**
+**Round 35 候选 — cut v0.2.0b0 (Web UI 主题 beta release)**
 
-战略视角: R33 OSS 爆款定位 → R34-A 后端 + R34-B CLI + 深色落地页已经把 "pip install → chronos web → 浏览器打开" 这条链打通. 现在缺的是落地页上除 `/docs` 之外**真正的可视化** —— ReactFlow 吃 `/tree` 渲染推理树, 这才是 README GIF 里让人第一眼 "wow" 的画面.
+战略视角: Web UI 全链 (API + CLI + ReactFlow viewer) 已贯通. `[Unreleased]` 累了 R31/R32/R33/R34-A/R34-B/R34-C 六段足够主题完整的 minor release. 下一步应该**打 tag + push release**, 让外部用户可以 `uv pip install chronos-agent[web]==0.2.0b0 && chronos web` 直接看到 demo, 而不是继续叠 feature.
 
-### R34-C (强推): ReactFlow 前端 MVP
+### R35-A (强推): Release cut v0.2.0b0
 
-- 前置: R34-A ✅ + R34-B ✅ (API + CLI + 落地页 deps 都就绪)
-- 目标: 能在 `/app` (或 `/viewer`) 渲染一个 run 的 reasoning tree, 节点可点开看 content/state_after, fork 边虚线标记, 叶 run 无 node 时渲 "unresolved branch"
-- 实现路径三选一, 各有利弊:
-  - **Path A: 同仓 `frontend/` 子目录 + Vite + 预构建 `dist/` 进 git** — 最简单, 但静态产物入 git 不干净; Python 包再把 `dist/` `package_data` 进去
-  - **Path B: 同仓 `frontend/` + GitHub Actions build on release + artifact 下发** — 干净, 但 CI/CD 要 setup, 而且本地开发需要先 `npm run build`
-  - **Path C: 完全 CDN-hosted SPA** (GitHub Pages 挂 `chronos-viewer`, 落地页点链接跳出去, 带 `?api=http://localhost:8765` 参数) — 最 decouple, 但跨域 + 两个仓库两套 issue tracker
-- 决策倾向: **Path A 先** (最快到 GIF), Path C 作为长期目标
-- 技术栈: Vite + React 18 + TypeScript + ReactFlow 12 + Zustand (state) + 原生 fetch (不引 react-query 第一版)
-- 覆盖范围 (MVP 红线内):
-  - 登录页/run 列表 ← fetch `/runs`, 点一个跳 tree 页
-  - Tree 页 ← fetch `/runs/{id}/tree`, ReactFlow 画 DAG, 分 `sequential` 实线 / `fork` 虚线
-  - Node 详情抽屉 ← 点 node 右滑抽屉, 展 `content_preview` / `usage` / `extracted` / `error`
-  - Fork 边 hover tooltip 展 `edited_fields`
-- 非目标 (砍掉不做):
-  - 用户登录 / 权限 / 多用户 (OSS, 不做 SaaS)
-  - 编辑功能 (只读 viewer)
-  - Replay 触发按钮 (CLI 已经 replay, web 端不急)
-  - 实时 WebSocket (每次刷新一整棵树就够)
+- 前置: R34-C ✅ (Web UI 全链就位, `[Unreleased]` 主题完整)
+- 用 skill `chronos-release-pattern` 的 7 步流程:
+  1. bump `pyproject.toml::project.version` = `0.2.0b0`
+  2. CLI `status`/`info` 命令里硬编码的 version 字符串同步 (如果有)
+  3. CHANGELOG `[Unreleased]` 段 → `## [0.2.0b0] — 2026-04-24`, 头加 release 主题段 "Web UI: local HTTP API + `chronos web` CLI + ReactFlow viewer"
+  4. 跑全绿 (pytest / ruff / ruff format / mypy / 再一遍 pytest)
+  5. commit + tag `v0.2.0b0`
+  6. push main + push --tags (via gh-proxy.com)
+  7. GitHub release page 手动写 release notes (从 CHANGELOG 搬) — 这步我可能做不到因为 gh CLI 没装, 用 REST API POST `/repos/.../releases` 带 token 即可
+- 测试 install: 从 PyPI-test (如果发了的话) 或直接本地 `uv pip install -e '.[web]'` + `chronos web --db /tmp/fresh.db` + 浏览器打开看 `/app/`
 
-### R34-D (可延): README GIF / demo 录制
+### R35-B (如果想继续功能): Diff viewer in ReactFlow
 
-- 用 `vhs` 或 `asciinema + agg` 录 CLI 段 (recorder 建库 → 列 run → 起 web)
-- 浏览器段用 OS 自带录屏或 `peek`, 同分辨率
-- `ffmpeg` 拼接 + 压帧, 目标 ≤ 3MB
+- 前置: R35-A **应先完成** (release 锁住当前成果), 否则 rebase/打 tag 会乱
+- 目标: `#/runs/<a>/diff/<b>` 新路由, 双 tree 并排 + node-level `cost_usd_cents` / `usage` / `extracted` diff 高亮
+- 实现: `GET /runs/compare?a=X&b=Y` 新端点返 `{tree_a, tree_b, node_alignment}` (alignment by `node_name` or `kind+step_index`); 前端新页面双 ReactFlow canvas
+- 工期估: 1 轮 (相比 R34-C 简单, 因为 tree 渲染已复用)
+
+### R35-C (可延): README GIF 录制
+
+- 前置: R35-A ✅ (release 链接可以放进 GIF 里的终端提示)
+- 用 `vhs` 录 CLI 段 + OS 录屏录浏览器段, `ffmpeg` 拼 ≤ 3MB
 - 放 `assets/demo.gif`, README 头部引用
-- 这轮是否要做 **取决于 R34-C 做到哪一步** —— 如果 R34-C 出最小可视化即可出 GIF, 就顺手录
+- 这是**真正能带 star** 的一步, 但做得糙不如不做, 计划给一整轮.
 
-### R34 非目标 (继承 R33 红线)
+### R35 非目标 (继承 R33 红线)
 
 - ❌ 多用户 / auth / 托管
-- ❌ 数据库 migration 框架 (用 schema_version + 手动 migration scripts 就够)
-- ❌ gRPC / GraphQL (REST 够用)
-- ❌ 多 SQLite 后端 (Postgres/Turso 先不做)
+- ❌ 数据库 migration 框架
+- ❌ gRPC / GraphQL
+- ❌ 多 SQLite 后端 (Postgres/Turso)
+- ❌ WebSocket 实时推送
 
-### Release strategy (R34 结束后)
+### Release strategy (R35 结束后)
 
-- R34-A + R34-B + R34-C 凑齐 Web UI 完整链 → cut **v0.2.0b0** (beta, 主题 = Web UI)
-- 或者 R34-B 结束当下就 cut 一个 **v0.2.0a1** (alpha 小修, 主题 = Local HTTP API + CLI), 把 R34-C 留到 v0.2.0b0. **倾向后者** —— 灰色 beta 门槛低, 用户早点拿到 `chronos web`, 把 "ReactFlow 还没做" 这件事藏在 beta 之前, 避免显得"没做完就发".
-- 后续 v0.2.0 stable = ReactFlow + dogfood + GIF + 改一轮 README 再发
+- **R35-A 做完 = v0.2.0b0 已 tag/push** → 用户可装. 这个 release 本身就是里程碑, 不等 R35-B/C.
+- R35-B (diff viewer) + R35-C (GIF) + dogfood 一轮 = **v0.2.0 stable** (可能凑 R35-B/C + R36, 看节奏)
+- v0.3 开 Phase 3 = fork 可靠性 + side-effect 沙箱 (roadmap §Phase 3)
 
 ## Cron 窗口门控 (2026-04-22 用户指令)
 

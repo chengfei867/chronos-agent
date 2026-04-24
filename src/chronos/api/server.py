@@ -49,10 +49,12 @@ simpler and makes the contract obvious at construction time.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from chronos.core.models import SCHEMA_VERSION, Fork, Node, Run
 
@@ -193,14 +195,35 @@ _INDEX_HTML = """<!doctype html>
   .pill { display: inline-block; background: #1f6feb33; color: #79c0ff;
           padding: 2px 10px; border-radius: 999px; font-size: 0.8em;
           margin-left: 0.5rem; vertical-align: middle; }
+  .cta {
+    display: inline-block; margin: 0.5rem 0 1.5rem;
+    background: linear-gradient(135deg, #1f6feb 0%, #0969da 100%);
+    color: #fff; padding: 0.7rem 1.4rem; border-radius: 8px;
+    font-weight: 600; text-decoration: none;
+    box-shadow: 0 4px 14px #1f6feb40;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+  }
+  .cta:hover { transform: translateY(-1px); text-decoration: none;
+               box-shadow: 0 6px 20px #1f6feb66; }
+  .cta-row { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+  .cta.secondary {
+    background: #161b22; color: #c9d1d9; box-shadow: none;
+    border: 1px solid #30363d;
+  }
+  .cta.secondary:hover { background: #1c2128; box-shadow: none; }
 </style>
 </head>
 <body>
   <h1>Chronos Agent <span class="pill">local api</span></h1>
   <p class="muted">
     Read-only HTTP surface over your recorded runs.
-    A real visual frontend ships in a later round — for now, poke the API directly.
+    Open the visual tree viewer below, or poke the API directly.
   </p>
+
+  <div class="cta-row">
+    <a class="cta" href="/app/">🌲 Open Tree Viewer</a>
+    <a class="cta secondary" href="/docs">API Docs</a>
+  </div>
 
   <h2>Endpoints</h2>
   <ul>
@@ -239,6 +262,32 @@ _INDEX_HTML = """<!doctype html>
 # ---------------------------------------------------------------------------
 # App factory
 # ---------------------------------------------------------------------------
+
+
+def _find_frontend_dist() -> Path | None:
+    """Resolve the frontend/dist bundle directory, or None if missing.
+
+    Search order:
+
+    1. ``CHRONOS_FRONTEND_DIST`` env var (explicit override, dev use).
+    2. ``<repo_root>/frontend/dist`` — for editable installs / dev checkouts.
+
+    We do NOT walk up arbitrarily; the repo-root lookup is based on this
+    file's location, so moving the package into site-packages without
+    packaging the dist would correctly return None (and trigger the 503
+    fallback in :func:`build_app`).
+    """
+    import os
+
+    override = os.environ.get("CHRONOS_FRONTEND_DIST")
+    if override:
+        p = Path(override)
+        return p if (p / "index.html").exists() else None
+
+    # src/chronos/api/server.py → src/chronos/api → src/chronos → src → <root>
+    repo_root = Path(__file__).resolve().parents[3]
+    candidate = repo_root / "frontend" / "dist"
+    return candidate if (candidate / "index.html").exists() else None
 
 
 def build_app(store: SqliteStore) -> FastAPI:
@@ -324,6 +373,38 @@ def build_app(store: SqliteStore) -> FastAPI:
         forks = store.get_forks_for_parent(run_id)
         tree = _assemble_tree(store, run_id, nodes, forks)
         return JSONResponse(content=tree)
+
+    # ------------------------------------------------------------------
+    # /app/* — ReactFlow viewer (R34-C). Served from the frontend/dist
+    # bundle that ships with the wheel. If the bundle is missing (dev
+    # checkout pre-build, or unusual packaging), /app returns a 503 with
+    # instructions rather than silently 404'ing — so the failure mode is
+    # explicit. The mount is best-effort: a missing dist does NOT break
+    # the REST API, healthz, or the landing page.
+    # ------------------------------------------------------------------
+    dist_dir = _find_frontend_dist()
+    if dist_dir is not None:
+        app.mount(
+            "/app",
+            StaticFiles(directory=str(dist_dir), html=True),
+            name="viewer",
+        )
+    else:
+
+        @app.get("/app", include_in_schema=False)
+        @app.get("/app/{_rest:path}", include_in_schema=False)
+        def viewer_missing(_rest: str = "") -> JSONResponse:
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "error": "viewer_bundle_missing",
+                    "detail": (
+                        "frontend/dist/ not found — rebuild with "
+                        "`cd frontend && npm install && npm run build`, "
+                        "or reinstall the chronos-agent package."
+                    ),
+                },
+            )
 
     return app
 

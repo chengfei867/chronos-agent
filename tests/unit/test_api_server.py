@@ -411,3 +411,105 @@ def test_build_app_binds_distinct_stores(tmp_path: Path) -> None:
 
         assert client_a.get("/runs").json()["count"] == 1
         assert client_b.get("/runs").json()["count"] == 0
+
+
+# ---------------------------------------------------------------------------
+# /app — ReactFlow viewer mount (R34-C)
+# ---------------------------------------------------------------------------
+
+
+def test_app_mount_serves_index_when_dist_present(
+    client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """With a valid dist directory (via CHRONOS_FRONTEND_DIST env override)
+    ``GET /app/`` returns ``index.html`` and ``GET /app/assets/<file>`` serves
+    static bundle assets.
+
+    We build a FRESH app inside the test so the override applies — the top-level
+    ``client`` fixture was built before the monkeypatch took effect.
+    """
+    from chronos.api import build_app
+
+    dist = tmp_path / "dist"
+    (dist / "assets").mkdir(parents=True)
+    (dist / "index.html").write_text(
+        "<!doctype html><html><body>stub viewer</body></html>",
+        encoding="utf-8",
+    )
+    (dist / "assets" / "index.js").write_text("console.log('hi')", encoding="utf-8")
+
+    monkeypatch.setenv("CHRONOS_FRONTEND_DIST", str(dist))
+
+    # Build a fresh app/client so the mount sees the override.
+    with SqliteStore.open(":memory:") as store:
+        fresh = TestClient(build_app(store))
+
+        r_index = fresh.get("/app/")
+        assert r_index.status_code == 200
+        assert "stub viewer" in r_index.text
+        assert r_index.headers["content-type"].startswith("text/html")
+
+        r_asset = fresh.get("/app/assets/index.js")
+        assert r_asset.status_code == 200
+        assert "console.log" in r_asset.text
+
+
+def test_app_mount_returns_503_when_dist_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """When no dist is found, ``/app`` and ``/app/<anything>`` return 503 with
+    a structured ``viewer_bundle_missing`` error — the REST API continues to
+    work regardless.
+    """
+    from chronos.api import build_app
+
+    # Point the override at an empty path so repo-root fallback is bypassed.
+    monkeypatch.setenv("CHRONOS_FRONTEND_DIST", str(tmp_path / "does-not-exist"))
+
+    with SqliteStore.open(":memory:") as store:
+        client_ = TestClient(build_app(store))
+
+        for path in ("/app", "/app/", "/app/index.html", "/app/deep/nested"):
+            r = client_.get(path)
+            assert r.status_code == 503, f"expected 503 for {path}, got {r.status_code}"
+            body = r.json()
+            assert body["error"] == "viewer_bundle_missing"
+            assert "frontend/dist" in body["detail"]
+
+        # REST API still works.
+        assert client_.get("/healthz").status_code == 200
+        assert client_.get("/runs").status_code == 200
+
+
+def test_find_frontend_dist_resolver(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Unit-test the resolver itself: override wins when valid, falls through
+    when the override is missing an ``index.html``.
+    """
+    from chronos.api.server import _find_frontend_dist
+
+    # 1. Valid override with index.html → returns that path.
+    good = tmp_path / "good"
+    good.mkdir()
+    (good / "index.html").write_text("ok")
+    monkeypatch.setenv("CHRONOS_FRONTEND_DIST", str(good))
+    assert _find_frontend_dist() == good
+
+    # 2. Override set but missing index.html → returns None (explicit fail).
+    bad = tmp_path / "bad"
+    bad.mkdir()  # exists but no index.html
+    monkeypatch.setenv("CHRONOS_FRONTEND_DIST", str(bad))
+    assert _find_frontend_dist() is None
+
+    # 3. Override pointing at a nonexistent path → None.
+    monkeypatch.setenv("CHRONOS_FRONTEND_DIST", str(tmp_path / "nope"))
+    assert _find_frontend_dist() is None
+
+
+def test_landing_page_advertises_viewer(client: TestClient) -> None:
+    """The landing page includes a visible CTA pointing at ``/app/`` so users
+    discover the tree viewer without reading docs.
+    """
+    r = client.get("/")
+    assert r.status_code == 200
+    assert 'href="/app/"' in r.text
+    assert "Tree Viewer" in r.text

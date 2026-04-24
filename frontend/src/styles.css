@@ -1,0 +1,367 @@
+/* Chronos Viewer - dark theme matching server.py's _INDEX_HTML landing page.
+ * Palette lifted from GitHub dark: #0d1117 bg, #c9d1d9 fg, #58a6ff accent. */
+:root {
+  color-scheme: dark;
+  --bg: #0d1117;
+  --bg-elev: #161b22;
+  --bg-hover: #1f2733;
+  --border: #30363d;
+  --fg: #c9d1d9;
+  --fg-muted: #8b949e;
+  --accent: #58a6ff;
+  --accent-dim: #1f6feb;
+  --ok: #3fb950;
+  --warn: #d29922;
+  --err: #f85149;
+  --fork: #bc8cff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial,
+    sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+button {
+  background: var(--bg-elev);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font: inherit;
+}
+button:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent-dim);
+}
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-elev);
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.app-header .spacer {
+  flex: 1;
+}
+
+.app-header .crumb {
+  color: var(--fg-muted);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 13px;
+}
+
+.app-body {
+  flex: 1;
+  overflow: auto;
+}
+
+/* ---------- RunList ---------- */
+.run-list {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 20px;
+}
+.run-list h2 {
+  margin: 0 0 16px;
+  font-size: 20px;
+  font-weight: 600;
+}
+.run-list .empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--fg-muted);
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+}
+.run-list .empty code {
+  display: inline-block;
+  padding: 2px 6px;
+  background: var(--bg-elev);
+  border-radius: 4px;
+  font-size: 13px;
+}
+.run-list table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.run-list th,
+.run-list td {
+  text-align: left;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.run-list th {
+  background: var(--bg-elev);
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--fg-muted);
+}
+.run-list tr:last-child td {
+  border-bottom: none;
+}
+.run-list tr.clickable {
+  cursor: pointer;
+}
+.run-list tr.clickable:hover {
+  background: var(--bg-hover);
+}
+.run-list .mono {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 13px;
+}
+.run-list .tag {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  color: var(--fg-muted);
+  font-size: 12px;
+}
+
+/* ---------- TreeView ---------- */
+.tree-view {
+  position: relative;
+  height: 100%;
+  width: 100%;
+}
+
+/* Node styling in ReactFlow */
+.chronos-node {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-elev);
+  color: var(--fg);
+  padding: 10px 12px;
+  min-width: 180px;
+  max-width: 240px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.chronos-node:hover {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+}
+.chronos-node.kind-llm {
+  border-left: 3px solid var(--accent);
+}
+.chronos-node.kind-tool {
+  border-left: 3px solid var(--ok);
+}
+.chronos-node.kind-fn {
+  border-left: 3px solid var(--fg-muted);
+}
+.chronos-node.kind-router {
+  border-left: 3px solid var(--warn);
+}
+.chronos-node.kind-fork {
+  border-left: 3px solid var(--fork);
+}
+.chronos-node.kind-end {
+  border-left: 3px solid var(--err);
+}
+.chronos-node .kind-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--fg-muted);
+  margin-bottom: 4px;
+}
+.chronos-node .node-title {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chronos-node .node-sub {
+  font-size: 12px;
+  color: var(--fg-muted);
+  margin-top: 4px;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+
+/* Node details drawer */
+.drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 420px;
+  background: var(--bg-elev);
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+  z-index: 10;
+  box-shadow: -4px 0 12px rgba(0, 0, 0, 0.5);
+}
+.drawer-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--bg-elev);
+}
+.drawer-header h3 {
+  margin: 0;
+  font-size: 14px;
+  flex: 1;
+}
+.drawer-close {
+  background: transparent;
+  border: none;
+  color: var(--fg-muted);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 4px 8px;
+}
+.drawer-close:hover {
+  color: var(--fg);
+}
+.drawer-section {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.drawer-section h4 {
+  margin: 0 0 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-muted);
+}
+.drawer-section pre {
+  margin: 0;
+  background: var(--bg);
+  padding: 8px 10px;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-size: 12px;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.drawer-section .kv {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 4px 12px;
+  font-size: 13px;
+}
+.drawer-section .kv dt {
+  color: var(--fg-muted);
+}
+.drawer-section .kv dd {
+  margin: 0;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  word-break: break-word;
+}
+
+/* Loading / error banner */
+.banner {
+  padding: 12px 20px;
+  margin: 16px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-elev);
+}
+.banner.err {
+  border-color: var(--err);
+  color: var(--err);
+}
+.banner.loading {
+  color: var(--fg-muted);
+}
+
+/* Legend in TreeView */
+.legend {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  padding: 10px 12px;
+  background: rgba(22, 27, 34, 0.92);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 12px;
+  z-index: 5;
+  backdrop-filter: blur(4px);
+}
+.legend h5 {
+  margin: 0 0 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-muted);
+}
+.legend .row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+}
+.legend .swatch {
+  width: 14px;
+  height: 3px;
+  background: var(--accent);
+}
+.legend .swatch.fork {
+  background: transparent;
+  border-top: 2px dashed var(--fork);
+}
+
+/* R34-C additions */
+.run-list td.task-cell {
+  max-width: 360px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.run-list .tag.status-completed { color: var(--ok); border-color: #2ea04350; }
+.run-list .tag.status-failed    { color: var(--err); border-color: #f8514950; }
+.run-list .tag.status-running   { color: #d29922; border-color: #d2992250; }
+.run-list .tag.status-forked    { color: var(--fork); border-color: #bc8cff50; }
+.run-list .tag.status-pending   { color: var(--fg-muted); }

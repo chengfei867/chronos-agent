@@ -1,0 +1,18 @@
+# Node tooling — we deliberately do NOT gitignore dist/ here.
+# Rationale: Chronos is a Python package. End users run `pip install
+# chronos-agent[web]` and expect the web viewer to Just Work without having
+# Node.js installed. So we commit the built frontend bundle into git and
+# ship it as package_data.
+#
+# The frontend/ source tree (src/, package.json, vite.config.ts, tsconfig.json)
+# is committed too — that's the authoritative source of truth. Re-build with
+# `cd frontend && npm install && npm run build`.
+
+node_modules/
+.vite/
+*.log
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
