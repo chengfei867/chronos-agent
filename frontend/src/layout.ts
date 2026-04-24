@@ -231,6 +231,7 @@ export function treeToReactFlow(tree: Tree): LayoutResult {
         source: e.from,
         target: e.to,
         type: "smoothstep",
+        data: { kind: "sequential" },
         style: { stroke: "var(--chr-accent)", strokeWidth: 2 },
         markerEnd: { type: "arrowclosed" as const, color: "#58a6ff", width: 18, height: 18 },
       });
@@ -242,6 +243,7 @@ export function treeToReactFlow(tree: Tree): LayoutResult {
         target,
         type: "smoothstep",
         animated: true,
+        data: { kind: "fork", childRunId: e.child_run_id },
         style: {
           stroke: "var(--chr-purple)",
           strokeWidth: 2.2,
@@ -251,7 +253,6 @@ export function treeToReactFlow(tree: Tree): LayoutResult {
         label: "fork",
         labelStyle: { fill: "var(--chr-purple)", fontSize: 11, fontWeight: 600 },
         labelBgStyle: { fill: "var(--chr-bg-elev)" },
-        data: { childRunId: e.child_run_id },
       });
     }
   }

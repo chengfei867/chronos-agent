@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ReactFlow,
   Background,
+  BackgroundVariant,
   Controls,
   MiniMap,
   Panel,
@@ -36,6 +37,7 @@ import {
   RotateCcw,
   Maximize2,
   ArrowLeft,
+  ArrowRight,
   Info,
   GitFork,
 } from "lucide-react";
@@ -47,6 +49,7 @@ import { treeToReactFlow, type LaneInfo } from "../layout";
 import ChronosNodeCard from "../components/nodes/ChronosNodeCard";
 import PlaceholderNode from "../components/nodes/PlaceholderNode";
 import NodeDetails from "../components/NodeDetails";
+import Legend from "../components/Legend";
 import ConceptTip from "../components/ConceptTip";
 import { usePlayback } from "../hooks/usePlayback";
 
@@ -86,6 +89,7 @@ function InnerTree({
 
   const playback = usePlayback(orderedNodes.length);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
 
   const { rfNodes: baseNodes, rfEdges: baseEdges, lanes } = useMemo(
     () => treeToReactFlow(tree),
@@ -116,7 +120,33 @@ function InnerTree({
     }));
   }, [baseNodes, playback.index, orderedNodes, selectedId]);
 
-  const rfEdges = useMemo<RFEdge[]>(() => baseEdges, [baseEdges]);
+  const rfEdges = useMemo<RFEdge[]>(
+    () =>
+      baseEdges.map((e) => {
+        const isSel = e.id === selectedEdgeId;
+        if (!selectedEdgeId) return e;
+        if (!isSel) {
+          return {
+            ...e,
+            style: { ...e.style, opacity: 0.65 },
+          } as RFEdge;
+        }
+        const isFork = e.data?.kind === "fork";
+        const accent = isFork ? "#c678f7" : "#58a6ff";
+        const glowRgb = isFork ? "198, 120, 247" : "88, 166, 255";
+        return {
+          ...e,
+          style: {
+            ...e.style,
+            stroke: accent,
+            strokeWidth: 2.6,
+            filter: `drop-shadow(0 0 6px rgba(${glowRgb}, 0.55))`,
+            opacity: 1,
+          },
+        } as RFEdge;
+      }),
+    [baseEdges, selectedEdgeId],
+  );
 
   // Auto-pan to the node that's currently "playing".
   useEffect(() => {
@@ -136,6 +166,16 @@ function InnerTree({
     (_evt: React.MouseEvent, node: RFNode) => {
       if (node.type === "placeholder") return;
       setSelectedId(node.id);
+      setSelectedEdgeId(null);
+    },
+    [],
+  );
+
+  const onEdgeClick = useCallback(
+    (_evt: React.MouseEvent, edge: RFEdge) => {
+      setSelectedEdgeId((prev) => (prev === edge.id ? null : edge.id));
+      // Click an edge → deselect any node so the right inspector reflects edge state
+      setSelectedId(null);
     },
     [],
   );
@@ -184,12 +224,14 @@ function InnerTree({
           </Text>
         </Space>
         <Space wrap>
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            {t("tree.stepOf", {
-              current: Math.max(0, playback.index + 1),
-              total: orderedNodes.length,
-            })}
-          </Text>
+          <ConceptTip concept="step">
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              {t("tree.stepOf", {
+                current: Math.max(0, playback.index + 1),
+                total: orderedNodes.length,
+              })}
+            </Text>
+          </ConceptTip>
           {playback.playing ? (
             <Button icon={<Pause size={14} />} onClick={playback.pause}>
               {t("tree.pause")}
@@ -274,9 +316,11 @@ function InnerTree({
                 </div>
               </div>
               <div>
-                <Text type="secondary" style={{ fontSize: 11 }}>
-                  {t("runs.columns.adapter")}
-                </Text>
+                <ConceptTip concept="framework">
+                  <Text type="secondary" style={{ fontSize: 11, cursor: "help" }}>
+                    {t("runs.columns.adapter")}
+                  </Text>
+                </ConceptTip>
                 <div><Tag color="geekblue">{run.adapter}</Tag></div>
               </div>
               {run.task_description && (
@@ -308,7 +352,13 @@ function InnerTree({
                 </Col>
                 <Col span={24}>
                   <Statistic
-                    title={t("nodeDetails.fields.costUsd")}
+                    title={
+                      <ConceptTip concept="usage">
+                        <span style={{ cursor: "help" }}>
+                          {t("nodeDetails.fields.costUsd")}
+                        </span>
+                      </ConceptTip>
+                    }
                     value={totalCost === 0 ? "–" : (totalCost / 100).toFixed(4)}
                     prefix={totalCost > 0 ? "$" : ""}
                   />
@@ -318,7 +368,9 @@ function InnerTree({
                 type="info"
                 showIcon
                 icon={<Info size={14} />}
-                message={t("tree.clickHint")}
+                message={
+                  selectedEdgeId ? t("tree.edgeSelectedHint") : t("tree.clickHint")
+                }
                 style={{ background: "transparent", padding: 8, fontSize: 12 }}
               />
             </Space>
@@ -337,6 +389,7 @@ function InnerTree({
               edges={rfEdges}
               nodeTypes={NODE_TYPES}
               onNodeClick={onNodeClick}
+              onEdgeClick={onEdgeClick}
               fitView
               fitViewOptions={{ padding: 0.15, minZoom: 0.5 }}
               minZoom={0.3}
@@ -344,10 +397,28 @@ function InnerTree({
               colorMode="dark"
               proOptions={{ hideAttribution: true }}
             >
-              <Background gap={24} size={1} color="#30363d" />
+              <Background
+                variant={BackgroundVariant.Dots}
+                gap={22}
+                size={1.6}
+                color="#3a4556"
+              />
               {includeDescendants && lanes.length > 1 && (
                 <LaneBackground lanes={lanes} rootRunId={run.id} />
               )}
+              <Panel position="top-left" style={{ margin: 12, pointerEvents: "auto" }}>
+                {selectedEdgeId && (
+                  <SelectedEdgePanel
+                    edge={baseEdges.find((e) => e.id === selectedEdgeId)}
+                    tree={tree}
+                    t={t}
+                    onClose={() => setSelectedEdgeId(null)}
+                  />
+                )}
+              </Panel>
+              <Panel position="top-right" style={{ margin: 12, pointerEvents: "none" }}>
+                <Legend showLanes={includeDescendants && lanes.length > 1} />
+              </Panel>
               <Controls showInteractive={false} />
               <MiniMap
                 pannable
@@ -508,5 +579,85 @@ function LaneBackground({
         })}
       </div>
     </Panel>
+  );
+}
+
+function SelectedEdgePanel({
+  edge,
+  tree,
+  t,
+  onClose,
+}: {
+  edge: RFEdge | undefined;
+  tree: Tree;
+  t: (k: string, vars?: Record<string, unknown>) => string;
+  onClose: () => void;
+}) {
+  if (!edge) return null;
+  const isFork = edge.data?.kind === "fork";
+  const sourceNode = tree.nodes.find((n) => n.id === edge.source);
+  const targetNode = tree.nodes.find((n) => n.id === edge.target);
+  const sourceLabel = sourceNode?.node_name ?? edge.source.slice(0, 12);
+  const targetLabel = targetNode?.node_name ?? edge.target.slice(0, 12);
+  const accent = isFork ? "#c678f7" : "#58a6ff";
+  const accentSoft = isFork ? "rgba(198,120,247,0.08)" : "rgba(88,166,255,0.08)";
+  return (
+    <div
+      style={{
+        padding: "10px 14px",
+        background: `linear-gradient(180deg, ${accentSoft}, rgba(13,17,23,0.92))`,
+        border: `1px solid ${accent}55`,
+        borderLeft: `3px solid ${accent}`,
+        borderRadius: 8,
+        fontSize: 12,
+        position: "relative",
+        minWidth: 220,
+        boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
+      }}
+    >
+      <button
+        onClick={onClose}
+        aria-label="close"
+        style={{
+          position: "absolute",
+          top: 6,
+          right: 8,
+          background: "transparent",
+          border: "none",
+          color: "#8b949e",
+          cursor: "pointer",
+          fontSize: 14,
+          lineHeight: 1,
+        }}
+      >
+        ×
+      </button>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          marginBottom: 6,
+          color: accent,
+          fontWeight: 600,
+          letterSpacing: 0.3,
+          fontSize: 11,
+          textTransform: "uppercase",
+        }}
+      >
+        {isFork ? <GitFork size={12} /> : <ArrowRight size={12} />}
+        {isFork ? t("tree.edgeTypeFork") : t("tree.edgeTypeSequential")}
+      </div>
+      <div style={{ color: "#c9d1d9", fontFamily: "monospace", fontSize: 11, lineHeight: 1.6 }}>
+        <span style={{ color: "#8b949e" }}>{t("tree.edgeFrom.from")}:</span>{" "}
+        <span style={{ color: "#e6edf3" }}>{sourceLabel}</span>
+        <br />
+        <span style={{ color: "#8b949e" }}>{t("tree.edgeFrom.to")}:</span>{" "}
+        <span style={{ color: "#e6edf3" }}>{targetLabel}</span>
+      </div>
+      <div style={{ marginTop: 8, color: "#8b949e", fontSize: 11, lineHeight: 1.5 }}>
+        {isFork ? t("tree.edgeForkExplain") : t("tree.edgeSequentialExplain")}
+      </div>
+    </div>
   );
 }

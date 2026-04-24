@@ -411,3 +411,6 @@ body {
     display: none;
   }
 }
+
+/* R38: selected edge uses only color + glow for emphasis — no dash animation
+   (kept plain to avoid clashing with ReactFlow fork edges that are naturally dashed). */

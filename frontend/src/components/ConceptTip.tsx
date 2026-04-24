@@ -6,7 +6,16 @@ import { Popover, Typography } from "antd";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 
-export type ConceptKey = "run" | "node" | "fork" | "adapter" | "usage" | "thread";
+export type ConceptKey =
+  | "run"
+  | "node"
+  | "fork"
+  | "adapter"
+  | "usage"
+  | "thread"
+  | "step"
+  | "framework"
+  | "timeline";
 
 export default function ConceptTip({
   concept,
