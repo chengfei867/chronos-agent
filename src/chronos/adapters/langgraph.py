@@ -581,4 +581,70 @@ def _jsonable(obj: Any) -> Any:
     return repr(obj)
 
 
-__all__ = ["AdapterError", "ForkRef", "LangGraphRecorder", "RunRef"]
+# ---------------------------------------------------------------------------
+# Module-level AdapterProtocol instance (ADR-016 P2, R32-B)
+# ---------------------------------------------------------------------------
+
+
+class _LangGraphAdapter:
+    """Module-level :class:`AdapterProtocol` implementation for LangGraph.
+
+    Thin factory over :class:`LangGraphRecorder`; holds no state beyond the
+    canonical ``name`` / ``version_constraint`` class attrs. Instantiated
+    once as the module-level :data:`langgraph_adapter` singleton.
+
+    The ``**adapter_specific`` kwarg of ``build_recorder()`` is LangGraph's
+    pressure-release valve per ADR-016 P2 — LangGraph is a first-class
+    adapter with no framework-specific construction knobs, so any
+    ``**adapter_specific`` kwargs raise :class:`AdapterError`. AutoGen /
+    CrewAI adapters will populate this kwarg meaningfully.
+    """
+
+    name: str = "langgraph"
+    version_constraint: str = ">=1.1,<2"
+
+    def build_recorder(
+        self,
+        store: SqliteStore,
+        *,
+        kind_map: dict[str, NodeKind] | None = None,
+        usage_extractor: UsageExtractor | None = None,
+        **adapter_specific: Any,
+    ) -> LangGraphRecorder:
+        """Construct a :class:`LangGraphRecorder` bound to ``store``.
+
+        Matches :class:`AdapterProtocol.build_recorder`. ``kind_map`` and
+        ``usage_extractor`` are forwarded to the recorder constructor.
+        ``**adapter_specific`` must be empty for LangGraph; any extra
+        kwargs raise :class:`AdapterError` (ADR-016 P2 pressure-release
+        is reserved for adapters with framework-specific construction
+        needs).
+        """
+        if adapter_specific:
+            raise AdapterError(
+                "langgraph_adapter.build_recorder() does not accept "
+                f"adapter-specific kwargs; got: {sorted(adapter_specific)}"
+            )
+        return LangGraphRecorder(
+            store,
+            kind_map=kind_map,
+            usage_extractor=usage_extractor,
+        )
+
+
+langgraph_adapter = _LangGraphAdapter()
+"""Module-level :class:`AdapterProtocol` instance for the LangGraph adapter.
+
+Satisfies :class:`~chronos.adapters.protocols.AdapterProtocol` structurally
+(verified by ``isinstance()`` via ``@runtime_checkable``). Import from
+either :mod:`chronos.adapters.langgraph` or :mod:`chronos.adapters`.
+"""
+
+
+__all__ = [
+    "AdapterError",
+    "ForkRef",
+    "LangGraphRecorder",
+    "RunRef",
+    "langgraph_adapter",
+]

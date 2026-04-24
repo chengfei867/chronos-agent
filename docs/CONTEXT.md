@@ -145,165 +145,175 @@
    145|
    146|---
    147|
-   148|## 5. 当前状态 (Current State)
-   149|
-   150|**截至 Round 31 结束 (2026-04-24 CST 凌晨 cron 轮) — ADR-016 rollout step 2 ✅ `protocols.py` landed**
-   151|
-   152|- Round: **31 完成** (adapter Protocol formalisation)
-   153|- 最近 progress doc: `progress/2026-04-24-round-31.md` ← **下一轮必读**
-   154|- 当前阶段: **Phase 2 in-flight** — v0.2.0a0 released (R30); R31 landed the adapter-Protocol canonical home (`src/chronos/adapters/protocols.py`). AutoGen adapter is the next real-work ticket (R32 candidate).
-   155|- 最新 ADR: **ADR-016 (R26)** — Adapter interface (未变; R31 是 ADR-016 rollout step 2 的实施, 非 ADR 级别决策)
-   156|- 最新 research doc: `docs/research/multi-framework-risks.md` (R27 + R29 verdict)
-   157|- 最新 tag: **v0.2.0a0** (R30 cut)
-   158|- Blocked items: 无
-   159|- 测试状态: **315/315 pass** (93% coverage; +22 new tests in `test_adapter_protocols.py`)
-   160|- CLI 表面: 未变 (R31 纯 internal refactor, 用户侧 import path 全兼容)
-   161|- **R31 产出**:
-   162|  - `src/chronos/adapters/protocols.py` (~290 LOC) — canonical home for `RunRef` / `ForkRef` / `AdapterError` + `RecorderProtocol` / `AdapterProtocol` / `NodeIdentityResolver` 三个 `@runtime_checkable` Protocols
-   163|  - `src/chronos/adapters/langgraph.py` — 本地 `RunRef` / `ForkRef` / `AdapterError` 删除, 改成 `from chronos.adapters.protocols import ...`; `from dataclasses import dataclass, field` 顺手 drop (本地再无 dataclass 用法); `__all__` 不变, 对外 import path 全兼容
-   164|  - `src/chronos/adapters/linear/recorder.py` — 同上 delete + re-import; 末尾补 `__all__` (mypy strict re-export 要求)
-   165|  - `src/chronos/adapters/__init__.py` 重写 — 现在顶层 `chronos.adapters` package 直接暴露 3 Protocol + 2 dataclass + AdapterError + LangGraphRecorder, `__all__` 七项全齐
-   166|  - `tests/unit/test_adapter_protocols.py` (+22 tests): canonical-identity (`is` 断言) / dataclass-shape / Protocol conformance (`isinstance` via `@runtime_checkable`, `cast()` smoke) / public-surface
-   167|  - CHANGELOG `[Unreleased]` 现在有 R31 Changed + Added 两小段 (为下一个 release 做准备)
-   168|- **R31 为什么不是 ADR**: ADR-016 早在 R26 就已 Accepted 并定义了 `protocols.py` 的内容, R31 只是**实施** rollout step 2 (即 ADR-016 §Rollout 的第 2 项). 属于合同执行非合同决策.
-   169|- **R31 意外发现 (value-add)**: mypy strict 在 `linear/__init__.py` 的 `from .recorder import AdapterError` 抛 `[attr-defined]` 错 — 原因: 当 `recorder.py` 把 `AdapterError` 从 `protocols` **重新导入** 但没加入自己的 `__all__` 时, mypy 认为它不是 "explicitly exported". 修: `recorder.py` 末尾加 `__all__`. 教训 (已更新到旧事实): **新加模块级 re-export 时 mypy strict 要求下游被再次 re-export 的模块也要有 `__all__`**; 不然 `[attr-defined]` 错误会误导人以为属性真的不存在
-   170|- **R30 bundle 回顾 (仍有效)**: v0.2.0a0 release cut (R24-R29 打包), 顺手修 R29 遗留 mypy bug
-   171|- **R29 bundle 回顾 (仍有效)**: dual adapter dogfood + linear usage-hint API 泛化
-   172|- **R28 bundle 回顾 (仍有效)**: linear reference adapter + 25 unit tests
-   173|- **R27 bundle 回顾 (仍有效)**: multi-framework risks doc (6 risks + R29 verdict)
-   174|- **R26 bundle 回顾 (仍有效)**: ADR-016 (adapter interface 3 Protocols) + roadmap drift 大修
-   175|- **R25 bundle 回顾 (仍有效)**: ADR-015 (extractor contract v2) + 四面包屑
-   176|- **R24 bundle 回顾 (仍有效)**: ADR-014 (Phase 2 entry checklist) + FORCE_COLOR conftest 修复
-   177|- 旧事实 (仍生效, 不重复):
-   178|  - GitHub push 只有 `gh-proxy.com`
-   179|  - LangGraph 1.1.9 record/fork/diff 全链路 OK
-   180|  - `NodeKind` 合法值 `{llm, tool, fn, router, fork, end}`
-   181|  - Runs/Nodes upsert, Forks append-only
-   182|  - Duck + real 双测试策略
-   183|  - CLI 状态行 / `pyproject.toml::project.version` 每次 version bump 要同步
-   184|  - JSON 模式走 stdlib `print(json.dumps(...))` 不走 rich Console
-   185|  - `SqliteStore.open()` 静默建文件, 读命令守 `Path.exists()`
-   186|  - **progress doc 每轮必写**
-   187|  - **`ForkPlan` schema 是 v0.1.1 对外契约**
-   188|  - **Extractor contract v2 (ADR-015) 是 v0.1.2+ 对外契约**
-   189|  - **Adapter interface (ADR-016) 是 v0.2.0 对外契约** (R26 决策, R31 实施 step 2 canonical `protocols.py`)
-   190|  - **Multi-framework risks (R27 research doc) 是 v0.2.0 前必读 Phase 2 gotchas 清单**
-   191|  - **Anthropic prompt caching 计账** (R15, ADR-015 Layer 5): cache_creation + cache_read 加到 prompt_tokens
-   192|  - **OpenAI reasoning tokens 语义** (R15, ADR-015 Layer 5): reasoning 是 completion 子字段, 不减
-   193|  - **Duck typing 原则** (R15, ADR-015 Layer 5): extractor 不 import SDK
-   194|  - **CLI 模块形状 (R14 确立)**: subcommand 实现模块暴露 `*_command(console, open_store_fn, ...)`
-   195|  - **OneAPI 配方 (R17/R18 确立)**: `model="Claude Opus 4.7"`, 不传 temperature, 响应恒包装饰性 error 字段忽略, UV_INDEX_URL=aliyun
-   196|  - **M milestone naming / multi-round bundle**: bug fix 不 bump M; release cut 单独一轮打包多个前轮
-   197|  - **Release pattern (R13/R16/R19/R22/R23/R30 六次验证 — skill `chronos-release-pattern`)**
-   198|  - **Dogfood script 陷阱**: `model_name` 在 `Node.model_name`; **R21 起推荐 `n.model` 短形式**
-   199|  - **Em-dash (U+2014) / U+2212 minus 被 ruff RUF001 禁** (仅 py 源码, md 文档 OK)
-   200|  - **Pydantic v2 field-level docstring**: 字段注解行下方 `"""..."""` 即是 docstring
-   201|  - **代码生成类测试必须 `compile()` + `exec()`** (R22 教训)
-   202|  - **ForkRef 字段**: `child_run_id`, `fork_id`, `node_ids` — 仅在 CM **exit** 后填
-   203|  - **SqliteStore 公开 API**: `SqliteStore.open(path)` classmethod 用作 CM
-   204|  - **LangGraph fork 语义 (R23-A 确立)**: `graph.invoke(None, {thread_id})` 续跑要求持久化且跨 run 共享的 checkpointer
-   205|  - **测试环境 color 污染 (R24 确立)**: `FORCE_COLOR` 由 `tests/conftest.py` autouse fixture 清掉
-   206|  - **ADR consolidation 模式 (R25 确立)**: consolidation ADR + predecessor 头面包屑
-   207|  - **Roadmap drift 自检 (R26 确立)**: 每轮收工前对一眼 `docs/roadmap.md`
-   208|  - **Research doc > ADR (R27 确立)**: 活内容用 `docs/research/*.md`
-   209|  - **Usage 字段边界 (R30 确立)**: `core.models.Usage` 只有 3 个 token 字段; `model_name` / `cost_usd_cents` 在 `Node` 上
-   210|  - **Release cut step 5 价值 (R30 确立)**: mypy 是最便宜的救命网
-   211|  - **Module re-export + mypy strict (R31 确立)**: 当模块 A 从 `protocols.py` import `X` 并被模块 B 再次 re-export 时, mypy strict (`implicit_reexport = False` or explicit `[attr-defined]`) 要求 A 模块自己加 `__all__` 显式列出 `X`. 否则 B 里 `from A import X` 报 `[attr-defined]`. 典型表现: 错误信息说 "does not explicitly export attribute X", 实际 X 确实在 A 的 module namespace 里, 只是没被 `__all__` 声明.
-   212|
-   213|## 6. 下一轮该做什么 (Next Round TODO)
-   214|
-   215|**Round 32 候选 — R31 清掉 `protocols.py` tech debt, AutoGen adapter 之路铺平**
-   216|
-   217|### R32-A (推荐): AutoGen adapter 首 commit — 第一个真正的 Phase 2 adapter 工作
-   218|
-   219|- 前置: R31 ✅ (`protocols.py` canonical home)
-   220|- 预估: 1-2 轮 (可能触发 ADR-017 async)
-   221|- 产出:
-   222|  - `uv add --optional autogen autogen-agentchat` (optional dep group)
-   223|  - `src/chronos/adapters/autogen/__init__.py` + `recorder.py` 占位 + `AutoGenRecorder.record()` 跑通 minimal group chat (2 agent)
-   224|  - 至少 1 个单元测试 (可用 stub/fake; 不依赖真 LLM)
-   225|  - 如果碰到 async-first API 无法套用现 sync Protocol → 立即停下写 ADR-017 `AsyncRecorderProtocol` 而不是硬塞
-   226|- 价值: 压测 R-1 (event-model drift) 和 R-4 (async); 是 v0.2.0b0 的核心卖点
-   227|- 非目标: 本轮不做 fork + 不做 CI dual-adapter dogfood 接入 (那是 R33+)
-   228|- **安全门**: 如果 `autogen-agentchat` 装不下 / 跟 OneAPI 不兼容, 就退到 R32-C
-   229|
-   230|### R32-B (次选): `langgraph_adapter: AdapterProtocol` 模块级 instance
-   231|
-   232|- 前置: R31 ✅
-   233|- 预估: 0.3-0.5 轮
-   234|- 产出: 在 `src/chronos/adapters/langgraph.py` 末尾加一个 module-level `langgraph_adapter = _LangGraphAdapter()` 对象, 暴露 `name="langgraph"` / `version_constraint=">=1.1,<2"` / `build_recorder(...)`; 给 `linear` 包同样加一个. 单元测试断 `isinstance(langgraph_adapter, AdapterProtocol)` 且 `isinstance(linear_adapter, AdapterProtocol)`.
-   235|- 价值: 把 `AdapterProtocol` 从 "仅 Protocol 无活着的 impl" 升级到 "2 impl 在线"; 为 future adapter registry 铺路
-   236|- 风险: 低
-   237|- **配合 R32-A 一起做, 或单独做 1 个轻量轮都合适**
-   238|
-   239|### R32-C (fallback): Documentation + migration guide for v0.2.0-alpha
-   240|
-   241|- 如果 R32-A/B 都不顺 (AutoGen 装不上 / 依赖冲突): 写 `docs/migration/v0.1-to-v0.2.md` 给 v0.1.x 用户看, 整理 R31 新暴露的 import path 建议 (optional, 都是 backward-compat)
-   242|- 低戏剧性, 1 轮完工
-   243|
-   244|### R32 非目标 (继承)
-   245|
-   246|- ❌ execute-fork 实现 (ADR-013 冻结, 未解除)
-   247|- ❌ Web UI 任何代码 (Phase 2 red line, CONTEXT.md §4 明确登记)
-   248|- ❌ 破坏性改动 ADR-015 / ADR-016 Protocol 签名 (v0.2.x 合同已稳)
-   249|- ❌ 改 `protocols.py` 里的 Protocol 签名 (那是 ADR-017 的事)
-   250|
-   251|### Release strategy
-   252|
-   253|- `[Unreleased]` 现在有 R31 Changed + Added
-   254|- 下一个 release 建议: R32 AutoGen 半边跑通 → cut v0.2.0b0 (beta); 或 R32+R33 一起打包 cut v0.2.0rc0
-   255|- 按 `chronos-release-pattern` skill 走 7 步
-   256|
-   257|## Cron 窗口门控 (2026-04-22 用户指令)
-   258|
-   259|用户要求 cron 只在**北京时间 0-11 点**跑。当前 cron 是 `every 3h` 全天跑。
-   260|**每轮启动必做**: 读当前时间，如果北京时间不在 [0, 11] 闭区间内，立即退出不做事（不烧 LLM）。代码:
-   261|
-   262|```python
-   263|from datetime import datetime, timezone, timedelta
-   264|beijing_hour = (datetime.now(timezone.utc) + timedelta(hours=8)).hour
-   265|if not (0 <= beijing_hour <= 11):
-   266|    print(f"跳过本轮 — 北京 {beijing_hour} 点超出 0-11 窗口")
-   267|    sys.exit(0)
-   268|```
-   269|或 agent prompt 里直接让它自检。
-   270|**例外**: 用户手动触发/手动说"继续跑"可以不看窗口 (Round 3/4 就是这种情况)。
-   271|
-   272|## 7. 文档索引 (当你需要深入某个主题)
-   510|
-   511|| 主题 | 文档 |
-   512||---|---|
-   513|| 竞品全景 | `docs/research/competitors.md` |
-   514|| 技术可行性 | `docs/research/feasibility.md` |
-   515|| 风险清单 | `docs/research/risks.md` |
-   516|| 用户故事 | `docs/design/user-stories.md` |
-   517|| 架构总图 | `docs/design/architecture.md` |
-   518|| 语言选型 | `docs/decisions/ADR-001-language.md` |
-   519|| 路线图 | `docs/roadmap.md` |
-   520|| 所有历史进展 | `progress/*.md` (按时间排序) |
-   521|
-   522|---
-   523|
-   524|## 8. 当你不知道该干什么的时候
-   525|
-   526|**决策树：**
-   527|
-   528|1. 读 `progress/` 里最新的那一份 doc → 看 "下一轮 TODO"
-   529|2. 如果 TODO 不明确，读这份 CONTEXT.md 的第 6 节
-   530|3. 如果第 6 节也空 → 读 `docs/roadmap.md` 找当前 phase 的下一个任务
-   531|4. 如果 roadmap 没写到 → 回到 `docs/decisions/` 最新 ADR，看当前决策边界在哪
-   532|5. 如果还不知道 → **自己想，然后在 progress doc 里论证决定**，不要找用户
-   533|
-   534|**绝不要做的事：**
-   535|- ❌ 不读文档直接写代码
-   536|- ❌ 不写 progress doc 就结束 cron
-   537|- ❌ 不推 GitHub 就结束 cron
-   538|- ❌ commit `.env` 或任何包含 token 的文件
-   539|- ❌ 删除或重写 `docs/CONTEXT.md` 核心骨架（可以**增加**第 5/6 节内容，或**更新**索引；不能删除前 4 节纪律）
-   540|- ❌ 部署到主网 / 花真钱 / 调公开的付费 API
-   541|- ❌ 公开仓库（保持 private，直到用户明确说公开）
-   542|
-   543|---
-   544|
-   545|*Last updated: 2026-04-23 by Round 12 agent (北京下午, 用户交互轮, M1.11 usage extractor hook ship, 未 tag 留 R13 cut v0.1.2)*
-   546|
+## 5. 当前状态 (Current State)
+
+**截至 Round 32 结束 (2026-04-24 CST 上午 cron 轮) — ADR-016 P2 首批活 instance 上线**
+
+- Round: **32 完成** (module-level `AdapterProtocol` instances)
+- 最近 progress doc: `progress/2026-04-24-round-32.md` ← **下一轮必读**
+- 当前阶段: **Phase 2 in-flight** — v0.2.0a0 released (R30); R31 landed canonical `protocols.py`; R32 landed first two live `AdapterProtocol` instances (`langgraph_adapter`, `linear_adapter`). AutoGen adapter still R33 候选.
+- 最新 ADR: **ADR-016 (R26)** — R31+R32 都是 rollout 实施, 不是新决策
+- 最新 research doc: `docs/research/multi-framework-risks.md` (R27 + R29 verdict)
+- 最新 tag: **v0.2.0a0** (R30 cut); `[Unreleased]` 现在叠了 R31 + R32 两段
+- Blocked items: 无
+- 测试状态: **336/336 pass** (93% coverage; +21 new tests in `test_adapter_instances.py`, +22 from R31's `test_adapter_protocols.py`)
+- CLI 表面: 未变 (R32 纯增量, 新导出不破坏任何旧 import)
+- **R32 产出 (本轮)**:
+  - `src/chronos/adapters/langgraph.py` 末尾新增 `_LangGraphAdapter` class + `langgraph_adapter = _LangGraphAdapter()` singleton. `name="langgraph"`, `version_constraint=">=1.1,<2"`. `build_recorder(store, *, kind_map, usage_extractor, **adapter_specific)` 转发前两个 kwarg 到 `LangGraphRecorder.__init__`, 任何 `**adapter_specific` → `AdapterError` (LangGraph 作为 first-class adapter 没有框架特定构造参数).
+  - `src/chronos/adapters/linear/__init__.py` 重写为完整 module: 新增 `_LinearAdapter` class + `linear_adapter = _LinearAdapter()` singleton. `name="linear"`, `version_constraint=""` (zero-dep 允许空). `build_recorder()` 对 `kind_map` / `usage_extractor` 非 None 抛 `AdapterError` 并提示正确通道 (`LinearRuntime.kind_map` / `__chronos_usage__` state-key); 接受 `adapter_name` via `**adapter_specific`; 未知 kwarg 抛 `AdapterError`.
+  - `src/chronos/adapters/__init__.py` 重写 — 现在暴露 9 个名字 (原 7 + `langgraph_adapter` + `linear_adapter` + 顺手加 `LinearRecorder` + `LinearRuntime`).
+  - `tests/unit/test_adapter_instances.py` (+21 tests, 5 test classes): metadata 值断言 / `isinstance(x, AdapterProtocol)` / `build_recorder()` 返回 `RecorderProtocol` / LangGraph 转发+错误 / Linear 3 条错误路径 + adapter_name / package 级 re-export + 可枚举 roster
+  - CHANGELOG `[Unreleased]` 新增 R32 Added + Tests 两小段 (R31 段已在之前)
+- **R32 为什么不是 ADR**: ADR-016 §P2 早已定义 `AdapterProtocol` 的字段 + `build_recorder()` 签名. R32 只是每个 shipping adapter 填一个 instance, 属 rollout 实施非合同决策.
+- **R32 意外发现 (value-add)**: Linear adapter 的 `kind_map` 实际住在 `LinearRuntime` 而不是 `LinearRecorder` 上 — 这意味着 `AdapterProtocol.build_recorder()` 的 `kind_map` kwarg 对 Linear 是语义不通道. 选择: 不静默忽略 (会骗用户), 而是 `AdapterError` + 指路. **教训 (新旧事实)**: 未来 adapter 如果 `build_recorder()` 某个标准 kwarg 不适用, "硬抛错 + 指路" 永远比 "静默忽略" 好.
+- **R31 产出 (上一轮, 回顾)**:
+  - `src/chronos/adapters/protocols.py` (~290 LOC) — canonical home for `RunRef` / `ForkRef` / `AdapterError` + 3 个 `@runtime_checkable` Protocols
+  - `langgraph.py` / `linear/recorder.py` 删本地 dataclass 改 re-import; 后者末尾加 `__all__`
+  - `tests/unit/test_adapter_protocols.py` (+22 tests)
+- **R31 教训 (仍有效)**: mypy strict 下模块间 re-export 链要求每一层模块自己的 `__all__` 都显式列出 re-export 名字. 错误信息 `[attr-defined] does not explicitly export` 误导人以为属性不存在, 其实只是 `__all__` 没列.
+- **R30 bundle 回顾 (仍有效)**: v0.2.0a0 release cut (R24-R29 打包), 顺手修 R29 遗留 mypy bug
+- **R29 bundle 回顾 (仍有效)**: dual adapter dogfood + linear usage-hint API 泛化
+- **R28 bundle 回顾 (仍有效)**: linear reference adapter + 25 unit tests
+- **R27 bundle 回顾 (仍有效)**: multi-framework risks doc (6 risks + R29 verdict)
+- **R26 bundle 回顾 (仍有效)**: ADR-016 (adapter interface 3 Protocols) + roadmap drift 大修
+- **R25 bundle 回顾 (仍有效)**: ADR-015 (extractor contract v2) + 四面包屑
+- **R24 bundle 回顾 (仍有效)**: ADR-014 (Phase 2 entry checklist) + FORCE_COLOR conftest 修复
+- 旧事实 (仍生效, 不重复):
+  - GitHub push 只有 `gh-proxy.com`
+  - LangGraph 1.1.9 record/fork/diff 全链路 OK
+  - `NodeKind` 合法值 `{llm, tool, fn, router, fork, end}`
+  - Runs/Nodes upsert, Forks append-only
+  - Duck + real 双测试策略
+  - CLI 状态行 / `pyproject.toml::project.version` 每次 version bump 要同步
+  - JSON 模式走 stdlib `print(json.dumps(...))` 不走 rich Console
+  - `SqliteStore.open()` 静默建文件, 读命令守 `Path.exists()`
+  - **progress doc 每轮必写**
+  - **`ForkPlan` schema 是 v0.1.1 对外契约**
+  - **Extractor contract v2 (ADR-015) 是 v0.1.2+ 对外契约**
+  - **Adapter interface (ADR-016) 是 v0.2.0 对外契约** (R26 决策, R31 实施 canonical `protocols.py`, R32 实施 module-level instances)
+  - **Multi-framework risks (R27 research doc) 是 v0.2.0 前必读 Phase 2 gotchas 清单**
+  - **Anthropic prompt caching 计账** (R15, ADR-015 Layer 5): cache_creation + cache_read 加到 prompt_tokens
+  - **OpenAI reasoning tokens 语义** (R15, ADR-015 Layer 5): reasoning 是 completion 子字段, 不减
+  - **Duck typing 原则** (R15, ADR-015 Layer 5): extractor 不 import SDK
+  - **CLI 模块形状 (R14 确立)**: subcommand 实现模块暴露 `*_command(console, open_store_fn, ...)`
+  - **OneAPI 配方 (R17/R18 确立)**: `model="Claude Opus 4.7"`, 不传 temperature, 响应恒包装饰性 error 字段忽略, UV_INDEX_URL=aliyun
+  - **M milestone naming / multi-round bundle**: bug fix 不 bump M; release cut 单独一轮打包多个前轮
+  - **Release pattern (R13/R16/R19/R22/R23/R30 六次验证 — skill `chronos-release-pattern`)**
+  - **Dogfood script 陷阱**: `model_name` 在 `Node.model_name`; **R21 起推荐 `n.model` 短形式**
+  - **Em-dash (U+2014) / U+2212 minus 被 ruff RUF001 禁** (仅 py 源码, md 文档 OK)
+  - **Pydantic v2 field-level docstring**: 字段注解行下方 `"""..."""` 即是 docstring
+  - **代码生成类测试必须 `compile()` + `exec()`** (R22 教训)
+  - **ForkRef 字段**: `child_run_id`, `fork_id`, `node_ids` — 仅在 CM **exit** 后填
+  - **SqliteStore 公开 API**: `SqliteStore.open(path)` classmethod 用作 CM
+  - **LangGraph fork 语义 (R23-A 确立)**: `graph.invoke(None, {thread_id})` 续跑要求持久化且跨 run 共享的 checkpointer
+  - **测试环境 color 污染 (R24 确立)**: `FORCE_COLOR` 由 `tests/conftest.py` autouse fixture 清掉
+  - **ADR consolidation 模式 (R25 确立)**: consolidation ADR + predecessor 头面包屑
+  - **Roadmap drift 自检 (R26 确立)**: 每轮收工前对一眼 `docs/roadmap.md`
+  - **Research doc > ADR (R27 确立)**: 活内容用 `docs/research/*.md`
+  - **Usage 字段边界 (R30 确立)**: `core.models.Usage` 只有 3 个 token 字段; `model_name` / `cost_usd_cents` 在 `Node` 上
+  - **Release cut step 5 价值 (R30 确立)**: mypy 是最便宜的救命网
+  - **Module re-export + mypy strict (R31 确立)**: 当模块 A 从 `protocols.py` import `X` 并被模块 B 再次 re-export 时, mypy strict (`implicit_reexport = False` or explicit `[attr-defined]`) 要求 A 模块自己加 `__all__` 显式列出 `X`. 否则 B 里 `from A import X` 报 `[attr-defined]`. 典型表现: 错误信息说 "does not explicitly export attribute X", 实际 X 确实在 A 的 module namespace 里, 只是没被 `__all__` 声明.
+  - **AdapterProtocol build_recorder() 不适用 kwarg 处理 (R32 确立)**: 当某个 adapter 的 `build_recorder(store, *, kind_map, usage_extractor, **adapter_specific)` 里某个标准 kwarg 实际上对这个 adapter 不是活通道 (例: Linear 的 `kind_map` 活在 `LinearRuntime` 上不在 recorder 上), **必须 `AdapterError` + 指向真正的活通道**, 不能静默忽略. 静默忽略会让调用方以为生效了. 本轮 Linear adapter 3 条 error 路径都是这个模式.
+
+## 6. 下一轮该做什么 (Next Round TODO)
+
+**Round 33 候选 — 两个实体 adapter instance 已活 (R32), AutoGen 首 commit 是下一个实体重量级 ticket**
+
+### R33-A (推荐): AutoGen adapter 首 commit — 真正的 Phase 2 第三个 adapter
+
+- 前置: R32 ✅ (`AdapterProtocol` 有 2 个活 instance 可参照; `langgraph_adapter` / `linear_adapter` 是 `autogen_adapter` 的模板)
+- 预估: 1-2 轮 (可能触发 ADR-017 async)
+- 产出:
+  - `uv add --optional autogen autogen-agentchat` (optional dep group; 失败立即退到 R33-C)
+  - `src/chronos/adapters/autogen/__init__.py` + `recorder.py` 占位 + `AutoGenRecorder.record()` 跑通 minimal group chat (2 agent)
+  - 新 `autogen_adapter = _AutoGenAdapter()` module-level instance (照 R32 模板)
+  - 至少 1 个单元测试 (可用 stub/fake; 不依赖真 LLM)
+  - 如果碰到 async-first API 无法套用现 sync Protocol → 立即停下写 ADR-017 `AsyncRecorderProtocol` 而不是硬塞
+- 价值: 压测 R-1 (event-model drift) 和 R-4 (async); 是 v0.2.0b0 的核心卖点
+- 非目标: 本轮不做 fork + 不做 CI 三 adapter dogfood 接入
+- **安全门**: 如果 `autogen-agentchat` 装不下 / 跟 OneAPI 不兼容, 就退到 R33-B 或 R33-C
+
+### R33-B (次选): CLI `chronos adapters list` — R32 的自然延伸
+
+- 前置: R32 ✅
+- 预估: 0.5-1 轮
+- 产出:
+  - 新 `src/chronos/cli/adapters.py` — 暴露 `adapters_command(console, ...)` (照 R14 CLI 模块形状)
+  - 顶层枚举 `chronos.adapters` package namespace 里所有 `AdapterProtocol`-conformant 对象 (利用 `isinstance(x, AdapterProtocol)` 在 `@runtime_checkable` 下), 打印 `name / version_constraint / recorder class name` 表格
+  - JSON 模式走 `print(json.dumps(...))` (旧事实)
+  - `src/chronos/cli/__init__.py` 注册 subcommand
+  - 单元测试: `CliRunner` 断 human + JSON 输出
+- 价值: 首个 user-facing feature 验证 `AdapterProtocol` 的 "对外可枚举" 声明; 给后续 adapter registry 打底
+- 风险: 低 (纯增量 CLI)
+
+### R33-C (fallback): Release cut v0.2.0b0 — 打包 R31 + R32
+
+- 如果 R33-A/B 都不顺: 按 `chronos-release-pattern` skill 7 步打 v0.2.0b0 beta, 把 R31 + R32 的 `[Unreleased]` 内容 cut 出去
+- R31 (canonical protocols.py) + R32 (module-level instances) 是一个自然的 beta 主题 ("adapter interface live")
+- 1 轮完工
+
+### R33 非目标 (继承)
+
+- ❌ execute-fork 实现 (ADR-013 冻结, 未解除)
+- ❌ Web UI 任何代码 (Phase 2 red line, CONTEXT.md §4 明确登记)
+- ❌ 破坏性改动 ADR-015 / ADR-016 Protocol 签名 (v0.2.x 合同已稳)
+- ❌ 改 `protocols.py` 里的 Protocol 签名 (那是 ADR-017 的事)
+
+### Release strategy
+
+- `[Unreleased]` 现在叠了 R31 + R32 两个 Added/Changed/Tests 段
+- 下一个 release 建议: R33-A AutoGen 半边跑通 → cut v0.2.0b0; 或 R33-B/C 单独 cut v0.2.0b0
+- 按 `chronos-release-pattern` skill 走 7 步
+
+## Cron 窗口门控 (2026-04-22 用户指令)
+
+用户要求 cron 只在**北京时间 0-11 点**跑。当前 cron 是 `every 3h` 全天跑。
+**每轮启动必做**: 读当前时间，如果北京时间不在 [0, 11] 闭区间内，立即退出不做事（不烧 LLM）。代码:
+
+```python
+from datetime import datetime, timezone, timedelta
+beijing_hour = (datetime.now(timezone.utc) + timedelta(hours=8)).hour
+if not (0 <= beijing_hour <= 11):
+    print(f"跳过本轮 — 北京 {beijing_hour} 点超出 0-11 窗口")
+    sys.exit(0)
+```
+或 agent prompt 里直接让它自检。
+**例外**: 用户手动触发/手动说"继续跑"可以不看窗口 (Round 3/4 就是这种情况)。
+
+## 7. 文档索引 (当你需要深入某个主题)
+
+| 主题 | 文档 |
+|---|---|
+| 竞品全景 | `docs/research/competitors.md` |
+| 技术可行性 | `docs/research/feasibility.md` |
+| 风险清单 | `docs/research/risks.md` |
+| 用户故事 | `docs/design/user-stories.md` |
+| 架构总图 | `docs/design/architecture.md` |
+| 语言选型 | `docs/decisions/ADR-001-language.md` |
+| 路线图 | `docs/roadmap.md` |
+| 所有历史进展 | `progress/*.md` (按时间排序) |
+
+---
+
+## 8. 当你不知道该干什么的时候
+
+**决策树：**
+
+1. 读 `progress/` 里最新的那一份 doc → 看 "下一轮 TODO"
+2. 如果 TODO 不明确，读这份 CONTEXT.md 的第 6 节
+3. 如果第 6 节也空 → 读 `docs/roadmap.md` 找当前 phase 的下一个任务
+4. 如果 roadmap 没写到 → 回到 `docs/decisions/` 最新 ADR，看当前决策边界在哪
+5. 如果还不知道 → **自己想，然后在 progress doc 里论证决定**，不要找用户
+
+**绝不要做的事：**
+- ❌ 不读文档直接写代码
+- ❌ 不写 progress doc 就结束 cron
+- ❌ 不推 GitHub 就结束 cron
+- ❌ commit `.env` 或任何包含 token 的文件
+- ❌ 删除或重写 `docs/CONTEXT.md` 核心骨架（可以**增加**第 5/6 节内容，或**更新**索引；不能删除前 4 节纪律）
+- ❌ 部署到主网 / 花真钱 / 调公开的付费 API
+- ❌ 公开仓库（保持 private，直到用户明确说公开）
+
+---
+
+*Last updated: 2026-04-24 by Round 32 agent (北京上午 cron, module-level AdapterProtocol instances + CONTEXT.md 清理老 line-number 污染)*
