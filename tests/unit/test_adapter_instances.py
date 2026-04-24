@@ -68,16 +68,12 @@ class TestAdapterProtocolConformance:
     def test_linear_adapter_isinstance(self) -> None:
         assert isinstance(linear_adapter, AdapterProtocol)
 
-    def test_build_recorder_returns_recorder_protocol_langgraph(
-        self, store: SqliteStore
-    ) -> None:
+    def test_build_recorder_returns_recorder_protocol_langgraph(self, store: SqliteStore) -> None:
         rec = langgraph_adapter.build_recorder(store)
         assert isinstance(rec, LangGraphRecorder)
         assert isinstance(rec, RecorderProtocol)
 
-    def test_build_recorder_returns_recorder_protocol_linear(
-        self, store: SqliteStore
-    ) -> None:
+    def test_build_recorder_returns_recorder_protocol_linear(self, store: SqliteStore) -> None:
         rec = linear_adapter.build_recorder(store)
         assert isinstance(rec, LinearRecorder)
         assert isinstance(rec, RecorderProtocol)
