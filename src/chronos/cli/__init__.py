@@ -99,7 +99,7 @@ def info() -> None:
     console.print(
         "Status: Phase 3 on-ramp -- effect annotations landed (PH3-02), "
         "adapter interface stable (ADR-016), LangGraph/Linear/AutoGen adapters + "
-        "`chronos web` tree viewer + side-by-side DiffView + fork-warning UI, v0.3.0"
+        "`chronos web` + fork-warning UI + fork-plan side-effects preview, v0.3.1"
     )
     console.print(
         "Commands: [green]runs list/show, forks show, diff, replay, fork plan, web[/green] "

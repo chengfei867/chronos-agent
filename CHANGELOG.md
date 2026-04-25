@@ -4,7 +4,37 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
-_Nothing yet._
+_Nothing yet — R46 will decide._
+
+## [0.3.1] — 2026-04-25 (Round 45-A)
+
+**Theme**: **Phase 3 on-ramp PH3-03** — the `chronos fork plan` CLI now previews which **dangerous downstream nodes** a fork would re-execute. Before this release, users got effect tags in the Web UI (v0.3.0) but the CLI fork preview was silent about downstream risk. v0.3.1 closes that gap.
+
+### Added (R45-A — Fork-plan side-effects preview)
+
+- **`build_effects_summary(downstream_nodes)`** — new pure helper in `chronos.cli.fork`. Aggregates `metadata["effects"]` across a node list and returns `{total, dangerous_count, tag_counts, dangerous_samples}`. The samples field caps at 3 concrete `(step, name, effects)` tuples so the CLI can show examples, not just an abstract count. Defensive against malformed metadata (non-list `effects` is treated as empty).
+- **`render_effects_preview(summary, console)`** — new renderer that prints a yellow-bordered `Downstream side-effects preview` panel **before** the overrides table in `chronos fork plan` output. Shows the dangerous count out of total, a per-tag breakdown (e.g. `db=1, external=1, fs=1, network=2`), up to 3 concrete node examples, and an ADR-019 disclaimer that Chronos does not sandbox fork execution. Silent when `total == 0` (forking at the last node) or `dangerous_count == 0` (pure-LLM downstream) — no false-alarm noise.
+- **`fork_plan_command` integration** — per-run linear downstream (`step_index > parent.step_index`) is now computed after the parent node resolves, summarised via `build_effects_summary`, and threaded to both `render_plan_preview` call sites (JSON and Python emit modes) via the new `effects_summary` kwarg. Backwards compatible: callers that don't pass the kwarg get the pre-R45-A behaviour.
+- **8 new unit tests** (`tests/unit/test_fork_cli.py`) covering the helper (empty, pure-LLM, mixed dangerous, sample cap at 3, malformed metadata) and the CLI (dangerous preview shown with ADR-019 reference, silent when no downstream, silent when only LLM downstream). Full suite: **435 pass / 2 skip / 94% coverage** (up from 427 in v0.3.0). `cli/fork.py` coverage rose to **97%**.
+
+### Fixed
+
+- `tests/unit/test_cli.py::test_cli_info` was pinned to `phase 2` but the CLI `info()` status line was bumped to `Phase 3` in R44-A. R44-A's own green bar run missed this because the test was skipped by the coverage-filtered run; R45-A caught it on full-suite verify and updated the assertion to `phase 3`.
+
+### Rationale
+
+R44-A shipped the effect-annotation plumbing and a visual badge in the UI drawer, but the CLI fork workflow — which is the actual entry point for fork plans per ADR-013 (JSON artifact, CLI-only consumption) — had no awareness of downstream risk. Users could happily fork at step 0 of a 10-step run where 6 of those steps hit paid APIs, with nothing in the preview to flag it. R45-A closes the loop: every `chronos fork plan` invocation now shows, in 4-6 lines of CLI output, exactly how many dangerous nodes will re-fire and what their names are.
+
+This is **honest warning, not safety theatre** (ADR-019). Chronos still does not sandbox. The panel's disclaimer line explicitly says so. If a user wants to re-send an email, they can. The goal is that they see it coming.
+
+### Non-goals
+
+- No *blocking* of dangerous forks — even `external`-heavy downstream just warns, never exits 1. Users with idempotent side effects should be free to fork.
+- No DAG-topological downstream (graph walk from the fork point following `parent_node_id` edges). Per-run linear downstream (`step_index > parent`) was chosen because (a) it matches how `replay`/`fork` consumers actually think about "what comes after", and (b) branching DAG analysis is Phase 4 territory.
+
+### Files
+
+- **Modified**: `src/chronos/cli/fork.py` (+2 helpers, +1 `render_plan_preview` kwarg, +6 lines in `fork_plan_command`), `tests/unit/test_fork_cli.py` (+8 tests, new `seeded_db_with_effects` fixture), `tests/unit/test_cli.py` (1-line phase-marker fix).
 
 ## [0.3.0] — 2026-04-25 (Round 44-A)
 

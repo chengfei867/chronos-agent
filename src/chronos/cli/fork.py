@@ -22,6 +22,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from chronos.adapters.effects import DANGEROUS_EFFECTS_DEFAULT
 from chronos.core.models import Node, Run
 from chronos.fork_plan import ForkPlan
 
@@ -221,6 +222,104 @@ def build_plan(
 # ---------------------------------------------------------------------------
 
 
+def build_effects_summary(
+    downstream_nodes: list[Node],
+    *,
+    dangerous: frozenset[str] = DANGEROUS_EFFECTS_DEFAULT,
+) -> dict[str, Any]:
+    """Aggregate effect tags across downstream nodes for fork preview.
+
+    Returns a dict with:
+      - ``total``: count of downstream nodes
+      - ``dangerous_count``: nodes with ≥1 tag in ``dangerous``
+      - ``tag_counts``: {tag: count} across all downstream nodes
+      - ``dangerous_samples``: up to 3 (step_index, node_name, effects) for
+        the first dangerous nodes — lets CLI show concrete examples, not
+        just an abstract count.
+
+    Pure helper. Unit-testable without a store or recorder.
+    """
+    total = len(downstream_nodes)
+    tag_counts: dict[str, int] = {}
+    dangerous_samples: list[tuple[int, str, list[str]]] = []
+    dangerous_count = 0
+
+    for node in downstream_nodes:
+        raw = node.metadata.get("effects") if node.metadata else None
+        effects: list[str] = raw if isinstance(raw, list) else []
+        for tag in effects:
+            tag_counts[tag] = tag_counts.get(tag, 0) + 1
+        if any(t in dangerous for t in effects):
+            dangerous_count += 1
+            if len(dangerous_samples) < 3:
+                dangerous_samples.append((node.step_index, node.node_name, list(effects)))
+
+    return {
+        "total": total,
+        "dangerous_count": dangerous_count,
+        "tag_counts": tag_counts,
+        "dangerous_samples": dangerous_samples,
+    }
+
+
+def render_effects_preview(
+    summary: dict[str, Any],
+    console: Console,
+) -> None:
+    """Render the downstream side-effects summary panel (PH3-03).
+
+    Silent when ``summary['total'] == 0`` (forking at the last node) or
+    when ``summary['dangerous_count'] == 0`` — no dangerous effects means
+    no warning needed. ADR-019 stance: honest warning, not fake safety.
+    """
+    total = summary["total"]
+    dangerous_count = summary["dangerous_count"]
+    if total == 0 or dangerous_count == 0:
+        return
+
+    # Tag breakdown (only show dangerous ones in the count line to keep it
+    # focused; llm is not dangerous per ADR-019 reasoning).
+    tag_counts: dict[str, int] = summary["tag_counts"]
+    dangerous_tag_bits = [
+        f"{tag}={tag_counts[tag]}"
+        for tag in sorted(tag_counts)
+        if tag in DANGEROUS_EFFECTS_DEFAULT and tag_counts[tag] > 0
+    ]
+    tag_line = ", ".join(dangerous_tag_bits) if dangerous_tag_bits else "—"
+
+    lines: list[str] = []
+    lines.append(
+        f"[bold red]⚠ side effects:[/] forking here may re-execute "
+        f"[bold]{dangerous_count}[/] dangerous downstream node(s) "
+        f"out of {total} total."
+    )
+    lines.append(f"  breakdown: {tag_line}")
+
+    samples = summary["dangerous_samples"]
+    if samples:
+        lines.append("  examples:")
+        for step, name, effects in samples:
+            tag_str = ",".join(effects)
+            lines.append(f"    • step {step}: [cyan]{name}[/] [yellow]({tag_str})[/]")
+        if dangerous_count > len(samples):
+            lines.append(f"    • … and {dangerous_count - len(samples)} more")
+
+    lines.append(
+        "  [dim]Chronos does not sandbox fork execution (ADR-019). "
+        "If these effects touch the real world (HTTP, DB, email, filesystem), "
+        "confirm duplicate invocations are safe before running the fork.[/]"
+    )
+
+    console.print(
+        Panel(
+            "\n".join(lines),
+            border_style="yellow",
+            title="[yellow]Downstream side-effects preview[/]",
+            expand=False,
+        )
+    )
+
+
 def _truncate(text: str, limit: int = 200) -> str:
     s = text if len(text) <= limit else text[:limit] + "…"
     # Collapse newlines for one-row display.
@@ -236,8 +335,18 @@ def render_plan_preview(
     *,
     out_path: Path | None,
     emit: str = "json",
+    effects_summary: dict[str, Any] | None = None,
 ) -> None:
-    """Print a human-readable preview of a plan before/after writing it."""
+    """Print a human-readable preview of a plan before/after writing it.
+
+    When ``effects_summary`` is provided (PH3-03), a dedicated yellow
+    panel above the overrides table warns about dangerous downstream
+    effects. Backwards-compatible: callers that don't pass the kwarg get
+    the pre-R45-A behavior.
+    """
+    if effects_summary is not None:
+        render_effects_preview(effects_summary, console)
+
     state_after = parent_node.state_after or {}
 
     tbl = Table(show_header=True, header_style="bold", box=None, pad_edge=False)
@@ -354,6 +463,13 @@ def fork_plan_command(
         tags=tags,
     )
 
+    # PH3-03: compute downstream dangerous-effect summary for preview.
+    # Note: this is per-run linear downstream (step_index > parent's), not
+    # DAG-topological. Good enough for preview — matches how replay/fork
+    # consumers think about "what comes after".
+    downstream_nodes = [n for n in nodes if n.step_index > parent_node.step_index]
+    effects_summary = build_effects_summary(downstream_nodes)
+
     # --json: emit to stdout, no preview, no file (back-compat shortcut).
     if as_json:
         console.print_json(plan.to_json())
@@ -373,6 +489,7 @@ def fork_plan_command(
             console,
             out_path=out_path,
             emit="python",
+            effects_summary=effects_summary,
         )
         return
 
@@ -392,16 +509,19 @@ def fork_plan_command(
         warnings,
         console,
         out_path=written,
+        effects_summary=effects_summary,
     )
 
 
 __all__ = [
     "ForkCLIError",
+    "build_effects_summary",
     "build_plan",
     "default_child_thread_id",
     "fork_plan_command",
     "merge_overrides",
     "parse_override_token",
+    "render_effects_preview",
     "render_plan_preview",
     "resolve_parent_node",
     "validate_overrides_against_state",

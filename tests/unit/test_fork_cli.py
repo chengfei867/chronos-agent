@@ -688,3 +688,249 @@ def test_cli_fork_plan_emit_invalid_format_errors(seeded_db: Path, tmp_path: Pat
     )
     assert result.exit_code == 1
     assert "unknown --emit value" in result.stdout
+
+
+# ---------------------------------------------------------------------------
+# R45-A / PH3-03: downstream effects summary in fork plan preview
+# ---------------------------------------------------------------------------
+
+
+def _mk_node_with_effects(nid: str, step: int, name: str, effects: list[str] | None) -> Node:
+    """Node factory whose metadata carries the R44-A ``effects`` key."""
+    t = datetime(2026, 4, 25, tzinfo=UTC)
+    metadata: dict[str, object] = {}
+    if effects is not None:
+        metadata["effects"] = effects
+    return Node(
+        id=nid,
+        run_id="run-fx",
+        step_index=step,
+        node_name=name,
+        kind=NodeKind.FN,
+        started_at=t,
+        ended_at=t,
+        state_after={"step": step},
+        metadata=metadata,
+    )
+
+
+def test_build_effects_summary_empty() -> None:
+    from chronos.cli.fork import build_effects_summary
+
+    summary = build_effects_summary([])
+    assert summary["total"] == 0
+    assert summary["dangerous_count"] == 0
+    assert summary["tag_counts"] == {}
+    assert summary["dangerous_samples"] == []
+
+
+def test_build_effects_summary_no_dangerous() -> None:
+    """Pure-LLM downstream: llm is NOT dangerous per ADR-019 reasoning."""
+    from chronos.cli.fork import build_effects_summary
+
+    nodes = [
+        _mk_node_with_effects("n1", 1, "plan", ["llm"]),
+        _mk_node_with_effects("n2", 2, "critique", ["llm"]),
+    ]
+    summary = build_effects_summary(nodes)
+    assert summary["total"] == 2
+    assert summary["dangerous_count"] == 0
+    assert summary["tag_counts"] == {"llm": 2}
+
+
+def test_build_effects_summary_mixed_dangerous() -> None:
+    from chronos.cli.fork import build_effects_summary
+
+    nodes = [
+        _mk_node_with_effects("n1", 1, "fetch_weather", ["network"]),
+        _mk_node_with_effects("n2", 2, "save_to_db", ["db"]),
+        _mk_node_with_effects("n3", 3, "reason", ["llm"]),
+        _mk_node_with_effects("n4", 4, "write_log", ["fs"]),
+        _mk_node_with_effects("n5", 5, "no_meta", None),
+    ]
+    summary = build_effects_summary(nodes)
+    assert summary["total"] == 5
+    # network, db, fs are all dangerous; llm + no-meta are not.
+    assert summary["dangerous_count"] == 3
+    assert summary["tag_counts"] == {"network": 1, "db": 1, "llm": 1, "fs": 1}
+    # Samples show first 3 dangerous in step order.
+    samples = summary["dangerous_samples"]
+    assert len(samples) == 3
+    assert [s[1] for s in samples] == ["fetch_weather", "save_to_db", "write_log"]
+
+
+def test_build_effects_summary_samples_capped_at_three() -> None:
+    from chronos.cli.fork import build_effects_summary
+
+    # 5 network-effect nodes downstream → only first 3 surface as samples.
+    nodes = [_mk_node_with_effects(f"n{i}", i, f"http_{i}", ["network"]) for i in range(1, 6)]
+    summary = build_effects_summary(nodes)
+    assert summary["dangerous_count"] == 5
+    assert len(summary["dangerous_samples"]) == 3
+
+
+def test_build_effects_summary_ignores_non_list_effects() -> None:
+    """Defensive: malformed metadata.effects must not crash or be counted."""
+    from chronos.cli.fork import build_effects_summary
+
+    t = datetime(2026, 4, 25, tzinfo=UTC)
+    bad = Node(
+        id="bad",
+        run_id="run-fx",
+        step_index=1,
+        node_name="garbled",
+        kind=NodeKind.FN,
+        started_at=t,
+        ended_at=t,
+        state_after={},
+        metadata={"effects": "network"},  # str, not list[str]
+    )
+    summary = build_effects_summary([bad])
+    assert summary["total"] == 1
+    assert summary["dangerous_count"] == 0
+    assert summary["tag_counts"] == {}
+
+
+@pytest.fixture
+def seeded_db_with_effects(tmp_path: Path) -> Path:
+    """Run r-fx with 4 nodes: plan(llm), fetch(network), persist(db), ack(llm)."""
+    db_path = tmp_path / "chronos_fx.db"
+    t = datetime(2026, 4, 25, tzinfo=UTC)
+    store = SqliteStore.open(db_path)
+    try:
+        store.put_run(
+            Run(
+                id="r-fx",
+                adapter="langgraph",
+                adapter_thread_id="t-fx",
+                status=RunStatus.COMPLETED,
+                started_at=t,
+                ended_at=t,
+                task_description="effects demo",
+                initial_state={"task": "x"},
+                final_state={"ok": True},
+                tags=[],
+                metadata={},
+            )
+        )
+        blueprint = [
+            ("plan", ["llm"]),
+            ("fetch_weather", ["network"]),
+            ("persist", ["db"]),
+            ("ack", ["llm"]),
+        ]
+        for i, (name, effects) in enumerate(blueprint):
+            store.put_node(
+                Node(
+                    id=f"nfx{i}",
+                    run_id="r-fx",
+                    step_index=i,
+                    node_name=name,
+                    kind=NodeKind.FN,
+                    parent_node_id=(f"nfx{i - 1}" if i > 0 else None),
+                    started_at=t,
+                    ended_at=t,
+                    state_after={"step": i},
+                    metadata={"effects": effects},
+                )
+            )
+    finally:
+        store.close()
+    return db_path
+
+
+def test_cli_fork_plan_preview_shows_dangerous_effects(
+    seeded_db_with_effects: Path, tmp_path: Path
+) -> None:
+    """Forking at plan (step 0) must warn about 2 dangerous downstream nodes."""
+    out = tmp_path / "fp.json"
+    result = runner.invoke(
+        app,
+        [
+            "--",
+            "fork",
+            "plan",
+            "r-fx",
+            "--at-node",
+            "plan",
+            "--override",
+            "seed=2",
+            "--allow-new-keys",
+            "--out",
+            str(out),
+            "--db",
+            str(seeded_db_with_effects),
+        ],
+    )
+    assert result.exit_code == 0, result.stdout
+    # The preview panel is printed before the overrides table.
+    assert "side effects" in result.stdout.lower()
+    assert "2" in result.stdout  # dangerous_count
+    # Mentions dangerous tags in the breakdown.
+    assert "network" in result.stdout
+    assert "db=" in result.stdout
+    # At least one concrete example.
+    assert "fetch_weather" in result.stdout
+    # ADR-019 disclaimer.
+    assert "ADR-019" in result.stdout
+
+
+def test_cli_fork_plan_preview_silent_when_no_dangerous_downstream(
+    seeded_db_with_effects: Path, tmp_path: Path
+) -> None:
+    """Forking at ack (last node) → zero downstream → no effects panel."""
+    out = tmp_path / "fp2.json"
+    result = runner.invoke(
+        app,
+        [
+            "--",
+            "fork",
+            "plan",
+            "r-fx",
+            "--at-node",
+            "ack",
+            "--override",
+            "seed=3",
+            "--allow-new-keys",
+            "--out",
+            str(out),
+            "--db",
+            str(seeded_db_with_effects),
+        ],
+    )
+    assert result.exit_code == 0, result.stdout
+    # No effects preview panel printed when there's nothing downstream.
+    assert "Downstream side-effects preview" not in result.stdout
+    assert "ADR-019" not in result.stdout
+
+
+def test_cli_fork_plan_preview_silent_when_only_llm_downstream(
+    seeded_db_with_effects: Path, tmp_path: Path
+) -> None:
+    """Forking at persist (step 2) → only `ack(llm)` downstream → silent.
+
+    Confirms ADR-019 framing: pure-LLM re-execution is not ``dangerous``
+    in the sense that warrants a blocking warning. Cost/latency belongs
+    in a different advisory layer.
+    """
+    out = tmp_path / "fp3.json"
+    result = runner.invoke(
+        app,
+        [
+            "--",
+            "fork",
+            "plan",
+            "r-fx",
+            "--at-node",
+            "persist",
+            "--override",
+            "seed=4",
+            "--allow-new-keys",
+            "--out",
+            str(out),
+            "--db",
+            str(seeded_db_with_effects),
+        ],
+    )
+    assert result.exit_code == 0, result.stdout
+    assert "Downstream side-effects preview" not in result.stdout
