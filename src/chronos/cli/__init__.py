@@ -99,7 +99,7 @@ def info() -> None:
     console.print(
         "Status: Phase 2 -- adapter interface stable (ADR-016), "
         "LangGraph/Linear/AutoGen adapters + `chronos web` tree viewer "
-        "(ADR-017 sync-wrap green, ReactFlow UI polished), v0.2.0"
+        "(Compare verb landed in ADR-018, side-by-side DiffView shipped), v0.2.1"
     )
     console.print(
         "Commands: [green]runs list/show, forks show, diff, replay, fork plan, web[/green] "

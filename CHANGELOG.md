@@ -4,7 +4,38 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
-_Nothing yet — R39 will decide._
+_Nothing yet — R42 will decide._
+
+## [0.2.1] — 2026-04-25 (Round 39-A + Round 40 + Round 41)
+
+**Theme**: Complete the **record / fork / diff / compare** four-verb loop in the Web UI, formalize "compare" as the narrative verb around the existing `diff` machinery, and refresh the README with screenshots that actually show what the tool does.
+
+### Added (Round 39-A — Side-by-side Diff viewer)
+
+- **`GET /runs/compare`** — new FastAPI endpoint backing the Web UI's side-by-side view. Accepts `a` and `b` run IDs (plus `downstream_only: bool`), returns a `CompareResponse` with the aligned entries, per-entry diff tags (`same` / `changed` / `added` / `missing`) and top-level summary counts. The alignment reuses `core/diff.py` unchanged (ADR-006 frozen since v0.1.x) — this endpoint is the *read-side* the UI has been missing. Route ordering matters: registered **before** `/runs/{run_id}` so `/runs/compare` doesn't get swallowed as a run ID literal. Covered by 6 new unit tests (`tests/unit/test_api_server.py`).
+- **DiffView page** (`frontend/src/pages/DiffView.tsx`, ~420 LOC). New hash route `#/runs/<a>/diff/<b>` renders two stacked ReactFlow panels (RUN A top, RUN B bottom) sharing the same layout primitives as the single-run TreeView. Summary badge (`相同 / 改变 / 新增 / 缺失` counts), alignment list table below the graphs, and an **Alert banner** explicitly calling out when B is a fork of A and what the "Downstream only" toggle hides. Auto-swap fallback: if the user navigates to `/runs/<child>/diff/<parent>`, the page silently swaps A/B via `history.replaceState` so the fork direction renders correctly (no banner, no toast — just works).
+- **Compare button in RunList** (`frontend/src/pages/RunList.tsx`). AntD `rowSelection` with a FIFO cap of 2 — selecting a third run evicts the oldest. Compare button disabled until exactly 2 are selected, then navigates to the diff route. Row click still opens the single-run view thanks to an `onRow` guard that bails when the target is a `.ant-table-selection-column` checkbox cell.
+- **`DiffNodeDetails` drawer** (`frontend/src/components/DiffNodeDetails.tsx`). Click any node in either diff panel to open a drawer with a field-level red/green JSON diff (additions green-tinted, removals red-tinted, unchanged rows collapsed). For nodes that exist on only one side, shows "A side only" / "B side only" chrome instead of attempting a diff. Picks its own field-level diff via a lightweight object-walk (not using `core/diff.py` since that's node-level).
+- **Legend panel — diff mode variant** (`frontend/src/components/Legend.tsx`). New `showDiff?: boolean` prop renders a 4-swatch diff vocabulary (same / changed / added / missing) with a one-line hint. Separate `localStorage` key (`chronos.legend.expanded.v1.diff`) so diff-mode legend defaults to collapsed — the dual-panel layout is narrow, don't waste vertical pixels on legend in default state.
+- **i18n (zh/en)** — new namespaces: `diff.*` (page chrome), `diffTag.*` (same/changed/added/missing), `diffHint.*` (legend hint copy), `legend.diff` (legend block title).
+
+### Added (Round 40 — "compare" narrative + ADR-018)
+
+- **ADR-018: "compare" is the narrative verb for structural run comparison** (`docs/decisions/0018-compare-verb-over-diff.md`). Resolves the tension between the install-era CLI (`chronos diff`, kept for muscle memory) and the new Web UI (where "Compare" reads more naturally to non-programmers). Decision: **narrative/docs use "compare"; CLI/API keep "diff"** for stability. No code moved, no endpoints renamed — this is a naming-in-docs decision only.
+- **Progress doc** (`progress/2026-04-25-round-40.md`) spelling out the follow-up backlog: R41-A (README screenshots + Compare section rewrite), R41-B (`chronos diff` docstring surfacing "compare"), R41-C (v0.2.1 release cut).
+
+### Added (Round 41-A — README refresh)
+
+- **Four Web UI screenshots** in `docs/assets/` — RunList, single-run TreeView, family tree (3-lane fork chain), DiffView with side-by-side panels and alignment list. Captured against the `scripts/seed_demo.py` 5-run demo DB so the screenshots are reproducible by anyone cloning the repo.
+- **README Web UI hero section** (English + 中文) linking to the screenshots, re-ordering the intro so the four-verb loop (record / fork / diff / **compare**) is the first thing a reader sees. Status table refreshed to v0.2.x with explicit R39-A / ADR-018 rows. Repository Layout updated to include `frontend/` and `src/chronos/api/`.
+
+### Changed (Round 41-B)
+
+- **`chronos diff --help` docstring** now mentions "compare verb" explicitly so a reader arriving from the README's *Compare* section can grep the CLI and find the entry point. One-line docstring tweak; zero behaviour change.
+
+### Docs / Process
+
+- **Skill**: `chronos-docs-screenshots` (in `~/.hermes/skills/`) captures the full 4-shot playbook including the AntD Switch `ariaChecked`-race pitfall, ReactFlow fit-view framing constraints with a 478-px canvas, and the tool-call budget split rule for cron rounds that both capture and rewrite.
 
 ## [0.2.0] — 2026-04-24 (Round 36-D + Round 37.5 + Round 38)
 
