@@ -157,25 +157,24 @@ the plan-artifact `fork plan emit → edit → fork plan exec` loop is the shipp
 
 ## Phase 3 — v0.3 "Production-ready fork"
 
-**Goal**: Make fork reliable for real-world agents.
+**Goal**: Make fork reliable for real-world agents. Chronos does **not** sandbox side effects ([ADR-019](decisions/ADR-019-chronos-does-not-sandbox.md) — trust the user's own sandboxing) — instead it classifies effects and warns honestly so users can decide before forking.
 
-**Estimated duration**: 10–20 rounds
-
-> **R42-A review in progress (2026-04-25):** Spike 8 + re-reading ADR-013
-> suggest the first milestone below may be roadmap drift. See
-> `docs/research/fork-sandbox-feasibility.md` for the argument that
-> "side-effect sandboxing" should be reframed as (a) a short docs item and
-> (b) effect-kind instrumentation, with E2B/Modal deferred until ADR-013
-> triggers fire. **Awaiting user sign-off before rewriting these bullets.**
+**Estimated duration**: 6–8 rounds total (**3.5 rounds landed** — R43 + R44-A + R45-A; remaining **~3–4 rounds** for determinism / partial-fork / semantic-diff / Tier-2 receiver).
 
 ### Key milestones
-- [ ] Side-effectful tool sandboxing (ADR-006; use E2B or Modal) *— under R42-A review, see research note*
+- [x] **Effect-kind instrumentation + honest warnings** (replaces the original "side-effectful tool sandboxing" bullet per ADR-019, landed R43/R44-A/R45-A across v0.3.0 and v0.3.1)
+  - [x] ADR-019 "Chronos does not sandbox fork execution" (R43-B)
+  - [x] `docs/guides/side-effects.md` user guide, zh/en (R43-C)
+  - [x] Adapter `classify_effects()` heuristic + `metadata["effects"]` on every Node (R44-A, v0.3.0)
+  - [x] Web UI: per-node effect Tags + amber warning Alert in NodeDetails drawer (R44-A, v0.3.0)
+  - [x] CLI `chronos fork plan`: Downstream side-effects preview Panel (R45-A, v0.3.1)
+  - [ ] Web UI: TreeView → fork-plan modal with effects summary (R46-A candidate, targets v0.3.2)
 - [ ] Determinism modes (stable / explore / custom)
 - [ ] Dependency-aware partial fork (don't re-execute unaffected subtree)
 - [ ] Semantic diff (LLM-as-judge for divergent responses)
 - [ ] Generic OTel receiver (Tier-2 adapter for non-LangGraph/AutoGen agents)
 - [ ] Plugin system for custom diff / redaction
-- [ ] Tag v0.3.0
+- [x] **Tag v0.3.0** (R44-A, 2026-04-25) + **Tag v0.3.1** (R45-A, 2026-04-25)
 
 ---
 
