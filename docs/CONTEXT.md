@@ -147,46 +147,41 @@
    147|
 ## 5. 当前状态 (Current State)
 
-**截至 Round 41 结束 (2026-04-25 CST 12:30) — v0.2.1 cut: README 4 图 + Compare narrative + tag + GitHub Release**
+**截至 Round 42-A 结束 (2026-04-25 CST ~13:00) — Phase 3 入口 spike 完成, research doc + spike8 数据齐, 等用户 sign-off**
 
-- Round: **41 完成** — R41-A (4 张截图: RunList / TreeView / Family Tree / DiffView 落 `docs/assets/` + README 中英双语加 Web UI hero section + 4-verb 列表加 Compare + Status 表格 refresh 到 v0.2.x) + R41-B (`chronos diff` docstring 提 "compare verb", 1 行改动 commit `114492c`) + R41-C (三处 version bump 0.2.0 → 0.2.1 + CHANGELOG Unreleased → [0.2.1] 2026-04-25 + tag + push). Release skill 第 9 次 clean 跑通.
-- 最近 progress doc: `progress/2026-04-25-round-41.md` (本轮)
-- 最近上一份 progress doc: `progress/2026-04-25-round-40.md` (ADR-018 纠偏)
-- 最近上上份 progress doc: `progress/2026-04-24-round-39-a.md` (Diff viewer)
-- Round: 40 (上轮): 纯文档轮, ADR-018 取消 `chronos compare` 幽灵 TODO, 纠正 CONTEXT §6.
-- Round: 39-A (上上轮): DiffView page + `/runs/compare` endpoint + RunList Compare 按钮. PR #3 squash-merged → `6c07b1f`.
-- Round: 38 (再上一轮): cut `v0.2.0` bundling R36-D + R37.5 + R38. Release skill 第 8 次 clean 跑通.
-- **战略定位 (R33 锁死, 持续有效)**: **GitHub 爆款开源项目**, 不是 SaaS. v0.2.1 是 Web UI Compare 叙事完备的第一个正式版 — `uv pip install chronos-agent[web]==0.2.1 && chronos web` + seed demo 后可以直接演示"勾两个 run → Compare → 看对齐"完整用户故事.
-- 当前阶段: **Phase 2 in-flight, v0.2.1 stable released** — 四段动词 (record / fork / diff / **compare**) 在 CLI / HTTP API / Web UI 三个 surface 全部完备 + 对外可看的 README screenshots + 对齐的 ADR-018 命名叙事.
-- 最新 ADR: **ADR-018 (R40, `compare` 叙事词 = `diff` CLI 词, 不加新 subcommand)**. 之前: ADR-017 (R33, AutoGen sync-wrap). R36-D/R37.5/R38/R39-A/R41 无新 ADR.
-- 最新 research doc: `docs/research/multi-framework-risks.md` (R27 + R29)
-- 最新 tag: **v0.2.1** (R41 cut, 2026-04-25); 上一 tag: v0.2.0 (R38 cut, 2026-04-24); 下一 release 候选: v0.3.0 (Phase 3 entry, fork 可靠性 + 沙箱) 或 v0.2.2 patch (如有 bug fix)
+- Round: **42-A 完成** — Phase 3 roadmap §Phase 3 首个 milestone "side-effect sandboxing (E2B or Modal)" 经 ADR-013 重读 + `tests/spikes/spike8_fork_sideeffect.py` 三场景实验 (F1 初始 run 1 次 httpx / F2 fork AFTER post 0 次 replay / F3 fork BEFORE post fresh 1 次) 判定为 **roadmap drift**. LangGraph checkpointer 自己保证 pre-fork immunity, 不需要 Chronos 做 sandbox. 产出: `docs/research/fork-sandbox-feasibility.md` (7.6KB 研究笔记) + `tests/spikes/spike8_fork_sideeffect.py` (9.1KB 可复跑 spike) + `docs/progress/2026-04-25-round-42a.md` + `docs/roadmap.md` 加"under R42-A review"标记. **未改 roadmap 核心 bullet** — charter 变更等用户 sign-off.
+- 最近 progress doc: `progress/2026-04-25-round-42a.md` (本轮)
+- 最近上一份 progress doc: `progress/2026-04-25-round-41.md` (v0.2.1 cut)
+- 最近上上份 progress doc: `progress/2026-04-25-round-40.md` (ADR-018)
+- Round: 41 (上轮): v0.2.1 release cut bundling R39-A + R40 + R41 polish.
+- Round: 40 (上上轮): ADR-018 纯文档轮.
+- **战略定位 (R33 锁死, 持续有效)**: **GitHub 爆款开源项目**, 不是 SaaS. v0.2.1 是 Web UI Compare 叙事完备的第一个正式版. Phase 3 的 on-ramp 现在指向 "side-effect docs + effect-kind 元数据" (3.5–4.5 轮), 不再是 "E2B/Modal 沙箱" (10–20 轮).
+- 当前阶段: **Phase 2 稳定, v0.2.1 released, Phase 3 entry 理论完成实现待 sign-off**. 四段动词三 surface 齐备; R42-A 把 Phase 3 工作量估算砍了 ~3×.
+- 最新 ADR: **ADR-018 (R40)**. 之前: ADR-017 (R33). R42-A 未新写 ADR (建议 ADR-019 codify "Chronos does not sandbox", 约 0.5 轮, 等用户决策).
+- 最新 research doc: **`docs/research/fork-sandbox-feasibility.md` (R42-A)**. 之前: `docs/research/multi-framework-risks.md` (R27+R29).
+- 最新 tag: v0.2.1 (R41); 下一 release 候选: v0.3.0 (Phase 3 完成时) 或 v0.2.2 patch.
 - Blocked items: 无
-- 测试状态: **386/2skip pass** (R39-A 后基线未动), 94% coverage, mypy strict clean on 26 src files, ruff + format clean
-- CLI 表面: `chronos runs list/show, forks show, diff, replay, fork plan, web` (7 个 subcommand), info 命令 status line 同步到 v0.2.1, `diff --help` docstring 含 "compare verb"
-- URL 表面: `/healthz`, `/runs`, `/runs/{id}`, `/runs/{id}/nodes`, `/runs/{id}/forks`, `/runs/{id}/tree` (w/ `?include_descendants=true`), `/runs/compare?a=X&b=Y&restrict=<bool>` (R39-A), `/app/*`, `/`, `/docs`, `/redoc`
+- 测试状态: **386/2skip pass** (R42-A 未动代码路径, 基线未变), 94% coverage, mypy/ruff/format clean
+- CLI 表面: `chronos runs list/show, forks show, diff, replay, fork plan, web` (7 个 subcommand), v0.2.1 status line
+- URL 表面: `/healthz`, `/runs`, `/runs/{id}`, `/runs/{id}/nodes`, `/runs/{id}/forks`, `/runs/{id}/tree`, `/runs/compare?a=X&b=Y&restrict=<bool>`, `/app/*`, `/`, `/docs`, `/redoc`
 - 前端路由: `/app/#/runs`, `/app/#/runs/<id>`, `/app/#/runs/<a>/diff/<b>` (R39-A)
 - 仓库可见性: **PUBLIC** since R34-C 尾部
-- **R41 产出 (本轮)**:
-  - `docs/assets/screenshot-runs-list.png` (89 KB)
-  - `docs/assets/screenshot-tree-single-run.png` (77 KB)
-  - `docs/assets/screenshot-family-tree.png` (107 KB)
-  - `docs/assets/screenshot-diff-view.png` (92 KB)
-  - `README.md` 中英双语 rewrite: Web UI hero section + 4-verb 列表加 Compare + Repository Layout 加 `frontend/` + `src/chronos/api/` + Status 表格 refresh + 测试计数 112 → 380
-  - `src/chronos/cli/__init__.py::diff` docstring 提 "compare verb" (commit `114492c`, R41-B)
-  - `src/chronos/__init__.py`: 0.2.0 → 0.2.1
-  - `pyproject.toml::project.version`: 0.2.0 → 0.2.1
-  - `src/chronos/cli/__init__.py::info` status line: v0.2.0 → v0.2.1, "ReactFlow UI polished" → "Compare verb landed in ADR-018, side-by-side DiffView shipped"
-  - `CHANGELOG.md`: Unreleased → [0.2.1] 2026-04-25 (Round 39-A + Round 40 + Round 41)
+- **R42-A 产出 (本轮)**:
+  - `tests/spikes/spike8_fork_sideeffect.py` (9.1 KB, 不是 pytest 而是 `uv run python ...` 形态, 随 spike4–7 惯例)
+  - `docs/research/fork-sandbox-feasibility.md` (7.6 KB, 三决策选项 + 3.5–4.5 轮的 on-ramp 估算)
+  - `docs/roadmap.md` §Phase 3 加 "R42-A review" 块 + 首 bullet 加注解 (保留原文未改)
+  - `docs/progress/2026-04-25-round-42a.md` (本 commit)
   - `docs/CONTEXT.md` §5 §6 refresh (本 commit)
-  - `progress/2026-04-25-round-41.md` (本 commit)
-- **R41 关键事实**:
-  - **Cron round 两任务预算分配 (本轮确立)**: 截图 + rewrite 同轮时要切预算 — 截图用浏览器 + vision 易爆 tool call, rewrite 是纯文件零 tool call. 规则: 截图阶段先落盘, 再切 rewrite.
-  - **ReactFlow 2-panel diff view 在 577 px viewport 下扁是真实约束不是 bug**: `fitView` 已 scale down, DOM clientRect 证实 nodes 在 bounds 内. Skill `chronos-docs-screenshots` 已记.
-  - **Tour localStorage 在 `location.reload()` 前要 `localStorage.setItem('chronos.tour.seen.v1','1')`**: 否则 DiffView 会重新触发 Tour.
-  - **execute_code 改 CONTEXT.md 的 off-by-one 教训 (本轮踩坑)**: 用 read_file + split("\n") 拿 lines 再 write_file 很容易切片出错 (原 total_lines 367 被某次 intermediate read 记错成 404), 结果 head 变量只拿到半个文件. 规则: 改大 md 文件用 `patch` 工具做精确 old/new 替换, 或者直接 open(p,"r").read() 拿原始 str. execute_code 的 hermes_tools.read_file 返回的 content 带 "N|" 前缀, 解析时要 split("|", 1) + 注意缓存失效.
+- **R42-A 关键事实**:
+  - **LangGraph checkpointer 自带 pre-fork immunity**: 实测 fork AFTER node → 不重跑, fork BEFORE node → fresh 跑一次. 与 ADR-005 的"state resumption"契约 100% 吻合.
+  - **"side-effect sandboxing" 其实是 ADR-013 冻结后的 roadmap drift**: 如果 Chronos 不执行 fork (ADR-013), 那下游 side effect 归用户管, Chronos 只需提供 (a) 文档模式 + (b) effect-kind 元数据让 UI 警告.
+  - **`recorder.record()` 参数叫 `thread_id` 不是 `adapter_thread_id`**: 写 spike 时栽了一次.
+  - **Node 字段是 `node_name` 和 `id`**: 不是 `name` / `node_id`. Pydantic 报 AttributeError 才暴露.
+  - **`build_graph()` 要在 `SqliteStore` CM 外创建 `InMemorySaver`**: 但 `compiled` 要传到 `recorder.fork()` 里, 所以两段 SqliteStore CM 之间 compiled + saver 共享活着.
+  - **写 roadmap charter 变更时用注解 + DRAFT 标, 不直接改**: 软边界下 judge, 这种级别的 Phase 3 重写归用户拍板.
+- **R41 回顾**: v0.2.1 release cut, README 4 图 + 中英双语 hero section + Compare narrative 完整
 - **R40 回顾**: 纯文档轮, ADR-018 取消 `chronos compare`, `v0.2.0` release page 验证已存在
-- **R39-A 回顾**: DiffView + `/runs/compare` + RunList Compare button + DiffNodeDetails drawer. 18 files, +1637 / −340. PR #3 → `6c07b1f`. Progress: `progress/2026-04-24-round-39-a.md`
+- **R39-A 回顾**: DiffView + `/runs/compare` + RunList Compare button. PR #3 → `6c07b1f`
 - **R38 回顾**: Legend + edge selection + ConceptTip + Dots background, v0.2.0 cut
 - **R37.5 回顾**: `?include_descendants=true` DFS merged tree + 多 run super-lanes 布局 + `@pytest.mark.live` real-LLM smoke
 - **R36-D 回顾**: AntD 6 + Framer Motion + react-i18next + AntD Tour + Lucide icons full UI rewrite
@@ -262,37 +257,42 @@
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 42 候选 — v0.2.1 已 cut, Phase 3 入口 or v0.2.2 bugfix or dogfood 找下一题**
+**Round 43 候选 — R42-A 研究已完成, 等用户 sign-off 后选 PH3-01 docs / PH3-02 metadata / ADR-019 / 其他方向**
 
-战略视角: v0.2.1 正式 release 后, 时光机四动词 (record / fork / diff / compare) 三 surface 全完备 + README 有图有叙事. 下一个跃进点是 **Phase 3: fork 可靠性 + side-effect 沙箱** (roadmap §Phase 3), 但 Phase 3 是大块头 (需 ADR + spike + 契约). 42 轮可以先选一个窄 slice.
+战略视角: R42-A 实测 Phase 3 的"side-effect sandboxing"是 roadmap drift, 给出 3.5–4.5 轮的 new on-ramp. 下一轮的 key 取决于用户对 `docs/research/fork-sandbox-feasibility.md` 的决策. 在用户回复前, 可以选"推进 Phase 3 其他 milestone 的预调研"或"等着先不动". 下面按用户 sign-off 情况列.
 
-1. **Phase 3 入口 spike** — fork 副作用真实代价调研 + spike (首选)
-2. **Dogfood 找 v0.2.1 bug 再 cut v0.2.2** (安全牌)
-3. **AutoGen + CrewAI adapter 扩张** (Phase 2 加深)
+### R43-A (用户 approve 了 R42-A 建议): PH3-01 — side-effect 模式文档
 
-### R42-A (首选): Phase 3 spike — fork 副作用沙箱 feasibility
-
-- 读 `docs/roadmap.md` §Phase 3 锁定范围
-- 写 `docs/research/fork-sandbox-feasibility.md` 调研: LangGraph checkpoint 是否承诺 side-effect idempotency, `graph.invoke(None, thread)` 续跑是否重放 tool call 副作用, 能否用 `httpx.MockTransport` 做 network-isolating 沙箱, subprocess 隔离成本估算
-- 60 分钟 spike: `tests/spikes/spike_fork_sideeffect.py` — 跑个 dogfood run 里有 `httpx.post` 的 LangGraph, fork 后观察 tool call 是否真被重跑
-- 产出: research doc + spike 结论, 决定 Phase 3 走 "checkpointer-level immutability guarantee" vs. "adapter-level replay interception" vs. "subprocess fork + network deny"
-- **不在本轮写 ADR**, 只出 research doc + spike — ADR 留到 R43 决策时写
+- 写 `docs/guides/side-effects.md` 中英双语 — 3 个 pattern (MockTransport / envvar kill-switch / pure/effectful split) + 每个 5 行 code snippet + 链接到 spike8
+- 顺便把 README "how to fork safely" 加一节 + 链接 guide
 - 工期估: 1 轮
 
-### R42-B (备选 1): v0.2.1 dogfood + bug cleanup
+### R43-B (用户 approve + 想先写 ADR): ADR-019 — "Chronos does not sandbox"
 
-- 用 `scripts/seed_demo.py` + 一个真实 LangGraph agent 跑 R39-A Compare 流程
-- 重点试: fork 直接对比 / 不相关两个 run 对比 / downstream_only toggle / 大型 run (100+ nodes) 下 DiffView 性能
-- 零 bug: 不 cut release, 写 progress doc 后转 R42-A
-- 有 bug: 修 → v0.2.2 patch (release skill 第 10 次)
+- codify ADR-013 的隐式推论 — Chronos 不管 fork 下游副作用, 用户负责
+- 列出 ADR-019 的 3 个触发条件 (跟 ADR-013 一样) 何时重新审视
+- 工期估: 0.5 轮
 
-### R42-C (备选 2): AutoGen / CrewAI adapter 扩张
+### R43-C (用户 reject R42-A 建议, 仍想要 sandbox): E2B/Modal PoC
 
-- 选一个 (AutoGen 已有 sync-wrap spike 基础, CrewAI 完全新)
-- 写 adapter + spike + 集成测试, 不动 contract
-- 工期估: 2-3 轮
+- 如果用户读了 research doc 后仍认为需要 sandbox, 那前提是 ADR-013 要重开
+- 先写 ADR-019' 重开 ADR-013, 然后 E2B + Modal 对比 PoC
+- 工期估: 5–8 轮 (比之前估的 10–20 轮小 — 因为 research doc 已经砍了部分工)
 
-### R42 非目标 (继承红线)
+### R43-D (备选): PH3-02 — effect-kind 节点元数据
+
+- 给 `Node` 加 `effects` 字段 (tags: network / fs / db / llm)
+- adapter 填充 (LangGraph 先根据 tool name heuristic)
+- Web UI: ForkPlan 页面算"这个 fork 会 re-trigger N 个 network-effectful 节点"角标
+- 工期估: 2–3 轮
+
+### R43-E (安全牌): Dogfood 找 v0.2.1 bug + 其他方向
+
+- 用 `scripts/seed_demo.py` + 一个真实 LangGraph agent 跑 Compare 流程
+- 有 bug → v0.2.2 patch (release skill 第 10 次)
+- 零 bug → 转 R43-A / R43-B
+
+### R43 非目标 (继承红线)
 
 - ❌ `chronos compare` alias (ADR-018 已决)
 - ❌ 改 `chronos diff` 行为
@@ -300,12 +300,13 @@
 - ❌ 数据库 migration 框架 / Postgres / WebSocket
 - ❌ PyPI publish
 - ❌ 独立写 diff 算法
+- ❌ 未经用户 sign-off 改 roadmap §Phase 3 主 bullet (R42-A 已加注解, 改 charter 归用户)
 
 ### Release strategy (v0.2.1 → v0.3.0)
 
-- v0.2.1 = R39-A DiffView + R40 ADR-018 + R41 README/CLI/release polish ✅ (2026-04-25 cut)
-- v0.2.2 (可选) = v0.2.1 dogfood 产出的 bug fix
-- v0.3.0 = Phase 3 entry = fork 可靠性 + side-effect 沙箱
+- v0.2.1 ✅ cut 2026-04-25 (R41)
+- v0.2.2 (可选) = dogfood 产出的 bug fix
+- v0.3.0 = Phase 3 完成 = PH3-01 + PH3-02 (+ 可能 ADR-019); 原 "E2B/Modal 沙箱" 不再是 v0.3.0 blocker
 
 
 ## 7. 文档索引 (当你需要深入某个主题)

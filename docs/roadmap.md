@@ -161,8 +161,15 @@ the plan-artifact `fork plan emit → edit → fork plan exec` loop is the shipp
 
 **Estimated duration**: 10–20 rounds
 
+> **R42-A review in progress (2026-04-25):** Spike 8 + re-reading ADR-013
+> suggest the first milestone below may be roadmap drift. See
+> `docs/research/fork-sandbox-feasibility.md` for the argument that
+> "side-effect sandboxing" should be reframed as (a) a short docs item and
+> (b) effect-kind instrumentation, with E2B/Modal deferred until ADR-013
+> triggers fire. **Awaiting user sign-off before rewriting these bullets.**
+
 ### Key milestones
-- [ ] Side-effectful tool sandboxing (ADR-006; use E2B or Modal)
+- [ ] Side-effectful tool sandboxing (ADR-006; use E2B or Modal) *— under R42-A review, see research note*
 - [ ] Determinism modes (stable / explore / custom)
 - [ ] Dependency-aware partial fork (don't re-execute unaffected subtree)
 - [ ] Semantic diff (LLM-as-judge for divergent responses)
