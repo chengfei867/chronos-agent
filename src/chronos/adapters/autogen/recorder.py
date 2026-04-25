@@ -56,6 +56,7 @@ from contextlib import contextmanager
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
+from chronos.adapters.effects import classify_effects
 from chronos.adapters.protocols import AdapterError, ForkRef, RunRef
 from chronos.core.models import Node, NodeKind, Run, RunStatus, Usage
 from chronos.store import SqliteStore
@@ -164,12 +165,14 @@ class AutoGenRecorder:
         *,
         adapter_name: str = "autogen",
         kind_map: dict[str, NodeKind] | None = None,
+        effects_map: dict[str, list[str]] | None = None,
     ) -> None:
         self._store = store
         self._adapter_name = adapter_name
         self._kind_map: dict[str, NodeKind] = {**_DEFAULT_KIND_MAP}
         if kind_map:
             self._kind_map.update(kind_map)
+        self._effects_map: dict[str, list[str]] = dict(effects_map or {})
 
     # ------------------------------------------------------------------
     # kind resolution
@@ -344,19 +347,30 @@ class AutoGenRecorder:
                 source = getattr(msg, "source", None) or "unknown"
                 cls_name = _message_cls_name(msg)
                 cumulative = serialized[: step_index + 1]
+                node_name = f"{source}:{cls_name}"
+                kind = self._kind_for(msg)
+                model_name = getattr(msg, "model_name", None) if usage is not None else None
                 node = Node(
                     id=node_id,
                     run_id=run_id,
                     step_index=step_index,
-                    node_name=f"{source}:{cls_name}",
-                    kind=self._kind_for(msg),
+                    node_name=node_name,
+                    kind=kind,
                     parent_node_id=prev_node_id,
                     started_at=now,
                     ended_at=now,
                     state_after={"messages": list(cumulative)},
-                    model_name=(getattr(msg, "model_name", None) if usage is not None else None),
+                    model_name=model_name,
                     usage=usage,
-                    metadata={"agent_id": source},
+                    metadata={
+                        "agent_id": source,
+                        "effects": classify_effects(
+                            node_name=node_name,
+                            kind=kind,
+                            model_name=model_name,
+                            override=self._effects_map.get(node_name),
+                        ),
+                    },
                 )
                 self._store.put_node(node)
                 node_ids.append(node_id)

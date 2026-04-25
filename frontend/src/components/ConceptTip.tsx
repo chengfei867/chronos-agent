@@ -15,7 +15,8 @@ export type ConceptKey =
   | "thread"
   | "step"
   | "framework"
-  | "timeline";
+  | "timeline"
+  | "effects";
 
 export default function ConceptTip({
   concept,

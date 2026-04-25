@@ -4,7 +4,34 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
-_Nothing yet — R42 will decide._
+_Nothing yet._
+
+## [0.3.0] — 2026-04-25 (Round 44-A)
+
+**Theme**: **Phase 3 on-ramp PH3-02** — adapters now annotate each node with an `effects` list (`network`/`fs`/`db`/`external`/`llm`), and the Web UI surfaces side-effect warnings on dangerous nodes. This is the first step toward fork confidence: before replaying a node, users can see whether the original execution touched the real world. Following ADR-019 (R43-B) the project remains **explicitly non-sandboxed** — warnings are the honest answer, not fake safety.
+
+### Added (R44-A — Effect annotations & Fork warnings)
+
+- **`src/chronos/adapters/effects.py`** — new `classify_effects(kind, node_name, override=None)` heuristic. Detects five effect tags from `NodeKind` + `node_name` regex: `llm` (from `NodeKind.LLM`), `network` (http/api/fetch/request/get/post/…), `fs` (read/write/file/path/save/load/…), `db` (db/postgres/redis/sql/…), `external` (send_slack/send_email/run_shell/subprocess/…). Snake_case compound names (`http_get`, `send_slack_notification`, `http_write_db`) are matched via `(_\w+)?` and `\b\w*keyword\w*\b` patterns — plain `\bword\b` fails here because `_` is a word char. Also exports `DANGEROUS_EFFECTS_DEFAULT = {network, fs, db, external}` — **`llm` is deliberately excluded** because forking is precisely for re-running LLM reasoning. `count_dangerous_downstream(store, run_id, from_step)` helper for the fork-plan preview.
+- **Adapter integration** — both `LangGraphRecorder` and the AutoGen `Recorder` now accept an optional `effects_map: dict[str, list[str]]` kwarg (per-node override) and write `metadata["effects"]` on every recorded node via `classify_effects(...)`. Zero SQL migration required: the `metadata_json` column has existed since v0.1.0, and `Node.model_dump()` auto-exposes the field through the API.
+- **UI effects badge in `NodeDetails`** — when a selected node carries `metadata.effects`, the drawer now renders a **"Side effects"** row with colored tags (`llm=purple`, `network=orange`, `fs=gold`, `db=volcano`, `external=red`). If any tag is in `DANGEROUS_EFFECTS_DEFAULT`, an amber `<Alert warning>` banner above the identity table explains that forking here will **re-run the real-world operation** (re-charge, re-send email, re-write a record) and suggests forking from a pure node for reasoning-only exploration.
+- **Danger-styled Fork button** — when `NodeDetails` is wired with an `onFork` prop (future fork-from-tree flow) and the node is dangerous, the button renders with AntD `danger` styling and appends `· re-triggers side effects` to the label. This code path is predicated on downstream integration; the warning Alert is the user-visible primary signal in v0.3.0.
+- **i18n (zh/en)** — new namespace `effects.*`: `tags.{llm,network,fs,db,external}`, `forkWarning.{title,body,buttonHint}`, plus `help.concepts.effects` for the `ConceptTip` glossary and `nodeDetails.fields.effects` for the drawer row label.
+- **41 unit tests** (`tests/unit/test_effects.py`) covering the classifier (LLM kind, each of the four keyword families, override precedence, snake_case compound names, the `_` word-boundary edge case) and `count_dangerous_downstream`. Full suite: **427 pass / 2 skip / 94% coverage** (up from 386 in v0.2.1).
+
+### Rationale
+
+PH3-02 was locked in R43 after R42-A's sandbox spike (→ `tests/spikes/spike8_sandbox.py`) confirmed that re-running agent code safely is a ~100x bigger project than Chronos itself (Docker/gVisor layer, credential mocking, network egress control). ADR-019 codified the no-sandbox stance: Chronos records and replays *narratives*, not real-world side effects. Effect tags are the honest compromise — we can't prevent double-sends, but we can make sure users know which nodes will fire when they fork.
+
+### Non-goals
+
+- No runtime effect *interception* (dry-run mode, effect stubs, network egress filter) — Phase 4 territory if ever.
+- No automatic fork-is-dangerous refusal — users may intentionally want to re-send the email. Warn, don't block.
+
+### Files
+
+- **New**: `src/chronos/adapters/effects.py`, `tests/unit/test_effects.py`.
+- **Modified**: `src/chronos/adapters/langgraph.py`, `src/chronos/adapters/autogen/recorder.py`, `frontend/src/components/NodeDetails.tsx`, `frontend/src/components/ConceptTip.tsx`, `frontend/src/i18n/{zh,en}.ts`.
 
 ## [0.2.1] — 2026-04-25 (Round 39-A + Round 40 + Round 41)
 

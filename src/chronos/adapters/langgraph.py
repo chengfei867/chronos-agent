@@ -37,6 +37,7 @@ from contextlib import contextmanager
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
+from chronos.adapters.effects import classify_effects
 from chronos.adapters.langgraph_usage import UsageContext, UsageExtractor, UsageResult
 from chronos.adapters.protocols import AdapterError, ForkRef, RunRef
 from chronos.core.models import Fork, Node, NodeKind, Run, RunStatus, Usage
@@ -81,10 +82,12 @@ class LangGraphRecorder:
         *,
         kind_map: dict[str, NodeKind] | None = None,
         usage_extractor: UsageExtractor | None = None,
+        effects_map: dict[str, list[str]] | None = None,
     ) -> None:
         self._store = store
         self._kind_map: dict[str, NodeKind] = dict(kind_map or {})
         self._usage_extractor: UsageExtractor | None = usage_extractor
+        self._effects_map: dict[str, list[str]] = dict(effects_map or {})
 
     # ------------------------------------------------------------------
     # record() — original runs (ADR-004)
@@ -493,6 +496,12 @@ class LangGraphRecorder:
                     "langgraph_task_id": getattr(task, "id", None),
                     "langgraph_step": lg_step,
                     "agent_id": "main",
+                    "effects": classify_effects(
+                        node_name=node_name,
+                        kind=kind,
+                        model_name=model_name,
+                        override=self._effects_map.get(node_name),
+                    ),
                 },
             )
             nodes.append(node)

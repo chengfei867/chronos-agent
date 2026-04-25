@@ -147,26 +147,38 @@
    147|
 ## 5. 当前状态 (Current State)
 
-**截至 Round 43 结束 (2026-04-25 CST ~14:00) — Phase 3 on-ramp 组合拳完成 (ADR-019 + side-effects guide + spike9 schema 决策)**
+**截至 Round 44-A 结束 (2026-04-25 CST ~12:30) — v0.3.0 cut, PH3-02 effects annotation 落地**
 
-- Round: **43 完成** — R42-A 研究落地为三件交付: (1) **ADR-019 "Chronos does not sandbox fork execution"** codify ADR-013 隐含推论 + 三-trigger 重开规则 + 明确 reject E2B/Modal/subprocess-nsjail; (2) **`docs/guides/side-effects.md` 用户指南**, 中英双语, 三种 idiomatic mitigation pattern (mock transport / envvar kill-switch / 纯工具拆分) + "fork 前后副作用"速查表; (3) **Spike 9 `tests/spikes/spike9_effects_metadata.py` + `docs/research/ph3-02-effects-schema-decision.md`**: 3-node LangGraph 实测 `node.metadata["effects"]` 方案 F1/F2/F3 全绿, **决策 Option B (annotation-level, 复用现有 `metadata_json` 列, 零迁移)**. PH3-02 实施估算缩到 ~1.5 轮.
-- 最近 progress doc: `progress/2026-04-25-round-43.md` (本轮)
-- 最近上一份 progress doc: `progress/2026-04-25-round-42a.md` (R42-A spike + research)
+- 最近 progress doc: `progress/2026-04-25-round-44-a.md` (v0.3.0 cut — **effects annotation + UI warning**)
+- 最近上份 progress doc: `progress/2026-04-25-round-43.md` (R43 ADR-019 + guide + schema 三件套)
 - 最近上上份 progress doc: `progress/2026-04-25-round-41.md` (v0.2.1 cut)
-- Round: 42-A (上轮): Phase 3 roadmap drift 诊断 + spike8.
-- Round: 41 (上上轮): v0.2.1 release cut.
-- **战略定位 (R33 锁死, 持续有效)**: **GitHub 爆款开源项目**, 不是 SaaS. v0.2.1 是 Web UI Compare 叙事完备的第一个正式版. Phase 3 on-ramp 已经在 R43 完成战略部分 (ADR + guide + schema 决策), 剩下 PH3-02 实施 (adapter 启发式 + UI badge, ≈1.5 轮) 即可发 v0.3.0.
-- 当前阶段: **Phase 2 稳定, v0.2.1 released, Phase 3 战略层全部锁死, 进入实施窗口**. R43 把"先做 ADR 再写 guide 再 spike schema"的研究债一次清完.
+
+- Round: **44-A**: PH3-02 实施完成, **v0.3.0 cut**. Adapter 启发式 classify_effects + NodeDetails effects badge + Fork warning banner + 41 new tests (427 pass total / 94% cov).
+- **战略定位 (R33 锁死, 持续有效)**: **GitHub 爆款开源项目**, 不是 SaaS. v0.3.0 是 Phase 3 第一砖 — 诚实告诉用户"这个节点 fork 会重放真实副作用", 承袭 ADR-019 的 no-sandbox 立场.
+- 当前阶段: **v0.3.0 released, PH3-02 落地完成**. 下一步候选: PH3-03 (fork-plan 预览里聚合 downstream dangerous effect 计数) 或 Phase 3 charter sign-off.
 - 最新 ADR: **ADR-019 (R43-B)**. 之前: ADR-018 (R40), ADR-017 (R33).
-- 最新 research doc: **`docs/research/ph3-02-effects-schema-decision.md` (R43-D)**. 之前: `docs/research/fork-sandbox-feasibility.md` (R42-A).
-- 最新 tag: v0.2.1 (R41); 下一 release 候选: v0.3.0 (PH3-02 实施完成时).
-- Blocked items: 无
-- 测试状态: **386/2skip pass** (R43 未动代码路径, 纯 docs + spike), 94% coverage, mypy/ruff/format clean
-- CLI 表面: `chronos runs list/show, forks show, diff, replay, fork plan, web` (7 个 subcommand)
-- URL 表面: `/healthz`, `/runs`, `/runs/{id}`, `/runs/{id}/nodes`, `/runs/{id}/forks`, `/runs/{id}/tree`, `/runs/compare?a=X&b=Y&restrict=<bool>`, `/app/*`, `/`, `/docs`, `/redoc`
+- 最新 research doc: **`docs/research/ph3-02-effects-schema-decision.md` (R43-D)** — R44-A 采用其推荐的 Option B (metadata-only, 零 schema 变更).
+- 最新 tag: **v0.3.0 (R44-A)**; 之前 v0.2.1 (R41).
+
+- 测试状态: **427/2skip pass** (+41 from R43), **94% coverage**, mypy/ruff/format clean
+
+- **R44-A 产出 (本轮)**:
+  - `src/chronos/adapters/effects.py` (170+ lines): `classify_effects()` + 5 tag regex families + `DANGEROUS_EFFECTS_DEFAULT={network,fs,db,external}` + `count_dangerous_downstream()`
+  - LangGraph + AutoGen 两个 adapter 都接入 `effects_map` kwarg, 写 `metadata["effects"]` 到 Node
+  - Frontend: `NodeDetails.tsx` 加 effects tags 行 + amber Alert warning banner + danger-styled Fork button (when `onFork` prop provided)
+  - i18n: `effects.*` 命名空间 (tags/forkWarning/buttonHint) + ConceptTip 术语表条目
+  - 41 new unit tests (`tests/unit/test_effects.py`) 覆盖 LLM/network/fs/db/external 识别 + override + snake_case compound + `_` word-boundary edge case
+
+- **R44-A 关键事实**:
+  - **regex `\\b` word-boundary 陷阱**: Python `\\b` 把 `_` 当 word char, 所以 `\\bhttp\\b` **不 match** `http_get`. 需要 `\\bhttp(_\\w+)?\\b` 或 `\\b\\w*http\\w*\\b` 宽松写法. 见 skill `python-regex-word-boundary-underscore-trap`.
+  - **LLM 故意不 dangerous**: fork 的首要用途就是重跑 LLM 推理 — LLM 算 dangerous 会让 warning 骚扰用户, 破坏核心 UX.
+  - **零 SQL migration**: `metadata_json` 列自 v0.1.0 存在, Node.model_dump() 自动透出, 选 Option B 走 metadata 不是 first-class 列省一次 schema churn.
+  - **Fork button danger 样式是预埋**: 当前 TreeView 没给 `NodeDetails` 传 `onFork` prop, warning Alert 是 v0.3.0 用户主要看见的信号. 未来 fork-from-tree 流程集成时会自动激活 danger button.
+
+- **R43 回顾**: Phase 3 on-ramp 组合拳 — ADR-019 "Chronos does not sandbox fork execution" + `docs/guides/side-effects.md` 中英双语 + spike9 实测 `metadata["effects"]` → 决策 Option B.
 - 前端路由: `/app/#/runs`, `/app/#/runs/<id>`, `/app/#/runs/<a>/diff/<b>` (R39-A)
 - 仓库可见性: **PUBLIC** since R34-C 尾部
-- **R43 产出 (本轮)**:
+- **R43 产出**:
   - `docs/decisions/ADR-019-chronos-does-not-sandbox.md` (9.4 KB, three-trigger 重开规则 mirrors ADR-013)
   - `docs/guides/side-effects.md` (10.1 KB, 首个 `docs/guides/` 下文档, 中英双语)
   - `tests/spikes/spike9_effects_metadata.py` (6.0 KB, `uv run python` 形态)

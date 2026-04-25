@@ -1,10 +1,32 @@
 // Node details drawer body — grouped into tabs so the wall of JSON isn't
 // dumped on the user at once. Every label uses i18n; every concept has a tip.
 import { Tabs, Typography, Descriptions, Tag, Empty, Button, Space, App as AntApp, Alert } from "antd";
-import { Copy } from "lucide-react";
+import { Copy, AlertTriangle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { Node as ChronosNode, NodeKind } from "../types";
 import ConceptTip from "./ConceptTip";
+
+// Effect tags written by adapters into node.metadata.effects (PH3-02).
+// Kept in sync with src/chronos/adapters/effects.py taxonomy.
+const DANGEROUS_EFFECTS = new Set(["network", "fs", "db", "external"]);
+
+const EFFECT_COLORS: Record<string, string> = {
+  llm: "purple",
+  network: "orange",
+  fs: "gold",
+  db: "volcano",
+  external: "red",
+};
+
+function readEffects(node: ChronosNode): string[] {
+  const raw = (node.metadata as Record<string, unknown> | null | undefined)?.effects;
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((t): t is string => typeof t === "string");
+}
+
+function hasDangerousEffect(effects: string[]): boolean {
+  return effects.some((t) => DANGEROUS_EFFECTS.has(t));
+}
 
 function prettyJSON(v: unknown): string {
   if (v === null || v === undefined) return "";
@@ -62,6 +84,39 @@ export default function NodeDetails({
   const { t } = useTranslation();
   const kind = node.kind as NodeKind;
   const ms = durationMs(node);
+  const effects = readEffects(node);
+  const dangerous = hasDangerousEffect(effects);
+
+  const effectsBanner = effects.length > 0 && (
+    <Space direction="vertical" size={8} style={{ width: "100%", marginBottom: 12 }}>
+      <Space size={6} wrap>
+        <Typography.Text strong style={{ fontSize: 12 }}>
+          {t("nodeDetails.fields.effects")}
+        </Typography.Text>
+        <ConceptTip concept="effects" asIcon>
+          <span />
+        </ConceptTip>
+        {effects.map((tag) => (
+          <Tag
+            key={tag}
+            color={EFFECT_COLORS[tag] ?? "default"}
+            style={{ marginInlineEnd: 0 }}
+          >
+            {t(`effects.tags.${tag}`, { defaultValue: tag })}
+          </Tag>
+        ))}
+      </Space>
+      {dangerous && (
+        <Alert
+          type="warning"
+          showIcon
+          icon={<AlertTriangle size={16} />}
+          message={t("effects.forkWarning.title")}
+          description={t("effects.forkWarning.body")}
+        />
+      )}
+    </Space>
+  );
 
   const identityTab = (
     <Descriptions size="small" column={1} bordered>
@@ -169,6 +224,7 @@ export default function NodeDetails({
 
   return (
     <div>
+      {effectsBanner}
       <Tabs
         defaultActiveKey="identity"
         items={[
@@ -180,8 +236,13 @@ export default function NodeDetails({
       />
       {onFork && (
         <div style={{ marginTop: 12 }}>
-          <Button block onClick={() => onFork(node)}>
+          <Button
+            block
+            onClick={() => onFork(node)}
+            danger={dangerous}
+          >
             {t("tree.forkThis")}
+            {dangerous && ` · ${t("effects.forkWarning.buttonHint")}`}
           </Button>
         </div>
       )}

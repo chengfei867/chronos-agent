@@ -177,8 +177,23 @@ export default {
       totalTokens: "总 tokens",
       costUsd: "成本 (USD)",
       metadata: "附加信息",
+      effects: "副作用",
     },
     noData: "该字段无数据",
+  },
+  effects: {
+    tags: {
+      llm: "调用 LLM",
+      network: "网络请求",
+      fs: "文件读写",
+      db: "数据库",
+      external: "外部命令",
+    },
+    forkWarning: {
+      title: "此节点可能带副作用",
+      body: "从这里 Fork 会重新执行此节点对应的真实世界操作 (例如重新扣费、重新发邮件、重新写库). 如果你只想看推理路径, 建议 Fork 一个纯函数节点; 如果你确实想重试外部调用, 请确认下游资源可接受重复调用.",
+      buttonHint: "会重新触发副作用",
+    },
   },
   help: {
     title: "帮助中心",
@@ -229,6 +244,10 @@ export default {
       timeline: {
         title: "Timeline (时间线)",
         body: "一条 Run 的完整执行路径. 原始 Run 是主时间线, 从中 Fork 出来的子 Run 属于另一条平行时间线, 互不影响.",
+      },
+      effects: {
+        title: "副作用 (Effects)",
+        body: "节点在真实世界里「做了什么」 — 调用网络 (network)、读写文件 (fs)、读写数据库 (db)、调用 LLM (llm) 或其他外部命令 (external). Chronos 根据节点名做启发式标注, 仅作参考. 在这里 Fork 会再次触发这些副作用, 比如又一次扣费、又一次发邮件 — 请先想清楚.",
       },
     },
     howToUse: {

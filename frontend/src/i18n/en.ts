@@ -179,8 +179,23 @@ export default {
       totalTokens: "Total Tokens",
       costUsd: "Cost (USD)",
       metadata: "Metadata",
+      effects: "Side effects",
     },
     noData: "No data",
+  },
+  effects: {
+    tags: {
+      llm: "LLM call",
+      network: "Network",
+      fs: "Filesystem",
+      db: "Database",
+      external: "External",
+    },
+    forkWarning: {
+      title: "This node may have side effects",
+      body: "Forking here will re-run the real-world operation this node performed (e.g. re-charge, re-send email, re-write a record). If you only want to explore the reasoning path, prefer forking from a pure node; if you really need to retry the external call, confirm that the downstream resource is OK with duplicate invocations.",
+      buttonHint: "re-triggers side effects",
+    },
   },
   help: {
     title: "Help Center",
@@ -231,6 +246,10 @@ export default {
       timeline: {
         title: "Timeline",
         body: "The full execution path of one run. The original run is the main timeline; any fork creates a parallel timeline that doesn't affect the original.",
+      },
+      effects: {
+        title: "Side effects",
+        body: "What a node actually does in the real world — hits the network, reads/writes files (fs), hits a database (db), calls an LLM, or runs other external commands. Chronos tags this heuristically from the node name; it's advisory only. Forking from a node with side effects will re-trigger them on replay (another charge, another email sent) — think twice.",
       },
     },
     howToUse: {
