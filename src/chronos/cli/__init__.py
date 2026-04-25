@@ -97,9 +97,9 @@ def info() -> None:
     """Print environment diagnostics."""
     console.print(f"[bold]chronos[/bold] {__version__}")
     console.print(
-        "Status: Phase 2 -- adapter interface stable (ADR-016), "
-        "LangGraph/Linear/AutoGen adapters + `chronos web` tree viewer "
-        "(Compare verb landed in ADR-018, side-by-side DiffView shipped), v0.2.1"
+        "Status: Phase 3 on-ramp -- effect annotations landed (PH3-02), "
+        "adapter interface stable (ADR-016), LangGraph/Linear/AutoGen adapters + "
+        "`chronos web` tree viewer + side-by-side DiffView + fork-warning UI, v0.3.0"
     )
     console.print(
         "Commands: [green]runs list/show, forks show, diff, replay, fork plan, web[/green] "
