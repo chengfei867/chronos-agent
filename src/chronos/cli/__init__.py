@@ -295,7 +295,7 @@ def diff(
         help="Include token/cost comparison between run A and run B (ADR-009).",
     ),
 ) -> None:
-    """Structural diff of two recorded runs (ADR-006 alignment)."""
+    """Compare two recorded runs side-by-side (the 'compare' verb — ADR-006 alignment)."""
     from chronos.cli.diff import diff_command
 
     diff_command(
