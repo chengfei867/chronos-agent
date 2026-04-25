@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-04-23
 - **Round:** R21 (formalized after R17+R18+R20 three-dogfood evidence arc)
-- **Relates to:** ADR-005 (fork semantics), ADR-008 (fork CLI plan artifact)
+- **Relates to:** ADR-005 (fork semantics), ADR-008 (fork CLI plan artifact), ADR-019 (no sandbox — R43-B)
 - **Supersedes:** none (this ADR does NOT change code — it formalizes a non-decision)
 
 ## Context

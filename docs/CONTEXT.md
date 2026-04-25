@@ -147,38 +147,41 @@
    147|
 ## 5. 当前状态 (Current State)
 
-**截至 Round 42-A 结束 (2026-04-25 CST ~13:00) — Phase 3 入口 spike 完成, research doc + spike8 数据齐, 等用户 sign-off**
+**截至 Round 43 结束 (2026-04-25 CST ~14:00) — Phase 3 on-ramp 组合拳完成 (ADR-019 + side-effects guide + spike9 schema 决策)**
 
-- Round: **42-A 完成** — Phase 3 roadmap §Phase 3 首个 milestone "side-effect sandboxing (E2B or Modal)" 经 ADR-013 重读 + `tests/spikes/spike8_fork_sideeffect.py` 三场景实验 (F1 初始 run 1 次 httpx / F2 fork AFTER post 0 次 replay / F3 fork BEFORE post fresh 1 次) 判定为 **roadmap drift**. LangGraph checkpointer 自己保证 pre-fork immunity, 不需要 Chronos 做 sandbox. 产出: `docs/research/fork-sandbox-feasibility.md` (7.6KB 研究笔记) + `tests/spikes/spike8_fork_sideeffect.py` (9.1KB 可复跑 spike) + `docs/progress/2026-04-25-round-42a.md` + `docs/roadmap.md` 加"under R42-A review"标记. **未改 roadmap 核心 bullet** — charter 变更等用户 sign-off.
-- 最近 progress doc: `progress/2026-04-25-round-42a.md` (本轮)
-- 最近上一份 progress doc: `progress/2026-04-25-round-41.md` (v0.2.1 cut)
-- 最近上上份 progress doc: `progress/2026-04-25-round-40.md` (ADR-018)
-- Round: 41 (上轮): v0.2.1 release cut bundling R39-A + R40 + R41 polish.
-- Round: 40 (上上轮): ADR-018 纯文档轮.
-- **战略定位 (R33 锁死, 持续有效)**: **GitHub 爆款开源项目**, 不是 SaaS. v0.2.1 是 Web UI Compare 叙事完备的第一个正式版. Phase 3 的 on-ramp 现在指向 "side-effect docs + effect-kind 元数据" (3.5–4.5 轮), 不再是 "E2B/Modal 沙箱" (10–20 轮).
-- 当前阶段: **Phase 2 稳定, v0.2.1 released, Phase 3 entry 理论完成实现待 sign-off**. 四段动词三 surface 齐备; R42-A 把 Phase 3 工作量估算砍了 ~3×.
-- 最新 ADR: **ADR-018 (R40)**. 之前: ADR-017 (R33). R42-A 未新写 ADR (建议 ADR-019 codify "Chronos does not sandbox", 约 0.5 轮, 等用户决策).
-- 最新 research doc: **`docs/research/fork-sandbox-feasibility.md` (R42-A)**. 之前: `docs/research/multi-framework-risks.md` (R27+R29).
-- 最新 tag: v0.2.1 (R41); 下一 release 候选: v0.3.0 (Phase 3 完成时) 或 v0.2.2 patch.
+- Round: **43 完成** — R42-A 研究落地为三件交付: (1) **ADR-019 "Chronos does not sandbox fork execution"** codify ADR-013 隐含推论 + 三-trigger 重开规则 + 明确 reject E2B/Modal/subprocess-nsjail; (2) **`docs/guides/side-effects.md` 用户指南**, 中英双语, 三种 idiomatic mitigation pattern (mock transport / envvar kill-switch / 纯工具拆分) + "fork 前后副作用"速查表; (3) **Spike 9 `tests/spikes/spike9_effects_metadata.py` + `docs/research/ph3-02-effects-schema-decision.md`**: 3-node LangGraph 实测 `node.metadata["effects"]` 方案 F1/F2/F3 全绿, **决策 Option B (annotation-level, 复用现有 `metadata_json` 列, 零迁移)**. PH3-02 实施估算缩到 ~1.5 轮.
+- 最近 progress doc: `progress/2026-04-25-round-43.md` (本轮)
+- 最近上一份 progress doc: `progress/2026-04-25-round-42a.md` (R42-A spike + research)
+- 最近上上份 progress doc: `progress/2026-04-25-round-41.md` (v0.2.1 cut)
+- Round: 42-A (上轮): Phase 3 roadmap drift 诊断 + spike8.
+- Round: 41 (上上轮): v0.2.1 release cut.
+- **战略定位 (R33 锁死, 持续有效)**: **GitHub 爆款开源项目**, 不是 SaaS. v0.2.1 是 Web UI Compare 叙事完备的第一个正式版. Phase 3 on-ramp 已经在 R43 完成战略部分 (ADR + guide + schema 决策), 剩下 PH3-02 实施 (adapter 启发式 + UI badge, ≈1.5 轮) 即可发 v0.3.0.
+- 当前阶段: **Phase 2 稳定, v0.2.1 released, Phase 3 战略层全部锁死, 进入实施窗口**. R43 把"先做 ADR 再写 guide 再 spike schema"的研究债一次清完.
+- 最新 ADR: **ADR-019 (R43-B)**. 之前: ADR-018 (R40), ADR-017 (R33).
+- 最新 research doc: **`docs/research/ph3-02-effects-schema-decision.md` (R43-D)**. 之前: `docs/research/fork-sandbox-feasibility.md` (R42-A).
+- 最新 tag: v0.2.1 (R41); 下一 release 候选: v0.3.0 (PH3-02 实施完成时).
 - Blocked items: 无
-- 测试状态: **386/2skip pass** (R42-A 未动代码路径, 基线未变), 94% coverage, mypy/ruff/format clean
-- CLI 表面: `chronos runs list/show, forks show, diff, replay, fork plan, web` (7 个 subcommand), v0.2.1 status line
+- 测试状态: **386/2skip pass** (R43 未动代码路径, 纯 docs + spike), 94% coverage, mypy/ruff/format clean
+- CLI 表面: `chronos runs list/show, forks show, diff, replay, fork plan, web` (7 个 subcommand)
 - URL 表面: `/healthz`, `/runs`, `/runs/{id}`, `/runs/{id}/nodes`, `/runs/{id}/forks`, `/runs/{id}/tree`, `/runs/compare?a=X&b=Y&restrict=<bool>`, `/app/*`, `/`, `/docs`, `/redoc`
 - 前端路由: `/app/#/runs`, `/app/#/runs/<id>`, `/app/#/runs/<a>/diff/<b>` (R39-A)
 - 仓库可见性: **PUBLIC** since R34-C 尾部
-- **R42-A 产出 (本轮)**:
-  - `tests/spikes/spike8_fork_sideeffect.py` (9.1 KB, 不是 pytest 而是 `uv run python ...` 形态, 随 spike4–7 惯例)
-  - `docs/research/fork-sandbox-feasibility.md` (7.6 KB, 三决策选项 + 3.5–4.5 轮的 on-ramp 估算)
-  - `docs/roadmap.md` §Phase 3 加 "R42-A review" 块 + 首 bullet 加注解 (保留原文未改)
-  - `docs/progress/2026-04-25-round-42a.md` (本 commit)
+- **R43 产出 (本轮)**:
+  - `docs/decisions/ADR-019-chronos-does-not-sandbox.md` (9.4 KB, three-trigger 重开规则 mirrors ADR-013)
+  - `docs/guides/side-effects.md` (10.1 KB, 首个 `docs/guides/` 下文档, 中英双语)
+  - `tests/spikes/spike9_effects_metadata.py` (6.0 KB, `uv run python` 形态)
+  - `docs/research/ph3-02-effects-schema-decision.md` (5.8 KB, Option A vs B 对比 + 决策)
+  - `docs/decisions/ADR-013...` 加一行 cross-link 到 ADR-019
+  - `docs/progress/2026-04-25-round-43.md` (本 commit)
   - `docs/CONTEXT.md` §5 §6 refresh (本 commit)
-- **R42-A 关键事实**:
-  - **LangGraph checkpointer 自带 pre-fork immunity**: 实测 fork AFTER node → 不重跑, fork BEFORE node → fresh 跑一次. 与 ADR-005 的"state resumption"契约 100% 吻合.
-  - **"side-effect sandboxing" 其实是 ADR-013 冻结后的 roadmap drift**: 如果 Chronos 不执行 fork (ADR-013), 那下游 side effect 归用户管, Chronos 只需提供 (a) 文档模式 + (b) effect-kind 元数据让 UI 警告.
-  - **`recorder.record()` 参数叫 `thread_id` 不是 `adapter_thread_id`**: 写 spike 时栽了一次.
-  - **Node 字段是 `node_name` 和 `id`**: 不是 `name` / `node_id`. Pydantic 报 AttributeError 才暴露.
-  - **`build_graph()` 要在 `SqliteStore` CM 外创建 `InMemorySaver`**: 但 `compiled` 要传到 `recorder.fork()` 里, 所以两段 SqliteStore CM 之间 compiled + saver 共享活着.
-  - **写 roadmap charter 变更时用注解 + DRAFT 标, 不直接改**: 软边界下 judge, 这种级别的 Phase 3 重写归用户拍板.
+- **R43 关键事实**:
+  - **`nodes.metadata_json` 列已存在且 round-trip 通**: `Node.metadata: dict[str, Any]` Pydantic → `metadata_json TEXT` SQL → 读回还是 dict. PH3-02 的 effects tag 零迁移就能塞.
+  - **`rec.record()` 是 contextmanager, 包 `compiled.invoke(...)`**: 不是"先 invoke 再 record"模式, 和 spike8 一致. 写 spike9 时栽了一次.
+  - **Store 方法叫 `get_nodes_for_run` 不是 `list_nodes`**: 惯例 `get_*_for_*`. 同样栽过.
+  - **`InMemorySaver` 对 spike 足够**, 不需要 `AsyncSqliteSaver`. `langgraph.checkpoint.sqlite` 这个子包在当前安装里其实没有.
+  - **charter 边界继续生效**: ADR-019 写了不代表 roadmap §Phase 3 首 bullet 自动被改. R42-A 的 "under review" 标注仍在; 改 charter 仍等用户明确 OK.
+  - **文档+ADR 组合拳的节奏**: R43 一次推三件 (ADR → guide → spike) 比 R42-A 推荐的"三选一"快, 但三件都属同一研究线, 所以零冲突. 不是所有岔口都能这么合.
+- **R42-A 回顾**: Phase 3 sandbox milestone 诊断为 roadmap drift; spike8 三场景实验; 研究笔记 7.6KB
 - **R41 回顾**: v0.2.1 release cut, README 4 图 + 中英双语 hero section + Compare narrative 完整
 - **R40 回顾**: 纯文档轮, ADR-018 取消 `chronos compare`, `v0.2.0` release page 验证已存在
 - **R39-A 回顾**: DiffView + `/runs/compare` + RunList Compare button. PR #3 → `6c07b1f`
@@ -257,42 +260,48 @@
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 43 候选 — R42-A 研究已完成, 等用户 sign-off 后选 PH3-01 docs / PH3-02 metadata / ADR-019 / 其他方向**
+**Round 44 候选 — R43 把 Phase 3 战略层 (ADR-019 + guide + schema 决策) 全部落地, 下一步进入 PH3-02 实施窗口 or 其他方向**
 
-战略视角: R42-A 实测 Phase 3 的"side-effect sandboxing"是 roadmap drift, 给出 3.5–4.5 轮的 new on-ramp. 下一轮的 key 取决于用户对 `docs/research/fork-sandbox-feasibility.md` 的决策. 在用户回复前, 可以选"推进 Phase 3 其他 milestone 的预调研"或"等着先不动". 下面按用户 sign-off 情况列.
+战略视角: R43 完成了 R42-A 研究的 follow-through 三件 (ADR-019 codify、side-effects guide 中英双语、spike9 实测 `metadata["effects"]` 方案可行). Phase 3 现在卡在 **charter sign-off** (roadmap §Phase 3 首 bullet 是否正式改写) 和 **PH3-02 实施** (adapter effect heuristic + UI badge, ≈1.5 轮 即可发 v0.3.0). 用户对哪条感兴趣决定 R44 方向.
 
-### R43-A (用户 approve 了 R42-A 建议): PH3-01 — side-effect 模式文档
+### R44-A (优先推荐): PH3-02 — adapter effect 启发式 + UI badge
 
-- 写 `docs/guides/side-effects.md` 中英双语 — 3 个 pattern (MockTransport / envvar kill-switch / pure/effectful split) + 每个 5 行 code snippet + 链接到 spike8
-- 顺便把 README "how to fork safely" 加一节 + 链接 guide
-- 工期估: 1 轮
+- `adapters/langgraph.py` 加 effect 启发式: 识别 `httpx`/`requests`/`openai`/`anthropic`/`SQLAlchemy`/`Path.write*` 等 tool signature, 产出 `["network"]`/`["db"]`/`["fs"]`/`["llm"]` tag, 写进 `node.metadata["effects"]`.
+- Web UI ForkPlan 抽屉加"此 fork 将重新执行 N 个 {network,fs,db}-effectful 节点"角标, 默认 dangerous set = `{network, fs, db}`, 可在前端 settings 关.
+- 测试: 合成 fixture LangGraph 覆盖 4 种 effect kind, snapshot 验 metadata.
+- 工期估: 1.5 轮 (0.5 adapter + 0.5 UI + 0.5 测试).
+- 发版: PH3-02 ship 就 cut v0.3.0.
 
-### R43-B (用户 approve + 想先写 ADR): ADR-019 — "Chronos does not sandbox"
+### R44-B (charter): roadmap §Phase 3 正式改写 + sign-off
 
-- codify ADR-013 的隐式推论 — Chronos 不管 fork 下游副作用, 用户负责
-- 列出 ADR-019 的 3 个触发条件 (跟 ADR-013 一样) 何时重新审视
-- 工期估: 0.5 轮
+- 用户读 ADR-019 后 OK 则改 `docs/roadmap.md` §Phase 3 首 bullet: "side-effectful tool sandboxing (E2B or Modal)" → "effect-kind metadata + side-effect user guide (per ADR-019)".
+- 清掉 R42-A 的 "under review" callout.
+- 改 Phase 3 工期估 10–20 轮 → 3.5–4.5 轮 (已经做掉 2, 剩 PH3-02).
+- 工期估: 0.5 轮.
+- 不能自治: **必须等用户明确 OK**.
 
-### R43-C (用户 reject R42-A 建议, 仍想要 sandbox): E2B/Modal PoC
+### R44-C: Dogfood v0.2.1 真实使用 + v0.2.2 patch 机会
 
-- 如果用户读了 research doc 后仍认为需要 sandbox, 那前提是 ADR-013 要重开
-- 先写 ADR-019' 重开 ADR-013, 然后 E2B + Modal 对比 PoC
-- 工期估: 5–8 轮 (比之前估的 10–20 轮小 — 因为 research doc 已经砍了部分工)
+- 拿一个真实 LangGraph agent (或 `scripts/seed_demo.py` 升级版) 跑完整 record → fork → diff → compare 流程, 找 v0.2.1 bug.
+- 有 bug → v0.2.2 patch release (release skill 第 10 次).
+- 零 bug → 转 R44-A 继续 PH3-02.
+- 工期估: 1–2 轮.
 
-### R43-D (备选): PH3-02 — effect-kind 节点元数据
+### R44-D: AutoGen/LangGraph adapter 的实战打磨
 
-- 给 `Node` 加 `effects` 字段 (tags: network / fs / db / llm)
-- adapter 填充 (LangGraph 先根据 tool name heuristic)
-- Web UI: ForkPlan 页面算"这个 fork 会 re-trigger N 个 network-effectful 节点"角标
-- 工期估: 2–3 轮
+- R33 的 AutoGen adapter 自进 main 后未被 dogfood 过 (参见 R27 multi-framework-risks).
+- 用 AutoGen 官方 example 跑一遍 Chronos record, 看 extractor v2 是否抓到 usage / 是否 node_name 合理.
+- 可能产出 R45 的 ADR-016 修订 (adapter interface v2).
+- 工期估: 2–3 轮.
 
-### R43-E (安全牌): Dogfood 找 v0.2.1 bug + 其他方向
+### R44-E (安全牌): 纯文档轮 — README + 主页更新
 
-- 用 `scripts/seed_demo.py` + 一个真实 LangGraph agent 跑 Compare 流程
-- 有 bug → v0.2.2 patch (release skill 第 10 次)
-- 零 bug → 转 R43-A / R43-B
+- README 把 Phase 3 段落改掉 (去掉 "sandbox" 字样, 加 "time-travel 是你设计的, Chronos 观察"的叙事).
+- 加 `docs/guides/side-effects.md` 链接到 README 的 "How Chronos Works" 节.
+- 可能加一个 `docs/guides/` 索引文件.
+- 工期估: 0.5 轮. 适合 "今天不想写代码但想推一点进度" 的场景.
 
-### R43 非目标 (继承红线)
+### R44 非目标 (继承红线)
 
 - ❌ `chronos compare` alias (ADR-018 已决)
 - ❌ 改 `chronos diff` 行为
@@ -300,13 +309,14 @@
 - ❌ 数据库 migration 框架 / Postgres / WebSocket
 - ❌ PyPI publish
 - ❌ 独立写 diff 算法
-- ❌ 未经用户 sign-off 改 roadmap §Phase 3 主 bullet (R42-A 已加注解, 改 charter 归用户)
+- ❌ 未经用户 sign-off 改 roadmap §Phase 3 主 bullet (R42-A 注解 + R43 ADR-019 已铺路, 但 charter 最终改写归用户)
+- ❌ E2B / Modal / nsjail / Docker 沙箱集成 (ADR-019 已决)
 
 ### Release strategy (v0.2.1 → v0.3.0)
 
 - v0.2.1 ✅ cut 2026-04-25 (R41)
 - v0.2.2 (可选) = dogfood 产出的 bug fix
-- v0.3.0 = Phase 3 完成 = PH3-01 + PH3-02 (+ 可能 ADR-019); 原 "E2B/Modal 沙箱" 不再是 v0.3.0 blocker
+- v0.3.0 = PH3-02 (adapter effect 启发式 + UI badge) 完成即可发; ADR-019 + side-effects guide + schema 决策已经在 R43 落地
 
 
 ## 7. 文档索引 (当你需要深入某个主题)
