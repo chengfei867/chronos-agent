@@ -76,3 +76,26 @@ export async function fetchCompare(
   });
   return getJSON<CompareResponse>(`/runs/compare?${params.toString()}`);
 }
+
+// R46-A: fork plan preview. Returns the ForkPlan artifact (per ADR-013,
+// Chronos only *plans*; the user runs `chronos fork apply` locally) plus
+// a downstream side-effects summary for the "💥 This fork re-runs N
+// dangerous nodes" warning block.
+export interface ForkPlanPreviewResponse {
+  plan: Record<string, unknown>;
+  effects_summary: {
+    total: number;
+    dangerous_count: number;
+    tag_counts: Record<string, number>;
+    dangerous_samples: Array<[number, string, string[]]>;
+  };
+}
+
+export async function fetchForkPlanPreview(
+  runId: string,
+  nodeId: string,
+): Promise<ForkPlanPreviewResponse> {
+  return getJSON<ForkPlanPreviewResponse>(
+    `/runs/${encodeURIComponent(runId)}/nodes/${encodeURIComponent(nodeId)}/fork-plan`,
+  );
+}

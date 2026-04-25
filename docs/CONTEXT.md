@@ -147,38 +147,42 @@
    147|
 ## 5. 当前状态 (Current State)
 
-**截至 Round 45-A 结束 (2026-04-25 CST ~16:00) — v0.3.1 cut, PH3-03 fork-plan 副作用预览落地**
+**截至 Round 46-A 结束 (2026-04-26 CST ~00:50) — TreeView Fork modal + `/fork-plan` API endpoint 落地**
 
-- 最近 progress doc: `progress/2026-04-25-round-45-a.md` (v0.3.1 cut — **fork-plan downstream effects preview**)
-- 最近上份 progress doc: `progress/2026-04-25-round-44-a.md` (v0.3.0 cut — effects annotation)
-- 最近上上份 progress doc: `progress/2026-04-25-round-43.md` (R43 ADR-019 + guide + schema 三件套)
+- 最近 progress doc: `docs/progress/2026-04-26-round-46-a.md` (R46-A — Web UI fork-from-tree 激活, PH3-04)
+- 最近上份 progress doc: `docs/progress/2026-04-25-round-45-a.md` (v0.3.1 cut — PH3-03 fork-plan downstream effects preview)
+- 最近上上份 progress doc: `docs/progress/2026-04-25-round-44-a.md` (v0.3.0 cut — PH3-02 effects annotation)
 
-- Round: **45-A**: PH3-03 实施完成, **v0.3.1 cut**. `chronos fork plan` 预览里加 `Downstream side-effects preview` 面板, 显示 dangerous count + tag 分布 + 3 个具体示例 + ADR-019 免责声明. 8 new tests (435 pass total / 94% cov).
-- **战略定位 (R33 锁死, 持续有效)**: **GitHub 爆款开源项目**, 不是 SaaS. v0.3.1 闭合了 effect-aware fork 的核心循环 — CLI 和 UI 都告诉用户 fork 会触发什么真实副作用, 承袭 ADR-019 的 no-sandbox 立场.
-- 当前阶段: **v0.3.1 released, PH3-02 + PH3-03 落地完成**. 下一步候选: Phase 3 charter sign-off (改 roadmap, 需用户 OK) 或 TreeView 接 onFork 激活 danger Fork button (R45-C).
-- 最新 ADR: **ADR-019 (R43-B)**. 之前: ADR-018 (R40), ADR-017 (R33).
-- 最新 research doc: **`docs/research/ph3-02-effects-schema-decision.md` (R43-D)** — R44-A/R45-A 都沿用其推荐的 Option B (metadata-only, 零 schema 变更).
-- 最新 tag: **v0.3.1 (R45-A)**; 之前 v0.3.0 (R44-A), v0.2.1 (R41).
+- Round: **46-A**: 接上了 v0.3.0 (R44-A) 预埋的 `NodeDetails.onFork` prop. 新增 `GET /runs/{run_id}/nodes/{node_id}/fork-plan` FastAPI 端点 (46 行) + `ForkPlanModal` React 组件 (252 行) + `fetchForkPlanPreview` 客户端 + `TreeView` 布线 + en/zh `forkModal.*` 19 keys i18n. **438 pass (+3 API tests) / 94% cov**, mypy/ruff/format clean, `npm run build` 绿.
+- **战略定位 (R33 锁死, 持续有效)**: **GitHub 爆款开源项目**, 不是 SaaS. R46-A 补上了 effect-aware UX 的第三条腿 — Web UI fork-from-tree 现在和 CLI 一样会预览 downstream dangerous 节点. Phase 3 effect-aware-UX 三面 (adapter tag + CLI preview + Web modal) **全部到位**.
+- 当前阶段: **v0.3.1 released, PH3-02 + PH3-03 + PH3-04 全部落地**. Phase 3 charter 已在 commit `93b76fd` (上一 cron slot) 正式签掉. 下一步候选: R47-A 浏览器 dogfood + R47-B `docs/guides/forking-safely.md` + R47-D cut v0.4.0-alpha.
+- 最新 ADR: **ADR-019 (R43-B)**. 之前: ADR-018 (R40), ADR-017 (R33). R46-A 不需要新 ADR (留在 ADR-013 + ADR-019 包络内).
+- 最新 research doc: **`docs/research/ph3-02-effects-schema-decision.md` (R43-D)**.
+- 最新 tag: **v0.3.1 (R45-A)**; 之前 v0.3.0 (R44-A), v0.2.1 (R41). R46-A **未发版**, 攒一波跟 R47-A/B 一起 cut v0.4.0-alpha.
 
-- 测试状态: **435/2skip pass** (+8 from R44-A), **94% coverage**, `cli/fork.py` 97%, mypy/ruff/format clean
+- 测试状态: **438/2skip pass** (+3 from R45-A), **94% coverage**, `api/server.py` 98%, mypy/ruff/format clean, frontend `tsc -b && vite build` 绿
 
-- **R45-A 产出 (本轮)**:
-  - `src/chronos/cli/fork.py`: 新增 `build_effects_summary(downstream_nodes) -> dict` 纯 helper (聚合 effects tags + 取 dangerous 样本, 上限 3) + `render_effects_preview(summary, console)` Rich Panel 渲染器 + `render_plan_preview` 接受新 `effects_summary` kwarg
-  - `fork_plan_command`: parent 解析后算 `downstream_nodes = [n for n in nodes if n.step_index > parent.step_index]`, 传 summary 到两处 `render_plan_preview` (JSON + Python emit)
-  - CLI 视觉: 黄色边 Panel "Downstream side-effects preview", 显示 `⚠ 2 dangerous / 5 total`, `breakdown: db=1, network=1`, 3 个 `• step N: name (tags)` 例子, ADR-019 免责声明
-  - 8 new unit tests (`tests/unit/test_fork_cli.py` 末尾块): helper 空/纯 LLM/混合/样本上限/malformed metadata, CLI dangerous 显示/末 node 静默/纯 LLM 下游静默
-  - `tests/unit/test_cli.py::test_cli_info`: assert `phase 2` → `phase 3` (R44-A 遗留的 stale assertion, R45-A full-suite verify 抓住)
+- **R46-A 产出 (本轮)**:
+  - `src/chronos/api/server.py`: 新增 `GET /runs/{run_id}/nodes/{node_id}/fork-plan` 端点. 复用 `chronos.cli.fork.build_plan` + `build_effects_summary` 两个纯 helper (R45-A 把它们设计成 console-free 就是为了这里). 返回 `{plan: ForkPlan.to_dict(), effects_summary: {total, dangerous_count, tag_counts, dangerous_samples}}`. 404 分 "Run not found" / "Node not found" 两个 detail.
+  - `frontend/src/api.ts`: 新增 `fetchForkPlanPreview(runId, nodeId)` 和 `ForkPlanPreviewResponse` 类型.
+  - `frontend/src/components/ForkPlanModal.tsx` (新文件, 252 行): AntD Modal (非 Drawer, 因为 plan JSON 是 deliverable), 宽 760px. 顶部 intro → loading/error → effects summary (Alert warning or success) → JSON `<pre>` (maxHeight 320) → 下一步提示. 页脚 Close/Copy/Download. 复制走 `navigator.clipboard`, 下载走 `Blob + anchor` 触发. 文件名 `fork-plan-<runIdPrefix>-step<N>.json`.
+  - `frontend/src/pages/TreeView.tsx`: 加 `forkNodeId` state (和 `selectedId` 分开, 关 modal 不关 drawer), `NodeDetails` 传 `onFork={(n) => setForkNodeId(n.id)}`, 挂 `<ForkPlanModal>`.
+  - `frontend/src/i18n/en.ts` + `zh.ts`: 补 `forkModal:` 19 keys (title/atNode/intro/loading/errorTitle/planJson/close/copy/copied/copyFailed/download/downloaded/nextSteps + dangerous.{title,breakdown,examples} + safe.{lastNode,pureLlm}). 中文用和 R44-A forkWarning 一致的口吻.
+  - `tests/unit/test_api_server.py`: 3 new tests — happy path (验证 plan envelope shape + effects_summary 四键结构 + `total==1` 锁 fixture 数学), 404 for unknown run, 404 for unknown node.
+  - `docs/progress/2026-04-26-round-46-a.md`: 本轮 progress doc.
 
-- **R45-A 关键事实**:
-  - **per-run 线性 downstream, 不是 DAG-topological**: step_index > parent.step_index 足矣, 匹配 replay/fork 消费者心智. DAG 沿 `parent_node_id` 边走是 Phase 4 话题.
-  - **静默原则**: `total == 0` (末 node) 或 `dangerous_count == 0` (纯 LLM) 不打 panel, 避免假警报疲劳 (ADR-019: honest warning, not noise)
-  - **sample 上限 3 + "… and N more"**: 防止 50-node dangerous run 把 CLI 输出淹没
-  - **defensive against malformed metadata**: `metadata["effects"]` 如果是 str 而非 list, 当空处理, 不抛异常
-  - **llm 继续不 dangerous**: 保持 R44-A 立场, fork 的首要用途就是重跑 LLM 推理
+- **R46-A 关键事实**:
+  - **API 端点零重复**: `build_plan` + `build_effects_summary` 在 R45-A 就被设计为 console-free, R46-A 直接 import 复用, 不写一行 fork 计划逻辑在 api 层. 未来所有需要 "给浏览器看 CLI-level 信息" 的场景都应照这个模式.
+  - **Modal vs Drawer 定位**: modal = deliverable/action (fork plan JSON 是产物), drawer = aux/passive (node 元数据). 遵 R38 视觉审美规范.
+  - **silence principle 在 modal 里反转**: CLI 里 `dangerous_count==0` 时静默; modal 里必须显示 success Alert, 否则 "点了 Fork 按钮什么都没发生" 用户会误以为坏了. 小但关键的 UX 不对称.
+  - **"Run not found" 先于 "Node not found"**: 否则 bad run_id + bad node_id 会报错成 "Node not found", 误导调试.
+  - **Cron slot 无 progress doc 交接 = 静默恢复负担 (R46-A pitfall)**: 本轮开场发现 8 个未 push commits + 未 commit 的 R46-A WIP (API 端点 + modal + TreeView 布线), 但 **i18n keys 缺失** — 浏览器会渲染字面 "forkModal.title". 补了 i18n + 写 progress doc 是本轮的恢复工作. 教训: 中途 cron 要么 feature-flag + commit WIP, 要么 stash/reset, 绝不留半条布线在 working tree.
+  - **backward compat**: `fetchForkPlanPreview` 返回 `plan: Record<string, unknown>` 故意不强 typed — UI 只 JSON 序列化给用户下载, 不 destructure, 保持和 `ForkPlan` Pydantic schema 解耦.
 
-- **R44-A 回顾**: PH3-02 adapter effects classifier + UI badge + warning Alert. `classify_effects()` 5 tag regex 家族 + `DANGEROUS_EFFECTS_DEFAULT={network,fs,db,external}`. 零 SQL migration.
+- **R45-A 回顾**: PH3-03 `chronos fork plan` 加 downstream side-effects Panel 预览. 8 new tests (435 pass → 443...等等, 现在是 438, 所以 R45-A 是 435), `cli/fork.py` 97%. ADR-019 "warn, not sandbox" 的 CLI 侧体现.
+- **R44-A 回顾**: PH3-02 adapter effects classifier + UI badge + warning Alert. `classify_effects()` 5 tag regex 家族 + `DANGEROUS_EFFECTS_DEFAULT={network,fs,db,external}`. 零 SQL migration. **预埋了 `NodeDetails.onFork` prop 但 TreeView 没激活 — R46-A 激活了**.
 
-- **R43 回顾**: Phase 3 on-ramp 组合拳 — ADR-019 "Chronos does not sandbox fork execution" + `docs/guides/side-effects.md` 中英双语 + spike9 实测 `metadata["effects"]` → 决策 Option B.
+- **R43 回顾**: Phase 3 on-ramp 组合拳 — ADR-019 + `docs/guides/side-effects.md` + spike9. 决策 Option B (metadata-only, 零 schema 变更).
 - 前端路由: `/app/#/runs`, `/app/#/runs/<id>`, `/app/#/runs/<a>/diff/<b>` (R39-A)
 - 仓库可见性: **PUBLIC** since R34-C 尾部
 - **R43 产出**:
@@ -186,30 +190,13 @@
   - `docs/guides/side-effects.md` (10.1 KB, 首个 `docs/guides/` 下文档, 中英双语)
   - `tests/spikes/spike9_effects_metadata.py` (6.0 KB, `uv run python` 形态)
   - `docs/research/ph3-02-effects-schema-decision.md` (5.8 KB, Option A vs B 对比 + 决策)
-  - `docs/decisions/ADR-013...` 加一行 cross-link 到 ADR-019
-  - `docs/progress/2026-04-25-round-43.md` (本 commit)
-  - `docs/CONTEXT.md` §5 §6 refresh (本 commit)
-- **R43 关键事实**:
-  - **`nodes.metadata_json` 列已存在且 round-trip 通**: `Node.metadata: dict[str, Any]` Pydantic → `metadata_json TEXT` SQL → 读回还是 dict. PH3-02 的 effects tag 零迁移就能塞.
-  - **`rec.record()` 是 contextmanager, 包 `compiled.invoke(...)`**: 不是"先 invoke 再 record"模式, 和 spike8 一致. 写 spike9 时栽了一次.
-  - **Store 方法叫 `get_nodes_for_run` 不是 `list_nodes`**: 惯例 `get_*_for_*`. 同样栽过.
-  - **`InMemorySaver` 对 spike 足够**, 不需要 `AsyncSqliteSaver`. `langgraph.checkpoint.sqlite` 这个子包在当前安装里其实没有.
-  - **charter 边界继续生效**: ADR-019 写了不代表 roadmap §Phase 3 首 bullet 自动被改. R42-A 的 "under review" 标注仍在; 改 charter 仍等用户明确 OK.
-  - **文档+ADR 组合拳的节奏**: R43 一次推三件 (ADR → guide → spike) 比 R42-A 推荐的"三选一"快, 但三件都属同一研究线, 所以零冲突. 不是所有岔口都能这么合.
 - **R42-A 回顾**: Phase 3 sandbox milestone 诊断为 roadmap drift; spike8 三场景实验; 研究笔记 7.6KB
 - **R41 回顾**: v0.2.1 release cut, README 4 图 + 中英双语 hero section + Compare narrative 完整
 - **R40 回顾**: 纯文档轮, ADR-018 取消 `chronos compare`, `v0.2.0` release page 验证已存在
 - **R39-A 回顾**: DiffView + `/runs/compare` + RunList Compare button. PR #3 → `6c07b1f`
 - **R38 回顾**: Legend + edge selection + ConceptTip + Dots background, v0.2.0 cut
-- **R37.5 回顾**: `?include_descendants=true` DFS merged tree + 多 run super-lanes 布局 + `@pytest.mark.live` real-LLM smoke
-- **R36-D 回顾**: AntD 6 + Framer Motion + react-i18next + AntD Tour + Lucide icons full UI rewrite
-- **R35-A 回顾**: v0.2.0b0 release cut (Web UI beta)
-- **R34-C 回顾**: ReactFlow viewer MVP + `/app` mount
-- **R34-B 回顾**: `chronos web` CLI + landing page
-- **R34-A 回顾**: Local HTTP API 6 endpoints
-- **R33 回顾**: AutoGen adapter + ADR-017 sync-wrap
 - 旧事实 (仍生效, 不重复):
-  - GitHub push 只有 `gh-proxy.com`
+  - GitHub push 只有 `gh-proxy.com` (**R46-A 再验证**)
   - LangGraph 1.1.9 record/fork/diff 全链路 OK
   - `NodeKind` 合法值 `{llm, tool, fn, router, fork, end}`
   - Runs/Nodes upsert, Forks append-only
@@ -217,7 +204,7 @@
   - CLI 状态行 / `pyproject.toml::project.version` / `__version__` 每次 bump 要同步 (**R35-A + R38 + R41 验证**)
   - JSON 模式走 stdlib `print(json.dumps(...))` 不走 rich Console
   - `SqliteStore.open()` 静默建文件, 读命令守 `Path.exists()`
-  - **progress doc 每轮必写**
+  - **progress doc 每轮必写** (R46-A 又吃一次亏)
   - **`ForkPlan` schema 是 v0.1.1 对外契约**
   - **Extractor contract v2 (ADR-015) 是 v0.1.2+ 对外契约**
   - **Adapter interface (ADR-016) 是 v0.2.0 对外契约, v0.2.1 仍有效**
@@ -258,69 +245,75 @@
   - **Fixture + monkeypatch 时序 (R34-C)**: 顶层 fixture 已构造后 monkeypatch env 需建 FRESH client
   - **`@xyflow/react` v12 替代 `reactflow` v11 (R34-C)**
   - **AntD v6 `App` context message/notification static 方法坑 (R36-D)**: 见 skill `antd-v6-app-pitfalls`
-  - **Browser visual review 必须, 不可选 (R37.5)**: 接口绿 ≠ 用户看到的对
+  - **Browser visual review 必须, 不可选 (R37.5)**: 接口绿 ≠ 用户看到的对 (**R47-A 必须补**)
   - **i18next 复数 key (R37.5)**: `foo_one` / `foo_other` 走 ICU plural, zh 无复数规则单形式
   - **ReactFlow v12 `useViewport` hook (R37.5)**: 写 Pan/zoom 跟随的背景 overlay 用它
   - **Vision 仲裁规则 (R38)**: `browser_vision` 反复波动时, 截图 + 焦点问题 → 用户判决, 不辩解
-  - **UI polish 真实优先级 (R38)**: 功能 + 流畅 > 视觉惊艳. 过亮/过粗/dash 动画反被反感
-  - **ReactFlow `.chr-edge-selected` + CSS keyframe dash-flow 与 fork dashed 冲突 (R38)**
+  - **UI polish 真实优先级 (R38)**: 功能 + 流畅 > 视觉惊艳
   - **GitHub REST read API 不要走 gh-proxy (R39-A)**: 返回 zstd bytes 但缺 `Content-Encoding` 头. 走直连 `api.github.com`
-  - **PR `mergeable_state: unstable` ≠ blocked (R39-A)**: 无必需 CI checks, squash merge 正常
-  - **多 cron slot 交接必写 stub progress doc (R39-A)**
+  - **多 cron slot 交接必写 stub progress doc (R39-A, R46-A 再验证)**
   - **ADR-006 `core.diff.align_runs` 是对外 compare 契约 (R39-A)**: `/runs/compare` 和 CLI 都复用
   - **命名不对称是健康的 (R40, ADR-018)**: `compare` 叙事 vs. `diff` CLI, 不统一、不 alias
   - **幽灵 TODO 防御 (R40)**: 每轮读 CONTEXT §6 "下一轮做 X" 后第一件事是验证 X 是否已存在
   - **GitHub Releases 状态查询走直连 (R40)**
   - **README screenshots 要 fresh DB + FIT view + Legend collapse (R41)**: skill `chronos-docs-screenshots` 三步缺一不可
-  - **R44-A 之后 `test_cli_info` 会因 phase-marker drift 炸 (R45-A)**: release cut 后用 `pytest -q` 全量跑, 不要只跑改动相关的 test file, 否则 assertion drift 会悄悄漏过. 这个 fix 上了 v0.3.1 CHANGELOG.
-  - **fork plan `render_plan_preview` 向后兼容 pattern (R45-A)**: 加新字段 (`effects_summary`) 用 `kwarg | None = None` + 条件渲染, 现有调用不改.
-  - **Pure helper + renderer 分层 (R45-A)**: `build_effects_summary()` 纯数据 (易单测, 无 I/O 无 console), `render_effects_preview()` 只 print. 单测覆盖 helper 详尽, renderer 只 smoke-test CLI 输出中的 key strings.
+  - **R44-A 之后 `test_cli_info` 会因 phase-marker drift 炸 (R45-A)**: release cut 后用 `pytest -q` 全量跑
+  - **fork plan `render_plan_preview` 向后兼容 pattern (R45-A)**: 加新字段用 `kwarg | None = None` + 条件渲染
+  - **Pure helper + renderer 分层 (R45-A, R46-A 验证)**: `build_*` 纯数据 → CLI console render + API JSON 复用. 未来所有跨 CLI/API 的数据要沿这条线走.
+  - **Modal 里 silence principle 要反转 (R46-A)**: CLI 可以静默, modal 必须给反馈. "点了按钮什么都没发生" = 失败 UX.
+  - **Cron slot 半布线交接 = 破坏性 (R46-A)**: 如果 i18n keys 缺了, frontend build 还会绿, 但用户看到的是字面 key 字符串. TS strict 不拦 i18next 动态 key. 教训: WIP 要么 feature-flag commit, 要么 stash, 不留半条链.
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 46 候选 — R45-A 补上了 PH3-03 (fork-plan side-effects preview), Phase 3 的"让用户感知副作用"三砖已到位: (PH3-02) adapter 打 tag + UI badge + warning banner; (PH3-03) CLI fork plan 预览打 warning panel. 下一步是把体验拼全 or 跨入 Phase 3 charter 正式 sign-off.**
+**Round 47 候选 — R46-A 补上了 PH3-04 (Web UI fork-from-tree modal), Phase 3 effect-aware UX 三条腿全齐: (PH3-02) adapter auto-tag + UI badge + drawer warning; (PH3-03) CLI fork plan 预览 panel; (PH3-04) Web modal 预览 panel. 下一步是真人场景 dogfood + 用户指南 + cut v0.4.0-alpha.**
 
-战略视角: PH3-02 (R44-A v0.3.0) + PH3-03 (R45-A v0.3.1) 已发, effect-aware UX 在三个入口都到位 (Web 抽屉、CLI fork plan 预览、adapter 自动打 tag). roadmap §Phase 3 的首 bullet "side-effectful tool sandboxing" 在 R43 的 ADR-019 里已被事实性否决但 charter 仍标 "under review" — 等用户点头改 bullet. 与此同时 UI 的 fork-from-tree 流程 (R44-A 预埋的 danger button) 还没通电, 是一个独立的功能闭环.
+战略视角: 代码面的 effect-aware UX 闭合, 但还没在浏览器里真点一遍看着它工作. 这是 R37.5/R38 学到的铁律 — "接口绿 ≠ 用户看到的对". 另外 v0.4.0-alpha 是一个天然打包点: R46-A + R47-A dogfood + R47-B 用户指南 = 一个完整的叙事发版.
 
-### R46-A (优先推荐): TreeView 接 onFork, 激活 v0.3.0 预埋的 danger Fork button
+### R47-A (优先推荐): In-browser dogfood of R46-A
 
-- R44-A 已在 `NodeDetails` 写好 `onFork?: () => void` prop + danger-styled 按钮逻辑, 但 `TreeView.tsx:442` 处没传 prop, 按钮当前不渲染.
-- 本轮: 在 `TreeView` 里给每个 node 加一个 "Fork from here" 按钮 (或 NodeDetails 内挂), 点击调 `/runs/{id}/nodes/{node_id}/fork-plan` (新端点) 返回 JSON 让用户下载 / 复制.
-- 端点可以在 CLI `fork_plan_command` 之上薄薄包一层 (已经有 `build_plan` pure helper).
-- 前端: 加一个小 modal 显示 fork plan 预览 (复用 R45-A 的 effects summary 数据), "Download JSON" + "Copy to clipboard" 两个按钮.
-- 工期估: 1.5 轮 (0.5 API 端点 + 0.5 前端 modal + 0.5 浏览器联调).
-- 发版: v0.3.2 or v0.4.0-alpha (看 API surface 有无 breaking).
+- `uv pip install -e '.[web]'` (dev 模式, 跑最新代码).
+- 造一个 dogfood DB: 至少一个 run 有 `metadata["effects"]` 非 LLM 标签 (db/network/fs/external) — 参考 R44-A 的 dogfood script.
+- `chronos web --db dogfood.db` → 导航到 run → 点一个中间 node → drawer 里点 danger "Fork from here" 按钮 → 验证:
+  1. modal 弹出正确
+  2. Plan JSON 显示 (非空 envelope, `chronos_fork_plan_version: 1`)
+  3. dangerous Alert 出现 (warning type, 列正确的 tag breakdown)
+  4. Download 下载 `.json` 正确 (打开再次验证 JSON 有效)
+  5. Copy 复制成功 message
+  6. Close 关 modal, drawer 仍在 (state 分离正确)
+- 用 `browser_vision` 截 1-2 张图留给 R47-B 的 guide.
+- 可能抓出 bug (CSS 叠层 / AntD v6 message 静态方法坑 / i18n missing key 的 fallback). 真有 bug, 当场 fix + 补 fixture + 加测试.
+- 工期估: 1 轮 (0.5 dogfood + 0.25 截图 + 0.25 小修).
 
-### R46-B (charter): roadmap §Phase 3 正式改写 + sign-off
+### R47-B: `docs/guides/forking-safely.md` — 写 effect-aware fork 的用户指南
 
-- 用户读 ADR-019 后 OK 则改 `docs/roadmap.md` §Phase 3 首 bullet: "side-effectful tool sandboxing (E2B or Modal)" → "effect-kind metadata + side-effect user guide + fork preview (per ADR-019, landed R44-A/R45-A)".
-- 清掉 R42-A 的 "under review" callout.
-- 改 Phase 3 工期估 10–20 轮 → 3.5 轮已完成 (R43 + R44-A + R45-A).
+- 中英双语 (按 R43 `side-effects.md` 模式).
+- 结构: What the 3 effect-aware surfaces do → How to read the CLI panel → How to read the modal → `effects_map` kwarg override → When to fork safely (pure LLM) vs when to think twice (db/network) → Link to ADR-019.
+- 嵌入 R47-A 的截图.
+- 工期估: 0.5–1 轮.
+
+### R47-C (nice-to-have): CLI `chronos fork plan --json` stdout 加 `_preview_effects_summary`
+
+- 当前 `--as-json` 走 `plan.to_json()` 直出 plan artifact, 不带 effects preview.
+- 加一个 `_preview_effects_summary` 字段 (underscore 前缀表 advisory, 非 plan schema). CLI 消费者 (其他 agent / scripts) 就能拿到 dangerous count.
+- 注意**不要**改 `ForkPlan` schema (→ breaking, 需 version bump). 只在 CLI stdout wrapper 层加.
+- 和 R46-A 的 API 端点对称 (API 也是 `{plan, effects_summary}` 两键并列).
 - 工期估: 0.5 轮.
-- 不能自治: **必须等用户明确 OK**.
 
-### R46-C: Phase 3 收尾文档 — `docs/guides/forking-safely.md`
+### R47-D (ready-to-ship): Cut **v0.4.0-alpha**
 
-- 把 v0.3.0 + v0.3.1 的 effect-aware UX 写成一份 user-facing guide: 什么时候 fork 安全、如何读 warning panel、如何用 `effects_map` kwarg 覆盖 heuristic.
-- 中英双语 (按 R43 模式).
-- 可以选截一张 v0.3.1 fork plan 预览的终端截图 (asciinema or PNG).
-- 工期估: 0.5–1 轮. 适合"推动进度但不想写代码"的时候.
+- 包含 R46-A + R47-A + R47-B + (可选) R47-C.
+- 沿 skill `chronos-release-pattern` 八步走.
+- CHANGELOG 亮点: "effect-aware fork UX across Web UI, CLI, and adapter — PH3 closed".
+- 版本 `0.4.0-alpha` (alpha 因为 PyPI 未发且还没被第三方用). 或直接 `0.4.0` 跳过 alpha, 看 R47-A/B 跑顺不顺.
+- 工期估: 0.5 轮.
 
-### R46-D: AutoGen adapter 的实战 dogfood + `effects_map` smoke
+### R47-E (诱惑但克制): AutoGen adapter 实战 dogfood
 
-- R44-A 给 AutoGen recorder 也接入了 `effects_map` kwarg, 但只有单测覆盖, 没跑过真实 AutoGen workflow.
-- 用 AutoGen 官方 GroupChat 或 AssistantAgent example 跑一遍, 看 `classify_effects` 对 AutoGen 的 node_name 模式识别得准不准 (AutoGen 的 node 名可能长得和 LangGraph 不一样).
-- 可能产出 classifier 补丁 or `effects_map` 文档示例.
-- 工期估: 1–2 轮.
+- R44-A 给 AutoGen recorder 接入了 `effects_map` kwarg 但只有单测.
+- 跑一次真实 AutoGen GroupChat, 看 classifier 对 AutoGen 的 node_name 模式识别得准不准.
+- 不在 R47 主线上 — 除非 R47-A 提前完成且还有 slot.
 
-### R46-E (安全牌): 纯 polish — `chronos fork plan --json` stdout 也加 effects summary
-
-- 当前 `--as-json` 走的是 `plan.to_json()` 直出 plan artifact, 不带 effects preview.
-- 一个小小 nice-to-have: 在 stdout JSON 里加 `_preview_effects_summary` 字段 (带 underscore 前缀表 advisory, 非 plan schema). CLI 消费者 (其他 agent / scripts) 就能拿到 dangerous count.
-- 要想清楚: 是否改 `ForkPlan` schema (→ breaking, 需 schema version bump)? 还是只 stdout 加这层? 后者更稳.
-- 工期估: 0.5 轮 (含一个 schema versioning ADR-check).
-
-### R46 非目标 (继承红线)
+### R47 非目标 (继承红线)
 
 - ❌ `chronos compare` alias (ADR-018 已决)
 - ❌ 改 `chronos diff` 行为
@@ -328,16 +321,14 @@
 - ❌ 数据库 migration 框架 / Postgres / WebSocket
 - ❌ PyPI publish
 - ❌ 独立写 diff 算法
-- ❌ 未经用户 sign-off 改 roadmap §Phase 3 主 bullet (R42-A/R43/R44-A/R45-A 铺了 4 轮路, 但 charter 最终改写归用户)
 - ❌ E2B / Modal / nsjail / Docker 沙箱集成 (ADR-019 已决)
+- ❌ 改 `ForkPlan` schema (R47-C 要小心不越线)
 
 ### Release strategy (v0.3.1 → v0.4.0)
 
 - v0.3.0 ✅ cut 2026-04-25 (R44-A) — PH3-02 effects annotation
-- v0.3.1 ✅ cut 2026-04-25 (R45-A) — PH3-03 fork-plan preview
-- v0.3.2 = R46-A 如果 API surface 不 break (新增 /fork-plan 端点, 不改已有)
-- v0.4.0 = 如果 R46 组合拳 (A + B + C) 一起发, 或出现 adapter interface 微调
-
+- v0.3.1 ✅ cut 2026-04-25 (R45-A) — PH3-03 CLI fork-plan preview
+- v0.4.0-alpha 🚧 候选 R47-D — PH3-04 Web UI fork modal + user guide + (optional) CLI JSON effects field
 
 ## 7. 文档索引 (当你需要深入某个主题)
 
@@ -375,4 +366,4 @@
 
 ---
 
-*Last updated: 2026-04-25 (CST 16:00) by Round 45-A agent (v0.3.1 cut: PH3-03 fork-plan downstream side-effects preview; CONTEXT §5/§6 refresh to R46 candidates).*
+*Last updated: 2026-04-26 (CST 00:50) by Round 46-A agent (PH3-04 — Web UI fork-from-tree modal + /fork-plan API endpoint; CONTEXT §5/§6 refresh to R47 candidates).*

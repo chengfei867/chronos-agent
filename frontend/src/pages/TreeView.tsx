@@ -51,6 +51,7 @@ import PlaceholderNode from "../components/nodes/PlaceholderNode";
 import NodeDetails from "../components/NodeDetails";
 import Legend from "../components/Legend";
 import ConceptTip from "../components/ConceptTip";
+import ForkPlanModal from "../components/ForkPlanModal";
 import { usePlayback } from "../hooks/usePlayback";
 
 const { Text } = Typography;
@@ -90,6 +91,9 @@ function InnerTree({
   const playback = usePlayback(orderedNodes.length);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+  // R46-A: fork preview modal state. null ⇒ closed. Intentionally separate
+  // from selectedId so closing the fork modal doesn't close the node drawer.
+  const [forkNodeId, setForkNodeId] = useState<string | null>(null);
 
   const { rfNodes: baseNodes, rfEdges: baseEdges, lanes } = useMemo(
     () => treeToReactFlow(tree),
@@ -183,6 +187,10 @@ function InnerTree({
   const selectedNode = useMemo(
     () => tree.nodes.find((n) => n.id === selectedId) ?? null,
     [tree.nodes, selectedId],
+  );
+  const forkNode = useMemo(
+    () => tree.nodes.find((n) => n.id === forkNodeId) ?? null,
+    [tree.nodes, forkNodeId],
   );
 
   // Stats for the left panel
@@ -439,8 +447,21 @@ function InnerTree({
         destroyOnHidden
         mask={false}
       >
-        {selectedNode && <NodeDetails node={selectedNode} />}
+        {selectedNode && (
+          <NodeDetails
+            node={selectedNode}
+            onFork={(n) => setForkNodeId(n.id)}
+          />
+        )}
       </Drawer>
+
+      <ForkPlanModal
+        runId={run.id}
+        nodeId={forkNodeId}
+        nodeName={forkNode?.node_name ?? null}
+        stepIndex={forkNode?.step_index ?? null}
+        onClose={() => setForkNodeId(null)}
+      />
     </div>
   );
 }

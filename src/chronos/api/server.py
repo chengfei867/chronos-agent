@@ -60,6 +60,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from chronos.cli.fork import build_effects_summary, build_plan
 from chronos.core.diff import DiffRunNotFoundError, diff_runs
 from chronos.core.models import SCHEMA_VERSION, Fork, Node, Run
 
@@ -511,6 +512,51 @@ def build_app(store: SqliteStore) -> FastAPI:
             forks = store.get_forks_for_parent(run_id)
             tree = _assemble_tree(store, run_id, nodes, forks)
         return JSONResponse(content=tree)
+
+    @app.get("/runs/{run_id}/nodes/{node_id}/fork-plan")
+    def get_fork_plan_preview(run_id: str, node_id: str) -> JSONResponse:
+        """Preview a fork plan rooted at ``node_id``.
+
+        Returns the plan artifact (serializable to JSON via ``ForkPlan.to_dict``)
+        plus a downstream side-effects summary (same shape as the CLI
+        ``chronos fork plan`` preview Panel). Effects summary is advisory
+        (not part of the ForkPlan schema) so we include it under a distinct
+        ``effects_summary`` key — consumers that only want the plan artifact
+        can ignore it.
+
+        Empty overrides — the UI flow is "download/copy plan, edit, then run
+        ``chronos fork apply`` locally". Per ADR-013 Chronos does not execute
+        the fork; this endpoint only *plans*.
+        """
+        run = store.get_run(run_id)
+        if run is None:
+            raise HTTPException(status_code=404, detail=f"Run not found: {run_id}")
+
+        nodes = store.get_nodes_for_run(run_id)
+        parent_node = next((n for n in nodes if n.id == node_id), None)
+        if parent_node is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Node not found: {node_id} (in run {run_id})",
+            )
+
+        plan = build_plan(
+            parent_run=run,
+            parent_node=parent_node,
+            overrides={},
+            child_thread_id=None,
+            reason=None,
+            tags=[],
+        )
+        downstream = [n for n in nodes if n.step_index > parent_node.step_index]
+        effects_summary = build_effects_summary(downstream)
+
+        return JSONResponse(
+            content={
+                "plan": plan.to_dict(),
+                "effects_summary": effects_summary,
+            }
+        )
 
     # ------------------------------------------------------------------
     # /app/* — ReactFlow viewer (R34-C). Served from the frontend/dist

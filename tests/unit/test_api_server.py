@@ -824,3 +824,61 @@ def test_compare_missing_query_params_422(client: TestClient) -> None:
     # FastAPI's Query() required default → 422 on missing params
     resp = client.get("/runs/compare")
     assert resp.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# /runs/{id}/nodes/{node_id}/fork-plan  (R46-A)
+# ---------------------------------------------------------------------------
+
+
+def test_fork_plan_preview_happy_path(
+    scenario: tuple[SqliteStore, dict[str, str]],
+    client: TestClient,
+) -> None:
+    """GET the preview for a real run + real node returns plan + summary."""
+    _, ids = scenario
+    resp = client.get(f"/runs/{ids['parent_run']}/nodes/{ids['n2']}/fork-plan")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "plan" in body
+    assert "effects_summary" in body
+
+    plan = body["plan"]
+    # Plan fields must match what build_plan wired up.
+    assert plan["parent_run_id"] == ids["parent_run"]
+    assert plan["parent_node_id"] == ids["n2"]
+    assert plan["overrides"] == {}
+    assert plan["reason"] is None or plan["reason"] == ""
+    # ForkPlan schema marker.
+    assert plan.get("chronos_fork_plan_version") == 1
+
+    summary = body["effects_summary"]
+    # Summary shape (regardless of whether this scenario has effects).
+    assert set(summary.keys()) == {
+        "total",
+        "dangerous_count",
+        "tag_counts",
+        "dangerous_samples",
+    }
+    assert isinstance(summary["total"], int)
+    assert isinstance(summary["dangerous_count"], int)
+    assert isinstance(summary["tag_counts"], dict)
+    assert isinstance(summary["dangerous_samples"], list)
+    # n2 is step_index=1 in the scenario, n3 is step_index=2 → total == 1.
+    assert summary["total"] == 1
+
+
+def test_fork_plan_preview_404_for_unknown_run(client: TestClient) -> None:
+    resp = client.get(f"/runs/{_uuid()}/nodes/{_uuid()}/fork-plan")
+    assert resp.status_code == 404
+    assert "Run not found" in resp.json()["detail"]
+
+
+def test_fork_plan_preview_404_for_unknown_node(
+    scenario: tuple[SqliteStore, dict[str, str]],
+    client: TestClient,
+) -> None:
+    _, ids = scenario
+    resp = client.get(f"/runs/{ids['parent_run']}/nodes/{_uuid()}/fork-plan")
+    assert resp.status_code == 404
+    assert "Node not found" in resp.json()["detail"]
