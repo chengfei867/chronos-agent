@@ -4,7 +4,42 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
-_Nothing yet — R46 will decide._
+_Nothing yet — R48 will decide._
+
+## [0.4.0a1] — 2026-04-26 (Round 46-A + Round 46-B + Round 47-A + Round 47-B)
+
+**Theme**: **Phase 3 fork-safety bundle** — Web UI fork-from-tree modal (PH3-04), Phase 3 charter sign-off, three publishable dogfood screenshots, and the first full-length user-facing guide `docs/guides/forking-safely.md` explaining when Chronos warns you vs. stays silent and why it deliberately doesn't sandbox. This is an **alpha** release because R48+ may extend the Phase 3 story (AutoGen adapter rewrite, effect-tag badge redesign). Everything shipped here is production-shaped; the alpha label only reserves room for follow-ons.
+
+### Added (R46-A — Web UI fork modal, PH3-04)
+
+- **`/runs/{run_id}/nodes/{node_id}/fork-plan` endpoint** — new FastAPI route in `chronos.api.server`. Returns `{plan, effects_summary}` where `plan` is the JSON `ForkPlan.to_dict()` payload (schema marker `chronos_fork_plan_version=1`) and `effects_summary` matches the CLI's R45-A aggregator: `{total, dangerous_count, tag_counts, dangerous_samples}`. Wraps the same pure helpers (`build_plan`, `build_effects_summary`) the CLI uses; no behavioral divergence.
+- **`ForkPlanModal` React component** (`frontend/src/components/ForkPlanModal.tsx`) — AntD Modal with three sections: plan JSON viewer, downstream count + tag-count histogram, orange Alert when `dangerous_count > 0` listing the sample `(step, name, tags)` rows. Green Alert when downstream is clean, neutral message when the fork targets the last node of the run.
+- **"Fork here" entry point** — TreeView node right-drawer now has a "Fork here" button that opens the modal with the current node pre-selected. Drawer stays open so you can keep browsing node details while the modal is up (intentional; matches how users actually decide).
+- **i18n keys** — full `forkModal.*` section in `frontend/src/i18n/{zh,en}.ts`.
+
+### Added (R46-B — Phase 3 charter sign-off)
+
+- **`docs/roadmap.md` Phase 3 charter** — commit `93b76fd` rewrote the roadmap's Phase 3 criteria to match what actually shipped: ADR-019 (Chronos does not sandbox), effect-aware UX, fork-plan CLI preview, Web modal. The old "side-effectful tool sandboxing" bullet was replaced with "Effect-kind instrumentation + honest warnings" crediting R43/R44-A/R45-A.
+
+### Added (R47-A — dogfood screenshots for the fork modal)
+
+- **`docs/images/fork-modal/01-warning.png`** — worst-case warning modal: 4 dangerous downstream nodes out of 5 total, all 4 family tags present (db, network, fs, external). Orange Alert, concrete sample rows.
+- **`docs/images/fork-modal/02-safe-pure-llm.png`** — happy path: 3 downstream nodes, 0 dangerous, green Alert "none carry dangerous tags (per ADR-019)".
+- **`docs/images/fork-modal/03-safe-last-node.png`** — edge case: forking at the last node of a run, 0 downstream, green Alert "This is the last node of the run — nothing downstream to re-run."
+- **`scripts/seed_r47a_effects.py`** — reproducible seed script (197 lines) that creates the three runs the screenshots came from. Run with `uv run python scripts/seed_r47a_effects.py --db dogfood.db` to regenerate.
+
+### Added (R47-B — `docs/guides/forking-safely.md`, 391 lines, bilingual)
+
+- **English + 中文 sections** explaining Chronos's three-tier safety model: adapter-level effect tags (PH3-02), `chronos fork plan` CLI preview panel (PH3-03), Web UI fork modal warning banner (PH3-04).
+- **TL;DR decision table** up front: "I want to fork — what does Chronos check for me?" → maps user intent to which safety layer covers it.
+- **"Why Chronos doesn't sandbox"** section cross-linking [ADR-019](../decisions/ADR-019-chronos-does-not-sandbox.md) and [ADR-013](../decisions/ADR-013-fork-auto-execution-stay-frozen.md).
+- **README pointer** — `README.md` Phase 3 row now links to this guide via `[forksafely]: ./docs/guides/forking-safely.md` reference link.
+
+### Notes
+
+- R45-A's `chronos info` status line bumped to `v0.4.0a1` + headline "fork modal + forking-safely guide".
+- Test suite **438 pass / 2 skip** (no new tests this release — all four rounds were UI/docs).
+- `ruff check`, `ruff format --check`, `mypy src/` all green.
 
 ## [0.3.1] — 2026-04-25 (Round 45-A)
 
