@@ -4,7 +4,21 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
-_Nothing yet — R48 will decide._
+### Fixed (R48-A — AutoGen effects classifier blind on tool events)
+
+- **`src/chronos/adapters/autogen/recorder.py`** — tool event `node_name`s now embed the FunctionCall name as a third segment: `{source}:{EventClass}:{tool_name[+tool_name...]}` (e.g. `coder:ToolCallExecutionEvent:fetch_weather_api`). Previously the recorder emitted only `{source}:{EventClass}` with no tool-name signal, so the PH3-02 effects classifier's keyword regexes matched zero patterns and **every AutoGen tool node silently got `effects=[]`**. Phase 3's fork-safety warning pipeline was effectively blind on AutoGen in v0.3.0 through v0.4.0a1. LangGraph was fine because graph-level node names are already function-shaped.
+- **4 new unit tests** in `tests/unit/test_adapter_autogen.py` cover the new shape: single tool, parallel tools (joined with `+`), fallback when name is unextractable, and per-tool `effects_map` override.
+- **`tests/spikes/spike10_autogen_tool_effects.py`** — reproducible real-LLM spike (229 lines) that drove a `RoundRobinGroupChat` through three tools (`fetch_weather_api`, `read_file`, `query_db`) against OneAPI/Claude Opus 4.7 and verified the classifier fires correctly post-fix.
+- **`docs/research/r48a-autogen-tool-effects.md`** — investigation note (162 lines) with pre-fix / post-fix classifier output.
+
+### Added (R48-A)
+
+- **`docs/decisions/ADR-020-adapter-tool-node-name-shape.md`** — codifies the three-segment convention `{source_or_agent}:{Kind_or_ClassName}:{tool_name[+tool_name...]}` for all message-based adapters. Graph-based adapters (LangGraph) whose `node_name` is already function-shaped are exempt.
+- **`docs/guides/forking-safely.md` §6** — new bilingual section on per-tool `effects_map` overrides, with a "Discovery path" debug snippet for users whose overrides aren't firing.
+
+### Breaking (soft)
+
+- **AutoGen `effects_map` keys targeting the pre-R48-A two-segment shape become silent no-ops.** E.g. `{"coder:ToolCallExecutionEvent": ["external"]}` now matches zero nodes. Migration: inspect `node.node_name` on a recent run and update keys to the three-segment shape. Existing code that relied on effect classification working on AutoGen at all didn't, so very little real-world code should hit this path.
 
 ## [0.4.0a1] — 2026-04-26 (Round 46-A + Round 46-B + Round 47-A + Round 47-B)
 

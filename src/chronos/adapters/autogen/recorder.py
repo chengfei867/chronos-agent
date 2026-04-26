@@ -115,6 +115,57 @@ def _serialize_message(msg: Any) -> dict[str, Any]:
     return out
 
 
+_TOOL_EVENT_CLASSES: frozenset[str] = frozenset(
+    {
+        "ToolCallRequestEvent",
+        "ToolCallExecutionEvent",
+        "ToolCallSummaryMessage",
+    }
+)
+
+
+def _extract_tool_names(msg: Any) -> list[str]:
+    """Return the FunctionCall names from a tool event message, if any.
+
+    AutoGen 0.7 serializes ``ToolCallRequestEvent.content`` as
+    ``list[FunctionCall]`` (each item has a ``name``). The execution
+    event mirrors the same shape with a ``name`` on every entry. The
+    summary message aggregates them. We extract names in order,
+    de-duplicated while preserving first occurrence.
+
+    For non-tool events this returns an empty list. Defensive against
+    missing ``content`` / string content / duck-typed stubs used in
+    unit tests (where ``content`` is a plain string like ``"calc(1,2)"``).
+
+    Spike reference: ``tests/spikes/spike10_autogen_tool_effects.py``
+    (R48-A) captured the real on-the-wire shape.
+    """
+    content = getattr(msg, "content", None)
+    if not isinstance(content, list):
+        return []
+    names: list[str] = []
+    for item in content:
+        name = item.get("name") if isinstance(item, dict) else getattr(item, "name", None)
+        if isinstance(name, str) and name and name not in names:
+            names.append(name)
+    return names
+
+
+def _tool_node_name(source: str, cls_name: str, tool_names: list[str]) -> str:
+    """Compose the ``node_name`` for a tool event, embedding tool names.
+
+    Shape (R48-A, ADR-020):
+        ``"{source}:{ClassName}:{tool}[+{tool}...]"``
+
+    When tool name extraction fails (malformed / stub message) we fall
+    back to the legacy shape ``"{source}:{ClassName}"`` so the recorder
+    never crashes on unfamiliar payloads.
+    """
+    if not tool_names:
+        return f"{source}:{cls_name}"
+    return f"{source}:{cls_name}:{'+'.join(tool_names)}"
+
+
 def _extract_usage(msg: Any) -> Usage | None:
     """Read ``msg.models_usage`` and coerce to :class:`Usage`, or ``None``."""
     raw = getattr(msg, "models_usage", None)
@@ -347,7 +398,15 @@ class AutoGenRecorder:
                 source = getattr(msg, "source", None) or "unknown"
                 cls_name = _message_cls_name(msg)
                 cumulative = serialized[: step_index + 1]
-                node_name = f"{source}:{cls_name}"
+                # R48-A / ADR-020: embed FunctionCall.name into tool event
+                # node_name so the effects classifier's keyword regexes can
+                # actually fire. For non-tool events this is a no-op (falls
+                # back to the legacy "source:ClassName" shape).
+                if cls_name in _TOOL_EVENT_CLASSES:
+                    tool_names = _extract_tool_names(msg)
+                    node_name = _tool_node_name(source, cls_name, tool_names)
+                else:
+                    node_name = f"{source}:{cls_name}"
                 kind = self._kind_for(msg)
                 model_name = getattr(msg, "model_name", None) if usage is not None else None
                 node = Node(

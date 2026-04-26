@@ -326,3 +326,159 @@ def test_factory_accepts_adapter_name_override(store):
     run = store.get_run(ref.run_id)
     assert run is not None
     assert run.adapter == "autogen-test"
+
+
+# ---------------------------------------------------------------------------
+# 8. R48-A / ADR-020 — tool events embed FunctionCall.name in node_name
+# ---------------------------------------------------------------------------
+
+
+def _make_tool_msg(cls_name: str, source: str, content: list[dict[str, Any]]) -> Any:
+    """Build a stub tool event with a ``content: list[FunctionCall-dict]``.
+
+    Real AutoGen 0.7 serializes tool event ``content`` as a list of dicts
+    with a ``name`` field per call; we replicate that shape to exercise
+    the new ``_extract_tool_names`` path. Spike reference:
+    ``tests/spikes/spike10_autogen_tool_effects.py``.
+    """
+
+    @dataclass
+    class _ToolMsg:
+        source: str
+        content: list[dict[str, Any]]
+        models_usage: _StubUsage | None = None
+
+        def model_dump(self, mode: str = "python") -> dict[str, Any]:
+            return {"source": self.source, "content": self.content, "cls": cls_name}
+
+    cls = type(cls_name, (_ToolMsg,), {})
+    return cls(source=source, content=content)
+
+
+def test_tool_request_event_embeds_function_name(store):
+    """A ToolCallRequestEvent with one FunctionCall → node_name carries it.
+
+    Expected shape: ``{source}:ToolCallRequestEvent:{tool_name}``.
+    """
+    recorder = AutoGenRecorder(store)
+    team = _StubTeam()
+    messages = [
+        _make_msg("TextMessage", source="user", content="fetch weather for Beijing"),
+        _make_tool_msg(
+            "ToolCallRequestEvent",
+            source="coder",
+            content=[
+                {
+                    "id": "call_1",
+                    "arguments": '{"city":"Beijing"}',
+                    "name": "fetch_weather_api",
+                }
+            ],
+        ),
+        _make_tool_msg(
+            "ToolCallExecutionEvent",
+            source="coder",
+            content=[
+                {
+                    "content": "sunny 22C",
+                    "name": "fetch_weather_api",
+                    "call_id": "call_1",
+                    "is_error": False,
+                }
+            ],
+        ),
+    ]
+    result = _StubTaskResult(messages=messages)
+
+    with recorder.record(team, thread_id="t-tool") as ref:
+        ref.submit_result(result)  # type: ignore[attr-defined]
+
+    nodes = store.get_nodes_for_run(ref.run_id)
+    assert nodes[1].node_name == "coder:ToolCallRequestEvent:fetch_weather_api"
+    assert nodes[2].node_name == "coder:ToolCallExecutionEvent:fetch_weather_api"
+
+    # And — the whole point — classify_effects now picks up "network" on
+    # the tool nodes because the function name is visible. metadata.effects
+    # is populated by the recorder itself, so we read it straight off.
+    assert "network" in nodes[1].metadata["effects"], (
+        f"tool request node should tag 'network' from fetch_weather_api, "
+        f"got {nodes[1].metadata['effects']!r}"
+    )
+    assert "network" in nodes[2].metadata["effects"]
+
+
+def test_tool_event_multiple_calls_concatenates_names(store):
+    """Parallel tool calls → node_name joins names with ``+``."""
+    recorder = AutoGenRecorder(store)
+    team = _StubTeam()
+    messages = [
+        _make_tool_msg(
+            "ToolCallRequestEvent",
+            source="coder",
+            content=[
+                {"id": "c1", "arguments": "{}", "name": "read_file"},
+                {"id": "c2", "arguments": "{}", "name": "query_db"},
+            ],
+        ),
+    ]
+    result = _StubTaskResult(messages=messages)
+    with recorder.record(team, thread_id="t-multi") as ref:
+        ref.submit_result(result)  # type: ignore[attr-defined]
+
+    nodes = store.get_nodes_for_run(ref.run_id)
+    assert nodes[0].node_name == "coder:ToolCallRequestEvent:read_file+query_db"
+    # Both tool name keywords fire → fs and db tags.
+    effects = nodes[0].metadata["effects"]
+    assert "fs" in effects and "db" in effects, f"expected both 'fs' and 'db' tags, got {effects!r}"
+
+
+def test_tool_event_falls_back_when_name_missing(store):
+    """Malformed tool event without name → legacy shape, no crash."""
+    recorder = AutoGenRecorder(store)
+    team = _StubTeam()
+    # content is a plain string (what the old stub tests used) — no list
+    messages = [
+        _make_msg(
+            "ToolCallRequestEvent",
+            source="coder",
+            content="calc(1,2)",  # string, not list-of-dicts
+        ),
+    ]
+    result = _StubTaskResult(messages=messages)
+    with recorder.record(team, thread_id="t-fallback") as ref:
+        ref.submit_result(result)  # type: ignore[attr-defined]
+
+    nodes = store.get_nodes_for_run(ref.run_id)
+    # No tool names extractable → fall back to legacy "{source}:{cls}".
+    assert nodes[0].node_name == "coder:ToolCallRequestEvent"
+    # And effects_map still works as a coarse-grained override path.
+    assert nodes[0].metadata["effects"] == []
+
+
+def test_effects_map_still_overrides_new_shape(store):
+    """User's explicit effects_map wins, keyed by the (new) full node_name.
+
+    This locks down the interaction: users who know the new shape get
+    per-tool overrides; the override path is key-exact so it works with
+    whatever node_name we settle on.
+    """
+    recorder = AutoGenRecorder(
+        store,
+        effects_map={
+            "coder:ToolCallExecutionEvent:fetch_weather_api": ["external"],
+        },
+    )
+    team = _StubTeam()
+    messages = [
+        _make_tool_msg(
+            "ToolCallExecutionEvent",
+            source="coder",
+            content=[{"content": "ok", "name": "fetch_weather_api", "call_id": "c"}],
+        ),
+    ]
+    result = _StubTaskResult(messages=messages)
+    with recorder.record(team, thread_id="t-override") as ref:
+        ref.submit_result(result)  # type: ignore[attr-defined]
+
+    nodes = store.get_nodes_for_run(ref.run_id)
+    assert nodes[0].metadata["effects"] == ["external"]

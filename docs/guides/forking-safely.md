@@ -226,9 +226,64 @@ endpoint.
 
 ---
 
-## 6. Related reading
+## 6. Per-tool effect overrides (AutoGen, v0.4.0a2+)
+
+The classifier tags effects by matching keyword patterns against the
+adapter-emitted `node_name`. Graph-based adapters (LangGraph) already
+produce function-shaped names, so effects Just Work. Message-based
+adapters (AutoGen) have to synthesize a name — see
+[ADR-020](../decisions/ADR-020-adapter-tool-node-name-shape.md) for
+the convention.
+
+For AutoGen, tool event `node_name`s take the shape:
+
+```
+{source}:{EventClass}:{tool_name[+tool_name...]}
+```
+
+Examples:
+
+- `coder:ToolCallExecutionEvent:fetch_weather_api` → `["network"]`
+- `analyst:ToolCallRequestEvent:read_file+query_db` → `["fs", "db"]`
+
+You can override or extend the classifier's verdict per-tool via the
+`effects_map` kwarg on the recorder. Keys are exact-match against
+`node_name`:
+
+```python
+from chronos.adapters.autogen import AutoGenRecorder
+
+recorder = AutoGenRecorder(
+    store,
+    effects_map={
+        # Mark a specific tool as "external" (fire-and-forget API call)
+        "coder:ToolCallExecutionEvent:fetch_weather_api": ["external"],
+        # Clear tags on a known read-only tool the classifier over-tagged
+        "analyst:ToolCallExecutionEvent:list_users": [],
+    },
+)
+```
+
+If you don't supply an `effects_map` entry, the classifier's keyword
+regex still runs. The override is only consulted when the key matches
+exactly.
+
+**Discovery path**: if your override isn't taking effect, check the
+actual `node_name` strings your recorder emitted:
+
+```python
+for node in store.get_nodes_for_run(run_id):
+    print(f"{node.kind}  {node.node_name}  effects={node.metadata.get('effects')}")
+```
+
+Keys in `effects_map` must match those strings character-for-character.
+
+---
+
+## 7. Related reading
 
 - [ADR-019 — Chronos does not sandbox](../decisions/ADR-019-chronos-does-not-sandbox.md)
+- [ADR-020 — Adapter tool-event `node_name` shape](../decisions/ADR-020-adapter-tool-node-name-shape.md)
 - [`side-effects.md`](side-effects.md) — three patterns for making your
   side-effecting tools fork-safe.
 - [ADR-013 — fork auto-execution stays frozen](../decisions/ADR-013-fork-auto-execution-stay-frozen.md)
@@ -384,8 +439,58 @@ $ curl http://127.0.0.1:8765/runs/<run_id>/nodes/<node_id>/fork-plan
 
 ---
 
-## 6. 相关阅读
+## 6. 按工具粒度的 effect 覆写 (AutoGen, v0.4.0a2+)
+
+Classifier 通过关键词模式匹配 adapter 吐出的 `node_name` 来打 effects 标签。
+基于图的 adapter (LangGraph) 天然就是函数名形状, 所以 effects 开箱即用。
+基于消息的 adapter (AutoGen) 需要自己合成一个 `node_name` — 约定见
+[ADR-020](../decisions/ADR-020-adapter-tool-node-name-shape.md)。
+
+AutoGen 的 tool event `node_name` 形状是:
+
+```
+{source}:{EventClass}:{tool_name[+tool_name...]}
+```
+
+示例:
+
+- `coder:ToolCallExecutionEvent:fetch_weather_api` → `["network"]`
+- `analyst:ToolCallRequestEvent:read_file+query_db` → `["fs", "db"]`
+
+通过 recorder 的 `effects_map` 参数可以按工具粒度覆写或扩展 classifier
+的判决。key 是对 `node_name` 的精确匹配:
+
+```python
+from chronos.adapters.autogen import AutoGenRecorder
+
+recorder = AutoGenRecorder(
+    store,
+    effects_map={
+        # 把特定工具标记为 "external" (fire-and-forget API 调用)
+        "coder:ToolCallExecutionEvent:fetch_weather_api": ["external"],
+        # 清掉 classifier 误标的只读工具的标签
+        "analyst:ToolCallExecutionEvent:list_users": [],
+    },
+)
+```
+
+如果没在 `effects_map` 里提供条目, 关键词正则照跑。覆写只在 key 精确匹配
+时才被查询。
+
+**调试方法**: 如果覆写没生效, 检查 recorder 实际吐出的 `node_name`:
+
+```python
+for node in store.get_nodes_for_run(run_id):
+    print(f"{node.kind}  {node.node_name}  effects={node.metadata.get('effects')}")
+```
+
+`effects_map` 的 key 必须一字不差。
+
+---
+
+## 7. 相关阅读
 
 - [ADR-019 — Chronos does not sandbox](../decisions/ADR-019-chronos-does-not-sandbox.md)
+- [ADR-020 — Adapter tool-event `node_name` shape](../decisions/ADR-020-adapter-tool-node-name-shape.md)
 - [`side-effects.md`](side-effects.md) — 让副作用工具 fork-safe 的三种模式
 - [ADR-013 — fork auto-execution stays frozen](../decisions/ADR-013-fork-auto-execution-stay-frozen.md)
