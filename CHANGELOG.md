@@ -4,6 +4,12 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added (R48-B — Effect-tag badge icons)
+
+- **`frontend/src/components/NodeDetails.tsx`** — effect tags in the node-details drawer and the fork-plan modal now render with a small leading lucide icon per family: `llm → Brain`, `network → Globe`, `fs → HardDrive`, `db → Database`, `external → ExternalLink`. Unknown tags fall back to plain text (no icon) so adapter authors who invent new effect families don't break rendering.
+- **`EffectTag` component** — extracted as a named export from `NodeDetails.tsx` and reused in `ForkPlanModal.tsx` so the drawer, the plan modal tag-count histogram, and the dangerous-sample rows all share one rendering path. The modal's `dangerous_samples` list previously showed tags as a single comma-separated text string; it now shows one icon-bearing chip per tag.
+- Color palette unchanged (purple/orange/gold/volcano/red). Schema and API responses unchanged. Pure frontend change; backend tests unaffected (442 pass / 2 skip, 94% coverage).
+
 ### Fixed (R48-A — AutoGen effects classifier blind on tool events)
 
 - **`src/chronos/adapters/autogen/recorder.py`** — tool event `node_name`s now embed the FunctionCall name as a third segment: `{source}:{EventClass}:{tool_name[+tool_name...]}` (e.g. `coder:ToolCallExecutionEvent:fetch_weather_api`). Previously the recorder emitted only `{source}:{EventClass}` with no tool-name signal, so the PH3-02 effects classifier's keyword regexes matched zero patterns and **every AutoGen tool node silently got `effects=[]`**. Phase 3's fork-safety warning pipeline was effectively blind on AutoGen in v0.3.0 through v0.4.0a1. LangGraph was fine because graph-level node names are already function-shaped.

@@ -147,47 +147,38 @@
    147|
 ## 5. 当前状态 (Current State)
 
-**截至 Round 48-A 结束 (2026-04-27 CST ~01:30) — Phase 3 AutoGen blind spot closed, ADR-020 landed, on track for v0.4.0a2**
+**截至 Round 48-B 结束 (2026-04-27 CST ~04:40) — Phase 3 UX polish done, icons shipped, on track for v0.4.0a2 (R48-C)**
 
-- 最近 progress doc: `docs/progress/2026-04-27-round-48-a.md` (R48-A — AutoGen effects classifier fix + ADR-020)
-- 最近上份 progress doc: `docs/progress/2026-04-26-round-47.md` (R47 — v0.4.0a1 cut, bundles R46-A + R46-B + R47-A + R47-B)
-- 最近上上份 progress doc: `docs/progress/2026-04-26-round-46-a.md` (R46-A — Web UI fork-from-tree 激活, PH3-04)
+- 最近 progress doc: `docs/progress/2026-04-27-round-48-b.md` (R48-B — Effect-tag badge icons, PH3 UX polish)
+- 最近上份 progress doc: `docs/progress/2026-04-27-round-48-a.md` (R48-A — AutoGen effects classifier fix + ADR-020)
+- 最近上上份 progress doc: `docs/progress/2026-04-26-round-47.md` (R47 — v0.4.0a1 cut)
 
-- Round: **48-A** (follow-on to v0.4.0a1, no release cut): closed a Phase 3 blind spot — classifier was emitting `effects=[]` on **every AutoGen tool node** in v0.3.0 → v0.4.0a1 because recorder `node_name` was `{source}:{ClassName}` (zero tool-function-name signal). Fixed by embedding `FunctionCall.name` as a 3rd segment (`{source}:{EventClass}:{tool_name[+tool_name...]}`). **442 pass / 2 skip (+4 from R47)**, 94% coverage, mypy/ruff/format clean. No release — bundling with R48-B/R48-C for v0.4.0a2.
-- **战略定位 (R33 锁死, 持续有效)**: GitHub 爆款开源项目, 不是 SaaS. R48-A 把 Phase 3 的 *实际* 效果从"ui 漂亮但 AutoGen 静默失效"修到"AutoGen 真的会警告"。从"半块砖"补到"整块砖"。
-- 当前阶段: **post-v0.4.0a1, pre-v0.4.0a2**. R48-A 已完成. 下一步候选: R48-B effect-tag badge 图标化 / R48-C fork modal i18n + v0.4.0a2 release cut 打包 R48-A + R48-B.
-- 最新 ADR: **ADR-020 (R48-A)** — adapter tool-event `node_name` 三段式 `{source}:{Kind}:{tool_name[+tool_name...]}` 约定, 适用于所有 message-based adapter (AutoGen/CrewAI/AG2), 图-based adapter (LangGraph) 豁免. Three-trigger re-open rule mirrors ADR-013/019. 之前: ADR-019 (R43-B), ADR-018 (R40).
-- 最新 research doc: **`docs/research/r48a-autogen-tool-effects.md` (R48-A)** — 162 行, 带 pre-fix/post-fix classifier 输出对比 + spike10 引用.
+- Round: **48-B** (UX polish, no release cut): effect tags in `NodeDetails` drawer and `ForkPlanModal` now render with a lucide icon per family — `llm → Brain`, `network → Globe`, `fs → HardDrive`, `db → Database`, `external → ExternalLink`. Extracted shared `EffectTag` component (named export from `NodeDetails.tsx`) reused in modal tag-count histogram + dangerous-samples list. Pure frontend change: schema / API / backend unchanged. **442 pass / 2 skip, 94% cov** unchanged from R48-A. `tsc -b && vite build` clean.
+- **战略定位 (R33 锁死, 持续有效)**: GitHub 爆款开源项目, 不是 SaaS. R48-B 把 Phase 3 UX 从"功能完整+文本可读"补到"视觉密度达标"。
+- 当前阶段: **post-v0.4.0a1, pre-v0.4.0a2**. R48-A + R48-B 都已完成. 下一步: **R48-C v0.4.0a2 release cut** 打包两个 UX round.
+- 最新 ADR: **ADR-020 (R48-A)** — adapter tool-event `node_name` 三段式. R48-B 无 ADR (纯 UX 优化, 不改对外契约).
+- 最新 research doc: **`docs/research/r48a-autogen-tool-effects.md` (R48-A)**.
 - 最新 tag: **v0.4.0a1 (R47)**; 之前 v0.3.1 (R45-A), v0.3.0 (R44-A), v0.2.1 (R41).
 
-- 测试状态: **442/2skip pass**, **94% coverage**, `api/server.py` 98%, mypy/ruff/format clean, frontend 未变动本轮无需 rebuild
+- 测试状态: **442/2skip pass**, **94% coverage**, `api/server.py` 98%, mypy/ruff/format clean. Frontend: `tsc -b && vite build` 本轮重跑 clean.
 
-- **R48-A 产出 (本轮)**:
-  - `docs/decisions/ADR-020-adapter-tool-node-name-shape.md` (9.2 KB) — 三段式 node_name 约定, three-trigger 重开规则.
-  - `docs/research/r48a-autogen-tool-effects.md` (162 行, 继承自前一个 cron slot) — 根因分析 + 为什么 4 轮没被发现 + 教训.
-  - `tests/spikes/spike10_autogen_tool_effects.py` (229 行, 继承) — 真 OneAPI Claude Opus 4.7 × 真 `RoundRobinGroupChat` × 3 tools (`fetch_weather_api`/`read_file`/`query_db`) 的 real function-calling spike. Pre-fix: `effects=[]`; post-fix: `["network"]/["fs"]/["db"]`.
-  - `src/chronos/adapters/autogen/recorder.py` (+65 行) — `_TOOL_EVENT_CLASSES` + `_extract_tool_names` + `_tool_node_name` + tool-branch on node 发射点. SIM108 ternary.
-  - `tests/unit/test_adapter_autogen.py` (+158 行) — 4 new tests under "8. R48-A / ADR-020": 单 tool 嵌入函数名 + parallel tools 用 `+` join + malformed 回退 legacy shape + `effects_map` 对新 shape 覆写仍工作.
-  - `docs/guides/forking-safely.md` §6 (+~110 行 EN+中) — "Per-tool effect overrides / 按工具粒度的 effect 覆写", 含 `effects_map` example + "Discovery path" 调试 snippet. 原 §6 → §7.
-  - `CHANGELOG.md` `[Unreleased]` — Fixed/Added/Breaking 三节, 清楚说明 soft-break on old-shape `effects_map` keys.
+- **R48-B 产出 (本轮)**:
+  - `frontend/src/components/NodeDetails.tsx` (+~40 行) — 导入 5 个 lucide icon (Brain/Globe/HardDrive/Database/ExternalLink), 新 `EFFECT_ICONS` map, 新 `EffectTag` named export, 把原 inline `<Tag>` loop 换成 `<EffectTag/>`.
+  - `frontend/src/components/ForkPlanModal.tsx` (~8 行修改) — 导入 `EffectTag`, tag-count histogram 从单色 orange `<Tag>` 换成按 family 染色的 `<EffectTag>`, dangerous-samples 从 `tags.join(", ")` 纯文本换成每个 tag 一枚带图标的 chip.
+  - `CHANGELOG.md` `[Unreleased]` — 新 "Added (R48-B)" 节, 明确 pure frontend, schema 不动.
+  - `docs/progress/2026-04-27-round-48-b.md` (~220 行) — 本轮 progress doc.
 
-- **R48-A 关键事实 / 教训 (新增)**:
-  - **Classifier 测试必须用真 adapter 输出, 不能用手选字符串**. R44-A classifier 通过是因为测试喂了 "fetch_weather" 这种本来就函数名形状的字符串, 从没喂过 AutoGen recorder 真正会产生的 `{source}:{ClassName}` 字符串. 结果是每一层单测都绿, 但 AutoGen × Phase 3 的 integration 完全断了 4 个 round.
-  - **LangGraph "偶然正确"**. 图级 `graph.add_node("fetch_weather", ...)` 天然产生函数名形状, classifier 无意中工作. Message-based 框架 (AutoGen/CrewAI/AG2) 都需要 adapter 显式合成 node_name, 必须照 ADR-020 的三段式.
-  - **`cron-slot-handoff-recovery` Option A 的模范案例**. 前一个 slot 做了最重的活 (spike + research + recorder 代码 + 单测), 留下 uncommitted. 本轮接手: 补 lint/format + 写 ADR + 写 guide §6 + 写 CHANGELOG + 写 progress doc + 推. 总耗时 ~45 分钟 agent time.
-  - **`effects_map` soft-break 可接受**: 旧 key `"coder:ToolCallExecutionEvent"` 升级后匹配 0 节点, 但 effects 本来就全错, 没几个用户会有生产覆写被破坏. Discovery path 显而易见 (打印 `node.node_name`).
-  - **ADR-020 分离于 ADR-019**: ADR-019 是 charter-level ("不沙箱"), ADR-020 是 mechanism-level (node_name 约定). 不同海拔, 分开写.
-
-- **R47 回顾**: v0.4.0a1 alpha cut — bundle R46-A (PH3-04 Web 模态) + R46-B (Phase 3 charter sign-off) + R47-A (3 dogfood 截图) + R47-B (`forking-safely.md` 391 行双语). 438 pass. `chronos --version` = `0.4.0a1`.
-- **R46-A 回顾**: Web TreeView fork-from-tree modal, `/fork-plan` FastAPI 端点 (46 行), `ForkPlanModal` React 组件 (252 行), TreeView 布线, en/zh i18n 19 keys.
-- **R45-A 回顾**: PH3-03 `chronos fork plan` 加 downstream side-effects Panel. `cli/fork.py` 97% 覆盖. ADR-019 CLI 侧体现.
-- **R44-A 回顾**: PH3-02 adapter effects classifier + UI badge + warning Alert. `classify_effects()` 5 tag regex 家族 + `DANGEROUS_EFFECTS_DEFAULT={network,fs,db,external}`. 零 SQL migration.
-- **R43 回顾**: Phase 3 on-ramp 组合拳 — ADR-019 + `docs/guides/side-effects.md` + spike9. 决策 Option B (metadata-only).
+- **R48-B 关键事实 / 教训 (新增)**:
+  - **`EffectTag` 是 frontend 共享组件**: 任何未来需要渲染 effect tag chip 的地方都应 import 它, 别再手写 `<Tag color={...}>tag</Tag>`. 目前住在 `NodeDetails.tsx` (named export), 第三个消费者出现时应提升到独立文件 `EffectTag.tsx`.
+  - **Unknown tag fallback**: `EffectTag` 对未知 tag 返回无图标、`default` 色的 Tag, 不报错. Adapter 作者造新 tag family 不会 break UI — 但也不会被自动着色/图标化, 需要加到 `EFFECT_COLORS` + `EFFECT_ICONS` + i18n `effects.tags.*`.
+  - **Icon semantic review pending**: `ExternalLink` (lucide "opens in new tab") 给 `external` effect family 在语义上略模糊 — 如果 R48-C 截图 / 用户 feedback 显示困惑, 可以换 `Send` 或 `Zap`. 目前不 block.
+  - **CI refresh gap**: `origin/main` 本地引用陈旧, `git push` 返回 "Everything up-to-date" 实际上 remote 比本地新. 需要 `git fetch` + `git update-ref refs/remotes/origin/main FETCH_HEAD` 校准. 下一次 cron slot 看到同样现象别慌.
+  - **截图刷新推迟到 R48-C**: 新图标值得和 v0.4.0a2 release 一起进 git (一次 PR, 一致的 commit story). R48-B 只改代码不改图片是刻意的.
 
 - 前端路由: `/app/#/runs`, `/app/#/runs/<id>`, `/app/#/runs/<a>/diff/<b>` (R39-A)
 - 仓库可见性: **PUBLIC** since R34-C 尾部
 - 旧事实 (仍生效, 不重复):
-  - GitHub push 只有 `gh-proxy.com` (**R48-A 再验证**)
+  - GitHub push 只有 `gh-proxy.com` (**R48-B 再验证**, 本轮同时 push 也踩到 `origin/main` 本地引用陈旧的坑)
   - LangGraph 1.1.9 record/fork/diff 全链路 OK
   - `NodeKind` 合法值 `{llm, tool, fn, router, fork, end}`
   - Runs/Nodes upsert, Forks append-only
@@ -200,7 +191,7 @@
   - **Extractor contract v2 (ADR-015) 是 v0.1.2+ 对外契约**
   - **Adapter interface (ADR-016) 是 v0.2.0+ 对外契约**
   - **AutoGen sync-wrap (ADR-017) 是 AutoGen adapter 永久架构原则**
-  - **AutoGen tool-event `node_name` 三段式 (ADR-020) 从 R48-A 起是 AutoGen adapter 对外契约** ← **new**
+  - **AutoGen tool-event `node_name` 三段式 (ADR-020) 从 R48-A 起是 AutoGen adapter 对外契约**
   - **Multi-framework risks (R27 research doc) 仍是 Phase 2 必读 gotchas**
   - **Anthropic prompt caching 计账** (R15, ADR-015 Layer 5)
   - **OpenAI reasoning tokens 语义** (R15, ADR-015 Layer 5)
@@ -210,48 +201,44 @@
   - **M milestone naming / multi-round bundle**: release cut 单独一轮打包多轮
   - **Release pattern (skill `chronos-release-pattern`, 十次验证: R13/R16/R19/R22/R23/R30/R35-A/R38/R41/R47)**
   - **Dogfood script 陷阱**: `n.model` 短形式
-  - **Em-dash (U+2014) / U+2212 minus 被 ruff RUF001 禁** (仅 py 源码, md 文档 OK). **R48-A 追加: `×` MULTIPLICATION SIGN 同样被 RUF001 禁, 用 `x` 代替**.
+  - **Em-dash (U+2014) / U+2212 minus / × 乘号被 ruff RUF001 禁** (仅 py 源码, md 文档 OK)
   - **Pydantic v2 field-level docstring**: 字段注解行下方 `"""..."""` 即是 docstring
   - **代码生成类测试必须 `compile()` + `exec()`** (R22)
   - **ForkRef 字段**: `child_run_id`, `fork_id`, `node_ids` — 仅在 CM **exit** 后填
   - **SqliteStore 公开 API**: `SqliteStore.open(path)` classmethod 用作 CM
   - **LangGraph fork 语义 (R23-A)**: `graph.invoke(None, {thread_id})` 续跑要求持久化且跨 run 共享的 checkpointer
   - **测试环境 color 污染 (R24)**: `FORCE_COLOR` 由 autouse fixture 清掉
-  - **Classifier integration 测试红线 (R48-A)**: 任何 keyword-regex classifier 的测试必须用真 adapter 输出喂 — 手选字符串是陷阱 ← **new**
+  - **Classifier integration 测试红线 (R48-A)**: 任何 keyword-regex classifier 的测试必须用真 adapter 输出喂 — 手选字符串是陷阱
+  - **Frontend `EffectTag` 共享组件 (R48-B)**: 渲染 effect tag chip 一律走 `EffectTag`, 未知 tag 安全 fallback, 新 family 要在 `EFFECT_COLORS`/`EFFECT_ICONS`/i18n 三处加 ← **new**
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 48-B / 48-C 候选 — R48-A 已完成, 下一步选 badge redesign 还是 v0.4.0a2 release cut**
+**Round 48-C — v0.4.0a2 release cut (bundle R48-A + R48-B)**
 
-战略视角: R48-A 把 Phase 3 的最大隐患 (AutoGen classifier 静默失效) 修掉了. 现在 Phase 3 UX 三面 + 用户指南 + ADR-020 都落地. 剩下的 R48-B/C 是美化 + 打包 alpha 发版.
+战略视角: R48-A 把 AutoGen classifier 静默失效修掉, R48-B 把 UX 视觉密度补上. 两个 round 都是 Phase 3 收尾动作, 现在是打 alpha 发版的最佳时机.
 
-### R48-B (优先推荐): Effect-tag badge 图标化 (UX 精修)
+### R48-C (next): v0.4.0a2 release cut
 
-- 当前 effect tags 在 NodeDetails drawer 里是纯文本 AntD Tag (color + text). 4 个 family (db/network/fs/external) 图标化会在小尺寸读得更快, 视觉密度更高.
-- 用 lucide-react 的 Database / Globe / HardDrive / ExternalLink 图标.
-- 不改 schema, 只改 `NodeDetails.tsx` 的渲染. 也要改 `ForkPlanModal.tsx` 的 dangerous samples 列表里的 tag chip.
-- 工期估: 0.5 轮. 需要补一张截图更新 `docs/images/fork-modal/01-warning.png`.
+- 版本三文件 lockstep bump `0.4.0a1 → 0.4.0a2`:
+  - `pyproject.toml::project.version`
+  - `src/chronos/__init__.py::__version__`
+  - `src/chronos/cli/__init__.py` status line headline (if it prints version)
+- CHANGELOG `[Unreleased]` (含 R48-A Fixed/Added + R48-B Added) → `[0.4.0a2] — 2026-04-27 (Round 48-A + Round 48-B)`, 新空 `[Unreleased]` 头.
+- **截图刷新 (R48-C 必做)**: 至少 `docs/images/fork-modal/01-warning.png`, 理想情况 `02-` 和 `03-` 也更新, 让截图反映新的 badge icons. 需要跑 dogfood seed + 启服务 + 手动截图, 建议用 `scripts/seed_r47a_effects.py` 做种子 (R47-A 已留了脚本).
+- `git tag -a v0.4.0a2 -m "..."` + push tag.
+- 可选: 轻扫 i18n — R47 说中文像机翻, 如果有明显违和改两行; 大改留 R49.
+- 走 skill `chronos-release-pattern` (已十次验证, 第十一次)
+- 工期估: 0.5-1 轮 (看截图刷新顺不顺).
 
-### R48-C: v0.4.0a2 release cut (打包 R48-A + R48-B)
+### R49 候选 (post-v0.4.0a2): LangGraph + CrewAI 对 ADR-020 一致性 audit
 
-- bundle R48-A (AutoGen classifier fix + ADR-020) + R48-B (badge 图标) 打 `v0.4.0a2` alpha.
-- 版本三文件 lockstep: `pyproject.toml` + `src/chronos/__init__.py` + `src/chronos/cli/__init__.py` status line headline.
-- CHANGELOG `[Unreleased]` → `[0.4.0a2]` 滚动.
-- 走 skill `chronos-release-pattern` (已十次验证).
-- i18n 轻扫一眼 (R47 说机翻感存在), 但大改留给 R49.
-- 工期估: 0.5 轮.
+- ADR-020 Follow-ups 里说 "review LangGraph and CrewAI adapters' tool-node naming". LangGraph 图级 node 名本来就是函数名形状 (R48-A 已口头确认), 但正式跑一个 spike 录 run + dump classifier output + 截图 effects populate 能彻底把这条 ADR-020 线索收干净.
+- CrewAI adapter 还没写, 但写它时 R48-A 教训 (classifier 测试必须用真 adapter 输出) 必须在第一个 PR 的 PR description 里.
+- 工期估: 1 轮 audit, 多轮写 CrewAI.
 
-### R48-D (若启动 Phase 4): Multi-run tree 对比视图
+### R48-D / Phase 4 候选 (unchanged): Multi-run tree 对比视图
 
-- 当前 compare view (R39-A) 是两个 run 的 side-by-side 节点 diff, 不是树视图.
-- Phase 4 候选: 把 fork 出来的 child runs 在原 run 的 TreeView 上叠加显示.
-- 需要新 ADR (fork tree 渲染规则 / 数据模型 / 交互), 可能需要 backend schema 加一点.
-- 工期估: 3-5 轮. 不是 R48 单轮能搞定.
-
-### R49 候选: LangGraph + CrewAI 对 ADR-020 一致性 audit
-
-- ADR-020 的 Follow-ups 里说 "Consider reviewing LangGraph and CrewAI adapters' tool-node naming for consistency".
-- LangGraph 不写 CrewAI 时估计问题不大 (还没有 CrewAI adapter), 但写 CrewAI adapter 时 R48-A 的教训必须在第一行.
+见 R48-A progress doc. 需要 ADR, 3-5 轮工期, 不是单轮能搞定.
 
 ### R48 非目标 (继承红线)
 
@@ -265,13 +252,14 @@
 - ❌ E2B / Modal / nsjail / Docker 沙箱集成 (ADR-019 已决)
 - ❌ 改 `ForkPlan` schema (v0.1.1 对外契约)
 - ❌ 改 AutoGen `node_name` 三段式之外的其它字段 (ADR-020)
+- ❌ frontend 引入 Vitest / RTL 测试框架 (R48-B 刻意推迟, 等有 3+ 组件需要测试的时机)
 
 ### Release strategy (v0.4.0a1 → v0.4.0a2 → v0.4.0 → v0.5.0?)
 
 - v0.3.0 ✅ cut 2026-04-25 (R44-A) — PH3-02 effects annotation
 - v0.3.1 ✅ cut 2026-04-25 (R45-A) — PH3-03 CLI fork-plan preview
 - v0.4.0a1 ✅ cut 2026-04-26 (R47) — PH3-04 Web fork modal + forking-safely guide
-- v0.4.0a2 🚧 候选 R48-C — R48-A (AutoGen classifier fix + ADR-020) + R48-B (badge icons)
+- v0.4.0a2 🚧 **候选 R48-C** — R48-A (AutoGen classifier fix + ADR-020) + R48-B (badge icons)
 - v0.4.0 🚧 候选 R49+ — 真实 dogfood 一轮后无大 bug 再 cut non-alpha
 - v0.5.0 🚧 候选 Phase 4 (多 run 树对比 / fork tree 可视化) 启动后
 
@@ -311,4 +299,4 @@
 
 ---
 
-*Last updated: 2026-04-27 (CST ~01:30) by Round 48-A agent (AutoGen effects classifier fix + ADR-020 + `forking-safely.md` §6; CONTEXT §5/§6 refresh to R48-B/R48-C candidates).*
+*Last updated: 2026-04-27 (CST ~04:40) by Round 48-B agent (Effect-tag badge icons; lucide Brain/Globe/HardDrive/Database/ExternalLink in NodeDetails drawer + ForkPlanModal; shared `EffectTag` component; CONTEXT §5/§6 refresh to R48-C candidate = v0.4.0a2 release cut).*

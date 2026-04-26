@@ -33,6 +33,7 @@ import {
   type ForkPlanPreviewResponse,
 } from "../api";
 import ConceptTip from "./ConceptTip";
+import { EffectTag } from "./NodeDetails";
 
 const { Paragraph, Text } = Typography;
 
@@ -188,9 +189,7 @@ export default function ForkPlanModal({
                     {t("forkModal.dangerous.breakdown")}:
                     <Space size={4} wrap style={{ marginLeft: 6 }}>
                       {Object.entries(summary.tag_counts).map(([tag, n]) => (
-                        <Tag key={tag} color="orange">
-                          {tag}:{n}
-                        </Tag>
+                        <EffectTag key={tag} tag={tag} label={`${tag}:${n}`} />
                       ))}
                     </Space>
                   </div>
@@ -200,8 +199,12 @@ export default function ForkPlanModal({
                       <ul style={{ margin: "4px 0 0 16px", padding: 0 }}>
                         {summary.dangerous_samples.map(([step, name, tags]) => (
                           <li key={step}>
-                            <Text code>step {step}</Text> {name} —{" "}
-                            <Text type="secondary">{tags.join(", ")}</Text>
+                            <Text code>step {step}</Text> {name}
+                            <Space size={2} wrap style={{ marginLeft: 6 }}>
+                              {tags.map((tag) => (
+                                <EffectTag key={tag} tag={tag} />
+                              ))}
+                            </Space>
                           </li>
                         ))}
                       </ul>

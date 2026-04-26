@@ -1,7 +1,8 @@
 // Node details drawer body — grouped into tabs so the wall of JSON isn't
 // dumped on the user at once. Every label uses i18n; every concept has a tip.
 import { Tabs, Typography, Descriptions, Tag, Empty, Button, Space, App as AntApp, Alert } from "antd";
-import { Copy, AlertTriangle } from "lucide-react";
+import { Copy, AlertTriangle, Brain, Globe, HardDrive, Database, ExternalLink } from "lucide-react";
+import type { ComponentType } from "react";
 import { useTranslation } from "react-i18next";
 import type { Node as ChronosNode, NodeKind } from "../types";
 import ConceptTip from "./ConceptTip";
@@ -17,6 +18,40 @@ const EFFECT_COLORS: Record<string, string> = {
   db: "volcano",
   external: "red",
 };
+
+// R48-B (ADR-020 family): one icon per effect family. Keeps visual density
+// high in the drawer + fork modal where tags are small. Falls back to plain
+// Tag (no icon) for unknown tags so adapter authors who invent new tags
+// don't break rendering.
+type LucideIcon = ComponentType<{ size?: number | string }>;
+const EFFECT_ICONS: Record<string, LucideIcon> = {
+  llm: Brain,
+  network: Globe,
+  fs: HardDrive,
+  db: Database,
+  external: ExternalLink,
+};
+
+// Render an effect Tag with a small leading icon. Used in both the
+// NodeDetails drawer and the ForkPlanModal dangerous-tag breakdown.
+export function EffectTag({
+  tag,
+  label,
+  style,
+}: {
+  tag: string;
+  label?: string;
+  style?: React.CSSProperties;
+}) {
+  const Icon = EFFECT_ICONS[tag];
+  const color = EFFECT_COLORS[tag] ?? "default";
+  return (
+    <Tag color={color} style={{ display: "inline-flex", alignItems: "center", gap: 4, ...style }}>
+      {Icon ? <Icon size={12} /> : null}
+      <span>{label ?? tag}</span>
+    </Tag>
+  );
+}
 
 function readEffects(node: ChronosNode): string[] {
   const raw = (node.metadata as Record<string, unknown> | null | undefined)?.effects;
@@ -97,13 +132,12 @@ export default function NodeDetails({
           <span />
         </ConceptTip>
         {effects.map((tag) => (
-          <Tag
+          <EffectTag
             key={tag}
-            color={EFFECT_COLORS[tag] ?? "default"}
+            tag={tag}
+            label={t(`effects.tags.${tag}`, { defaultValue: tag })}
             style={{ marginInlineEnd: 0 }}
-          >
-            {t(`effects.tags.${tag}`, { defaultValue: tag })}
-          </Tag>
+          />
         ))}
       </Space>
       {dangerous && (
