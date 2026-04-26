@@ -81,6 +81,9 @@ Phase 2 in flight — **single-agent record / fork / diff / compare complete, mu
 | Tree view polish (Legend, ConceptTip, edges)  | v0.2.0    | ✅ R38                                    |
 | **Compare: side-by-side diff viewer (UI)**    | **v0.2.1**| **✅ R39-A — ADR-018 "compare" narrative**|
 | Release pipeline (semver, tags, changelog)    | ongoing   | ✅ [`chronos-release-pattern`] skill      |
+| **Effect-aware fork UX** — adapter tags, CLI preview, Web modal | **v0.3.0 → v0.4.0-α** | **✅ PH3-02 + PH3-03 + PH3-04, see [`docs/guides/forking-safely.md`][forksafely]** |
+
+[forksafely]: ./docs/guides/forking-safely.md
 
 **Next phases**: additional framework adapters (AutoGen / CrewAI / raw OpenAI tool-loops), diff export formats, Web UI merge view.
 
