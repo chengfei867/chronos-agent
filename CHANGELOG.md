@@ -4,6 +4,12 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
+_Nothing yet — R49 will decide._
+
+## [0.4.0a2] — 2026-04-27 (Round 48-A + Round 48-B)
+
+**Theme**: **Phase 3 UX polish** — two small-footprint rounds bundled into one alpha cut. R48-A fixes a silent classifier regression in the AutoGen adapter (tool-event `node_name`s now carry the function name, so PH3-02 effect classification actually fires on AutoGen runs) and codifies ADR-020 so future message-based adapters can't repeat the mistake. R48-B lifts the fork-safety UX from "functional" to "scannable" by giving every effect tag a lucide icon badge and extracting a shared `EffectTag` frontend component. Pure frontend + adapter-internal changes; schema, API, and CLI contracts unchanged from v0.4.0a1.
+
 ### Added (R48-B — Effect-tag badge icons)
 
 - **`frontend/src/components/NodeDetails.tsx`** — effect tags in the node-details drawer and the fork-plan modal now render with a small leading lucide icon per family: `llm → Brain`, `network → Globe`, `fs → HardDrive`, `db → Database`, `external → ExternalLink`. Unknown tags fall back to plain text (no icon) so adapter authors who invent new effect families don't break rendering.

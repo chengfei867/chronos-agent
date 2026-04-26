@@ -97,9 +97,10 @@ def info() -> None:
     """Print environment diagnostics."""
     console.print(f"[bold]chronos[/bold] {__version__}")
     console.print(
-        "Status: Phase 3 fork-safety bundle -- effect annotations (PH3-02), "
+        "Status: Phase 3 UX polish -- effect annotations (PH3-02), "
         "CLI fork-plan preview (PH3-03), Web fork modal (PH3-04), "
-        "forking-safely.md user guide, v0.4.0a1"
+        "effect-tag badge icons + AutoGen classifier fix (ADR-020), "
+        "v0.4.0a2"
     )
     console.print(
         "Commands: [green]runs list/show, forks show, diff, replay, fork plan, web[/green] "
