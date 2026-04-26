@@ -69,10 +69,16 @@ build/
 
 # chronos-agent runtime artifacts
 .chronos/
+Thumbs.db
 chronos.db
 chronos.db-journal
 chronos.db-wal
 chronos.db-shm
+examples/chronos.db
+*.db-journal
+dogfood.db
+dogfood.db-shm
+dogfood.db-wal
 
 # OS / editor
 .DS_Store
