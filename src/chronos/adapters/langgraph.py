@@ -74,6 +74,25 @@ class LangGraphRecorder:
         store: A :class:`SqliteStore` to persist into.
         kind_map: Optional dict mapping ``node_name -> NodeKind``. Nodes not
             in the map default to :attr:`NodeKind.FN`.
+
+    .. warning::
+        **Pass ``kind_map`` for any node that performs I/O** (network calls,
+        filesystem writes, database access, external subprocess) if you rely
+        on Phase 3 fork-plan *effect annotations* (the dangerous-effect
+        warnings shown in the Web fork modal and CLI ``fork-plan``).
+
+        LangGraph adapters have no reliable way to infer a node's kind from
+        the graph alone, so un-mapped nodes fall back to
+        :attr:`NodeKind.FN`. The effects classifier's TOOL-gate then
+        short-circuits those nodes to ``effects=[]``, which looks like
+        *safe-to-fork* in the UI — even if the node actually hits the
+        network. This is silent false-safety, which is strictly worse than
+        a loud false-alarm.
+
+        Explicitly mark I/O-doing nodes as :attr:`NodeKind.TOOL` in
+        ``kind_map`` to opt them into effect annotation. See
+        ``docs/research/r49-langgraph-adr020-audit.md`` for an empirical
+        walkthrough (spike 11).
     """
 
     def __init__(

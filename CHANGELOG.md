@@ -4,7 +4,11 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
-_Nothing yet — R49 will decide._
+### Docs (R50 — LangGraph kind_map warning + fork-modal screenshot refresh)
+
+- **`src/chronos/adapters/langgraph.py`** — `LangGraphRecorder.__init__` docstring gains a prominent `.. warning::` block explaining that un-mapped nodes default to `NodeKind.FN`, which silently short-circuits the Phase 3 effects classifier to `effects=[]`. Users who rely on fork-modal effect annotation MUST supply `kind_map` entries marking any I/O-doing node as `NodeKind.TOOL`. Cross-references `docs/research/r49-langgraph-adr020-audit.md` (spike 11). No code or behaviour change — docstring only.
+- **`docs/images/fork-modal/{01,02,03}.png`** — all three fork-plan-modal screenshots re-captured against v0.4.0a2. They now show the R48-B effect-tag badge icons (Brain / Globe / HardDrive / Database / ExternalLink) rather than the R47-A plain-text tags. Capture recipe unchanged; seed script `scripts/seed_r47a_effects.py` reused as-is.
+- Gate unchanged: 442 passed / 2 skipped / 94% coverage. No version bump — ships with the next non-alpha release.
 
 ## [0.4.0a2] — 2026-04-27 (Round 48-A + Round 48-B)
 
