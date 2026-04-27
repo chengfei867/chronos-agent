@@ -147,33 +147,32 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
-**截至 Round 48-C 结束 (2026-04-27 CST ~07:40) — v0.4.0a2 cut; Phase 3 UX polish 打包发版完毕**
+**截至 Round 49 结束 (2026-04-27 CST ~10:50) — post-v0.4.0a2, Phase 3 audit cleanup; ADR-020 LangGraph 半边关闭**
 
-- 最近 progress doc: `docs/progress/2026-04-27-round-48-c.md` (R48-C — v0.4.0a2 release cut, bundle R48-A + R48-B)
-- 最近上份 progress doc: `docs/progress/2026-04-27-round-48-b.md` (R48-B — effect-tag badge icons)
-- 最近上上份 progress doc: `docs/progress/2026-04-27-round-48-a.md` (R48-A — AutoGen effects classifier fix + ADR-020)
+- 最近 progress doc: `docs/progress/2026-04-27-round-49.md` (R49 — LangGraph ADR-020 audit spike + research note)
+- 最近上份 progress doc: `docs/progress/2026-04-27-round-48-c.md` (R48-C — v0.4.0a2 release cut, bundle R48-A + R48-B)
+- 最近上上份 progress doc: `docs/progress/2026-04-27-round-48-b.md` (R48-B — effect-tag badge icons)
 
-- Round: **48-C** (release cut, no new features): lockstep version bump across `pyproject.toml` / `src/chronos/__init__.py` / `src/chronos/cli/__init__.py` status line, CHANGELOG `[Unreleased]` → `[0.4.0a2] — 2026-04-27 (Round 48-A + Round 48-B)`, annotated tag pushed, GitHub Release page created as prerelease. `chronos info` status line rewritten to reflect Phase 3 UX polish theme. **442 pass / 2 skip / 94% cov** unchanged (zero test churn this round). CONTEXT.md line-number prefix corruption (inherited from R48-B commit) was fixed in-flight during §5/§6 rewrite.
-- **战略定位 (R33 锁死, 持续有效)**: GitHub 爆款开源项目, 不是 SaaS. R48-C 把 R48-A + R48-B 两轮 UX polish 打包成 v0.4.0a2 alpha — 发版本身没有产品语义变化.
-- 当前阶段: **post-v0.4.0a2**, Phase 3 UX 收尾完毕. 下一步候选: R49 screenshot refresh + ADR-020 adapter audit, 或开始 CrewAI adapter (ADR 先行).
-- 最新 ADR: **ADR-020 (R48-A)** — adapter tool-event `node_name` 三段式. R48-B / R48-C 无 ADR (UX polish + 纯发版).
-- 最新 research doc: **`docs/research/r48a-autogen-tool-effects.md` (R48-A)**.
-- 最新 tag: **v0.4.0a2 (R48-C, prerelease)**; 之前 v0.4.0a1 (R47), v0.3.1 (R45-A), v0.3.0 (R44-A), v0.2.1 (R41).
+- Round: **49** (docs + test-spike, 无 release): 写 `tests/spikes/spike11_langgraph_tool_effects.py` (offline / 无真 LLM / <2s) 和 `docs/research/r49-langgraph-adr020-audit.md` (~185 行) 正式关闭 ADR-020 Follow-ups 里 "LangGraph audit" 那一半 — 实证验证了 ADR-020 §"Graph-based adapters" 关于 "LangGraph vacuously satisfied" 的说法 (R48-A 只是代码阅读推断). ADR-020 文档里新增 `## Follow-ups` section, 把 LangGraph 标 CLOSED, CrewAI 标 OPEN (等 ADR-021 / R51+). 唯一实战发现: **LangGraph 的 `kind_map` 对 Phase 3 effect 标注是事实必需** (不传的话每个 node 默认 `NodeKind.FN`, classifier 的 TOOL-gate 直接短路, 所有 `effects=[]` — 无论 node name 多像工具). 这个 docstring 补丁 + 截图刷新捆绑到 R50. **442 pass / 2 skip / 94% cov** 维持, `src/` 无改动, `[Unreleased]` CHANGELOG 块维持空 (R49 是 docs-only, 用户无感).
+- **战略定位 (R33 锁死, 持续有效)**: GitHub 爆款开源项目, 不是 SaaS. R48-C 把 R48-A + R48-B 两轮 UX polish 打包成 v0.4.0a2 alpha. R49 未发版, 是 Phase 3 尾部的审计清理.
+- 当前阶段: **post-v0.4.0a2, Phase 3 audit cleanup**. Phase 3 UX 功能面已完成, 但 (a) ADR-020 的 Follow-ups 需要把 LangGraph / CrewAI 都查一遍 — R49 关了 LangGraph 半边, CrewAI 还开着 (等 ADR-021); (b) 截图站 (`docs/images/fork-modal/*.png`) 还是 R47-A 无图标版, R50 首要事项.
+- 最新 ADR: **ADR-020 (R48-A, R49 扩写 Follow-ups)** — adapter tool-event `node_name` 三段式; R49 新增 `## Follow-ups` section 把 LangGraph 标 CLOSED.
+- 最新 research doc: **`docs/research/r49-langgraph-adr020-audit.md` (R49)** — LangGraph ADR-020 audit 关闭笔记 + `kind_map` usage gotcha 详释.
+- 最新 tag: **v0.4.0a2 (R48-C, prerelease)**; 之前 v0.4.0a1 (R47), v0.3.1 (R45-A), v0.3.0 (R44-A), v0.2.1 (R41). R49 无 tag.
 
-- 测试状态: **442/2skip pass**, **94% coverage**, `api/server.py` 98%, mypy/ruff/format clean. 前端 `tsc -b && vite build` 上轮(R48-B)验证 clean, 本轮无前端改动.
+- 测试状态: **442/2skip pass**, **94% coverage**, `api/server.py` 98%, mypy/ruff/format clean (src/ tests/ 范围, `scripts/seed_r47a_effects.py` 有 pre-R47-A 遗留格式漂移, 不在每次 release 检查范围内, 不是 R49 的问题). 前端 `tsc -b && vite build` 上轮(R48-B)验证 clean, R49 无前端改动.
 
-- **R48-C 产出 (本轮)**:
-  - `CHANGELOG.md` — `[Unreleased]` 滚入 `[0.4.0a2] — 2026-04-27 (Round 48-A + Round 48-B)`, 顶部新建空 `[Unreleased]` + `_Nothing yet — R49 will decide._` 占位, 新 `**Theme**` prose 行总结 bundle (Phase 3 UX polish, AutoGen classifier fix + icon badges, API/schema 不变).
-  - `pyproject.toml::project.version` — `0.4.0a1 → 0.4.0a2`.
-  - `src/chronos/__init__.py::__version__` — `0.4.0a1 → 0.4.0a2`.
-  - `src/chronos/cli/__init__.py` — `info()` status line 从 "Phase 3 fork-safety bundle … forking-safely.md user guide, v0.4.0a1" 重写为 "Phase 3 UX polish … effect-tag badge icons + AutoGen classifier fix (ADR-020), v0.4.0a2".
-  - `docs/progress/2026-04-27-round-48-c.md` (~210 行) — 本轮 progress doc, 含 deferral rationale.
-  - `docs/CONTEXT.md` §5 + §6 refresh, 附带把 R48-B 引入的行号前缀 corruption 修掉 (全文 147 行被污染, 现已清理).
+- **R49 产出 (本轮)**:
+  - `tests/spikes/spike11_langgraph_tool_effects.py` (new, ~260 行) — offline 4-node `StateGraph(State)`, 跑两遍 (带 / 不带 `kind_map`), 实证 4 个 findings (F1 node_name 单段函数形 / F2 不带 kind_map 全空 / F3 带 kind_map 得到正确 tag / F4 ADR-020 vacuously satisfied). Ruff-clean + 未被 pytest 收集.
+  - `docs/research/r49-langgraph-adr020-audit.md` (new, ~185 行) — audit 关闭笔记. 重点: **LangGraph 用户不传 `kind_map` 就拿不到 effect 标注** (silent false-safety on fork modal), 推荐在 R50 给 `LangGraphRecorder.__init__` docstring 加一段话指向这份 research note.
+  - `docs/decisions/ADR-020-adapter-tool-node-name-shape.md` — 新增 `## Follow-ups` section (+23 行), LangGraph CLOSED / CrewAI OPEN; References 新增两条引用.
+  - `docs/CONTEXT.md` §5 + §6 refresh (本文件).
+  - `docs/progress/2026-04-27-round-49.md` (~260 行) — 本轮 progress doc.
 
-- **R48-C 关键事实 / 教训 (新增)**:
-  - **CONTEXT.md 行号前缀 corruption 修复 (R48-C)**: R48-B commit `87d200d` 把 `read_file` 工具返回的带行号前缀 (`     1|`, `   283|...`) 当成文件内容写回 `docs/CONTEXT.md`, git 里的 147 行都有这种前缀. 本轮 §5/§6 rewrite 前用 `re.sub(r"(?m)^ *\d+\|", "", raw)` 整体清洗. **教训**: **永远不要把 `read_file` 或 `hermes_tools.read_file` 的返回 paste 进 `write_file`**. 那个工具在 stdout 加了 `LINE|CONTENT` 前缀用于人眼阅读, 不是文件原始内容. 正确路径: `execute_code` 里用 `open(path).read()` 拿纯文本, 或者 `terminal` + `read_file` 但只复制 `|` 右边的内容. 任何时候发现行首有疑似行号前缀, 先 grep 确认 `awk '{print NR, (/^ *[0-9]+\|/?"PFX":"OK")}' | sort | uniq -c`, 有污染就 `re.sub` 清掉再改.
-  - **Release pattern 第 11 次验证**: R48-C 走 skill `chronos-release-pattern` 完全按既定步骤, 无新 pitfall. origin 已指向 gh-proxy (R48-A/B 继承), 无 uv.lock drift (本轮未跑 uv sync), 无 roadmap drift (grep 空结果), 无 stale string assertion (grep `v0.4.0a1|fork-safety bundle|forking-safely.md user guide` 在 `tests/` `src/` 下空结果).
-  - **Screenshot refresh 推迟到 R49**: R48-C 刻意不做. 原因: 无 headless automation, 手动 playwright session 要 15-25 分钟 wall time, 是 release cut 的下行风险. 文档里代码/prose 都对, 只有 `docs/images/fork-modal/*.png` 一轮陈旧 (显示 R48-B 之前的无图标 Alert). R49 首要任务就是补齐 + 同时写可复用 headless capture helper under `scripts/`.
+- **R49 关键事实 / 教训 (新增)**:
+  - **LangGraph `kind_map` 对 Phase 3 effect 标注是事实必需**: 不传 → 每个 node 默认 `NodeKind.FN` → classifier 的 `kind == NodeKind.TOOL` gate 直接短路 → 所有 `effects=[]` 无论 node name 多像 `fetch_weather_api` / `read_file` / `query_db`. 对真实用户的后果: fork modal 会误报 "绿色安全" Alert, 即使图里真的在写文件/发 HTTP. **Silent false-safety 比 loud false-alarm 更糟**. R50 要在 `LangGraphRecorder.__init__` docstring 加一段话指向 `docs/research/r49-langgraph-adr020-audit.md`.
+  - **ADR-020 "Graph-based adapters" 豁免条款是正确的**: 不是代码阅读的一面之词, spike11 实测验证 node_name 就是 `StateGraph.add_node(name, fn)` 的 name (单段, 无冒号, 无前缀). 任何 graph-based 框架 (LangGraph / 未来 LangGraph-like) 都可以直接套用, 不需要三段式 surgery.
+  - **Spike 先于文档**: R48-A 的 ADR-020 说 "LangGraph 靠代码阅读判断为合规", R49 补了 empirical verification. 这是 chronos-agent 文档规则 §3.1 "文档先行" 的健康变体 — ADR 先出, 后面轮次用 spike 补验证, 避免了因代码阅读错判导致的 ADR 漂移.
 
 - 前端路由: `/app/#/runs`, `/app/#/runs/<id>`, `/app/#/runs/<a>/diff/<b>` (R39-A)
 - 仓库可见性: **PUBLIC** since R34-C 尾部
@@ -214,34 +213,36 @@ chronos-agent/
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 49 — post-v0.4.0a2, Phase 3 收尾的最后一块拼图 + ADR-020 adapter audit**
+**Round 50 — screenshot refresh + LangGraphRecorder docstring 补丁 (R49 发现的 usage gotcha)**
 
-战略视角: v0.4.0a2 已 cut. Phase 3 的功能面完成了, 但 (a) docs 站里的 fork-modal 截图还是 R47-A 时代的无图标版, 需要刷新匹配 R48-B 的 badge icons; (b) ADR-020 的 Follow-ups 要求对 LangGraph / CrewAI adapter 也做一致性 audit. R49 合并这两件事, 工期 1-1.5 轮.
+战略视角: v0.4.0a2 已 cut. R49 已经把 ADR-020 的 LangGraph 半边用 spike 关掉 (`tests/spikes/spike11_langgraph_tool_effects.py` + `docs/research/r49-langgraph-adr020-audit.md`). R50 收尾两件 Phase 3 尾部小事: (a) 把 R48-B 没刷的 fork-modal 截图补上, (b) 把 R49 新发现的 "LangGraph 用户必须传 `kind_map`" 这件事落进 `LangGraphRecorder.__init__` docstring. 工期 1 轮.
 
-### R49 (next): 截图刷新 + ADR-020 LangGraph audit
+### R50 (next): 截图刷新 + LangGraph docstring patch
 
-- **截图刷新 (必做)**:
-  - 至少 `docs/images/fork-modal/01-warning.png` 必须用 R48-B 之后的代码截. 理想情况 `02-safe-pure-llm.png` 和 `03-safe-last-node.png` 也刷, 这样三张图风格一致.
+- **截图刷新 (必做, 主项)**:
+  - 至少 `docs/images/fork-modal/01-warning.png` 必须用 R48-B 之后的代码截 (显示 effect-tag badge icons, 而不是 R47-A 时代的纯文字 tag). 理想情况 `02-safe-pure-llm.png` 和 `03-safe-last-node.png` 也一起刷, 保持风格一致.
   - 种子: `scripts/seed_r47a_effects.py --db dogfood.db` (R47-A 已留好, 仍可复用).
   - **顺手建 `scripts/capture_fork_modal.py` 或等价 bash**: 跑 `chronos web` + 启 Vite dev server + Playwright headless 驱动三个截图. 工期 15-25 分钟一次, 沉淀成脚本后下次只要 1 分钟.
-- **ADR-020 LangGraph audit (必做)**:
-  - ADR-020 Follow-ups 说过 "review LangGraph and CrewAI adapters' tool-node naming". LangGraph 图级 node 名本来就是函数名形状 (R48-A 已口头确认), 但要正式跑一次 spike: 录一个 LangGraph tool-heavy run, dump 每个 node 的 `node_name` 和 `classify_effects()` 输出, 确认 `effects` 都非空.
-  - 产出: `tests/spikes/spike11_langgraph_tool_effects.py` + 在 `docs/research/` 下一页短笔记说明 "LangGraph 对 ADR-020 vacuously 满足".
-  - 如果发现 LangGraph 有边界情况 (例如 `ToolNode(tools=[...])` 封装后名字不匹配), 写一个跟 R48-A 同构的 fix.
-- 工期估: 1 轮 (如果 spike 顺利) 或 1.5 轮 (截图 automation + spike 都要写).
+  - **重要**: 不要在 cron slot 第一次跑 Playwright install — 要么提前另起一轮验证 `uv run playwright install chromium` 能过, 要么 R50 如果 cron slot 启动 Playwright 下载/启动 >3 分钟就降级到只写脚本不真截图, 把截图推到手动轮.
+- **LangGraphRecorder docstring 补丁 (必做, 小项, <10 行改动)**:
+  - R49 实证发现: 用户不传 `kind_map` → 所有 node 默认 `NodeKind.FN` → classifier TOOL-gate 短路 → fork modal 永远显示 "绿色安全". 这是 silent false-safety, 比 loud false-alarm 更严重.
+  - 改 `src/chronos/adapters/langgraph.py::LangGraphRecorder.__init__` docstring 加一段 `.. note::` 或 `.. warning::`, 指向 `docs/research/r49-langgraph-adr020-audit.md` 说清楚: "如果要让 Phase 3 fork-plan 的 effect 标注工作, 必须给 I/O-doing 的 node 在 `kind_map` 里显式标 `NodeKind.TOOL`".
+  - 跑完整 gate (`uv run ruff check src/ tests/ && uv run ruff format --check src/ tests/ && uv run mypy src/ && uv run pytest -q`) 必须 442 pass / 2 skip 不变, mypy clean.
+- **是否 cut v0.4.0a3?**: 只有 docstring + 截图改动, 没有代码/schema 变化, 按 v0.4.0-series alpha 节奏 **不发新 tag**. 把 CHANGELOG `[Unreleased]` 下写一条 "Docs: LangGraph adapter docstring 补 kind_map warning (R50)" 留到 v0.4.0 non-alpha 一并发.
 
-### R50+ 候选: CrewAI adapter 启动 (ADR 先行)
+### R51+ 候选: CrewAI adapter 启动 (ADR 先行, ADR-020 CrewAI 半边并轨)
 
 - CrewAI 是 agent 生态里除 LangGraph / AutoGen 外使用面最大的第三家. 如果要让 chronos-agent 在 GitHub 上看起来"多框架覆盖", CrewAI 必须有 day-0 adapter.
-- ADR 先写 (ADR-021 候选, CrewAI adapter interface + ADR-020 合规 `node_name` 三段式约定).
+- ADR 先写 (ADR-021 候选, CrewAI adapter interface + ADR-020 合规 `node_name` 三段式约定). ADR-020 的 CrewAI Follow-up 就在这里并轨关掉.
 - R48-A 的教训必须在第一个 PR description 里醒目列出: **classifier 测试一律用真 adapter 输出喂, 手选字符串是陷阱**.
+- R49 的教训也要带入: **graph-based / group-chat-based 框架, 看完 adapter 代码之后必须补一个 real-framework spike 验证 `node_name` 的实际形状, 不能只靠代码阅读**.
 - 工期估: ADR 1 轮, scaffold + 第一个 real-LLM spike 2-3 轮.
 
-### R51+ 候选: Phase 4 多 run 对比视图 (ADR 先行, 不在近期)
+### R52+ 候选: Phase 4 多 run 对比视图 (ADR 先行, 不在近期)
 
 见 R48-A progress doc §7. 需要先写 ADR (parent-of-run graph 数据模型, 非 parent-of-node), 3-5 轮工期, 不是单轮活.
 
-### R48 非目标 (继承红线)
+### R50 非目标 (继承红线)
 
 - ❌ `chronos compare` alias (ADR-018 已决)
 - ❌ 改 `chronos diff` 行为 (ADR-006 FROZEN)

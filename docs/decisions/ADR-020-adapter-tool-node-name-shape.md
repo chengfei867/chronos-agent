@@ -174,11 +174,34 @@ Pushes the per-adapter knowledge into the wrong layer. Rejected —
 responsibility belongs in the adapter: each adapter knows its own
 framework's tool-call shape.
 
+## Follow-ups
+
+- **LangGraph audit (R49) — CLOSED.** Spike 11
+  (`tests/spikes/spike11_langgraph_tool_effects.py`) and research note
+  `docs/research/r49-langgraph-adr020-audit.md` empirically verified the
+  §"Graph-based adapters" carve-out: LangGraph's `node_name` is
+  single-segment and function-shaped
+  (`node_name = task.name` in `langgraph.py:466`), and the classifier
+  produces correct tags whenever the user declares TOOL nodes via
+  `kind_map`. No adapter code change required. One usage gotcha was
+  documented: `kind_map` is effectively required for Phase 3 effect
+  annotations to fire on LangGraph — see the research note for the
+  docstring-patch recommendation (R50 candidate).
+- **CrewAI audit — OPEN.** No CrewAI adapter exists yet; when ADR-021
+  proposes one, re-evaluate against this ADR's three-segment
+  convention. R48-A's classifier-test lesson (use real adapter output,
+  not hand-picked strings) is the most important constraint on that
+  future adapter's test plan.
+
 ## References
 
 - `docs/research/r48a-autogen-tool-effects.md` — empirical trigger,
   pre- and post-fix classifier output from spike 10.
+- `docs/research/r49-langgraph-adr020-audit.md` — LangGraph audit
+  closure (R49), including the `kind_map` usage gotcha.
 - `tests/spikes/spike10_autogen_tool_effects.py` — reproducible spike.
+- `tests/spikes/spike11_langgraph_tool_effects.py` — LangGraph audit
+  spike (R49); runs offline in <2 s with no real LLM.
 - `tests/unit/test_adapter_autogen.py::test_tool_request_event_embeds_function_name`
   (and 3 sibling tests) — unit coverage of the new shape.
 - ADR-019 — the "warn, don't sandbox" charter this ADR operationalizes
