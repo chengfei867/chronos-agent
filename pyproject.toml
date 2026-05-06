@@ -42,6 +42,13 @@ autogen = [
     "autogen-agentchat>=0.7.5",
     "autogen-ext>=0.7.5",
 ]
+crewai = [
+    # ADR-021 §D8: 0.80+ is where scoped_handlers(), Future-returning
+    # emit(), and top-level tool_name/agent_role on ToolUsage*Event are
+    # stable. Upper bound is pre-emptive for CrewAI's pre-1.0 event-schema
+    # churn.
+    "crewai>=0.80,<1.0",
+]
 web = [
     "fastapi>=0.110",
     "uvicorn[standard]>=0.30",
