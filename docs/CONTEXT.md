@@ -147,34 +147,37 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
-**截至 Round 50 结束 (2026-04-27 CST ~12:00, foreground slot) — post-v0.4.0a2, Phase 3 tail 完全关闭; R51 起 Phase 3 扩张期 (CrewAI adapter)**
+**截至 Round 51 结束 (2026-05-06 CST 11:15, cron slot inside 0–11 window) — post-v0.4.0a2, Phase 3 扩张期启动 (CrewAI adapter ADR landed)**
 
-- 最近 progress doc: `docs/progress/2026-04-27-round-50.md` (R50 — LangGraph `kind_map` 警告 docstring 补丁 + fork-modal 三张截图刷新到 R48-B 风格)
-- 最近上份 progress doc: `docs/progress/2026-04-27-round-49.md` (R49 — LangGraph ADR-020 audit spike + research note)
-- 最近上上份 progress doc: `docs/progress/2026-04-27-round-48-c.md` (R48-C — v0.4.0a2 release cut, bundle R48-A + R48-B)
+- 最近 progress doc: `docs/progress/2026-05-06-round-51.md` (R51 — ADR-021 CrewAI adapter interface 落地; spike12 补 format; 7 CLI 测试意外红 (click/typer 升级造成, 非 R51 引入), R52 修)
+- 最近上份 progress doc: `docs/progress/2026-04-27-round-50.md` (R50 — LangGraph `kind_map` 警告 docstring 补丁 + fork-modal 三张截图刷新到 R48-B 风格)
+- 最近上上份 progress doc: `docs/progress/2026-04-27-round-49.md` (R49 — LangGraph ADR-020 audit spike + research note)
 
-- Round: **50** (docs + docstring, 无 release): CONTEXT §6 给 R50 定的两件事同一轮全部落地. (a) `src/chronos/adapters/langgraph.py::LangGraphRecorder.__init__` docstring 加 `.. warning::` 段, 明确告诉用户不传 `kind_map` → Phase 3 effect 标注 silently 失效, 交叉引用 `docs/research/r49-langgraph-adr020-audit.md` (spike 11). (b) `docs/images/fork-modal/{01,02,03}.png` 三张都按 `chronos-docs-screenshots` skill 的 recipe 用 v0.4.0a2 代码重截, 全部显示 R48-B 的彩色 icon badge (Brain/Globe/HardDrive/Database/ExternalLink) 而不是 R47-A 的纯文字 tag. 零 src/ 行为变更, 零 schema/API/CLI 变更, `[Unreleased]` CHANGELOG 加一行 R50 docs entry (下次非 alpha release 一起发). **442 pass / 2 skip / 94% cov 维持**.
-- **战略定位 (R33 锁死, 持续有效)**: GitHub 爆款开源项目, 不是 SaaS. v0.4.0a2 仍是最新 tag; R49 + R50 是 docs-only 清理轮, 为 R51+ CrewAI adapter 扩张期腾干净.
-- 当前阶段: **post-v0.4.0a2 Phase 3 tail 完全关闭**. Phase 3 UX 功能面 (R44/R45/R46/R47/R48-A/R48-B) + 审计清理 (R49/R50) 全部完成. 下一程是 Phase 3 扩张期 — 把 ADR-020 的 CrewAI 半边闭环 + 第三个 adapter 进仓.
-- 最新 ADR: **ADR-020 (R48-A, R49 扩写 Follow-ups)** — adapter tool-event `node_name` 三段式; LangGraph CLOSED, CrewAI OPEN (候选 ADR-021 / R51).
-- 最新 research doc: **`docs/research/r49-langgraph-adr020-audit.md` (R49)** — LangGraph ADR-020 audit 关闭笔记 + `kind_map` usage gotcha 详释. R50 的 docstring 警告就是指向这篇.
-- 最新 tag: **v0.4.0a2 (R48-C, prerelease)**; 之前 v0.4.0a1 (R47), v0.3.1 (R45-A), v0.3.0 (R44-A), v0.2.1 (R41). R49 + R50 都无 tag.
+- Round: **51** (cross-slot handoff 收尾, 无 release): 早上发现 2026-04-27 的一个过去 slot 已经 commit 并 push 了 spike12 (commit `f3ae302`, CrewAI event bus F1–F6, 451 行) 但 ADR-021 写完后留在 working tree 没 commit, progress doc 也没写. 今天这轮按 `cron-slot-handoff-recovery` 技能 Option A2 收尾: (a) 补 commit `docs/decisions/ADR-021-crewai-adapter.md` (349 行, D1–D8 + 4 个 rejected alternatives + follow-ups + 三触发重启规则), 跟 spike12 的 F1–F6 严格对齐, 无偏差; (b) 对 spike12 跑 `ruff format` 收掉 3 处 style nits, 行为零变更, F1–F6 重跑依然 ✅; (c) 写本轮 progress doc; (d) 本次 CONTEXT §5+§6 refresh. **意外发现 pre-existing regression**: `tests/unit/test_cli.py` 7 个测试红 (`ValueError: stderr not separately captured`, `exit_code==0 vs 2`), 根因是 `click>=8.2` / `typer>=0.22` 升级后 `CliRunner` 默认 `mix_stderr=True`, 和 no-args exit-code 行为变了. 在 `b86d163` (R50 tip) 上验证同红, **与 R51 无关**, R52 修. R51 非目标: CrewAI 真 scaffold (推到 R52, ADR 先落地干净).
 
-- 测试状态: **442/2skip pass**, **94% coverage**, `api/server.py` 98%, mypy/ruff/format clean (src/ tests/ 范围). R50 无前端改动, 前端 `tsc -b && vite build` R48-B 上次验证依然有效.
+- R50 (prior): CONTEXT §6 给 R50 定的两件事同一轮全部落地. (a) `src/chronos/adapters/langgraph.py::LangGraphRecorder.__init__` docstring 加 `.. warning::` 段, 明确告诉用户不传 `kind_map` → Phase 3 effect 标注 silently 失效, 交叉引用 `docs/research/r49-langgraph-adr020-audit.md` (spike 11). (b) `docs/images/fork-modal/{01,02,03}.png` 三张都按 `chronos-docs-screenshots` skill 的 recipe 用 v0.4.0a2 代码重截, 全部显示 R48-B 的彩色 icon badge (Brain/Globe/HardDrive/Database/ExternalLink) 而不是 R47-A 的纯文字 tag. 零 src/ 行为变更, 零 schema/API/CLI 变更, `[Unreleased]` CHANGELOG 加一行 R50 docs entry (下次非 alpha release 一起发). **442 pass / 2 skip / 94% cov 维持**.
+- **战略定位 (R33 锁死, 持续有效)**: GitHub 爆款开源项目, 不是 SaaS. v0.4.0a2 仍是最新 tag; R49 + R50 是 docs-only 清理轮, R51 补 ADR-021 把 CrewAI 闭环的路线图固化, 为 R52+ CrewAI adapter 真实 scaffold 腾干净.
+- 当前阶段: **post-v0.4.0a2 Phase 3 扩张期启动**. Phase 3 UX 功能面 (R44/R45/R46/R47/R48-A/R48-B) + 审计清理 (R49/R50) + CrewAI adapter 设计 (R51) 全部完成. 下一程是 R52 scaffold CrewAI adapter 骨架并顺手修 CLI test regression.
+- 最新 ADR: **ADR-021 (R51)** — CrewAI adapter event-bus recorder (`scoped_handlers()`), sync-first (`Crew.kickoff` 直接用, 不走 ADR-017 async-wrap), 继承 ADR-020 三段式 `node_name`, `crewai>=0.80,<1.0`, 配 `threading.Lock`+`flush(timeout=...)` 双保险应对 F4 的 ThreadPoolExecutor dispatch. 8 个 Decision, 4 个 rejected alternatives, 5 个 follow-ups (首 follow-up = R52 scaffold). 上一份 ADR-020 (R48-A, R49 Follow-ups 扩写) — LangGraph CLOSED, R51 起 CrewAI 半边也 CLOSED.
+- 最新 research doc: **`docs/research/r49-langgraph-adr020-audit.md` (R49)** — LangGraph ADR-020 audit 关闭笔记 + `kind_map` usage gotcha 详释. R50 的 docstring 警告就是指向这篇. (R51 spike12 的 F 发现直接在 ADR-021 Context 里, 没独立 research doc — 选择是 ADR 本身够详细.)
+- 最新 tag: **v0.4.0a2 (R48-C, prerelease)**; 之前 v0.4.0a1 (R47), v0.3.1 (R45-A), v0.3.0 (R44-A), v0.2.1 (R41). R49 / R50 / R51 都无 tag.
 
-- **R50 产出 (本轮)**:
-  - `src/chronos/adapters/langgraph.py` — `LangGraphRecorder.__init__` docstring +19 行 `.. warning::` 段 (kind_map 必要性 + silent false-safety 警告 + 指向 r49 research note). 无代码改动.
-  - `docs/images/fork-modal/01-warning.png` (108 975 bytes) — amber alert + 4 彩色 icon badge (db/network/fs/external), 完全展示 R48-B 新 visual.
-  - `docs/images/fork-modal/02-safe-pure-llm.png` (106 517 bytes) — 绿色 success alert, 3 downstream 全干净.
-  - `docs/images/fork-modal/03-safe-last-node.png` (104 643 bytes) — 绿色 success alert + "last node — nothing downstream to re-run".
-  - `CHANGELOG.md` — `[Unreleased]` 加 R50 docs entry (docstring + 3 screenshots).
-  - `docs/CONTEXT.md` §5 + §6 refresh (本次编辑).
-  - `docs/progress/2026-04-27-round-50.md` (~225 行) — 本轮 progress doc.
+- 测试状态: **435 pass / 2 skip / 7 failed** (CLI regression, 非 R51 引入, R52 修一次性解决. `tests/unit/test_cli.py` 的 6 个 `*_missing*` + `test_cli_help_default`). `mypy src/` ✅ 27 files, `ruff check src/ tests/spikes/spike12_*.py` ✅, `ruff format` ✅. Spike12 单跑 ✅ F1–F6 (需要 `CREWAI_DISABLE_TELEMETRY=1 OTEL_SDK_DISABLED=true` + `.venv/bin/python`, `uv run` 在 heavy SDK import 会超时). 前端无改动, 前端 build 验证继承 R48-B.
 
-- **R50 关键事实 / 教训 (新增)**:
-  - **NodeKind enum 合法值**: `{llm, tool, fn, router, fork, end}` — 没有 `IO`. 我第一稿 docstring 写了 `NodeKind.IO` 作为"或者"备选, commit 前自查抓到并修掉. 未来任何 adapter 文档引用枚举, **必须先读 `src/chronos/core/models.py::NodeKind` 确认实际成员**, 别靠印象.
-  - **Tour dialog 是 session-scoped 不是 localStorage-scoped**: R50 中段 browser session 被 context compaction 重置成 `about:blank`, 再 `browser_navigate` 回业务 URL, onboarding Tour 又弹了. 对 cron slot 截图流程的含义: 每次 `browser_navigate` 之后都要检查 Tour 是否在顶部且准备好点 Close. 候选 skill-patch 一条补进 `chronos-docs-screenshots` pitfalls 表.
-  - **`chronos-docs-screenshots` skill 的 "Fork Modal Recipe" 是真的好用**: R50 三张截图走该 skill 教的 CSS 注入藏 drawer 技巧, 每张只花 3-4 个 browser tool calls, 比临场摸索省一半 budget. Skill v1.0.0 与 R50 内容完全一致, 不需要 patch, 只需要把"Tour session-scoped"这条小 pitfall 补进去 (非阻塞, R51 顺手干).
+- **R51 产出 (本轮)**:
+  - `docs/decisions/ADR-021-crewai-adapter.md` (349 行, 从 working tree 晋级到 commit) — CrewAI adapter interface 锁定.
+  - `tests/spikes/spike12_crewai_events.py` — `ruff format` 收 3 处 cosmetic nits (行为 zero change, F1–F6 重跑全 ✅).
+  - `CHANGELOG.md` — `[Unreleased]` 加 R51 ADR-021 行.
+  - `docs/CONTEXT.md §5 + §6` refresh (本次编辑).
+  - `docs/progress/2026-05-06-round-51.md` (~285 行) — 本轮 progress doc + cross-slot handoff 还原 + CLI regression 诊断.
+
+- **R51 关键事实 / 教训 (新增)**:
+  - **CrewAI event bus 的 ThreadPoolExecutor dispatch 是 adapter 设计的关键约束**: `crewai_event_bus.emit()` 返回 `concurrent.futures.Future`, 不在调用线程 inline 跑. 不调 `future.result()` + `flush(timeout=...)` 就读 buffer 会丢同 class 的第二次 emit (spike12 F4 实测复现). Recorder 必须 `threading.Lock` + 显式 flush barrier. ADR-021 D1+D2 固化.
+  - **CrewAI 相比 AutoGen 的 ergonomics 净胜**: `Crew.kickoff` 是 sync (`kickoff_async` opt-in), 不走 ADR-017 `asyncio.run()` wrap; `scoped_handlers()` CM 自己管 handler detach, 零泄漏风险; `ToolUsage*Event` 自带 `tool_name` + `agent_role` 顶层字段, ADR-020 三段式 `node_name` 天然合身, 零 classifier patch. ADR-021 Consequences §Positive 有完整清单.
+  - **CrewAI import 必须先关 telemetry**: `import crewai` 默认 opts into OpenTelemetry + PostHog 上报. 本地 spike 跑之前必须 `CREWAI_DISABLE_TELEMETRY=1 OTEL_SDK_DISABLED=true`, 测试 harness 也一样 (ADR-021 D6 codify). `chronos-spike-authoring` skill 已有这条.
+  - **`uv run python tests/spikes/spikeN_*.py` 在 heavy SDK 上会挂超时 (60s+)**: CrewAI spike12 首跑踩坑, 改用 `.venv/bin/python tests/spikes/spikeN_*.py` 秒过. `chronos-spike-authoring` skill R51 补的这条已在写 spike 时就提醒到位.
+  - **`click>=8.2` / `typer>=0.22` 破坏 CliRunner.stderr 默认行为**: R51 跑 pytest 首次 7 个测试炸 `ValueError: stderr not separately captured`. 根因升级后 `CliRunner` 默认 `mix_stderr=True`, `result.stderr` 访问直接抛. 解法: `tests/unit/test_cli.py` 模块级 `runner = CliRunner(mix_stderr=False)`, 或 pin `click<8.2` / `typer<0.22`. **这是 pre-existing, 在 b86d163 (R50 tip) 上也红**, 非 R51 引入, R52 第一件事修.
+  - **`cron-slot-handoff-recovery` skill Option A2 一次性验证通过**: 早上识别\"spike 已 push, ADR 留在 working tree 没 commit, progress doc 没写\"只花 5 个 tool call; 按技能 playbook 直接 finish-the-docs, 无需重跑 spike 逻辑 / 重写 ADR 推理. 技能原文, 零 patch 需求.
 
 - 前端路由: `/app/#/runs`, `/app/#/runs/<id>`, `/app/#/runs/<a>/diff/<b>` (R39-A)
 - 仓库可见性: **PUBLIC** since R34-C 尾部
@@ -217,32 +220,53 @@ chronos-agent/
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 51 — CrewAI adapter 启动 (ADR-021 候选 + scaffold)**
+**Round 52 — CLI test regression fix + CrewAI adapter scaffold**
 
-战略视角: Phase 3 tail (R48-A..R50) 完全收尾. 下一程是让 ADR-020 的 CrewAI Follow-up 正式并轨, 同时给 chronos-agent 添加第三个生产 adapter, 把"多框架 time-machine"的叙事从 2 框架升到 3 框架. CrewAI 是 agent 生态里除 LangGraph / AutoGen 外使用面最大的第三家, day-0 adapter 的战略价值明显.
+战略视角: R51 已把 ADR-021 落地并把 CrewAI adapter 设计面固化. R52 是执行轮, 顺手先修一下 R51 发现的 pre-existing CLI test regression (`click>=8.2` / `typer>=0.22` 升级导致 `CliRunner.stderr` 炸), 再按 ADR-021 D1–D8 scaffold `src/chronos/adapters/crewai/`. 两件事一起做是因为 scaffold 会加 duck test, 需要 pytest gate 是绿的才能看出 scaffold 对不对.
 
-### R51 (next): CrewAI adapter ADR + scaffold
+### R52 (next): fix CLI tests + CrewAI scaffold
 
-- **ADR-021 (候选, 必做第一步)**: CrewAI adapter interface 文档, 明确三件事:
-  - `node_name` 三段式应如何在 CrewAI 的 agent-task-crew 模型上映射. CrewAI 的主要事件形状是什么 (TaskStart/TaskComplete/ToolUse/AgentResponse)? 工具调用是否有 per-call function name? 如果有, 三段式对齐 AutoGen (`agent:EventClass:tool_name`); 如果 CrewAI 的 node 粒度已经是 function-shaped, 走 ADR-020 "Graph-based adapters" 豁免条款.
-  - `kind_map` 在 CrewAI 里要求什么 (参考 R49 LangGraph 的 silent false-safety 教训, 从 Day 0 就 docstring 警告).
-  - CrewAI 框架本身是否像 AutoGen 一样 async-first, 是否需要类似 ADR-017 的 sync-wrap 策略.
-- **前置 spike (建议)**: `tests/spikes/spikeN_crewai_events.py` — offline 4-node crew, 看 CrewAI 的事件流长什么样, 确认 ADR-021 里 `node_name` 约定能落地. 推荐在 ADR-021 之前做, 避免 R48-A 式的 "ADR 靠代码阅读漂移" 重演.
-- **scaffold (必做)**: `src/chronos/adapters/crewai/recorder.py` 骨架 + `tests/unit/test_adapter_crewai.py` (duck-only). CrewAI 依赖先不加进 `pyproject.toml` 必需 deps; 走 optional dep 路线 (`chronos-agent[crewai]` extras) 和 LangGraph/AutoGen 风格一致.
-- **不必做**: 真 LLM smoke 测试 (R52+). R51 只要 duck test + ADR + 结构骨架.
-- 工期估: 如果 spike 和 ADR 分 2 轮走, R51 完成 spike + ADR 即可; scaffold 挪到 R52. 如果 spike 轻量 (CrewAI 事件模型够直白), R51 一轮打包 ADR + 骨架, R52+ 做真 LLM smoke.
-- **R48-A + R49 教训必须在 ADR-021 里醒目引用**: (a) classifier 测试一律用真 adapter 输出喂, 手选字符串是陷阱; (b) graph-based / group-chat-based 框架看完 adapter 代码之后**必须补一个 real-framework spike 验证 `node_name` 的实际形状**, 不能只靠代码阅读.
+**P0 (先做, 30 min): CLI test regression**
 
-### R52+ 候选: CrewAI real-LLM smoke + v0.4.0 发版窗口
+- 改 `tests/unit/test_cli.py` 模块级 `runner = CliRunner()` → `runner = CliRunner(mix_stderr=False)`.
+- 修 `test_cli_help_default`: Typer 0.22+ 的 `no_args_is_help` 默认行为变了 (exit 0 + print help to stdout, 不再 exit 2). 把断言从 `assert result.exit_code == 2` 改成只 assert help text 内容 (`"time-travel" in result.stdout.lower()`), 或 pin `typer<0.22`. 推荐前者, 避免锁版本.
+- 期望 gate 恢复到 **442 pass / 2 skip / 94% cov** (R50 基线).
 
-- 真 LLM smoke 测试 (`tests/spikes/spikeN_crewai_tool_effects.py`) — 参考 R48-A spike10 模板, 跑一个 2-3 工具的 CrewAI crew, 验 classifier 在 CrewAI 上跑得通.
-- 如果 smoke 绿, v0.4.0 非 alpha 发版 (把 v0.4.0a1 + a2 + R49 + R50 的 `[Unreleased]` 合并) OR 直接 v0.5.0a1 发版把 CrewAI 作为新框架纳入. 具体走哪条看 R51/R52 工期和测试结果.
+**P1 (主体, 2-3 小时): CrewAI scaffold (ADR-021 D1–D8)**
 
-### R53+ 候选: Phase 4 多 run 对比视图 (ADR 先行, 仍不在近期)
+- `src/chronos/adapters/crewai/__init__.py` — 导出 `crewai_adapter` singleton, conform to `AdapterProtocol` (ADR-016). 形状镜像 `src/chronos/adapters/autogen/__init__.py`.
+- `src/chronos/adapters/crewai/recorder.py` — 实现 `CrewAIRecorder.record()` CM:
+  - `with crewai_event_bus.scoped_handlers()` (D1).
+  - `threading.Lock` + list buffer (D2).
+  - 三段式 `node_name = f"{agent_role}:{type(event).__name__}:{tool_name}"` for tool events, identity-token third segment for LLM/task (D3).
+  - Default `kind_map` covers 7 event classes per D4 table (`Task*` → FN, `ToolUsage*` → TOOL, `LLMCall*` → LLM, `CrewKickoffCompleted` → END).
+  - `flush(timeout=self.flush_timeout_s)` + `_drain_buffer_to_store()` in `finally` block (D1).
+  - **docstring**: 仿 R50 LangGraph `kind_map` warning style, 把 `flush()+lock` 必要性 + `kind_map` 对 effect annotation 必要性 (R49 lesson carryover) 都写进去.
+  - **不支持** `UsageExtractor` callback (D7), 非 None 时 raise `AdapterError`.
+- `tests/unit/test_adapter_crewai.py` — duck only (不进真 CrewAI). 必须包含:
+  - 基础 `record()` CM 生命周期测试.
+  - **Concurrency regression test** (ADR-021 Follow-up 显式要求): 用 `ThreadPoolExecutor(max_workers=4)` rapid-fire 发三个 `ToolUsageStartedEvent` (同 class 同 agent), 验证 buffer 里有 3 条 (F4 regression fence).
+  - `kind_map` override 测试 (覆盖默认到自定义).
+  - 不包含真实 `import crewai` — 用 MagicMock 模拟 event bus + event 对象.
+- `pyproject.toml` — 加 `[project.optional-dependencies]` 下 `crewai = ["crewai>=0.80,<1.0"]`; 不进 required deps.
+- `CHANGELOG.md` `[Unreleased]` 加 R52 scaffold 行.
+
+**P2 (如果 P0+P1 还剩时间, 可选): 把 spike12 的实验知识点转成 research doc**
+
+- 新 `docs/research/r51-crewai-event-bus-characterization.md`, 把 spike12 的 8 合成事件细节 + F1–F6 的更详 prose 版本放进去. ADR-021 Context §What Spike 12 established 已经相当完整, 这步是 nice-to-have. R52 如果 P0+P1 吃满时间则整个推到 R53.
+
+**工期估计**: P0 = 30 min, P1 = 2-3 小时, P2 = 1 小时. 单 slot 应该能完成 P0+P1; P2 推到 R53.
+
+### R53+ 候选: CrewAI real-LLM smoke + v0.4.0 发版窗口
+
+- 真 LLM smoke 测试 `tests/spikes/spike13_crewai_tool_effects.py` — 参考 spike10 AutoGen 模板, 跑一个 2-agent CrewAI crew 带 3 工具 (weather fetch + file read + db query), 验 effect classifier 在 CrewAI 真事件上 tag 正确.
+- 如果 smoke 绿, v0.4.0 非 alpha 发版 (把 v0.4.0a1 + a2 + R49 + R50 + R51 + R52 + R53 的 `[Unreleased]` 合并一起发). 新增 adapter 是 minor-level 兼容变更, 0.4.0 non-alpha 可以承载.
+
+### R54+ 候选: Phase 4 多 run 对比视图 (ADR 先行, 仍不在近期)
 
 见 R48-A progress doc §7. 需要先写 ADR (parent-of-run graph 数据模型, 非 parent-of-node), 3-5 轮工期, 不是单轮活.
 
-### R51 非目标 (继承红线)
+### R52 非目标 (继承红线)
 
 - ❌ `chronos compare` alias (ADR-018 已决)
 - ❌ 改 `chronos diff` 行为 (ADR-006 FROZEN)
@@ -254,8 +278,11 @@ chronos-agent/
 - ❌ E2B / Modal / nsjail / Docker 沙箱集成 (ADR-019 已决)
 - ❌ 改 `ForkPlan` schema (v0.1.1 对外契约)
 - ❌ 改 AutoGen `node_name` 三段式 (ADR-020)
+- ❌ 改 CrewAI adapter interface (ADR-021 D1–D8 刚落地, 除非触发 3-of-5 重启条件)
 - ❌ frontend 引入 Vitest / RTL 测试框架 (R48-B 刻意推迟, 等有 3+ 组件需要测试的时机)
-- ❌ CrewAI 真 LLM smoke (推到 R52+, R51 只做 duck + ADR)
+- ❌ CrewAI `kickoff_async` 支持 (ADR-021 D5 显式 defer)
+- ❌ CrewAI agent-level events (ADR-021 D4 显式 defer)
+- ❌ CrewAI 真 LLM smoke (R53+)
 
 ### Release strategy (v0.4.0a2 → v0.4.0 → v0.5.0?)
 
@@ -263,7 +290,7 @@ chronos-agent/
 - v0.3.1 ✅ cut 2026-04-25 (R45-A) — PH3-03 CLI fork-plan preview
 - v0.4.0a1 ✅ cut 2026-04-26 (R47) — PH3-04 Web fork modal + forking-safely guide
 - v0.4.0a2 ✅ cut 2026-04-27 (R48-C) — R48-A AutoGen classifier fix + ADR-020; R48-B effect-tag badge icons
-- v0.4.0 🚧 候选 R52+ — CrewAI adapter smoke 通过 + Phase 3 全框架 dogfood 无大 bug 再 cut non-alpha; 把 R49 + R50 的 `[Unreleased]` 条目一起发
+- v0.4.0 🚧 候选 R53+ — CrewAI adapter scaffold (R52) + real-LLM smoke (R53) 通过后, 把 R49 / R50 / R51 / R52 / R53 的 `[Unreleased]` 合并非 alpha cut
 - v0.5.0 🚧 候选 Phase 4 (多 run 树对比 / fork tree 可视化) 启动后
 
 
@@ -303,4 +330,4 @@ chronos-agent/
 
 ---
 
-*Last updated: 2026-04-27 (CST ~07:40) by Round 48-C agent (v0.4.0a2 release cut bundling R48-A + R48-B; lockstep version bump across pyproject/`__version__`/CLI status line; CHANGELOG rolled; tag pushed via gh-proxy; GitHub Release page created as prerelease; fixed CONTEXT.md line-number prefix corruption inherited from R48-B commit).*
+*Last updated: 2026-05-06 (CST 11:15, cron slot inside 0–11 window) by Round 51 agent — cross-slot handoff completion (Option A2 per `cron-slot-handoff-recovery`): committed ADR-021 that an earlier 2026-04-27 slot left untracked, format-swept spike12, wrote progress doc, refreshed CONTEXT §5+§6, logged pre-existing CLI-test regression (click/typer upgrade, R50-era bug) as R52 first priority.*

@@ -326,22 +326,15 @@ def main() -> None:
         assert data["tool_name"] in {"fetch_weather_api", "read_file"}, (
             f"F1 tool_name missing on {name}: {data}"
         )
-        assert data["agent_role"] == "researcher", (
-            f"F1 agent_role missing on {name}: {data}"
-        )
+        assert data["agent_role"] == "researcher", f"F1 agent_role missing on {name}: {data}"
     # Simulated three-segment node_name as a CrewAI adapter would build it:
     for name, data in tool_events:
         simulated = f"{data['agent_role']}:{name}:{data['tool_name']}"
-        assert simulated.count(":") == 2, (
-            f"F1 three-segment shape failed: {simulated!r}"
-        )
+        assert simulated.count(":") == 2, f"F1 three-segment shape failed: {simulated!r}"
     print(
-        f"[F1] ToolUsage*Event three-segment node_name viable "
-        f"({len(tool_events)} events verified)"
+        f"[F1] ToolUsage*Event three-segment node_name viable ({len(tool_events)} events verified)"
     )
-    print(
-        f"     example node_name: {'researcher:ToolUsageStartedEvent:fetch_weather_api'!r}"
-    )
+    print(f"     example node_name: {'researcher:ToolUsageStartedEvent:fetch_weather_api'!r}")
 
     # --- F2 verify: Task events carry task_name ---
     with _cap_lock:
@@ -372,8 +365,7 @@ def main() -> None:
         f"F3 response missing on LLMCallCompletedEvent: {llm_completed}"
     )
     assert (
-        llm_completed["usage"] is not None
-        and llm_completed["usage"].get("prompt_tokens") == 42
+        llm_completed["usage"] is not None and llm_completed["usage"].get("prompt_tokens") == 42
     ), f"F3 usage missing on LLMCallCompletedEvent: {llm_completed}"
     print(
         "[F3] LLMCall*Event carries call_id + model + usage (2 events verified; "
@@ -389,9 +381,7 @@ def main() -> None:
     #     second same-class emit vanishes.
     with _cap_lock:
         total = len(captured)
-    assert total == 8, (
-        f"F4 expected 8 captured after future-wait + flush, got {total}"
-    )
+    assert total == 8, f"F4 expected 8 captured after future-wait + flush, got {total}"
     print(
         f"[F4] emit() returns Future; handlers run on ThreadPoolExecutor. "
         f"Future.result()+flush() barrier reliably materialized {total} events."

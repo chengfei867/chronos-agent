@@ -4,6 +4,12 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Docs (R51 — ADR-021 CrewAI adapter interface)
+
+- **`docs/decisions/ADR-021-crewai-adapter.md`** (new, 349 lines) — codifies the CrewAI adapter design based on the `spike12_crewai_events.py` empirical findings (F1–F6). Event-bus recorder via `crewai_event_bus.scoped_handlers()`, `threading.Lock` + list buffer with `flush(timeout=...)` barrier to handle CrewAI's `ThreadPoolExecutor` dispatch, three-segment `node_name` per ADR-020 (`{agent_role}:{EventClassName}:{tool_name}`), sync-first `Crew.kickoff` (no ADR-017 asyncio wrap — CrewAI only uses async for opt-in `kickoff_async`), default `kind_map` covering `{Task*, ToolUsage*, LLMCall*, CrewKickoffCompleted}`, `usage_extractor` callback unsupported (raises `AdapterError`), version pin `crewai>=0.80,<1.0`. 4 rejected alternatives (listener-class subclassing, monkey-patch `kickoff`, force-sync dispatch, inherit ADR-017). 5 follow-ups tracked including R52 scaffold and R53 real-LLM smoke.
+- **`tests/spikes/spike12_crewai_events.py`** — cosmetic `ruff format` sweep (3 hunks — assertion-message string joins and redundant f-string wraps). Zero behaviour change; F1–F6 still all pass.
+- No source code, schema, API, CLI, or frontend change. Ships with the next non-alpha release (v0.4.0).
+
 ### Docs (R50 — LangGraph kind_map warning + fork-modal screenshot refresh)
 
 - **`src/chronos/adapters/langgraph.py`** — `LangGraphRecorder.__init__` docstring gains a prominent `.. warning::` block explaining that un-mapped nodes default to `NodeKind.FN`, which silently short-circuits the Phase 3 effects classifier to `effects=[]`. Users who rely on fork-modal effect annotation MUST supply `kind_map` entries marking any I/O-doing node as `NodeKind.TOOL`. Cross-references `docs/research/r49-langgraph-adr020-audit.md` (spike 11). No code or behaviour change — docstring only.
