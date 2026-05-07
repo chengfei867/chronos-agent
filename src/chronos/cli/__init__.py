@@ -100,7 +100,8 @@ def info() -> None:
         "Status: Phase 3 UX polish -- effect annotations (PH3-02), "
         "CLI fork-plan preview (PH3-03), Web fork modal (PH3-04), "
         "effect-tag badge icons + AutoGen classifier fix (ADR-020), "
-        "v0.4.0a2"
+        "CrewAI adapter (ADR-021 + ADR-022), "
+        "v0.4.0"
     )
     console.print(
         "Commands: [green]runs list/show, forks show, diff, replay, fork plan, web[/green] "

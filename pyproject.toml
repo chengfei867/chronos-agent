@@ -1,6 +1,6 @@
 [project]
 name = "chronos-agent"
-version = "0.4.0a2"
+version = "0.4.0"
 description = "Time-travel debugger for multi-agent AI systems — record, replay, fork, diff reasoning trees."
 readme = "README.md"
 license = { text = "MIT" }
