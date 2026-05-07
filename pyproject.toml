@@ -47,7 +47,11 @@ crewai = [
     # emit(), and top-level tool_name/agent_role on ToolUsage*Event are
     # stable. Upper bound is pre-emptive for CrewAI's pre-1.0 event-schema
     # churn.
-    "crewai>=0.80,<1.0",
+    # ADR-022 (R53): upper bound bumped from <1.0 to <2.0 after
+    # spike13a verified that CrewAI 1.14.3's event-bus surface is
+    # a source-compatible superset of 0.80+. The <1.0 upper was
+    # pre-emptive, not empirical.
+    "crewai>=0.80,<2.0",
 ]
 web = [
     "fastapi>=0.110",

@@ -53,11 +53,9 @@ class _CrewAIAdapter:
     """Module-level :class:`AdapterProtocol` implementation for CrewAI.
 
     Thin factory over :class:`CrewAIRecorder`. Version constraint targets
-    ``crewai>=0.80,<1.0`` (ADR-021 §D8 — the 0.80 line is where
-    ``scoped_handlers()``, ``Future``-returning ``emit()``, and the
-    top-level ``tool_name`` / ``agent_role`` fields on ``ToolUsage*Event``
-    are all stable; the upper bound is pre-emptive because CrewAI marks the
-    event schema as unstable in the lead-up to their 1.0 release).
+    ``crewai>=0.80,<2.0`` (ADR-021 §D8 original floor; ADR-022 R53 raised
+    the ceiling from ``<1.0`` to ``<2.0`` after spike13a verified 1.14.3
+    was a source-compatible superset of the 0.80+ event-bus API).
 
     Construction channels:
 
@@ -76,7 +74,7 @@ class _CrewAIAdapter:
     """
 
     name: str = "crewai"
-    version_constraint: str = ">=0.80,<1.0"
+    version_constraint: str = ">=0.80,<2.0"
 
     def build_recorder(
         self,

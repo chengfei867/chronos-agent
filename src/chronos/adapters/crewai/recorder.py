@@ -416,7 +416,7 @@ class CrewAIRecorder:
             raise AdapterError(
                 "CrewAIRecorder.record(): the 'crewai' package is not "
                 "installed. Install the extra with 'pip install "
-                "chronos-agent[crewai]' or add crewai>=0.80,<1.0 to your "
+                "chronos-agent[crewai]' or add crewai>=0.80,<2.0 to your "
                 "own deps."
             ) from e
 

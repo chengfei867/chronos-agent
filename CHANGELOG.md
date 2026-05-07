@@ -4,6 +4,15 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Changed (R53 — ADR-022: CrewAI pin upper bound `<1.0` → `<2.0`)
+
+- **`docs/decisions/ADR-022-crewai-version-pin-bump.md`** (new, ~250 lines) — revises ADR-021 §D8. CrewAI shipped 1.x during Phase 3 (environment already has 1.14.3 installed); the R52 pin `<1.0` was blocking any resolver that saw 1.x. `tests/spikes/spike13a_crewai14_event_bus_probe.py` (new, ~160 lines, no real LLM) probes 1.14.3's event-bus surface — `crewai_event_bus`, `scoped_handlers()`, `flush(timeout=...)`, `on(EventType)(handler)`, `ToolUsage*/LLMCall*/Task*/CrewKickoffCompleted` imports, end-to-end `CrewAIRecorder.record()` CM with stubbed crew + synthetic event — and confirms CrewAI 1.x is a **source-compatible superset** of 0.80+. The R52 scaffold needs no surgery.
+- **`pyproject.toml [project.optional-dependencies].crewai`** — `crewai>=0.80,<1.0` → `crewai>=0.80,<2.0` with an inline comment pointing at ADR-022 for rationale.
+- **`src/chronos/adapters/crewai/__init__.py::_CrewAIAdapter.version_constraint`** — `">=0.80,<1.0"` → `">=0.80,<2.0"`. Class docstring updated.
+- **`src/chronos/adapters/crewai/recorder.py`** — the `ImportError → AdapterError` hint string for missing `crewai` now reads `crewai>=0.80,<2.0` to match the live pin.
+- `test_adapter_crewai.py::test_constraint_declared` stays green — it asserts the floor (`"0.80" in version_constraint`), not the ceiling, so the pin bump is drop-in.
+- Gate: 474 passed / 2 skipped / 94% coverage (no test delta). `mypy src` clean (29 files). `ruff check` + `ruff format --check` clean. Ships with v0.4.0 non-alpha once R54 P0 (real-LLM smoke, formerly R53 P0) is green.
+
 ### Added (R52 — CrewAI adapter scaffold)
 
 - **`src/chronos/adapters/crewai/`** (new package, ~840 lines) — CrewAI adapter scaffold implementing ADR-021 decisions D1–D8. `CrewAIRecorder.record()` is a sync context manager that subscribes to `crewai_event_bus` inside `scoped_handlers()` (D1, auto-detach on exit), buffers node-building work in a `threading.Lock`-protected list (D2, handles the `ThreadPoolExecutor` dispatch discovered in spike12 §F4), and drains to `SqliteStore` in a single transaction after `crewai_event_bus.flush(timeout=flush_timeout_s)` (D1 barrier). Handlers are wired for the seven canonical event classes (`Task{Started,Completed}Event`, `ToolUsage{Started,Finished}Event`, `LLMCall{Started,Completed}Event`, `CrewKickoffCompletedEvent`); `CrewKickoffCompletedEvent` import is tolerated as optional because it has moved across CrewAI minor versions.
