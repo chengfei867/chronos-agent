@@ -3,7 +3,7 @@
 > **Time-Travel Debugger for Multi-Agent AI Systems.**
 > Record every reasoning step. Fork at any node. Diff branches. Compare timelines side by side.
 
-**🤖 100% AI-generated** — every commit, design doc, and architectural decision in this repository is authored autonomously by an AI agent (Hermes Agent / Claude Opus). The human instigator only fired the starting pistol.
+**🤖 100% AI-generated** — every commit, design doc, and architectural decision in this repository is authored autonomously by an AI agent (Hermes Agent / Claude Opus). The human instigator only fired the starting pistol. The CrewAI adapter shipped in v0.4.0 spans a seven-round arc (R49–R55) entirely authored by the agent across three time zones of autonomous cron slots.
 
 ---
 
@@ -67,25 +67,30 @@ See [`docs/getting-started.md`](./docs/getting-started.md) for the full walkthro
 
 ### Status
 
-Phase 2 in flight — **single-agent record / fork / diff / compare complete, multi-framework adapter contract stable, Web UI shipping**:
+Phase 3 **complete** — **three-adapter matrix (LangGraph + AutoGen + CrewAI) shipping, effect-aware fork UX end-to-end, Web UI and CLI in lockstep**:
 
-| Capability                                    | Milestone | Status                                   |
-|-----------------------------------------------|-----------|------------------------------------------|
-| Spikes (capture/fork/diff)                    | M1.1      | ✅ all 3 green                            |
-| Core four-verb loop (record/replay/fork/diff) | M1.*      | ✅ shipped in v0.1.x                      |
-| Token usage & cost visibility                 | v0.1.2+   | ✅ (three-extractor family)               |
-| Adapter contract v2 (ADR-015/016)             | v0.2.0a   | ✅ Phase-2 unblocked                      |
-| Linear pipeline reference adapter             | v0.2.0a   | ✅ zero-dep, ships as R1 impl             |
-| Web UI — TreeView + Run Info + playback       | v0.2.0    | ✅ AntD v6 + ReactFlow v12, zh/en i18n    |
-| Multi-run family tree + lane layout           | v0.2.0    | ✅ R37.5                                  |
-| Tree view polish (Legend, ConceptTip, edges)  | v0.2.0    | ✅ R38                                    |
-| **Compare: side-by-side diff viewer (UI)**    | **v0.2.1**| **✅ R39-A — ADR-018 "compare" narrative**|
-| Release pipeline (semver, tags, changelog)    | ongoing   | ✅ [`chronos-release-pattern`] skill      |
-| **Effect-aware fork UX** — adapter tags, CLI preview, Web modal | **v0.3.0 → v0.4.0-α** | **✅ PH3-02 + PH3-03 + PH3-04, see [`docs/guides/forking-safely.md`][forksafely]** |
+| Capability                                                      | Milestone             | Status                                                                            |
+|-----------------------------------------------------------------|-----------------------|-----------------------------------------------------------------------------------|
+| Spikes (capture/fork/diff)                                      | M1.1                  | ✅ all 3 green                                                                     |
+| Core four-verb loop (record/replay/fork/diff)                   | M1.*                  | ✅ shipped in v0.1.x                                                               |
+| Token usage & cost visibility                                   | v0.1.2+               | ✅ (three-extractor family)                                                        |
+| Adapter contract v2 (ADR-015/016)                               | v0.2.0a               | ✅ Phase-2 unblocked                                                               |
+| Linear pipeline reference adapter                               | v0.2.0a               | ✅ zero-dep, ships as R1 impl                                                      |
+| **LangGraph adapter**                                           | v0.2.0                | ✅ state-dict paradigm (checkpointer-backed fork)                                  |
+| **AutoGen adapter**                                             | v0.4.0a2              | ✅ message-list paradigm + per-tool `effects_map` override ([ADR-020])             |
+| **CrewAI adapter**                                              | **v0.4.0**            | **✅ event-bus paradigm, pin `>=0.80,<2.0` ([ADR-021] / [ADR-022])**               |
+| Web UI — TreeView + Run Info + playback                         | v0.2.0                | ✅ AntD v6 + ReactFlow v12, zh/en i18n                                             |
+| Multi-run family tree + lane layout                             | v0.2.0                | ✅ R37.5                                                                           |
+| Compare: side-by-side diff viewer (UI)                          | v0.2.1                | ✅ R39-A — ADR-018 "compare" narrative                                             |
+| **Effect-aware fork UX** — adapter tags, CLI preview, Web modal | v0.3.0 → v0.4.0       | ✅ PH3-02 + PH3-03 + PH3-04, see [`docs/guides/forking-safely.md`][forksafely]     |
+| Release pipeline (semver, tags, changelog)                      | ongoing               | ✅ [`chronos-release-pattern`] skill, 12x validated                                |
 
 [forksafely]: ./docs/guides/forking-safely.md
+[ADR-020]: ./docs/decisions/ADR-020-adapter-tool-node-name-shape.md
+[ADR-021]: ./docs/decisions/ADR-021-crewai-adapter.md
+[ADR-022]: ./docs/decisions/ADR-022-crewai-version-pin-bump.md
 
-**Next phases**: additional framework adapters (AutoGen / CrewAI / raw OpenAI tool-loops), diff export formats, Web UI merge view.
+**Next phases**: Phase 4 candidates (multi-run tree comparison, fork-tree visualization, fourth adapter #4, Jupyter integration).
 
 Detailed milestones: [`docs/roadmap.md`](./docs/roadmap.md). Design decisions: [`docs/decisions/`](./docs/decisions/).
 
@@ -159,22 +164,25 @@ chronos web --db /tmp/chronos-demo.db
 
 ### 当前阶段
 
-Phase 2 推进中 — **record / fork / diff / compare 四段式单 agent 能力已全通**, 多框架 adapter 契约稳定, Web UI 可视化上线。
+Phase 3 **已收官** — **三 adapter 矩阵 (LangGraph + AutoGen + CrewAI) 全部上线, 副作用感知 fork UX 端到端打通, Web UI 与 CLI 同步对齐**:
 
-| 能力                                       | 里程碑    | 状态                                   |
-|--------------------------------------------|-----------|----------------------------------------|
-| 三条 spike（capture/fork/diff）            | M1.1      | ✅ 全绿                                 |
-| 四段动词 (record/replay/fork/diff)         | M1.*      | ✅ v0.1.x 系列已 ship                   |
-| Token 用量 & 成本可视                      | v0.1.2+   | ✅ 三种 extractor 合流                  |
-| Adapter 契约 v2 (ADR-015/016)              | v0.2.0a   | ✅ Phase 2 正式解锁                     |
-| Linear pipeline 参考 adapter               | v0.2.0a   | ✅ 零依赖                               |
-| Web UI — TreeView + 运行信息 + 回放        | v0.2.0    | ✅ AntD v6 + ReactFlow v12, 中英双语    |
-| 多 run 族谱视图                            | v0.2.0    | ✅ R37.5                                |
-| Tree 视图 polish (Legend/ConceptTip/edge)  | v0.2.0    | ✅ R38                                  |
-| **并排对比视图 Compare (Web UI)**          | **v0.2.1**| **✅ R39-A — ADR-018 "compare" 叙事**   |
-| Release 流程 (SemVer + tag + changelog)    | 长期      | ✅ [`chronos-release-pattern`] skill    |
+| 能力                                             | 里程碑        | 状态                                                                |
+|--------------------------------------------------|---------------|---------------------------------------------------------------------|
+| 三条 spike (capture/fork/diff)                   | M1.1          | ✅ 全绿                                                              |
+| 四段动词 (record/replay/fork/diff)               | M1.*          | ✅ v0.1.x 系列已 ship                                                |
+| Token 用量 & 成本可视                            | v0.1.2+       | ✅ 三种 extractor 合流                                               |
+| Adapter 契约 v2 (ADR-015/016)                    | v0.2.0a       | ✅ Phase 2 正式解锁                                                  |
+| Linear pipeline 参考 adapter                     | v0.2.0a       | ✅ 零依赖                                                            |
+| **LangGraph adapter**                            | v0.2.0        | ✅ state-dict 范式 (checkpointer-backed fork)                        |
+| **AutoGen adapter**                              | v0.4.0a2      | ✅ message-list 范式 + 工具粒度 `effects_map` 覆写 ([ADR-020])       |
+| **CrewAI adapter**                               | **v0.4.0**    | **✅ event-bus 范式, pin `>=0.80,<2.0` ([ADR-021] / [ADR-022])**     |
+| Web UI — TreeView + 运行信息 + 回放              | v0.2.0        | ✅ AntD v6 + ReactFlow v12, 中英双语                                 |
+| 多 run 族谱视图                                  | v0.2.0        | ✅ R37.5                                                             |
+| 并排对比视图 Compare (Web UI)                    | v0.2.1        | ✅ R39-A — ADR-018 "compare" 叙事                                    |
+| **副作用感知 Fork UX** — tag + CLI preview + Web | v0.3.0 → v0.4.0 | ✅ PH3-02 + PH3-03 + PH3-04, 见 [`docs/guides/forking-safely.md`][forksafely] |
+| Release 流程 (SemVer + tag + changelog)          | 长期          | ✅ [`chronos-release-pattern`] skill, 12 轮验证                      |
 
-**下一阶段**: 更多框架 adapter (AutoGen / CrewAI / 纯 OpenAI tool-loop)、diff 导出格式、Web UI merge 视图。
+**下一阶段**: Phase 4 候选 (多 run 树形对比 / fork tree 可视化 / 第 4 个 adapter / Jupyter 集成).
 
 详细里程碑见 [`docs/roadmap.md`](./docs/roadmap.md)。设计决策见 [`docs/decisions/`](./docs/decisions/)。
 
@@ -197,7 +205,7 @@ chronos-agent/
 ├── README.md
 ├── pyproject.toml
 ├── src/chronos/
-│   ├── adapters/            ← framework adapters (LangGraph + Linear today)
+│   ├── adapters/            ← framework adapters (LangGraph + AutoGen + CrewAI + Linear)
 │   ├── api/                 ← FastAPI Web UI backend (/runs, /runs/compare, …)
 │   ├── cli/                 ← `chronos` typer app (runs/diff/fork/replay/web)
 │   ├── core/                ← models, diff engine
@@ -209,9 +217,10 @@ chronos-agent/
 ├── scripts/
 │   └── seed_demo.py         ← 10-second demo DB (5 runs, 3-gen fork chain)
 ├── tests/
-│   ├── unit/                ← 380+ unit tests (duck-typed fakes)
+│   ├── unit/                ← 470+ unit tests (duck-typed fakes)
 │   ├── integration/         ← real SqliteStore + real LangGraph
-│   └── spikes/              ← empirical validation scripts (M1.1)
+│   ├── live/                ← real-LLM smoke tests, opt-in via CHRONOS_LIVE=1
+│   └── spikes/              ← empirical validation scripts (M1.1 + per-adapter)
 ├── docs/
 │   ├── assets/              ← README screenshots
 │   ├── getting-started.md   ← 5-minute onboarding
@@ -231,7 +240,7 @@ chronos-agent/
 
 ```bash
 uv sync
-uv run pytest            # 380+ tests, ~92% coverage
+uv run pytest            # 470+ tests, ~94% coverage
 uv run ruff check .
 uv run ruff format .
 uv run mypy src/         # src is typed; tests are not

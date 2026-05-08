@@ -280,10 +280,94 @@ Keys in `effects_map` must match those strings character-for-character.
 
 ---
 
+## 6a. CrewAI adapter — event-bus paradigm (v0.4.0+)
+
+The CrewAI adapter ([ADR-021](../decisions/ADR-021-crewai-adapter.md), pin
+`>=0.80,<2.0` per [ADR-022](../decisions/ADR-022-crewai-version-pin-bump.md))
+subscribes to `crewai_event_bus` inside `record()`'s `scoped_handlers()`
+context manager. This sits on a third paradigm — neither LangGraph's
+state-dict nor AutoGen's message list, but a **per-run scoped event
+bus** with `ThreadPoolExecutor` dispatch.
+
+Recording shape (ADR-021 §D5 — sync-first, no `asyncio.run`):
+
+```python
+from crewai import Agent, Crew, Task, Process, LLM
+from crewai.tools import tool
+from chronos.adapters.crewai import crewai_adapter
+from chronos.store import SqliteStore
+
+@tool("fetch_weather_api")
+def fetch_weather(city: str) -> str:
+    """Fetch live weather for a city (network effect)."""
+    return f"It is sunny in {city}."
+
+llm = LLM(
+    provider="openai",                  # R54: explicit provider="openai"
+    model="GLM-5",                      # bypasses LiteLLM native-constants
+    base_url="https://...",             # validation for OneAPI aliases
+    api_key="...",
+)
+
+investigator = Agent(role="investigator", goal="...", llm=llm, tools=[fetch_weather])
+task = Task(description="...", agent=investigator, expected_output="...")
+crew = Crew(agents=[investigator], tasks=[task], process=Process.sequential)
+
+with SqliteStore.open("chronos.db") as store:
+    with crewai_adapter.build_recorder(store).record(
+        crew, thread_id="t1"
+    ) as ref:
+        result = crew.kickoff(inputs={"topic": "weather"})
+        ref.submit_result(result)       # optional; records Run.final_state
+    # run_id = ref.run_id is available here, after handlers have flushed
+```
+
+### What gets recorded
+
+On `crewai_event_bus`, the recorder subscribes to the event families
+listed in [ADR-021 §D1](../decisions/ADR-021-crewai-adapter.md) and
+materializes them as `Node`s with `kind ∈ {llm, tool, fn, end}`. The
+adapter's `classify_effects()` sees CrewAI-shaped `node_name`s (e.g.
+`ToolUsageStartedEvent:fetch_weather_api`) and emits effect tags
+consistent with the other adapters — a `read_file` tool gets `["fs"]`,
+`query_db` gets `["db"]`, `fetch_weather_api` gets `["network"]`.
+
+### Pitfalls (empirically validated across R52–R55)
+
+1. **OneAPI model names**: `LLM(model="openai/GLM-5", ...)` is rejected
+   by LiteLLM's native-constants validator. Always pass
+   `LLM(provider="openai", model="GLM-5", ...)` — the `provider=`
+   keyword bypasses the `model=<ns>/<name>` parse path.
+2. **Telemetry muting**: set `CREWAI_DISABLE_TELEMETRY=1` and
+   `OTEL_SDK_DISABLED=true` when running in CI / live tests; otherwise
+   CrewAI's OTel hooks race with the recorder's event-bus handler.
+3. **Optional dep**: `crewai` ships as `[project.optional-dependencies].crewai`,
+   not core. Tests must guard with `importlib.util.find_spec("crewai")` in
+   addition to `CHRONOS_LIVE` / API-key gates.
+4. **Event-bus handlers fire on a thread pool**: the adapter's
+   `scoped_handlers()` CM takes care of this, but if you hand-roll a
+   recorder you must call `crewai_event_bus.flush(timeout=...)` before
+   reading back from the store. ADR-021 §D2 explains why.
+5. **Fork**: not supported yet (Phase 4 candidate). Record + classify +
+   diff work end-to-end on CrewAI v1.x; `fork()` lands in a later
+   milestone after the LangGraph-style checkpointer-equivalent design
+   is ADR'd.
+
+### Live test reference
+
+The three-adapter live-smoke suite is at `tests/live/test_real_llm_smoke.py`
+(LangGraph + AutoGen) and `tests/live/test_crewai_smoke.py` (CrewAI).
+Opt-in via `CHRONOS_LIVE=1`. Total wall-clock ≈ 3–4 minutes with
+OneAPI GLM-5 as the backend.
+
+---
+
 ## 7. Related reading
 
 - [ADR-019 — Chronos does not sandbox](../decisions/ADR-019-chronos-does-not-sandbox.md)
 - [ADR-020 — Adapter tool-event `node_name` shape](../decisions/ADR-020-adapter-tool-node-name-shape.md)
+- [ADR-021 — CrewAI adapter](../decisions/ADR-021-crewai-adapter.md)
+- [ADR-022 — CrewAI version pin](../decisions/ADR-022-crewai-version-pin-bump.md)
 - [`side-effects.md`](side-effects.md) — three patterns for making your
   side-effecting tools fork-safe.
 - [ADR-013 — fork auto-execution stays frozen](../decisions/ADR-013-fork-auto-execution-stay-frozen.md)
@@ -488,9 +572,87 @@ for node in store.get_nodes_for_run(run_id):
 
 ---
 
+## 6a. CrewAI adapter — event-bus 范式 (v0.4.0+)
+
+CrewAI adapter ([ADR-021](../decisions/ADR-021-crewai-adapter.md), pin
+`>=0.80,<2.0`, 由 [ADR-022](../decisions/ADR-022-crewai-version-pin-bump.md) 抬升)
+在 `record()` 的 `scoped_handlers()` 上下文里订阅 `crewai_event_bus`.
+这是第三种范式 — 既不是 LangGraph 的 state-dict, 也不是 AutoGen 的
+message list, 而是**按 run 作用域的事件总线** + `ThreadPoolExecutor` 派发.
+
+录制形状 (ADR-021 §D5, sync-first, 不用 `asyncio.run`):
+
+```python
+from crewai import Agent, Crew, Task, Process, LLM
+from crewai.tools import tool
+from chronos.adapters.crewai import crewai_adapter
+from chronos.store import SqliteStore
+
+@tool("fetch_weather_api")
+def fetch_weather(city: str) -> str:
+    """取某城市实时天气 (network 副作用)."""
+    return f"It is sunny in {city}."
+
+llm = LLM(
+    provider="openai",                  # R54: 显式传 provider="openai"
+    model="GLM-5",                      # 绕开 LiteLLM native-constants
+    base_url="https://...",             # 校验 (OneAPI 别名用)
+    api_key="...",
+)
+
+investigator = Agent(role="investigator", goal="...", llm=llm, tools=[fetch_weather])
+task = Task(description="...", agent=investigator, expected_output="...")
+crew = Crew(agents=[investigator], tasks=[task], process=Process.sequential)
+
+with SqliteStore.open("chronos.db") as store:
+    with crewai_adapter.build_recorder(store).record(
+        crew, thread_id="t1"
+    ) as ref:
+        result = crew.kickoff(inputs={"topic": "weather"})
+        ref.submit_result(result)       # 可选, 记 Run.final_state
+    # CM 退出后 ref.run_id 已可用, handlers 已 flush
+```
+
+### 能录到什么
+
+Recorder 订阅 [ADR-021 §D1](../decisions/ADR-021-crewai-adapter.md)
+列出的事件族, 物化成 `kind ∈ {llm, tool, fn, end}` 的 Node.
+Adapter `classify_effects()` 看到 CrewAI 形状的 `node_name`
+(如 `ToolUsageStartedEvent:fetch_weather_api`), 吐出与其它 adapter
+一致的 effect tag — `read_file` 工具 `["fs"]`, `query_db` `["db"]`,
+`fetch_weather_api` `["network"]`.
+
+### 坑位 (R52–R55 经验)
+
+1. **OneAPI 模型名**: `LLM(model="openai/GLM-5", ...)` 被 LiteLLM
+   native-constants 校验拒掉. 必须 `LLM(provider="openai", model="GLM-5", ...)`
+   — `provider=` 关键字绕开 `model=<ns>/<name>` 解析分支.
+2. **遥测静音**: CI / live test 里设 `CREWAI_DISABLE_TELEMETRY=1` +
+   `OTEL_SDK_DISABLED=true`, 否则 CrewAI 的 OTel 钩子会跟 recorder 的
+   event-bus handler 抢跑.
+3. **可选依赖**: `crewai` 在 `[project.optional-dependencies].crewai`,
+   不是核心 dep. 测试除了 `CHRONOS_LIVE` / API-key gate 外还要用
+   `importlib.util.find_spec("crewai")` 守一下.
+4. **事件总线 handler 在线程池里跑**: adapter 的 `scoped_handlers()` CM
+   已处理好; 如果你自己搭 recorder, 读 store 前必须先
+   `crewai_event_bus.flush(timeout=...)`. 原因见 ADR-021 §D2.
+5. **Fork**: 尚未支持 (Phase 4 候选). CrewAI v1.x 上 record + classify +
+   diff 端到端都 OK; `fork()` 等后面一个 milestone, 需要先 ADR
+   一个类 LangGraph checkpointer 的机制.
+
+### Live 测试参考
+
+三 adapter live smoke 分布在 `tests/live/test_real_llm_smoke.py`
+(LangGraph + AutoGen) 与 `tests/live/test_crewai_smoke.py` (CrewAI).
+`CHRONOS_LIVE=1` opt-in. OneAPI GLM-5 下墙钟合计 ≈ 3-4 min.
+
+---
+
 ## 7. 相关阅读
 
 - [ADR-019 — Chronos does not sandbox](../decisions/ADR-019-chronos-does-not-sandbox.md)
 - [ADR-020 — Adapter tool-event `node_name` shape](../decisions/ADR-020-adapter-tool-node-name-shape.md)
+- [ADR-021 — CrewAI adapter](../decisions/ADR-021-crewai-adapter.md)
+- [ADR-022 — CrewAI version pin](../decisions/ADR-022-crewai-version-pin-bump.md)
 - [`side-effects.md`](side-effects.md) — 让副作用工具 fork-safe 的三种模式
 - [ADR-013 — fork auto-execution stays frozen](../decisions/ADR-013-fork-auto-execution-stay-frozen.md)

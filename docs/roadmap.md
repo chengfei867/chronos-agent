@@ -155,11 +155,11 @@ the plan-artifact `fork plan emit → edit → fork plan exec` loop is the shipp
 
 ---
 
-## Phase 3 — v0.3 "Production-ready fork"
+## Phase 3 — v0.3 "Production-ready fork" ✅ COMPLETE (R55, v0.4.0)
 
 **Goal**: Make fork reliable for real-world agents. Chronos does **not** sandbox side effects ([ADR-019](decisions/ADR-019-chronos-does-not-sandbox.md) — trust the user's own sandboxing) — instead it classifies effects and warns honestly so users can decide before forking.
 
-**Estimated duration**: 6–8 rounds total (**3.5 rounds landed** — R43 + R44-A + R45-A; remaining **~3–4 rounds** for determinism / partial-fork / semantic-diff / Tier-2 receiver).
+**Final duration**: 11 rounds (R43 → R55) across tags v0.3.0 / v0.3.1 / v0.4.0a1 / v0.4.0a2 / v0.4.0. Phase 3 was scoped as "effect-aware fork UX across all shipping adapters". The last item (CrewAI adapter) landed in v0.4.0 (R55) and completes the three-adapter matrix.
 
 ### Key milestones
 - [x] **Effect-kind instrumentation + honest warnings** (replaces the original "side-effectful tool sandboxing" bullet per ADR-019, landed R43/R44-A/R45-A across v0.3.0 and v0.3.1)
@@ -168,28 +168,50 @@ the plan-artifact `fork plan emit → edit → fork plan exec` loop is the shipp
   - [x] Adapter `classify_effects()` heuristic + `metadata["effects"]` on every Node (R44-A, v0.3.0)
   - [x] Web UI: per-node effect Tags + amber warning Alert in NodeDetails drawer (R44-A, v0.3.0)
   - [x] CLI `chronos fork plan`: Downstream side-effects preview Panel (R45-A, v0.3.1)
-  - [ ] Web UI: TreeView → fork-plan modal with effects summary (R46-A candidate, targets v0.3.2)
-- [ ] Determinism modes (stable / explore / custom)
-- [ ] Dependency-aware partial fork (don't re-execute unaffected subtree)
-- [ ] Semantic diff (LLM-as-judge for divergent responses)
-- [ ] Generic OTel receiver (Tier-2 adapter for non-LangGraph/AutoGen agents)
-- [ ] Plugin system for custom diff / redaction
-- [x] **Tag v0.3.0** (R44-A, 2026-04-25) + **Tag v0.3.1** (R45-A, 2026-04-25)
+  - [x] Web UI: TreeView → fork-plan modal with effects summary (R46-A → R47, v0.4.0a1)
+  - [x] AutoGen adapter + per-tool `effects_map` override (R48-A, v0.4.0a2, [ADR-020])
+  - [x] Frontend `EffectTag` shared component + icons (R48-B, v0.4.0a2)
+  - [x] CrewAI adapter — scaffold (R52) + version pin bump (R53, [ADR-022]) + real-LLM spike (R54) + pytest-live wrap (R55), [ADR-021]
+- [ ] Determinism modes (stable / explore / custom) — deferred to Phase 4
+- [ ] Dependency-aware partial fork — deferred to Phase 4
+- [ ] Semantic diff (LLM-as-judge) — deferred to Phase 4
+- [ ] Generic OTel receiver (Tier-2 adapter) — deferred to Phase 4
+- [ ] Plugin system for custom diff / redaction — deferred to Phase 4
+- [x] **Tag v0.3.0** (R44-A) + **v0.3.1** (R45-A) + **v0.4.0a1** (R47) + **v0.4.0a2** (R48-C) + **v0.4.0** (R55)
+
+[ADR-020]: decisions/ADR-020-adapter-tool-node-name-shape.md
+[ADR-021]: decisions/ADR-021-crewai-adapter.md
+[ADR-022]: decisions/ADR-022-crewai-version-pin-bump.md
 
 ---
 
-## Phase 4 — v0.4+ "Ecosystem"
+## Phase 4 — v0.5+ "Depth & ecosystem"
 
-**Goal**: Expand ecosystem, plug into team workflows.
+**Goal**: Now that the three-adapter matrix is stable and effect-aware, go deeper on the *diff/compare/fork-tree* semantics users actually reason with, and broaden the ecosystem surface.
 
-### Candidate items (no order yet)
-- [ ] CrewAI adapter
-- [ ] Vercel AI SDK adapter (TS)
-- [ ] Jupyter notebook integration (`chronos.load_run(id)`)
-- [ ] Export to Parquet / OTel JSON for ML pipelines
-- [ ] LAN-sharing of traces for small teams
-- [ ] Docker image for reproducible traces
-- [ ] Public demo / marketing site
+**Candidate charter (R56-authored skeleton, not locked)**:
+
+### 4.1 Depth — fork-tree semantics (priority: high)
+- [ ] **Multi-run tree comparison UI** — select N runs, render a merged family tree with lane alignment and cross-lane "same node" bridges. Generalises the R39-A two-run compare to N runs.
+- [ ] **Fork-tree visualization** — for a single run with descendants, render the full fork DAG (not just the 2-run diff). R37.5 family-tree was a first step; this is the full thing.
+- [ ] **Semantic diff (LLM-as-judge)** — for divergent LLM outputs, let the user delegate "are these equivalent?" to a judge model. Adapter-agnostic. Needs an ADR for trust model.
+- [ ] **Dependency-aware partial fork** — don't re-execute unaffected subtrees. Needs adapter-level "purity" annotation or heuristic.
+- [ ] **Determinism modes** (stable / explore / custom) — seed + temperature policy on fork.
+
+### 4.2 Ecosystem — broader surface (priority: medium)
+- [x] **Third adapter: CrewAI** — shipped in v0.4.0 (R49-R55)
+- [ ] **Fourth adapter candidate** — options: OpenAI Assistants API v2, Swarm, Anthropic Agents SDK, Letta, LiveKit Agents. Evaluation table deferred to R57+ (tracked separately under ADR-023 candidate).
+- [ ] **Vercel AI SDK adapter (TS)** — requires the Python-or-TS decision (out of scope for Phase 4 unless a clear demand signal arrives).
+- [ ] **Generic OTel receiver** (Tier-2 adapter for non-LangGraph/AutoGen/CrewAI agents) — catch-all via OTel GenAI semconv.
+- [ ] **Jupyter notebook integration** (`chronos.load_run(id)`).
+- [ ] **Export to Parquet / OTel JSON** for ML pipelines.
+- [ ] **LAN-sharing of traces** for small teams.
+- [ ] **Docker image** for reproducible traces.
+- [ ] **Public demo / marketing site**.
+
+### 4.3 Plumbing (priority: as-needed)
+- [ ] Plugin system for custom diff / redaction.
+- [ ] Release cadence shift (R55 has validated 12× — pattern is solid).
 
 ---
 
