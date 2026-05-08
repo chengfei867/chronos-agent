@@ -182,6 +182,8 @@ the plan-artifact `fork plan emit → edit → fork plan exec` loop is the shipp
 [ADR-020]: decisions/ADR-020-adapter-tool-node-name-shape.md
 [ADR-021]: decisions/ADR-021-crewai-adapter.md
 [ADR-022]: decisions/ADR-022-crewai-version-pin-bump.md
+[ADR-023]: decisions/ADR-023-phase-4-charter-skeleton.md
+[n-run-compare]: design/n-run-compare.md
 
 ---
 
@@ -189,18 +191,18 @@ the plan-artifact `fork plan emit → edit → fork plan exec` loop is the shipp
 
 **Goal**: Now that the three-adapter matrix is stable and effect-aware, go deeper on the *diff/compare/fork-tree* semantics users actually reason with, and broaden the ecosystem surface.
 
-**Candidate charter (R56-authored skeleton, not locked)**:
+**Charter**: Phase 4 has three candidate arcs (R56 skeleton). **R57 commits to Arc A (Depth) as the active arc** — see [ADR-023] §"Decision (R57 — Arc A committed)". Arc B and Arc C remain deferred.
 
-### 4.1 Depth — fork-tree semantics (priority: high)
-- [ ] **Multi-run tree comparison UI** — select N runs, render a merged family tree with lane alignment and cross-lane "same node" bridges. Generalises the R39-A two-run compare to N runs.
-- [ ] **Fork-tree visualization** — for a single run with descendants, render the full fork DAG (not just the 2-run diff). R37.5 family-tree was a first step; this is the full thing.
+### 4.1 Depth — fork-tree semantics (priority: **ACTIVE** — Arc A pinned R57)
+- [ ] **Multi-run tree comparison UI** — select N runs, render a merged family tree with lane alignment and cross-lane "same node" bridges. Generalises the R39-A two-run compare to N runs. **Design doc: [n-run-compare][n-run-compare] (R57). Impl plan: R58 core / R59 CLI+API / R60 Web (optional) / R61 dogfood.**
+- [ ] **Fork-tree visualization** — for a single run with descendants, render the full fork DAG (not just the 2-run diff). R37.5 family-tree was a first step; this is the full thing. Arc A second slice; design doc R62+ gated on R58-R60 results.
 - [ ] **Semantic diff (LLM-as-judge)** — for divergent LLM outputs, let the user delegate "are these equivalent?" to a judge model. Adapter-agnostic. Needs an ADR for trust model.
 - [ ] **Dependency-aware partial fork** — don't re-execute unaffected subtrees. Needs adapter-level "purity" annotation or heuristic.
 - [ ] **Determinism modes** (stable / explore / custom) — seed + temperature policy on fork.
 
-### 4.2 Ecosystem — broader surface (priority: medium)
+### 4.2 Ecosystem — broader surface (priority: DEFERRED until Arc A ships or external demand)
 - [x] **Third adapter: CrewAI** — shipped in v0.4.0 (R49-R55)
-- [ ] **Fourth adapter candidate** — options: OpenAI Assistants API v2, Swarm, Anthropic Agents SDK, Letta, LiveKit Agents. Evaluation table deferred to R57+ (tracked separately under ADR-023 candidate).
+- [ ] **Fourth adapter candidate** — options: OpenAI Assistants API v2, Swarm, Anthropic Agents SDK, Letta, LiveKit Agents. Evaluation table lives in [ADR-023] §Arc B; promoted to `docs/research/adapter-4-survey.md` when Arc B reopens.
 - [ ] **Vercel AI SDK adapter (TS)** — requires the Python-or-TS decision (out of scope for Phase 4 unless a clear demand signal arrives).
 - [ ] **Generic OTel receiver** (Tier-2 adapter for non-LangGraph/AutoGen/CrewAI agents) — catch-all via OTel GenAI semconv.
 - [ ] **Jupyter notebook integration** (`chronos.load_run(id)`).
@@ -209,7 +211,7 @@ the plan-artifact `fork plan emit → edit → fork plan exec` loop is the shipp
 - [ ] **Docker image** for reproducible traces.
 - [ ] **Public demo / marketing site**.
 
-### 4.3 Plumbing (priority: as-needed)
+### 4.3 Plumbing (priority: DEFERRED — demand-driven)
 - [ ] Plugin system for custom diff / redaction.
 - [ ] Release cadence shift (R55 has validated 12× — pattern is solid).
 

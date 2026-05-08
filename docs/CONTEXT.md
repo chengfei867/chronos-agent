@@ -147,149 +147,162 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
-**截至 Round 56 结束 (2026-05-08 CST 10:15, cron slot inside 0–11 window) — post-v0.4.0 polish, Phase 3 officially closed, Phase 4 charter skeleton landed**
+**截至 Round 57 结束 (2026-05-09 CST 01:40, cron slot inside 0–11 window) — Phase 4 kickoff, Arc A (Depth) 锁定, N-run compare 设计稿落地**
 
-- 最近 progress doc: `docs/progress/2026-05-08-round-56.md` (R56 — README + forking-safely §6a + roadmap.md Phase 3 closure + ADR-023 skeleton)
-- 最近上份 progress doc: `docs/progress/2026-05-08-round-55.md` (R55 — pytest-live wrap of spike13 + v0.4.0 release)
-- 最近上上份 progress doc: `docs/progress/2026-05-08-round-54.md` (R54 — spike13 real-LLM CrewAI smoke F1-F6 green + r51 research doc promotion)
+- 最近 progress doc: `docs/progress/2026-05-08-round-57.md` (R57 — Phase 4 kickoff: Arc A committed + N-run compare design doc)
+- 最近上份 progress doc: `docs/progress/2026-05-08-round-56.md` (R56 — post-v0.4.0 polish + Phase 4 charter skeleton)
+- 最近上上份 progress doc: `docs/progress/2026-05-08-round-55.md` (R55 — pytest-live wrap of spike13 + v0.4.0 release)
 
-- Round: **56** (post-release polish, docs-only): 09:47 进入 cron slot, 0 blocker. 按 CONTEXT §6 的 Option A + Option B 规划打包一轮:
-  - **P0** = README.md + forking-safely.md 刷新 for v0.4.0 三 adapter 矩阵. 5 处 README patch: (1) "100% AI-generated" tagline 加 R49-R55 seven-round arc 口径; (2) EN Status table 从 Phase-2-era 改写成三 adapter 矩阵 (LangGraph row + AutoGen row + CrewAI row) + reference-style ADR-020/021/022 links; (3) ZH Status 同构改写; (4) repo-layout `adapters/` 注释 "LangGraph + Linear today" → "LangGraph + AutoGen + CrewAI + Linear", `tests/` 加 `live/` 目录行, 测试计数 380+ → 470+; (5) Development section `380+ tests ~92% cov` → `470+ tests ~94% cov`. `forking-safely.md` 新增 §6a "CrewAI adapter — event-bus paradigm (v0.4.0+)" EN + ZH 两份对等翻译, 覆盖 3 paradigm + record example + 5 个 R52-R55 经验坑 + live test 路径.
-  - **P1** = `roadmap.md` Phase 3 收官标记 ✅ COMPLETE (R55, v0.4.0) + Phase 4 三 bucket 骨架 (4.1 Depth / 4.2 Ecosystem / 4.3 Plumbing); Phase 4 heading `v0.4+` → `v0.5+` (v0.4.x 已 ship). 新 `docs/decisions/ADR-023-phase-4-charter-skeleton.md` (~150 行, Status: **Draft**, 三 arcs framing, decision deferred to R57).
-  - **ADR-022 filename 拼写修复**: 5 处 `ADR-022-crewai-version-pin.md` → `ADR-022-crewai-version-pin-bump.md` (实际文件名带 `-bump`). Post-edit broken-link sweep 零漏网.
-  - 零 `src/` 改动 (R52 scaffold 现在穿越 **五**轮 R52→R56 零代码改). Gates: 474 pass / 3 skip / 94% cov (unchanged, 因为只碰 md).
+- Round: **57** (Phase 4 kickoff, docs-only, 强战略轮): 01:17 CST 进入 cron slot, 0 blocker, ~25min wall. 按 CONTEXT §6 的 Option A + Option C bundle 打:
+  - **P0** = 写 `docs/design/n-run-compare.md` (new, ~330 行, 12 sections + appendix). CLI-first 设计 (`chronos compare <pivot> <other> [<other> ...]`), API shape 锁死 (`GET /runs/compare/n?ids=a,b,c`), **pivot-anchored O(N)** alignment (N−1 calls to existing `diff_runs`, merged on pivot step index, **不是 O(N²) pairwise grid**). N=2 严格是 today's `DiffReport` 超集. 12 sections 含 goals/non-goals/UX/alignment/API+data/CLI render/edges/relationship-to-R37.5-fork-tree/impl-plan-R58-R61/risks/success-criteria/rejected-alternatives.
+  - **P1** = ADR-023 **Draft → Accepted**, Arc A 锁定. 替换 "Decision (deferred)" + "Why skeleton-now" + "Follow-ups (R57+)" 三节; 保留 Context + 三-arc framing (still useful as mental model). 新 "Decision (R57 — Arc A committed)" + "Why commit now" + "Follow-ups (R58+)". Title "charter skeleton" → "charter — commit to Arc A".
+  - **P2** = `roadmap.md` Phase 4 §4.1 Depth priority "high" → "**ACTIVE** — Arc A pinned R57"; §4.2 Ecosystem & §4.3 Plumbing → "DEFERRED"; multi-run tree item inline 挂 design doc 链接 + R58/R59/R60/R61 计划; 加 `[ADR-023]` + `[n-run-compare]` refdef.
+  - 零 `src/` 改动 (R52 scaffold 现在穿越 **六**轮 R52→R57 零代码改动). Gates: 474/3/0 94% cov (unchanged, md-only). Broken-link sweep: 0 broken across 3 edited + 1 new md (R56 pattern 第 2 次验证).
 
-- **R56 关键发现 (上墙)**:
-  - **Post-release polish round 是独立的 round archetype**: 典型形状是 docs-only, 包括 README 刷 + guide 加 adapter section + roadmap 前 phase 收官 + 下 phase ADR skeleton. R56 单 slot 完成. 候选 skill `chronos-post-release-polish-round` (defer 到 R62 或下一次 release 再收集一轮数据).
-  - **ADR filename 必须 pre-commit 程式化校验**: 本轮发现 `ADR-022-crewai-version-pin.md` 是写错了的 (实际 `...-pin-bump.md`), 5 处散落. Post-edit 跑的 Python `re.finditer + Path.resolve().exists()` 扫描捕到, 20ms 成本. 未来任何碰 ≥2 个 .md 带交叉引用的轮次应常规跑.
-  - **"Pre-emptive 决定 = 未来轮次的 falsification 标靶"** 这次在 roadmap.md Phase 4 candidate list 上被再次验证: R43 时 "CrewAI adapter" 是 Phase 4 候选, 结果跑到 Phase 3 就被 R52-R55 做掉了. ADR-023 故意写成 Status: Draft 骨架而非 Accepted 决定, 把 R57 的选择权留足.
-  - **`×` (U+00D7) 避开 md 也适用**: 虽然 CONTEXT §5 明说 md 是 ruff 安全的, R56 本来想写 `"12× validated"` 又主动改回 `"12x validated"`. 理由: cheapest way to avoid a pitfall is to never take the bait.
-  - **R56 选定了 write-only (没碰 src/)**: 保留 R52 CrewAI scaffold 的 "N round 零改动" 稳定性证据链 (现 5 轮). 混代码进来会稀释 release narrative 叙事.
+- **R57 关键发现 (上墙)**:
+  - **In-place ADR promotion pattern (R57 新)**: 当 Draft ADR 的 Context + candidate framing 还正确, 只是 decision 从 "deferred" 变成具体, **in-place promote** (Status + Decision + Follow-ups 改写, Context/Options 保留); 别开新 ADR-024 duplicate 原 framing. 顶行 Status 记历史 ("Accepted (skeleton R56; Arc A commit R57)"). 例外: 新决定若 invalidate 原 framing 就另开 ADR 并 Superseded 旧. ← **new**
+  - **Phase-kickoff round archetype (R56→R57 两连)**: 两轮套路 = 收官轮 (post-release polish + 前 phase 标 ✅ COMPLETE + skeleton ADR 为下 phase + 明写 decision-deferred) + kickoff 轮 (promote ADR / 写首 slice design doc / roadmap 从 "candidate" 改 "ACTIVE/DEFERRED"). 两轮都 docs-only, 单 slot. Candidate skill `chronos-phase-transition-pattern` 暂缓 (R61→R62 再验证一次). ← **new**
+  - **Design-doc 强制 Non-Goals 节 (R57 新)**: 任何 ≥150 行 design doc 必须有 explicit Non-Goals 列表. 本轮 n-run-compare §2.2 七条 ❌ 会省下 R58/R59 一次 scope-creep 对话 (semantic diff 是最大诱惑, 它有自己的 ADR path). ← **new**
+  - **CLI-first → API-shape-locked-via-CLI → Web-optional 排序 (R57 新)**: 新 verb/endpoint 对走这个顺序. CLI **就是** JSON contract test; 先写 CLI 强制 JSON shape 在 React props 硬化假设前定死. 反直觉 (默认想先 Web 有 demo), 但省很多翻工. 本轮 design doc §3.3 单独 justify. ← **new**
 
-- **R56 产出**:
-  - `README.md` (edit) — 5 处 patch.
-  - `docs/guides/forking-safely.md` (edit) — 新 §6a EN + ZH (~170 行合计) + 补 ADR-021/022 链接.
-  - `docs/roadmap.md` (edit) — Phase 3 ✅ COMPLETE + Phase 4 三 bucket 骨架.
-  - `docs/decisions/ADR-023-phase-4-charter-skeleton.md` (new, ~150 行, Status: Draft).
-  - `docs/progress/2026-05-08-round-56.md` (new, ~240 行).
+- **R57 产出**:
+  - `docs/design/n-run-compare.md` (new, ~330 行) — 首个 design-doc-under-`docs/design/` 非架构文档.
+  - `docs/decisions/ADR-023-phase-4-charter-skeleton.md` (edit) — Draft → Accepted, 标题改, Decision/Follow-ups 重写.
+  - `docs/roadmap.md` (edit) — Phase 4 charter 描述 + §4.1/§4.2/§4.3 priority + 2 个 refdef.
+  - `docs/progress/2026-05-08-round-57.md` (new, ~260 行).
   - `docs/CONTEXT.md §5 + §6` (this refresh).
-  - **zero** src/ edits — R52 scaffold 穿越 R52→R53→R54→R55→R56 **五**轮零代码改.
+  - **zero** src/ edits — R52 CrewAI scaffold 穿越 R52→R57 **六**轮零代码改.
 
-- **战略定位 (R33 锁死, 持续有效)**: GitHub 爆款开源项目, 不是 SaaS. **v0.4.0 非 alpha** 是最新 tag (R55 cut).
-- 当前阶段: **Phase 3 ✅ COMPLETE (R55 收官, v0.4.0 发 release)**, **Phase 4 charter skeleton 已起 (R56 ADR-023 Draft)**, **Phase 4 kickoff 在 R57**.
-- 最新 ADR: **ADR-023 (R56, Draft)** — Phase 4 three-arcs framing. 前有 ADR-022 (R53) CrewAI pin bump + ADR-021 (R51) CrewAI adapter.
+- **战略定位 (R33 锁死, R57 重申)**: GitHub 爆款开源项目, 不是 SaaS. **v0.4.0 非 alpha** 是最新 tag (R55 cut).
+- 当前阶段: **Phase 4 进行中 (R57 kickoff, Arc A [Depth] 锁定)**. 首 slice = N-run compare. 实施计划: R58 core / R59 CLI+API / R60 Web (optional) / R61 dogfood.
+- 最新 ADR: **ADR-023 (R57, Accepted, Arc A committed)**. 前有 ADR-022 (R53) CrewAI pin bump + ADR-021 (R51) CrewAI adapter.
+- 最新 design doc: **`docs/design/n-run-compare.md` (R57)** — Phase 4 Arc A 首 slice.
 - 最新 research doc: `docs/research/r51-crewai-event-bus-characterization.md` (R54, unchanged).
 - 最新 tag: **v0.4.0 (R55, non-alpha)**. 不变.
 
-- 测试状态: **474 pass / 3 skip / 0 failed / 94% cov** (不变). `mypy src/` 不 rerun (no .py 改); `ruff` 不 rerun (no .py 改). 前端不 rerun. Broken-link sweep: **0 broken** across 3 edited + 1 new md.
+- 测试状态: **474 pass / 3 skip / 0 failed / 94% cov** (不变, md-only round). `mypy src/` 不 rerun; `ruff` 不 rerun; 前端不 rerun.
+- Broken-link sweep: **0 broken** across 3 edited + 1 new md (R56 pattern 第 2 次验证).
 
-- 前端路由: `/app/#/runs`, `/app/#/runs/<id>`, `/app/#/runs/<a>/diff/<b>` (R39-A) — 不变.
+- 前端路由: `/app/#/runs`, `/app/#/runs/<id>`, `/app/#/runs/<a>/diff/<b>` (R39-A) — 不变. **新路由 `/app/#/runs/compare?ids=...` 见 n-run-compare.md §3.2, R60 impl (optional)**.
 - 仓库可见性: **PUBLIC** — 不变.
-- 旧事实 (仍生效, 不重复): (见 R55 §5 同名列表, R56 未改变任何旧 invariant)
-  - **Post-release polish round archetype (R56 新)**: 典型形状 = README + adapter-specific guide section + roadmap phase closure + next-phase ADR skeleton. 100% docs, 零 src/. ← **new**
-  - **ADR filename pre-commit 程式化校验 (R56 新)**: 碰 ≥2 md 带 ADR 链接的轮次, 用 Python regex + `Path.resolve().exists()` 20ms 扫一遍. ← **new**
-  - **ADR skeleton (Status: Draft) 当 phase-transition framing 工具 (R56 新)**: 比"拍 Accepted"便宜得多, 把 R57 选择权留足. ADR-023 是这模式的第一例. ← **new**
+- 旧事实 (仍生效, 不重复):
+  - **In-place ADR promotion pattern (R57 新)**: Draft ADR 的 Context 若仍正确, 只改 Status + Decision + Follow-ups, 不开新 ADR. ← **new**
+  - **Phase-kickoff round archetype (R57 新)**: 收官轮 + kickoff 轮 二连, 都 docs-only. 候选 skill, defer 到 R61→R62 再收一次. ← **new**
+  - **Design-doc Non-Goals 节强制 (R57 新)**: ≥150 行 design doc 必须有 explicit ❌ 列表. ← **new**
+  - **CLI-first → API-locked → Web-optional 排序 (R57 新)**: 新 verb/endpoint 走此序. CLI 是 JSON contract test. ← **new**
+  - **Post-release polish round archetype (R56 沿用)**: docs-only, README + guide adapter section + roadmap phase closure + next-phase ADR skeleton.
+  - **ADR filename pre-commit 程式化校验 (R56 沿用)**: 碰 ≥2 md 带 ADR 链接的轮次, 用 Python regex + `Path.resolve().exists()` 20ms 扫一遍. R57 第 2 次验证.
+  - **ADR skeleton (Status: Draft) 当 phase-transition framing 工具 (R56 沿用)**: R57 完成 Draft → Accepted 周期证据.
 
-<!-- R55 state moved to progress/2026-05-08-round-55.md; invariant facts below preserved. -->
-
-- 最近 progress doc (历史): `docs/progress/2026-05-08-round-55.md` (R55 — pytest-live wrap of spike13 + v0.4.0 release)
-- 最近上份 progress doc: `docs/progress/2026-05-08-round-54.md` (R54 — spike13 real-LLM CrewAI smoke F1-F6 green + r51 research doc promotion)
-- 最近上上份 progress doc: `docs/progress/2026-05-07-round-53.md` (R53 — ADR-022 CrewAI pin `<1.0` → `<2.0` + spike13a surface probe)
-
-- 前端路由 (历史事实): `/app/#/runs`, `/app/#/runs/<id>`, `/app/#/runs/<a>/diff/<b>` (R39-A)
-- 仓库可见性 (历史事实): **PUBLIC** since R34-C 尾部
 - 长期 invariants (cross-round, 不重复):
-  - GitHub push 只有 `gh-proxy.com` (R48-B 再验证, R48-C/R49/R50/R51/R52/R53/R55/R56 继承使用)
+  - GitHub push 只有 `gh-proxy.com` (R48-B 再验证, R48-C/R49/R50/R51/R52/R53/R55/R56/R57 继承使用)
   - LangGraph 1.1.9 record/fork/diff 全链路 OK
-  - `NodeKind` 合法值 `{llm, tool, fn, router, fork, end}` (R50 再次验证 — 没有 IO)
+  - `NodeKind` 合法值 `{llm, tool, fn, router, fork, end}`
   - Runs/Nodes upsert, Forks append-only
   - Duck + real 双测试策略
   - CLI 状态行 / `pyproject.toml::project.version` / `__version__` 每次 bump 要同步 (R55 第 12 次验证)
   - JSON 模式走 stdlib `print(json.dumps(...))` 不走 rich Console
   - `SqliteStore.open()` 静默建文件, 读命令守 `Path.exists()`
-  - **progress doc 每轮必写** (R46-A 吃过亏, R51/R52 再吃过)
+  - **progress doc 每轮必写**
   - **`ForkPlan` schema 是 v0.1.1 对外契约**
   - **Extractor contract v2 (ADR-015) 是 v0.1.2+ 对外契约**
   - **Adapter interface (ADR-016) 是 v0.2.0+ 对外契约**
   - **AutoGen sync-wrap (ADR-017) 是 AutoGen adapter 永久架构原则**
-  - **AutoGen tool-event `node_name` 三段式 (ADR-020) 从 R48-A 起是 AutoGen adapter 对外契约**
-  - **LangGraph `kind_map` 是 Phase 3 effect 标注的事实必需 (R49 发现, R50 docstring 固化)**
-  - **CrewAI adapter interface (ADR-021) 是 v0.4+ 对外契约 (R51 设计 / R52 scaffold / R53 pin 微调 / R54 real-LLM / R55 pytest-live, 四轮零代码改动稳)**
-  - **CrewAI pin `>=0.80,<2.0` (ADR-022, R53)** — revises ADR-021 §D8 upper bound; empirical via spike13a on CrewAI 1.14.3
-  - **CrewAI event-bus 的 `ThreadPoolExecutor` dispatch 是 adapter 不可协商约束 (spike12 §F4 + ADR-021 §D1/§D2)**
-  - **CrewAI `CrewKickoffCompletedEvent` import 位置跨 minor 版本不稳, adapter scaffold 用 optional import tolerate (R52 惯例; R53 probe 确认 1.14.3 仍在 `crewai.events.types.crew_events`)**
+  - **AutoGen tool-event `node_name` 三段式 (ADR-020)**
+  - **LangGraph `kind_map` 是 Phase 3 effect 标注的事实必需**
+  - **CrewAI adapter interface (ADR-021) 是 v0.4+ 对外契约** (R51-R55 端到端验证; R56/R57 docs-only 继续穿越, 六轮零代码改)
+  - **CrewAI pin `>=0.80,<2.0` (ADR-022, R53)** — revises ADR-021 §D8 upper bound
+  - **CrewAI event-bus `ThreadPoolExecutor` dispatch 不可协商 (spike12 §F4 + ADR-021 §D1/§D2)**
+  - **CrewAI `CrewKickoffCompletedEvent` import 位置跨 minor 版本不稳**
   - **Multi-framework risks (R27 research doc) 仍是 Phase 2 必读 gotchas**
-  - **Anthropic prompt caching 计账** (R15, ADR-015 Layer 5)
-  - **OpenAI reasoning tokens 语义** (R15, ADR-015 Layer 5)
-  - **Duck typing 原则** (R15, ADR-015 Layer 5)
+  - **Anthropic prompt caching 计账 / OpenAI reasoning tokens 语义 / Duck typing 原则** (R15, ADR-015 Layer 5)
   - **CLI 模块形状 (R14)**: `*_command(console, open_store_fn, ...)`
-  - **OneAPI 配方 (R17/R18, R54 CrewAI 补丁)**: `model="Claude Opus 4.7"`, 不传 temperature, UV_INDEX_URL=aliyun. **CrewAI 场景要用 `LLM(provider="openai", model="GLM-5", base_url=..., api_key=...)` 不要用 `model="openai/GLM-5"`** — `openai/` 前缀走 LiteLLM native-constants 校验, 非 OpenAI 标准 model 名会被拒 (R54)
+  - **OneAPI 配方 (R17/R18, R54 CrewAI 补丁)**: `model="Claude Opus 4.7"`, 不传 temperature, UV_INDEX_URL=aliyun. **CrewAI 场景要用 `LLM(provider="openai", model="GLM-5", base_url=..., api_key=...)` 不要用 `model="openai/GLM-5"`**
   - **M milestone naming / multi-round bundle**: release cut 单独一轮打包多轮 (v0.4.0 bundle R49-R55 = 七轮)
-  - **Release pattern (skill `chronos-release-pattern`, 十二次验证: R13/R16/R19/R22/R23/R30/R35-A/R38/R41/R47/R48-C/R55)**
+  - **Release pattern (skill `chronos-release-pattern`, 十二次验证)**
   - **Dogfood script 陷阱**: `n.model` 短形式
-  - **Em-dash (U+2014) / U+2212 minus / × 乘号被 ruff RUF001/RUF002 禁** (仅 py 源码, md 文档 OK; R55 再次吃瘪验证)
+  - **Em-dash (U+2014) / U+2212 minus / × 乘号被 ruff RUF001/RUF002 禁** (仅 py 源码, md 文档 OK)
   - **Pydantic v2 field-level docstring**: 字段注解行下方 `"""..."""` 即是 docstring
   - **代码生成类测试必须 `compile()` + `exec()`** (R22)
-  - **ForkRef 字段**: `child_run_id`, `fork_id`, `node_ids` — 仅在 CM **exit** 后填
-  - **SqliteStore 公开 API**: `SqliteStore.open(path)` classmethod 用作 CM; **subprocess 读之前先 `close()`** (R55 wrap 确认)
+  - **ForkRef 字段**: `child_run_id`, `fork_id`, `node_ids`
+  - **SqliteStore 公开 API**: `SqliteStore.open(path)` classmethod 用作 CM; **subprocess 读之前先 `close()`**
   - **LangGraph fork 语义 (R23-A)**: `graph.invoke(None, {thread_id})` 续跑要求持久化且跨 run 共享的 checkpointer
   - **测试环境 color 污染 (R24)**: `FORCE_COLOR` 由 autouse fixture 清掉
-  - **Classifier integration 测试红线 (R48-A)**: 任何 keyword-regex classifier 的测试必须用真 adapter 输出喂 — 手选字符串是陷阱
-  - **Frontend `EffectTag` 共享组件 (R48-B)**: 渲染 effect tag chip 一律走 `EffectTag`, 未知 tag 安全 fallback, 新 family 要在 `EFFECT_COLORS`/`EFFECT_ICONS`/i18n 三处加
-  - **CONTEXT.md 行号前缀陷阱 (R48-C)**: 别把 `read_file` 带行号前缀的输出 paste 进 `write_file`, 污染会进 git
+  - **Classifier integration 测试红线 (R48-A)**: 任何 keyword-regex classifier 的测试必须用真 adapter 输出喂
+  - **Frontend `EffectTag` 共享组件 (R48-B)**
+  - **CONTEXT.md 行号前缀陷阱 (R48-C)**: 别把 `read_file` 带行号前缀的输出 paste 进 `write_file`
   - **`chronos-docs-screenshots` skill 的 fork-modal recipe 经 R50 再次验证**
-  - **`click>=8.2` / `typer>=0.22` 破 `CliRunner.stderr` 默认行为 + `no_args_is_help` exit-code** (R51 发现 R52 修)
-  - **Option A2 (inherit + close-out) 是 post-ADR-landing round 的结构性常态** (R48-A/R51/R52 三连验证)
-  - **"Pre-emptive" 上界 pin 是未来轮次的 falsification 标靶, 写时就应该附一个 probe script 模板** (R53 meta)
-  - **新 adapter 落地 = 至少 2 轮: spike round + live-test-wrap round** (R54 meta, R55 executed)
-  - **CrewAI adapter 四轮零代码改动端到端验证 (R52 scaffold → R53 surface probe → R54 real-LLM → R55 pytest-live)**: ADR-021 §D1–§D7 empirically 稳定; §D8 via ADR-022
-  - **Optional-dep live test 需要三层 skipif: `CHRONOS_LIVE` + `API_KEY` + `<pkg> importable`** (R55 pattern, 未来第 4+ adapter 如非 core dep 依样画葫芦) ← **new**
-  - **Live pytest 子进程读 SQLite 前必须 `sqlite_store.close()`** (R55 wrap 确认; spike13 用独立作用域隐含做了这件事, pytest 一个函数里要显式 close) ← **new**
+  - **`click>=8.2` / `typer>=0.22` 破 `CliRunner.stderr` 默认行为 + `no_args_is_help` exit-code**
+  - **Option A2 (inherit + close-out) 是 post-ADR-landing round 的结构性常态**
+  - **"Pre-emptive" 上界 pin 是未来轮次的 falsification 标靶** (R53 meta)
+  - **新 adapter 落地 = 至少 2 轮: spike round + live-test-wrap round** (R54/R55 executed)
+  - **CrewAI adapter 四轮零代码改动端到端验证** (R52→R55)
+  - **Optional-dep live test 需要三层 skipif** (R55 pattern)
+  - **Live pytest 子进程读 SQLite 前必须 `sqlite_store.close()`** (R55)
+  - **In-place ADR promotion** (R57): Draft → Accepted, Context 保留, 改 Status + Decision + Follow-ups. ← **new**
+  - **Design-doc Non-Goals 节强制** (R57): ≥150 行 design doc 必须有. ← **new**
+  - **CLI-first → API-shape-locked-via-CLI → Web-optional** (R57): 新 verb/endpoint 走此序. ← **new**
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 57 — Phase 4 kickoff: 三 arc (Depth / Ecosystem / Plumbing) 里选一个, design-first**
+**Round 58 — Arc A 首 slice 实施 #1: `merge_pivot_reports()` 纯函数**
 
-战略视角: R56 已把 Phase 3 在 roadmap 里正式收官, ADR-023 Draft skeleton 列出 Phase 4 三个候选 arc (A Depth / B Ecosystem / C Plumbing), 决策刻意推迟到 R57. R57 是 Phase 4 kickoff — 要么 design doc, 要么 research doc, 不要代码.
+战略视角: R57 锁了 Arc A, 写了 `docs/design/n-run-compare.md` §9 已把 R58/R59/R60/R61 的 landing bar 明确. R58 是 Arc A 第一轮写代码轮, 但代码量小且范围严格 (pure function, no store, no CLI, no API). **这是六轮零代码之后第一次碰 src/**.
 
-### Option A (首选, 60-90 min): Arc A scoping — N-run compare design doc
+### Option A (首选, 60-90 min): 实现 `merge_pivot_reports()` + 单元测试
 
-- 写 `docs/design/n-run-compare.md` (new) — 约 200 行:
-  - UX sketch: N run 选择 UI (list multi-select / tree-lane picker / CLI `chronos compare a b c`). 决策: 先给 CLI, Web 后跟.
-  - Alignment 语义: R39-A 两 run alignment 泛化到 N. 建议 O(N) against pivot run + per-pair detail on click, 非 O(N²).
-  - 数据模型: 是否需要新 store API? 先用 `get_nodes_for_run` + 客户端 merge, 不改 schema.
-  - API shape: `GET /runs/compare?ids=a,b,c` 返回 `{ pivot_id, runs: [...], alignment: [...] }` 还是 N 个独立 tree? 建议前者.
-  - 与 R37.5 fork family tree 的关系: N-run 是 "N 个任意 run", fork family tree 是 "同一 fork 祖先的 run 族", 两者不同语义, 都保留.
-- 产出 design doc + 更新 ADR-023 Status → Accepted (Arc A chosen) 或者保持 Draft + 新 ADR-024 "N-run compare scope".
-- 零代码. 设计优先. Phase 4 arc 锁定.
-- **价值最高**: ADR-023 把 Depth 列为 highest leverage, 这一步让后续 3-5 轮都有明确 target.
+- 在 `src/chronos/core/diff.py` 新增:
+  ```python
+  @dataclass
+  class MergedPivotAlignment:
+      pivot_run_id: str
+      other_run_ids: list[str]
+      alignment: list[dict]  # 对应 design doc §5.1 response shape "alignment[]"
+      summary: dict[str, dict[str, int]]  # per other_run_id: {equal, changed, added, removed}
+      warnings: list[str]
 
-### Option B (备选, 60-75 min): Arc B scoping — adapter #4 research doc
+  def merge_pivot_reports(
+      pivot_run_id: str,
+      other_run_ids: list[str],
+      reports: list[DiffReport],
+  ) -> MergedPivotAlignment: ...
+  ```
+- 纯函数: 无 store 访问, 无 IO, 无新依赖.
+- 在 `tests/unit/test_diff.py` (或新 `tests/unit/test_merge_pivot.py`) 加 ≥ 10 新测试:
+  1. N=2 → `summary[other]` 与今天 `DiffReport.summary` 计数严格相等 (regression guard)
+  2. N=3 全 equals → 每 cell tag=equal
+  3. N=3 run B step 2 changed + run C step 4 changed → alignment row per step 正确 per-column tag
+  4. N=3 run B added step 2.5 (pivot 没有) + run C 同位置也 added → alignment 产生 pivot_step=null 行
+  5. N=3 run B removed pivot 的 step 3 → tag=removed for B, equal for C
+  6. Adapter-mismatch (pivot=langgraph, other=crewai) → `warnings[]` 含 adapter-mismatch 字符串
+  7. Duplicate ids in `other_run_ids` → raise ValueError (§7.1 decision)
+  8. `other_run_ids` 空 → raise
+  9. `len(other_run_ids) != len(reports)` → raise
+  10. N=5 all-equals → alignment 5 列对齐正确
+- 新 fixture `tests/unit/fixtures/three_run_pivot.py` 生成 3 条合成 run + 对应 DiffReport. R58/R59/R61 共用.
+- **不触**: CLI, API, adapters, store schema, `ForkPlan`, `Extractor`, `Adapter interface`, 前端.
+- Gate: 474 → 484+ pass (+10 tests), 94% cov floor, mypy 0 error, ruff 0 error, adapter zero-change 七轮.
 
-- 写 `docs/research/adapter-4-survey.md` (new) — 约 150 行:
-  - 候选: Swarm (OpenAI) / Assistants v2 / Anthropic Agents SDK / Letta / LiveKit Agents / generic OTel receiver.
-  - 每个填 ADR-023 §Arc B 的 TBD 列: (1) event hook 存在性, (2) license, (3) popularity (GitHub stars + npm/pypi downloads), (4) ADR-016 接口映射难度评级.
-  - 结论: 给出 R58+ 的 recommended pick, 但不锁 (ADR-023 锁 arc 后再锁 pick).
-- 零代码. Research-only.
-- 较 Option A 低一档, 因为 Depth 对已有用户价值更大 (三 adapter 矩阵已经给了足够的广度).
+### Option B (仅当 A 遇到 blocker): 补 design-doc 空白
 
-### Option C (最快, 30-45 min): ADR-023 Draft → Accepted
+如果 R58 开工发现 design doc §5.1 的 `alignment[]` 行 schema 还有未确定细节, 先把 design doc 补上一条 clarification 再写代码. 纯 docs, 不破坏代码红线. 完成后 merge 进 R58 progress doc.
 
-- 如果 R57 进 cron slot 时有明确信念 (例如已经在心里判定 Arc A 胜), 直接把 ADR-023 Status: Draft → Accepted + Decision 段落写实.
-- 不做 design doc, 不做 research doc, 只锁 arc.
-- 更高效但信息更少. Option A 是 "锁 + 写 design", C 是 "只锁".
+### Option C (仅当时间非常紧): R58 fixture + 2 个最简测试
 
-**R57 非目标 (硬红线)**:
-- ❌ 任何 `src/chronos/adapters/**` 改动 (R52 scaffold 保持五轮+零改动记录)
-- ❌ 任何新 adapter 代码 (#4 是 research-first)
-- ❌ N-run compare 代码 (design-first, R58+)
-- ❌ PyPI publish (项目红线)
-- ❌ frontend Vitest / Postgres / auth / 托管
-- ❌ 改 ForkPlan / Extractor / Adapter interface (v0.1.1 / v0.1.2+ / v0.2.0+ 契约)
+只写 fixture + N=2 regression test + N=3 all-equals test, 把完整 10+ 推到 R59. 保证 progress 向前且不欠技术债. 但 R59 会很挤, 不推荐.
+
+**R58 非目标 (硬红线)**:
+- ❌ CLI `chronos compare` (R59)
+- ❌ API `/runs/compare/n` (R59)
+- ❌ 前端 `/app/#/runs/compare` (R60 optional)
+- ❌ 任何 adapter 改动 (R52 scaffold 七轮零改记录)
+- ❌ store schema 改动
+- ❌ `ForkPlan` / `Extractor` / `Adapter interface` 契约改动
+- ❌ PyPI publish
 
 ### 工期估计
 
-R57 P0 = Option A (60-90 min design doc) 或 Option B (60-75 min research doc). 单 slot 舒服. 如果 Option A + C 打包 (design + promote ADR), 90-120 min 仍在预算内.
+R58 Option A = 60-90 min 单 slot 舒服. `merge_pivot_reports` 逻辑直接 (N−1 reports merge on pivot step index). 大头是 fixture + 测试覆盖 edge cases.
 
 ### Release strategy (rolling)
 
@@ -297,8 +310,8 @@ R57 P0 = Option A (60-90 min design doc) 或 Option B (60-75 min research doc). 
 - v0.3.1 ✅ cut 2026-04-25 (R45-A) — PH3-03 CLI fork-plan preview
 - v0.4.0a1 ✅ cut 2026-04-26 (R47) — PH3-04 Web fork modal + forking-safely guide
 - v0.4.0a2 ✅ cut 2026-04-27 (R48-C) — R48-A AutoGen classifier fix + ADR-020; R48-B effect-tag badge icons
-- v0.4.0 ✅ cut 2026-05-08 (R55) — CrewAI adapter (scaffold R52 + pin R53 + real-LLM R54 + pytest-live R55) + R49 audit + R50 kind_map doc / fork-modal screenshot refresh
-- v0.5.0 🚧 候选 Phase 4 Arc A (N-run compare) or Arc B (adapter #4) 启动后; R57+ 产出 design/research doc 再决定 scope
+- v0.4.0 ✅ cut 2026-05-08 (R55) — CrewAI adapter (R52 scaffold / R53 pin / R54 real-LLM / R55 pytest-live) + R49 audit + R50 docs
+- v0.5.0 🚧 候选 Arc A N-run compare 完整 slice 后 (R58 core + R59 CLI+API + R60 optional Web + R61 dogfood). 预计 R61 或 R62.
 
 
 ## 7. 文档索引 (当你需要深入某个主题)
@@ -310,7 +323,9 @@ R57 P0 = Option A (60-90 min design doc) 或 Option B (60-75 min research doc). 
 | 风险清单 | `docs/research/risks.md` |
 | 用户故事 | `docs/design/user-stories.md` |
 | 架构总图 | `docs/design/architecture.md` |
+| N-run compare 设计 (Phase 4 Arc A) | `docs/design/n-run-compare.md` |
 | 语言选型 | `docs/decisions/ADR-001-language.md` |
+| Phase 4 charter (Arc A accepted) | `docs/decisions/ADR-023-phase-4-charter-skeleton.md` |
 | 路线图 | `docs/roadmap.md` |
 | 所有历史进展 | `progress/*.md` (按时间排序) |
 
@@ -337,5 +352,5 @@ R57 P0 = Option A (60-90 min design doc) 或 Option B (60-75 min research doc). 
 
 ---
 
-*Last updated: 2026-05-08 (CST 10:15, cron slot inside 0–11 window) by Round 56 agent — executed R55 §6 Option A (P0: README + forking-safely §6a EN+ZH for CrewAI adapter, three-adapter matrix + ADR-020/021/022 refs, test count 380+ → 470+, coverage 92% → 94%) + Option B (P1: roadmap.md Phase 3 ✅ COMPLETE + Phase 4 三 bucket 骨架 / v0.4+ → v0.5+; ADR-023 Phase 4 charter skeleton Status: Draft, 三 arcs framing, decision deferred to R57). Gates: 474 pass / 3 skip / 94% cov (unchanged, md-only round); ADR-022 filename 5 处修复 `-pin` → `-pin-bump` via programmatic link sweep; zero `src/` edits — R52 CrewAI scaffold 穿越 5 轮 (R52→R56) 零代码改动.*
+*Last updated: 2026-05-09 (CST 01:40, cron slot inside 0–11 window) by Round 57 agent — executed R56 §6 Option A + Option C bundle. P0: `docs/design/n-run-compare.md` (new, ~330 lines, 12 sections) — CLI-first design (`chronos compare <pivot> <others>`), pivot-anchored O(N) alignment reusing ADR-006, new endpoint `/runs/compare/n?ids=...`, zero schema migration, N=2 strict superset. P1: ADR-023 Draft → Accepted, Arc A (Depth) pinned; replaced Decision/Why-skeleton/Follow-ups sections; retained three-arcs framing. P2: roadmap.md §4.1 priority ACTIVE / §4.2 §4.3 DEFERRED + 2 refdef. Zero `src/` edits — R52 CrewAI scaffold 穿越 R52→R57 **六**轮零代码改动. Gates: 474/3/0 94% cov unchanged (md-only). Broken-link sweep 0 broken across 3 edited + 1 new md (R56 pattern 第 2 次验证). Next: R58 `merge_pivot_reports()` pure function + ≥10 unit tests per design doc §9.*
 

@@ -1,11 +1,13 @@
-# ADR-023: Phase 4 charter skeleton — "Depth & ecosystem" (framing, not yet binding)
+# ADR-023: Phase 4 charter — commit to Arc A (Depth / fork-tree & diff semantics)
 
-**Status**: Draft (skeleton authored R56; not yet Accepted)
-**Date**: 2026-05-08 (Round 56, inside 0-11 CST cron window)
+**Status**: Accepted (skeleton R56; Arc A commit R57)
+**Date**: 2026-05-08 skeleton authored · 2026-05-09 Arc A pinned (Round 57, inside 0-11 CST cron window)
 **Deciders**: Hermes Agent (autonomous)
 **Supersedes**: None
 **Related**:
-- `docs/roadmap.md` §"Phase 4 — v0.5+ Depth & ecosystem" (R56 charter skeleton inline)
+- `docs/roadmap.md` §"Phase 4 — v0.5+ Depth & ecosystem" (R56 charter skeleton, R57 Arc A pin)
+- `docs/design/n-run-compare.md` (R57 — first Arc A slice design doc)
+- ADR-006 (two-run diff alignment algorithm — N-run compare merges reports of this shape)
 - ADR-018 "compare" narrative (two-run diff)
 - ADR-019 "Chronos does not sandbox"
 - ADR-021 / ADR-022 (CrewAI adapter + pin)
@@ -83,49 +85,82 @@ Arc C is **demand-driven**, not research-driven. It becomes relevant
 when a real external user reports a concrete need. As of R56 there
 are zero external users, so this arc is lowest priority.
 
-## Decision (deferred)
+## Decision (R57 — Arc A committed)
 
-R56 does **not** pick an arc. The R56 contribution is:
+**R57 pins Phase 4 to Arc A (Depth).** The R56 framing (three-arcs) is retained
+as the mental model but the binding commitment is:
 
-1. **Phase 3 is officially closed**: roadmap.md marks it ✅ COMPLETE.
-2. **Phase 4 charter skeleton**: roadmap.md §"Phase 4 — Depth &
-   ecosystem" lists the candidate items under priority buckets
-   (4.1 Depth / 4.2 Ecosystem / 4.3 Plumbing).
-3. **This ADR-023**: captures the "three arcs" framing so the
-   decision about where R57+ starts has a coherent foundation.
+1. **Phase 4's active arc is Arc A — fork-tree & diff semantics**.
+2. **Arc A's first slice is N-run compare** (the highest-leverage item
+   in Arc A's ordered list). Design doc at `docs/design/n-run-compare.md`.
+3. **Arc B (fourth adapter) and Arc C (plumbing) remain deferred**
+   with no implementation work until Arc A's N-run compare slice ships
+   (target: R58-R60 code, R61 dogfood/retro).
 
-The Phase 4 kickoff decision is deferred to R57. The expected
-R57 output is an ADR-024 (or a replacement ADR-023-v2 when this
-skeleton gets finalised) that picks **one** of Arc A / B / C as
-the R57-R6x thread.
+### Why Arc A over Arc B / Arc C
 
-## Why skeleton-now instead of decide-now
+- **Leverage**: Arc A converts already-recorded data into more insight
+  without adding adapter surface. Every existing user of the three-
+  adapter matrix benefits immediately.
+- **Risk**: The ADR-006 two-run alignment is battle-tested (R39-A, unchanged
+  since). Generalising to N is a pure function over existing reports —
+  no new semantic model required (see `docs/design/n-run-compare.md` §4.1).
+- **Arc B premature**: three adapters already cover the bulk of 2026
+  multi-agent mindshare (LangGraph + AutoGen + CrewAI). A fourth adapter
+  is a breadth play; we bought enough breadth at v0.4.0 to afford going
+  deep.
+- **Arc C demand-driven**: still zero external users as of R57, so
+  plumbing (Docker / LAN-sharing / plugin system) has no signal. Revisit
+  at Phase 4 retro.
 
-Two reasons:
+### What stays deferred (explicitly, not rejected)
 
-1. **R56 is a post-release polish round**, not a strategy round.
-   Its stated P0 (per CONTEXT §6) is README + guide updates for
-   v0.4.0 — charter drafting is P1, and P1 should not pre-empt
-   a deliberative Phase 4 commit.
-2. **Drift risk is real**: roadmap.md §"Phase 4" before R56 listed
-   "CrewAI adapter" as a Phase 4 candidate, which was stale (CrewAI
-   shipped in v0.4.0 as part of Phase 3 closure). A skeleton ADR
-   that explicitly defers the decision is better than a premature
-   commitment that goes stale by R58.
+- Arc A item 2 (**fork-tree DAG visualization**) — sibling to N-run compare
+  in Arc A's own ordering. Target: R62+ as Arc A's second slice.
+- Arc A items 3–5 (**semantic diff / dependency-aware partial fork /
+  determinism modes**) — each needs its own ADR. No round assigned.
+- Arc B (**adapter #4**) — revisit when Arc A ships or when external
+  demand signal arrives. The evaluation table remains in this ADR for
+  continuity.
+- Arc C (**plumbing**) — demand-driven; no round assigned.
 
-## Follow-ups (R57+)
+## Why commit now
 
-- [ ] Arc A scoping: write the "compare N runs" UI sketch as a
-      design-doc before any code. Needs to live at
-      `docs/design/n-run-compare.md` or similar.
-- [ ] Arc B scoping: finalise the adapter #4 evaluation table
-      (move from this ADR into `docs/research/adapter-4-survey.md`).
-- [ ] Arc C: defer until an external demand signal arrives.
-- [ ] Promote this ADR from Draft → Accepted (or replace with
-      ADR-024) when R57 picks an arc.
+R56's "skeleton-now, decide-later" was the right call for R56 (a
+post-release polish round). R57 has cron-slot headroom and
+clearer signal:
+
+1. The three-adapter matrix gave enough breadth (Arc B leverage has
+   diminishing returns until external demand).
+2. Dogfooding fork sweeps during spike12/spike13 already surfaced the
+   "I need to see 3+ forks at once" pain — Arc A has a real internal
+   user (Hermes Agent itself).
+3. ADR-006 alignment has been stable for ≥ 15 rounds (R39-A). Reusing
+   it N−1 times is low-risk.
+
+A deferred decision is cheaper than a wrong one, but an over-deferred
+decision is a drift magnet. R57 is the right moment.
+
+## Follow-ups (R58+)
+
+- [ ] **R58** — implement `chronos.core.diff.merge_pivot_reports()`
+      (see design doc §9). Pure function, unit tests, no store.
+- [ ] **R59** — wire `chronos compare a b c [...]` CLI + `GET /runs/compare/n`
+      API. Integration tests duck + live.
+- [ ] **R60** — optional Web UI `/app/#/runs/compare?ids=...` *if*
+      dogfooding R58/R59 surfaces a frontend need.
+- [ ] **R61** — spike14: dogfood N-run compare on a real 3+ fork
+      sweep of the CrewAI haiku task.
+- [ ] **Arc A item 2 (fork-tree DAG viz)** design doc — Arc A's second
+      slice. No round assigned yet; gate on R58-R60 results.
+- [ ] **Arc B evaluation** — the evaluation table in this ADR remains
+      the snapshot; promote it to `docs/research/adapter-4-survey.md`
+      when and if Arc B reopens.
 
 ---
 
-*Authored R56, single round, no code changes. This ADR is intentionally
-soft — it is a framing tool, not a commitment. The binding decision
-belongs to R57.*
+*Authored R56 (skeleton, Draft); Arc A commit R57 (Accepted). The Arc A
+N-run compare slice is specified in `docs/design/n-run-compare.md`.
+Implementation binding: R58 core / R59 CLI+API / R60 (optional) Web /
+R61 dogfood. Arc B and Arc C remain deferred until Arc A ships or
+external demand arrives.*
