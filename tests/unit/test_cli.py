@@ -154,12 +154,12 @@ def test_cli_version() -> None:
 def test_cli_info() -> None:
     result = runner.invoke(app, ["info"])
     assert result.exit_code == 0
-    # v0.3.0 / Phase 3 entry — status line was updated in R44-A release cut.
-    # Assert on stable tokens: the "chronos" program name + the current
-    # phase marker. Don't pin the exact version string; other tests cover
-    # that.
+    # Status line moves with the release — R60 rolled it from "Phase 3" to
+    # "Phase 4 Arc A" alongside the v0.5.0 cut. Assert on stable tokens: the
+    # "chronos" program name + the current phase marker. Don't pin the exact
+    # version string; other tests cover that.
     assert "chronos" in result.stdout.lower()
-    assert "phase 3" in result.stdout.lower()
+    assert "phase 4" in result.stdout.lower()
 
 
 def test_cli_help_default() -> None:

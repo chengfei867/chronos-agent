@@ -147,11 +147,34 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
-**截至 Round 59 结束 (2026-05-09 CST ~11:02, cron slot inside 0–11 window) — Phase 4 Arc A slice 2 shipped: `chronos compare` CLI + `/runs/compare/n` HTTP, 16 new tests, all gates green**
+**截至 Round 60 结束 (2026-05-10 CST ~02:18, cron slot inside 0–11 window) — Phase 4 Arc A slice 3 shipped + v0.5.0 released: dogfood script + three-round bundle release cut, all gates green**
 
-- 最近 progress doc: `docs/progress/2026-05-09-round-59.md` (R59 — Arc A slice 2: CLI + API close-out, Option A2 inheritance)
-- 最近上份 progress doc: `docs/progress/2026-05-09-round-58.md` (R58 — Arc A slice 1: `merge_pivot_reports` core + 17 tests)
-- 最近上上份 progress doc: `docs/progress/2026-05-08-round-57.md` (R57 — Phase 4 kickoff: Arc A committed + N-run compare design doc)
+- 最近 progress doc: `docs/progress/2026-05-10-round-60.md` (R60 — Arc A slice 3: dogfood + v0.5.0 release cut bundling R58+R59+R60)
+- 最近上份 progress doc: `docs/progress/2026-05-09-round-59.md` (R59 — Arc A slice 2: CLI + API close-out, Option A2 inheritance)
+- 最近上上份 progress doc: `docs/progress/2026-05-09-round-58.md` (R58 — Arc A slice 1: `merge_pivot_reports` core + 17 tests)
+
+- Round: **60** (Phase 4 Arc A slice 3 — dogfood + release, R59 §6 Option A executed): ~02:18 CST, 0 blocker, single-slot execution (不 inherit). Bundle R58 (core) + R59 (CLI/API) + R60 (dogfood + release) 作 **v0.5.0** 发射. 按 `chronos-release-pattern` skill 八步 + R60 新增 "pre-gate greps" 守卫:
+  - **P0 Dogfood**: `scripts/dogfood_compare_n.py` (new, ~240 LOC) — 4-run fork-sweep (pivot `rounds=3` + twin `rounds=3` + early-exit `rounds=1` + extra-round `rounds=5`), 同 SQLite DB, `chronos compare --format text` + `--format json` 抓到 `/tmp/chronos_r60_dogfood_*`. 输出: twin 6eq/0/0/0, early-exit 0/2/0/4 (pivot 侧 `absent` dogfood 首见), extra-round 0/6/2/0. Scripts 撞 `E402` (sys.path.insert before local import) → `pyproject.toml` 加 `[tool.ruff.lint.per-file-ignores] scripts/* = ["E402"]` (mirrors `examples/router_loop.py` 现成 pattern), 不撒 noqa. R59 "先让 ruff 报再 ignore" 纪律再验证.
+  - **P1 Release cut 八步**: (1) `pyproject.toml::version 0.4.0→0.5.0`; (2) `src/chronos/__init__.py::__version__ "0.4.0"→"0.5.0"`; (3) `src/chronos/cli/__init__.py::info_command` 状态行滚到 "Phase 4 Arc A -- N-run compare shipped (R58 merge core, R59 `chronos compare` CLI + `/runs/compare/n` HTTP, R60 dogfood + release), CrewAI adapter nine rounds zero-change, v0.5.0"; (4) `CHANGELOG.md [Unreleased]→[0.5.0] — 2026-05-10 (R58+R59+R60)`, Added/Fixed 分三轮拼; (5) **pre-gate greps** 发现 `tests/unit/test_cli.py:162` 固定 `"phase 3"` → 改 `"phase 4"` + 注释补 R60 (若漏扫 CI 必红, 升级到 release-pattern skill); (6) gates; (7) commit + tag; (8) push + GH release.
+  - Gates: **507→507 pass / 3 skip / 0 fail / 94% cov 保持** (dogfood 是 script 不是 pytest). mypy 30 files 0 error, ruff check 0 error (src+tests+scripts), ruff format 0 drift (81 files, `scripts/` 豁免 by design). Adapter **zero change** — R52 CrewAI scaffold 穿越 **R52→R60 = 九**轮零代码改.
+
+- **R60 关键发现 (上墙)**:
+  - **"Arc slice = core + surface + proof = 1 bundle = 1 minor version" (R60 新, 第 1 次显式三轮 bundle, 候选 skill)**: R58 pure → R59 CLI/API → R60 dogfood+release 合打 v0.5.0. 替代方案 (三个独立 patch) 噪音多、Arc 被切碎、notes 重复. 下一 Arc 再验证后 promote. ← **new**
+  - **Dogfood script = living design doc (R60 新)**: `scripts/dogfood_*.py` 不仅 release evidence, 也是 design-doc §5/§6 的可执行 spec, non-maintainer 读 5 分钟 get 语义. 下一 Arc (B/C) 每个都 budget 一个. ← **new**
+  - **Test assertion drift guard in release pattern (R60 新)**: CLI 状态行 phase/version bump 前必 `grep -nr "phase [0-9]" tests/`. R60 命中 `test_cli.py:162`. 升级到 `chronos-release-pattern` skill §4 pre-gate greps checklist. ← **new**
+  - **`ruff format --check` scope = `src/ + tests/` only (R60 确认)**: `scripts/` 是 seed/evidence/one-shot, 风格 drift 不值 regression; lint (正确性) 保留, format (风格) 豁免. ← **new invariant**
+
+- **R60 产出**:
+  - `scripts/dogfood_compare_n.py` (**new, 240 LOC**) — 4-run fork-sweep dogfood.
+  - `docs/progress/2026-05-10-round-60.md` (**new**).
+  - `pyproject.toml` — version bump + `per-file-ignores scripts/*`.
+  - `src/chronos/__init__.py` — `__version__ = "0.5.0"`.
+  - `src/chronos/cli/__init__.py` — `info_command` 状态行 Phase 4 / v0.5.0.
+  - `CHANGELOG.md` — `[Unreleased]→[0.5.0] — 2026-05-10 (R58+R59+R60)`.
+  - `tests/unit/test_cli.py` — `"phase 3"→"phase 4"` + R60 注释.
+  - `docs/CONTEXT.md §5/§6` — 本 refresh + release strategy 补 v0.5.0 ✅.
+  - `v0.5.0` annotated tag + GH release page (dogfood 证据 + CHANGELOG).
+  - **Phase 4 Arc A 对外完整可交付** — N-run pivot-anchored compare 的 core + CLI + HTTP + dogfood 四层全 ship.
 
 - Round: **59** (Phase 4 Arc A slice 2 — CLI + API, R58 §6 Option A finished end-to-end): ~11:02 CST 进入 cron slot (窗口尾, 勉强卡线), 0 blocker, **Option A2 inheritance** — 前一 cron slot 留下 ~850 LOC WIP (CLI + API impl + CLI tests 全 green), 本 slot 补齐 API tests + CHANGELOG + docs + commit + push. 按 `cron-slot-handoff-recovery` skill A2 checklist 执行:
   - **Inherited**: `src/chronos/cli/compare.py` (new, 247 LOC), `src/chronos/cli/__init__.py` (+81 LOC `@app.command("compare")`), `src/chronos/api/server.py` (+102 LOC `GET /runs/compare/n`), `tests/unit/test_cli_compare.py` (new, 420 LOC, 11 tests). 前 3 实现 + 1 测试文件 all green 但未 commit, 也无 API tests.
@@ -180,23 +203,28 @@ chronos-agent/
   - `docs/CONTEXT.md §5 + §6` (this refresh).
   - **第一次 `chronos compare` 对外可用** — N-run pivot-anchored compare 的 CLI + HTTP surface 全部 shipped.
 
-- **战略定位 (R33 锁死, R58/R59 继承)**: GitHub 爆款开源项目, 不是 SaaS. **v0.4.0 非 alpha** 是最新 tag. v0.5.0 候选 R60 (dogfood + release) 或 R61.
-- 当前阶段: **Phase 4 Arc A slice 1 ✅ (R58) + slice 2 ✅ (R59)**. 下一步 = R60 dogfood + v0.5.0 release cut **或** Web UI **或** ADR-024 post-impl retro (见 §6).
+- **战略定位 (R33 锁死, R58/R59/R60 继承)**: GitHub 爆款开源项目, 不是 SaaS. **v0.5.0 是最新 tag (R60 cut, bundles R58+R59+R60 Arc A 全套)**. v0.5.1 候选 R61+ (post-release polish) 或 v0.6.0 候选 Arc B kickoff.
+- 当前阶段: **Phase 4 Arc A ✅ closed (R58 core + R59 CLI/API + R60 dogfood+release)**. 下一步 = R61 Arc B kickoff (multi-pivot compare) / Web UI §3.2 / ADR-024 retro (见 §6).
 - 最新 ADR: **ADR-023 (R57, Accepted, Arc A committed)**. 无新 ADR 本轮.
-- 最新 design doc: **`docs/design/n-run-compare.md` (R57)** — §3.1/§3.3/§4.1/§5.1/§6/§7.1 全部 binded by R58+R59 code; §3.2 (Web UI route) 仍 optional/unimpl.
+- 最新 design doc: **`docs/design/n-run-compare.md` (R57)** — §3.1/§3.3/§4.1/§5.1/§6/§7.1 全部 binded by R58+R59 code, R60 dogfood 验证; §3.2 (Web UI route) 仍 optional/unimpl.
 - 最新 research doc: `docs/research/r51-crewai-event-bus-characterization.md` (R54, unchanged).
-- 最新 tag: **v0.4.0 (R55, non-alpha)**. 不变.
+- 最新 tag: **v0.5.0 (R60, bundles R58+R59+R60)**.
 
-- 测试状态: **507 pass / 3 skip / 0 failed / 94% cov** (+16 tests). `mypy src/` 0 error 30 files. `ruff src tests` 0 error. `ruff format --check` 0 drift 81 files. 前端不 rerun.
+- 测试状态: **507 pass / 3 skip / 0 failed / 94% cov** (R59 baseline 保持, dogfood 不加 pytest). `mypy src/` 0 error 30 files. `ruff src tests scripts` 0 error. `ruff format --check src tests` 0 drift 81 files. 前端不 rerun.
 - Broken-link sweep: unchanged (md 改: CHANGELOG + CONTEXT + 新 progress doc, 无跨链).
 
 - 前端路由: `/app/#/runs`, `/app/#/runs/<id>`, `/app/#/runs/<a>/diff/<b>` (R39-A) — 不变. **`/app/#/runs/compare?ids=...` 见 n-run-compare.md §3.2, R60 optional impl (非必需).**
 - 仓库可见性: **PUBLIC** — 不变.
+- 新事实 (R60 上墙, 仍生效, 不重复):
+  - **Arc slice = core + surface + proof = 1 bundle = 1 minor version (R60 新, 候选 skill)**: R58 pure → R59 CLI/API → R60 dogfood+release 合打 v0.5.0. ← **new**
+  - **Dogfood script = living design doc (R60 新)**: `scripts/dogfood_*.py` = release evidence + 可执行 spec. ← **new**
+  - **Test assertion drift guard (R60 新)**: CLI 状态行 bump 前 `grep -nr "phase [0-9]" tests/` 必扫. ← **new**
+  - **`ruff format --check` scope = `src/ + tests/` only (R60 确认)**: `scripts/` 豁免 format, 保留 lint. ← **new invariant**
 - 新事实 (R59 上墙, 仍生效, 不重复):
-  - **A2 inheritance = post-implementation-slot 结构性常态 (R59, 五连)**: 单 slot 1 把梭不要 budget. ← **new**
-  - **N=2 cross-layer frozen-contract 三连守卫 (R59 候选 skill)**: pure + CLI + HTTP 三个 layer 都要有 N=2-equals-legacy 测试. ← **new**
-  - **`# noqa: RUFxxx` 反向纪律 (R59 新)**: 先让 ruff 报警再加 noqa, 否则 `RUF100` dead-code. ← **new**
-  - **新 fixture 新 scenario 原则 (R59 新)**: 不 piggyback 旧 fixture, 测试 isolation 优先. ← **new**
+  - **A2 inheritance = post-implementation-slot 结构性常态 (R59, 五连)**: 单 slot 1 把梭不要 budget.
+  - **N=2 cross-layer frozen-contract 三连守卫 (R59 候选 skill, R60 dogfood 再次 consistency 验证)**: pure + CLI + HTTP 三层 N=2-equals-legacy.
+  - **`# noqa: RUFxxx` 反向纪律 (R59 新, R60 再验证)**: 先让 ruff 报再加 noqa; 或走 config per-file-ignores.
+  - **新 fixture 新 scenario 原则 (R59 新)**: 不 piggyback 旧 fixture.
   - **"Absent" 是 merge 代数一等公民 (R58)**: insert-row 合并启发式接受 `absent` 为未贡献.
   - **Fixture module `tests/unit/fixtures/` + `__init__.py` (R58)**: 跨轮共享 fixture 标准位置.
   - **O(N) 纯函数 boundary over-validate (R58)**: ≥ 6 input-validation tests per new public function.
@@ -224,7 +252,7 @@ chronos-agent/
   - **AutoGen sync-wrap (ADR-017) 是 AutoGen adapter 永久架构原则**
   - **AutoGen tool-event `node_name` 三段式 (ADR-020)**
   - **LangGraph `kind_map` 是 Phase 3 effect 标注的事实必需**
-  - **CrewAI adapter interface (ADR-021) 是 v0.4+ 对外契约** (R51-R59 端到端验证; R56/R57 docs-only + R58 merge core + R59 CLI/API wrappers 继续穿越, **八**轮零代码改)
+  - **CrewAI adapter interface (ADR-021) 是 v0.4+ 对外契约** (R51-R60 端到端验证; R56/R57 docs-only + R58 merge core + R59 CLI/API wrappers + R60 dogfood/release 继续穿越, **九**轮零代码改)
   - **CrewAI pin `>=0.80,<2.0` (ADR-022, R53)** — revises ADR-021 §D8 upper bound
   - **CrewAI event-bus `ThreadPoolExecutor` dispatch 不可协商 (spike12 §F4 + ADR-021 §D1/§D2)**
   - **CrewAI `CrewKickoffCompletedEvent` import 位置跨 minor 版本不稳**
@@ -260,47 +288,50 @@ chronos-agent/
   - **Fixture module `tests/unit/fixtures/`** (R58)
   - **O(N) 纯函数 boundary over-validate** (R58)
   - **`RUF043` `pytest.raises(match=...)` 里的 regex metachar** (R58)
-  - **A2 inheritance = post-implementation-slot 常态 (R59, 五连 R48-A→R51→R52→R53→R59)** ← **new**
-  - **N=2 cross-layer frozen-contract 三连守卫 (R59 候选 skill, R60 再验证 promote)** ← **new**
-  - **`# noqa: RUFxxx` 反向纪律 (R59)**: 先让 ruff 报再加 noqa ← **new**
-  - **新 fixture 新 scenario 原则 (R59)** ← **new**
+  - **A2 inheritance = post-implementation-slot 常态 (R59, 五连 R48-A→R51→R52→R53→R59)**
+  - **N=2 cross-layer frozen-contract 三连守卫 (R59 候选 skill, R60 dogfood consistency 二次验证)**
+  - **`# noqa: RUFxxx` 反向纪律 (R59, R60 再验证; 或 config per-file-ignores)**
+  - **新 fixture 新 scenario 原则 (R59)**
+  - **CrewAI adapter 九轮零代码改动端到端验证 (R52→R60)** ← **R60 updated**
+  - **Arc slice = core + surface + proof = 1 bundle = 1 minor version (R60 候选 skill)** ← **new**
+  - **Dogfood script = living design doc (R60)** ← **new**
+  - **Test assertion drift guard in release pattern (R60)** ← **new**
+  - **`ruff format --check` scope = `src/ + tests/` only, `scripts/` 豁免 (R60)** ← **new**
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 60 — Arc A 收尾: dogfood + v0.5.0 release cut (优选), 或 Web UI, 或 ADR-024 retro**
+**Round 61 — Post-v0.5.0: Arc B kickoff (首选), 或 Web UI §3.2, 或 ADR-024 retro**
 
-战略视角: R59 关闭了 Arc A 的 CLI + API surface; Phase 4 Arc A 技术上已可交付. R60 的三个候选, 优先级清晰. 本轮 (R59) 没 cut v0.5.0 是因为 cron slot 窗口尾 (~11:02 CST) + inheritance close-out 已经消耗 30 分钟, 留 release 给专门一轮做是历史上十二次验证的正道 (见 skill `chronos-release-pattern`).
+战略视角: R60 发射 v0.5.0, Phase 4 Arc A 完整 closed. R61 是 post-release cron slot, 三个候选优先级清晰. 参考 R56/R57 post-phase-kickoff 的节奏: release 完该推进下一 Arc, 不该滞留在 A 的 polish.
 
-### Option A (首选, 90–120 min): dogfood + v0.5.0 release cut
+### Option A (首选, 90–120 min): Phase 4 Arc B kickoff (Breadth: multi-pivot compare)
 
-- **P0 Dogfood**: 跑一个真 4-agent crew (LangGraph 最熟, 或 CrewAI `tests/live/test_crewai_smoke.py` 的升级版), fork-sweep 3 次, 手动驱动 `chronos compare <pivot> <f1> <f2> <f3>`, 捕获 `--format text` 和 `--format json` 两种输出的截图 / log 用于 README. 目标: 证实 R58+R59 的 surface 在真实 agent trace 上的可用性, 暴露任何 design doc 没覆盖的 edge.
-- **P1 Release cut**: 按 skill `chronos-release-pattern` 八步. 打 tag `v0.5.0`. CHANGELOG `[Unreleased]` → `[0.5.0] — 2026-05-DD (R58 + R59 + R60)` bundled, 三轮成组 (slice 1 core + slice 2 wrappers + slice 3 dogfood+release). `pyproject.toml::project.version` `0.4.0 → 0.5.0`, `src/chronos/__init__.py::__version__` 同步, CLI 状态行同步.
-- **P2 README**: 新增 "Compare N runs (Arc A)" 节, 引用 design doc + 贴 dogfood 截图 + text/JSON 两个例子.
-- Gate: 507 → 507+ pass (dogfood 新建 live test 若有则 +1-3 skip), 94% cov, mypy 0 error, ruff 0 error, CrewAI adapter **九轮零改 (R52→R60)**.
+- **P0**: ADR-024 Draft — "Multi-pivot compare when no natural anchor exists". Context: Arc A 前提是有 pivot (e.g. 原始 baseline run); Arc B 处理 **无 pivot** 或 **多 candidate pivot** 的 case. 候选策略: (a) bootstrap virtual pivot by prefix LCS across N runs; (b) symmetric pairwise O(N²) diff; (c) star schema (pick centroid by metric).
+- **P1**: `docs/research/r61-multi-pivot-alignment.md` — 2-3 算法 trade-offs, complexity, precedent in bioinformatics / sequence alignment.
+- **P2**: `docs/roadmap.md` §4.2 Arc B 从 DEFERRED → ACTIVE.
+- 无 `src/` 改动, md-only. Follow R57 phase-kickoff archetype.
+- Gate: 507/3/0 保持, md broken-link 0.
 
-### Option B (备选, 60–90 min): Web UI `/app/#/runs/compare?ids=...`
+### Option B (备选, 60–90 min): Web UI `/app/#/runs/compare?ids=...` (Arc A §3.2 optional route)
 
-- 设计 doc §3.2 描述的 Web 路由. 对 `GET /runs/compare/n` 的前端消费者. pivot-anchored 列表 + per-column EffectTag 徽章 + click-to-expand 行.
-- Reuse `EffectTag` (R48-B), 新组件 `CompareNTable.tsx`.
-- ≥ 6 Playwright/vitest 前端测试.
-- **风险**: 前端 slot 通常比估计久 (R37.5/R46-A 惯例); Web UI 在 Arc A 是 optional (design doc §3.2 explicit).
+- Close out design doc §3.2. `CompareNTable.tsx` 消费 `GET /runs/compare/n`. `EffectTag` reuse (R48-B).
+- ≥ 6 前端 tests.
+- 风险: frontend slot 超时史 (R37.5/R46-A).
 
-### Option C (备选, 单 slot, docs-only): ADR-024 "N-run compare post-implementation retro"
+### Option C (备选, 45–60 min): ADR-024 "Arc A post-implementation retro"
 
-- 把 R58+R59 所有 lessons 固化为 ADR-024: `absent`-as-first-class-tag, fixture-module location, O(N) boundary validation, N=2 triangulation, CLI-first-API-locked-via-CLI, A2 inheritance 常态.
-- 纯 docs, 0 src 改动, ~45 min.
-- 适合: R60 cron slot 窗口紧 (<60 min) 时的 fallback.
+- 固化 R58/R59/R60 全部 lessons: `absent`-first-class, N=2 triangulation, CLI-first-API-locked, A2 inheritance, "Arc slice = core + surface + proof = 1 bundle" (R60 新), dogfood-as-living-design-doc (R60 新), test-assertion-drift guard (R60 新).
+- 纯 docs, `src/` 0 改.
 
 ### 推荐
 
-**Option A (dogfood + release)** — 最强 user-facing 价值轴. Arc A 是 CLI + API 主的特性; release 证明它 matters. Web UI 和 ADR 可以 ride v0.5.1.
+**Option A (Arc B kickoff)** — v0.5.0 释放能量, 趁热推进到 Arc B 对外价值最大. Web UI 和 ADR-024 retro 可 ride R62/R63.
 
-### R60 非目标 (硬红线)
+### R61 非目标 (硬红线)
 
-- ❌ Web UI impl **除非** R60 选 Option B
-- ❌ Adapter 改动 (R52 scaffold 九轮零改目标)
+- ❌ Adapter 改动 (十轮零改目标)
 - ❌ Store schema 改动
-- ❌ `merge_pivot_reports` / `compare_command` / `/runs/compare/n` signature 改动 (R58+R59 frozen contract)
+- ❌ Arc A surface 改动 (v0.5.0 frozen contract: `merge_pivot_reports`, `compare_command`, `/runs/compare/n`)
 - ❌ `ForkPlan` / `Extractor` / `Adapter interface` 契约改动
 - ❌ 主网 / 花钱 / public repo toggle
 - ❌ Alias `chronos diff` → `chronos compare` (OQ-1, need ADR-025)
@@ -308,7 +339,7 @@ chronos-agent/
 
 ### 工期估计
 
-R60 Option A = 90–120 min, 单 slot 可做. 分两段: dogfood 30–50 min, release cut 40–60 min (skill 熟). Option B = 60–90 min 若 frontend 框架到位. Option C = 45 min.
+R61 Option A = 90–120 min. Option B = 60–90 min. Option C = 45 min.
 
 ### Release strategy (rolling)
 
@@ -317,7 +348,10 @@ R60 Option A = 90–120 min, 单 slot 可做. 分两段: dogfood 30–50 min, re
 - v0.4.0a1 ✅ cut 2026-04-26 (R47) — PH3-04 Web fork modal
 - v0.4.0a2 ✅ cut 2026-04-27 (R48-C)
 - v0.4.0 ✅ cut 2026-05-08 (R55) — CrewAI adapter
-- v0.5.0 🚧 候选 R60 (dogfood + release bundled with R58+R59). 预计 R60 或 R61.
+- **v0.5.0 ✅ cut 2026-05-10 (R60, bundles R58+R59+R60)** — Phase 4 Arc A: N-run compare (`merge_pivot_reports` core + `chronos compare` CLI + `/runs/compare/n` HTTP + dogfood)
+- v0.5.1 🚧 候选 R61+ (post-release polish if Option B/C).
+- v0.6.0 🚧 候选 Arc B complete (multi-pivot compare).
+
 ## 7. 文档索引 (当你需要深入某个主题)
 
 | 主题 | 文档 |

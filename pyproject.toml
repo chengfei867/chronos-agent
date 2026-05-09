@@ -1,6 +1,6 @@
 [project]
 name = "chronos-agent"
-version = "0.4.0"
+version = "0.5.0"
 description = "Time-travel debugger for multi-agent AI systems — record, replay, fork, diff reasoning trees."
 readme = "README.md"
 license = { text = "MIT" }
@@ -102,6 +102,10 @@ ignore = [
 # function defaults. B008 forbids this in general Python; Typer itself
 # documents and requires this pattern. Scope the allowance to the CLI module.
 "src/chronos/cli/*" = ["B008"]
+# Dogfood / seed scripts mutate sys.path before importing from local
+# packages (chronos.*, examples.*) to work outside the installed venv.
+# The ordering is intentional; don't flag E402.
+"scripts/*" = ["E402"]
 
 [tool.ruff.format]
 quote-style = "double"
