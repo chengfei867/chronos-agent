@@ -517,9 +517,8 @@ def merge_pivot_reports(
             # with the same node_name and this run hasn't yet contributed
             # (its cell is still the default "absent" placeholder).
             existing = ir["per_run"].get(oid)
-            if (
-                ir["inserted_node_name"] == entry.b.node_name
-                and (existing is None or existing.get("tag") == "absent")
+            if ir["inserted_node_name"] == entry.b.node_name and (
+                existing is None or existing.get("tag") == "absent"
             ):
                 ir["per_run"][oid] = {
                     "tag": "added",
@@ -536,11 +535,15 @@ def merge_pivot_reports(
                     "inserted_after_pivot_step": anchor_step,
                     "inserted_node_name": entry.b.node_name,
                     "per_run": {
-                        o: ({
-                            "tag": "added",
-                            "node_id": entry.b.id,
-                            "node_name": entry.b.node_name,
-                        } if o == oid else _cell_absent())
+                        o: (
+                            {
+                                "tag": "added",
+                                "node_id": entry.b.id,
+                                "node_name": entry.b.node_name,
+                            }
+                            if o == oid
+                            else _cell_absent()
+                        )
                         for o in other_run_ids
                     },
                 }
@@ -566,8 +569,7 @@ def merge_pivot_reports(
     # (can happen if the report was fully "added") — splay them at the end
     # in ascending anchor order.
     orphan_anchors = sorted(
-        a for a in inserts_by_anchor
-        if a != -1 and a not in pivot_step_positions
+        a for a in inserts_by_anchor if a != -1 and a not in pivot_step_positions
     )
     for anchor in orphan_anchors:
         for ir in inserts_by_anchor[anchor]:

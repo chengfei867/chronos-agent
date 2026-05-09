@@ -61,7 +61,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from chronos.cli.fork import build_effects_summary, build_plan
-from chronos.core.diff import DiffRunNotFoundError, diff_runs
+from chronos.core.diff import DiffRunNotFoundError, diff_runs, merge_pivot_reports
 from chronos.core.models import SCHEMA_VERSION, Fork, Node, Run
 
 if TYPE_CHECKING:
@@ -458,6 +458,104 @@ def build_app(store: SqliteStore) -> FastAPI:
             "diff": report.to_dict(),
             "tree_a": _tree_for(a),
             "tree_b": _tree_for(b),
+        }
+
+    # /runs/compare/n — N-run pivot-anchored compare (Phase 4 Arc A, R59).
+    # Same registration-order constraint as /runs/compare: this literal
+    # path MUST come before /runs/{run_id}.
+    @app.get("/runs/compare/n")
+    def compare_runs_n(
+        ids: str = Query(
+            ...,
+            description=(
+                "Comma-separated run_ids, ≥ 2. First is the pivot; all others "
+                "are compared against it. Duplicates 400, self-in-others 400."
+            ),
+        ),
+        restrict_to_downstream: bool = Query(
+            True,
+            description=(
+                "Applied per (pivot, other) pair. When an other is a forked child "
+                "of pivot, skip the shared prefix. Same semantic as /runs/compare."
+            ),
+        ),
+    ) -> dict[str, Any]:
+        # --- parse & validate `ids` -----------------------------------
+        id_list = [s.strip() for s in ids.split(",") if s.strip()]
+        if len(id_list) < 2:
+            raise HTTPException(
+                status_code=400,
+                detail="`ids` must be a comma-separated list of at least 2 run_ids",
+            )
+        pivot_id = id_list[0]
+        other_ids = id_list[1:]
+        seen: set[str] = set()
+        for oid in other_ids:
+            if oid == pivot_id:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"run_id {oid!r} appears as both pivot and other",
+                )
+            if oid in seen:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"duplicate run_id in `ids`: {oid!r}",
+                )
+            seen.add(oid)
+
+        # --- fetch runs (404 surfaces any missing id) -----------------
+        pivot_run = store.get_run(pivot_id)
+        if pivot_run is None:
+            raise HTTPException(status_code=404, detail=f"Run not found: {pivot_id}")
+        other_runs: dict[str, Run] = {}
+        for oid in other_ids:
+            r = store.get_run(oid)
+            if r is None:
+                raise HTTPException(status_code=404, detail=f"Run not found: {oid}")
+            other_runs[oid] = r
+
+        # --- build the N-1 DiffReports (ADR-006 algorithm, per pair) --
+        reports = []
+        for oid in other_ids:
+            try:
+                reports.append(
+                    diff_runs(
+                        store,
+                        pivot_id,
+                        oid,
+                        restrict_to_downstream=restrict_to_downstream,
+                    )
+                )
+            except DiffRunNotFoundError as exc:
+                # Defensive: already guarded above, but re-raise as 404.
+                raise HTTPException(status_code=404, detail=f"Run not found: {exc.run_id}") from exc
+
+        merged = merge_pivot_reports(pivot_id, other_ids, reports)
+
+        # --- assemble response (design doc §5.1) ----------------------
+        def _tree_for(run_id: str) -> dict[str, Any]:
+            nodes = store.get_nodes_for_run(run_id)
+            forks = store.get_forks_for_parent(run_id)
+            return _assemble_tree(store, run_id, nodes, forks)
+
+        runs_payload: dict[str, Any] = {pivot_id: _run_to_dict(pivot_run)}
+        trees_payload: dict[str, Any] = {pivot_id: _tree_for(pivot_id)}
+        diffs_payload: dict[str, Any] = {}
+        for oid, rep in zip(other_ids, reports, strict=True):
+            runs_payload[oid] = _run_to_dict(other_runs[oid])
+            trees_payload[oid] = _tree_for(oid)
+            diffs_payload[oid] = rep.to_dict()
+
+        merged_dict = merged.to_dict()
+        return {
+            "pivot_id": pivot_id,
+            "other_ids": list(other_ids),
+            "runs": runs_payload,
+            "trees": trees_payload,
+            "diffs": diffs_payload,
+            "alignment": merged_dict["alignment"],
+            "summary": merged_dict["summary"],
+            "warnings": merged_dict["warnings"],
         }
 
     @app.get("/runs/{run_id}")

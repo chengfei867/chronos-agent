@@ -182,9 +182,7 @@ def test_duplicate_other_run_ids_raises() -> None:
     pivot, others, reports = three_run_all_equal()
     with pytest.raises(ValueError, match="duplicate"):
         # Same id twice in other_run_ids.
-        merge_pivot_reports(
-            pivot.id, [others[0].id, others[0].id], [reports[0], reports[0]]
-        )
+        merge_pivot_reports(pivot.id, [others[0].id, others[0].id], [reports[0], reports[0]])
 
 
 def test_empty_other_run_ids_raises() -> None:
@@ -277,12 +275,8 @@ def test_alignment_rows_ordered_by_ascending_pivot_step() -> None:
     assert anchored_steps == sorted(anchored_steps)
     # And the insert row is spliced in between its anchor (step 1) and
     # the following pivot step (step 2).
-    idx_step1 = next(
-        i for i, r in enumerate(merged.alignment) if r["pivot_step"] == 1
-    )
-    idx_step2 = next(
-        i for i, r in enumerate(merged.alignment) if r["pivot_step"] == 2
-    )
+    idx_step1 = next(i for i, r in enumerate(merged.alignment) if r["pivot_step"] == 1)
+    idx_step2 = next(i for i, r in enumerate(merged.alignment) if r["pivot_step"] == 2)
     # Insert row should live strictly between them.
     assert idx_step2 == idx_step1 + 2
     assert merged.alignment[idx_step1 + 1]["pivot_step"] is None

@@ -170,9 +170,7 @@ def three_run_b_changed_step2_c_changed_step3() -> tuple[Run, list[Run], list[Di
     return pivot, [b, c], [rep_b, rep_c]
 
 
-def three_run_b_and_c_both_insert_same_position() -> tuple[
-    Run, list[Run], list[DiffReport]
-]:
+def three_run_b_and_c_both_insert_same_position() -> tuple[Run, list[Run], list[DiffReport]]:
     """Pivot has 3 steps. Both B and C add a ``refine`` step between
     pivot step 1 and step 2. These inserts should merge into a single
     alignment row.
@@ -296,14 +294,10 @@ def n_run_all_equal(n: int) -> tuple[Run, list[Run], list[DiffReport]]:
         raise ValueError("n must be >= 2")
     pivot = mk_run("P")
     others = [mk_run(f"O{i}") for i in range(n - 1)]
-    p_nodes = [
-        mk_node(run_id="P", step=i, name=f"step{i}", state={"x": i}) for i in range(5)
-    ]
+    p_nodes = [mk_node(run_id="P", step=i, name=f"step{i}", state={"x": i}) for i in range(5)]
     reports: list[DiffReport] = []
     for o in others:
-        o_nodes = [
-            mk_node(run_id=o.id, step=i, name=f"step{i}", state={"x": i}) for i in range(5)
-        ]
+        o_nodes = [mk_node(run_id=o.id, step=i, name=f"step{i}", state={"x": i}) for i in range(5)]
         reports.append(
             DiffReport(
                 run_a=pivot,

@@ -314,6 +314,87 @@ def diff(
 
 
 # ---------------------------------------------------------------------------
+# `chronos compare` — N-run pivot-anchored diff (Phase 4 Arc A, R59)
+# ---------------------------------------------------------------------------
+
+
+@app.command("compare")
+def compare_cmd(
+    pivot_run_id: str = typer.Argument(
+        ..., help="Pivot run id — the 'before' / reference run all others align against."
+    ),
+    other_run_ids: list[str] = typer.Argument(
+        ...,
+        help=(
+            "One or more other run ids to compare against the pivot. "
+            "Minimum 1 other; N > 8 prints a soft warning."
+        ),
+        show_default=False,
+    ),
+    db: Path | None = typer.Option(
+        None, "--db", help="Path to chronos.db (overrides $CHRONOS_DB)."
+    ),
+    json_out: bool = typer.Option(
+        False,
+        "--json",
+        help="Emit the merged alignment as JSON (stable contract — design doc §5.1).",
+    ),
+    restrict_to_downstream: bool = typer.Option(
+        True,
+        "--restrict-to-downstream/--full",
+        "-R/-F",
+        help=(
+            "When an other run is a forked child of the pivot, skip the shared prefix. "
+            "Default. Applied per (pivot, other) pair. Use --full for apples-to-apples."
+        ),
+    ),
+    columns: str = typer.Option(
+        "changed-or-added",
+        "--columns",
+        help="Which rows to render in text mode: all | changed | changed-or-added.",
+    ),
+    show_equal: bool = typer.Option(
+        False,
+        "--show-equal",
+        help="In --columns=all text mode, also print rows where every column is equal.",
+    ),
+    width: int | None = typer.Option(
+        None,
+        "--width",
+        help="Override terminal width for the rendered table (useful in narrow panes).",
+    ),
+) -> None:
+    """Compare N recorded runs against a pivot (fork-sweep debugger).
+
+    First positional is the pivot; all other positionals are aligned
+    against it. N=2 is numerically identical to ``chronos diff`` on
+    the summary row. See ``docs/design/n-run-compare.md`` for the
+    full spec.
+
+    Examples::
+
+        chronos compare run_001 run_002                        # N=2
+        chronos compare run_001 run_002 run_003 run_004        # N=4
+        chronos compare run_001 run_002 run_003 --json         # JSON contract
+        chronos compare run_001 run_002 --full                 # don't slice
+    """
+    from chronos.cli.compare import compare_command
+
+    compare_command(
+        pivot_run_id=pivot_run_id,
+        other_run_ids=list(other_run_ids),
+        db=db,
+        json_out=json_out,
+        restrict_to_downstream=restrict_to_downstream,
+        columns=columns,
+        show_equal=show_equal,
+        width=width,
+        open_store_fn=_open_store,
+        console=console,
+    )
+
+
+# ---------------------------------------------------------------------------
 # `chronos fork plan` — emit fork plan artifact (ADR-008)
 # ---------------------------------------------------------------------------
 

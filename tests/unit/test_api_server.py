@@ -882,3 +882,202 @@ def test_fork_plan_preview_404_for_unknown_node(
     resp = client.get(f"/runs/{ids['parent_run']}/nodes/{_uuid()}/fork-plan")
     assert resp.status_code == 404
     assert "Node not found" in resp.json()["detail"]
+
+
+# ---------------------------------------------------------------------------
+# /runs/compare/n  (R59 — Phase 4 Arc A slice 2 — N-run pivot-anchored compare)
+# ---------------------------------------------------------------------------
+# Shape: pivot_id + other_ids, bundled runs/trees/diffs + merged alignment.
+# N=2 is numerically identical to /runs/compare on the summary row (R58 guard).
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def compare_n_scenario(
+    tmp_path: Path,
+) -> Iterator[tuple[SqliteStore, dict[str, str]]]:
+    """Seed a DB with pivot + two other runs for N-run compare tests.
+
+    ``pivot`` has 3 nodes (plan → draft → polish). ``twin`` has identical
+    3 nodes (expect all-equal column). ``variant`` forks off pivot's
+    second node with a diverged polish step (expect changed column).
+    """
+    db_path = tmp_path / "compare_n.db"
+    with SqliteStore.open(db_path) as store:
+        pivot_id, twin_id, variant_id = "run-pivot-n", "run-twin-n", "run-variant-n"
+        for rid, tag in (
+            (pivot_id, "pivot"),
+            (twin_id, "twin"),
+            (variant_id, "variant"),
+        ):
+            store.put_run(
+                Run(
+                    id=rid,
+                    adapter="langgraph",
+                    adapter_thread_id=f"thread-{tag}",
+                    status=RunStatus.COMPLETED,
+                    started_at=_now(),
+                    ended_at=_now(),
+                    task_description=f"Run {tag}",
+                    tags=["compare-n", tag],
+                )
+            )
+
+        def _seed_three_nodes(run_id: str, prefix: str, polish_state: str) -> tuple[str, str, str]:
+            p, d, po = f"{prefix}-plan", f"{prefix}-draft", f"{prefix}-polish"
+            store.put_node(
+                Node(
+                    id=p,
+                    run_id=run_id,
+                    step_index=0,
+                    node_name="plan",
+                    kind=NodeKind.LLM,
+                    parent_node_id=None,
+                    model_name="gpt-4o",
+                    output_state={"phase": "plan"},
+                )
+            )
+            store.put_node(
+                Node(
+                    id=d,
+                    run_id=run_id,
+                    step_index=1,
+                    node_name="draft",
+                    kind=NodeKind.LLM,
+                    parent_node_id=p,
+                    model_name="gpt-4o",
+                    output_state={"phase": "draft"},
+                )
+            )
+            store.put_node(
+                Node(
+                    id=po,
+                    run_id=run_id,
+                    step_index=2,
+                    node_name="polish",
+                    kind=NodeKind.LLM,
+                    parent_node_id=d,
+                    model_name="gpt-4o",
+                    output_state={"phase": polish_state},
+                )
+            )
+            return p, d, po
+
+        pivot_p, pivot_d, _pivot_po = _seed_three_nodes(pivot_id, "pivot", "polish")
+        _seed_three_nodes(twin_id, "twin", "polish")
+        _seed_three_nodes(variant_id, "variant", "polish-v2")
+
+        # Register variant as a fork of pivot so restrict_to_downstream
+        # semantics exercise the same code path as /runs/compare.
+        store.put_fork(
+            Fork(
+                id="fork-variant",
+                parent_run_id=pivot_id,
+                parent_node_id=pivot_d,
+                child_run_id=variant_id,
+                created_at=_now(),
+                edited_fields={"polish_prompt": "be more concise"},
+                reason="variant polish",
+            )
+        )
+        _ = pivot_p  # silence unused-var; kept for readability above.
+
+        ids = {"pivot": pivot_id, "twin": twin_id, "variant": variant_id}
+        yield store, ids
+
+
+@pytest.fixture
+def compare_n_client(
+    compare_n_scenario: tuple[SqliteStore, dict[str, str]],
+) -> TestClient:
+    store, _ = compare_n_scenario
+    app = build_app(store)
+    return TestClient(app)
+
+
+def test_compare_n_happy_path_returns_merged_alignment(
+    compare_n_scenario: tuple[SqliteStore, dict[str, str]],
+    compare_n_client: TestClient,
+) -> None:
+    _, ids = compare_n_scenario
+    resp = compare_n_client.get(
+        "/runs/compare/n",
+        params={"ids": f"{ids['pivot']},{ids['twin']},{ids['variant']}"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["pivot_id"] == ids["pivot"]
+    assert body["other_ids"] == [ids["twin"], ids["variant"]]
+    assert set(body["runs"].keys()) == {ids["pivot"], ids["twin"], ids["variant"]}
+    assert set(body["trees"].keys()) == {ids["pivot"], ids["twin"], ids["variant"]}
+    assert set(body["diffs"].keys()) == {ids["twin"], ids["variant"]}
+    # Alignment rows carry per_run tags for each other_id.
+    assert isinstance(body["alignment"], list)
+    assert len(body["alignment"]) >= 1
+    for row in body["alignment"]:
+        assert set(row["per_run"].keys()) == {ids["twin"], ids["variant"]}
+        for cell in row["per_run"].values():
+            assert cell["tag"] in {"equal", "changed", "added", "removed", "absent"}
+    # Summary keyed by other_id.
+    assert set(body["summary"].keys()) == {ids["twin"], ids["variant"]}
+    # Tree shape matches /runs/{id}/tree (same keys).
+    for tree in body["trees"].values():
+        assert set(tree.keys()) >= {"run_id", "nodes", "edges", "child_runs"}
+
+
+def test_compare_n_n2_matches_compare_2run_summary(
+    compare_n_scenario: tuple[SqliteStore, dict[str, str]],
+    compare_n_client: TestClient,
+) -> None:
+    """N=2 via /runs/compare/n agrees with /runs/compare on the summary row.
+
+    This is the R58 frozen-contract regression guard at the HTTP layer.
+    """
+    _, ids = compare_n_scenario
+    resp_n = compare_n_client.get(
+        "/runs/compare/n",
+        params={"ids": f"{ids['pivot']},{ids['variant']}"},
+    )
+    resp_2 = compare_n_client.get(
+        "/runs/compare",
+        params={"a": ids["pivot"], "b": ids["variant"]},
+    )
+    assert resp_n.status_code == 200
+    assert resp_2.status_code == 200
+    n_summary = resp_n.json()["summary"][ids["variant"]]
+    two_summary = resp_2.json()["diff"]["summary"]
+    for key in ("equal", "changed", "added", "removed"):
+        assert n_summary[key] == two_summary[key], (
+            f"N=2 compare-n summary[{key}] diverged from /runs/compare: "
+            f"n={n_summary[key]} vs 2={two_summary[key]}"
+        )
+
+
+def test_compare_n_404_when_pivot_missing(compare_n_client: TestClient) -> None:
+    resp = compare_n_client.get(
+        "/runs/compare/n",
+        params={"ids": f"ghost-pivot,{_uuid()}"},
+    )
+    assert resp.status_code == 404
+    assert "not found" in resp.json()["detail"].lower()
+
+
+def test_compare_n_400_when_duplicate_ids(
+    compare_n_scenario: tuple[SqliteStore, dict[str, str]],
+    compare_n_client: TestClient,
+) -> None:
+    _, ids = compare_n_scenario
+    resp = compare_n_client.get(
+        "/runs/compare/n",
+        params={"ids": f"{ids['pivot']},{ids['twin']},{ids['twin']}"},
+    )
+    assert resp.status_code == 400
+    assert "duplicate" in resp.json()["detail"].lower()
+
+
+def test_compare_n_400_when_fewer_than_two_ids(
+    compare_n_client: TestClient,
+) -> None:
+    resp = compare_n_client.get("/runs/compare/n", params={"ids": "solo-run"})
+    assert resp.status_code == 400
+    assert "at least 2" in resp.json()["detail"].lower()
