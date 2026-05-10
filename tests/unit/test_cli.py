@@ -20,11 +20,10 @@ from chronos.cli import app
 from chronos.core.models import Fork, Node, NodeKind, Run, RunStatus
 from chronos.store.sqlite import SqliteStore
 
-# R52: typer>=0.22 / click>=8.2 flipped `CliRunner(mix_stderr=True)` to be the
-# default, which raises ValueError on `result.stderr` access. The tests below
-# read `result.stderr` in several "missing DB" / "missing run" paths, so pin
-# stderr-separation here.
-runner = CliRunner(mix_stderr=False)
+# R52/R62: click<8.3 needed `CliRunner(mix_stderr=False)` to keep stderr
+# separate; click>=8.3 **removed** the kwarg (stderr is always separate). The
+# runner below keeps working across both by passing no argument.
+runner = CliRunner()
 
 
 # ---------------------------------------------------------------------------

@@ -147,11 +147,34 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
-**截至 Round 61 结束 (2026-05-10 CST ~08:30, cron slot inside 0–11 window) — Phase 4 Arc A slice 4 planning shipped (md-only round): ADR-024 Draft + research survey + roadmap §4.1 slice itemization + naming-drift correction**
+**截至 Round 62 结束 (2026-05-10 CST ~11:45, cron slot inside 0–11 window) — Phase 4 Arc A slice 4 core shipped: `auto_pivot_compare()` pure function + 27 tests, 100% coverage on new module**
 
-- 最近 progress doc: `docs/progress/2026-05-10-round-61.md` (R61 — Arc A slice 4 planning: ADR-024 Draft + research survey, md-only)
-- 最近上份 progress doc: `docs/progress/2026-05-10-round-60.md` (R60 — Arc A slice 3: dogfood + v0.5.0 release cut bundling R58+R59+R60)
-- 最近上上份 progress doc: `docs/progress/2026-05-09-round-59.md` (R59 — Arc A slice 2: CLI + API close-out, Option A2 inheritance)
+- 最近 progress doc: `docs/progress/2026-05-10-round-62.md` (R62 — Arc A slice 4 core impl: `auto_pivot_compare`, pure core, tests)
+- 最近上份 progress doc: `docs/progress/2026-05-10-round-61.md` (R61 — Arc A slice 4 planning, md-only)
+- 最近上上份 progress doc: `docs/progress/2026-05-10-round-60.md` (R60 — Arc A slice 3: dogfood + v0.5.0 release cut)
+
+- Round: **62** (Phase 4 Arc A slice 4 **core impl** — post-R61-planning first-code round, mirrors R57→R58 cadence): ~11:45 CST single slot, 0 blocker, **"first code after planning" archetype**. 三个 artifact + 一个 side-effect fix:
+  - **P0 Pure core** `src/chronos/core/auto_pivot.py` (**new**, ~480 lines): `compute_distance` (metric v1: `(changed+added+removed) / total_rows`, [0,1], docstring mentions `metric_version=1`) + `pairwise_distances_from_reports` (canonical `(min_id, max_id)` orientation, rejects dup/self-pairs) + `select_centroid` (argmin mean-distance, lex tie-break) + `auto_pivot_compare(store, run_ids, ...) -> AutoPivotReport` 编排, 末尾 re-call `diff_runs(centroid, other)` 把 canonical-oriented reports 重定向成 `run_a == centroid` (必须 — `merge_pivot_reports` R58 invariant). `AutoPivotReport = {centroid_run_id, distance_matrix, merged_alignment, warnings}`; `merged_alignment` 复用 R58 `MergedPivotAlignment` 类型. `N > 8` soft-cap warning. Duck-typed `_AutoPivotStore` protocol (R15).
+  - **P1 Tests** `tests/unit/test_auto_pivot.py` (**new**, ~500 lines, **27 tests**): 4 tier (compute_distance 3 / pairwise_distances 4 / select_centroid 6 / orchestrator 14). N=2 degenerate byte-for-byte 匹配 `merge_pivot_reports`. N=3 happy path (twin + variant) + N=4 mixed topology + 1 end-to-end (real `SqliteStore`, no inject-seam) + warnings + validation. 100% coverage on new module (71 stmts / 26 branches / 0 miss).
+  - **P2 Side-effect fix (click 8.3)**: `tests/unit/test_cli.py:23-27` + `test_cli_compare.py:21` — `CliRunner(mix_stderr=False)` → `CliRunner()`. click 8.3.2 removed `mix_stderr` kwarg (stderr 永远 separate). **Pre-existing baseline break** verified via `git stash` + untouched HEAD (`daac889`). 20 行以内, 同 commit 搭车.
+  - **Tactical deviation from ADR-024**: spec 写 `src/chronos/core/diff/auto_pivot.py` (package layout), 实际 ship `src/chronos/core/auto_pivot.py` (sibling). Rationale: `core/diff.py` 是 594-line 单 module, 转 package 是 cross-cutting refactor (8+ import sites + v0.5 frozen contract blast radius); 算法 intent 零改, 仅 import path 差 (`chronos.core.auto_pivot` vs `chronos.core.diff.auto_pivot`). R63 landing CLI/HTTP 时可 transparently migrate 到 package layout. 详 progress doc §Deviation.
+  - Gates: **534 pass / 3 skip / 0 fail / 94% cov** (+27 from R60 baseline 507, 所有增量来自 `test_auto_pivot.py`). mypy 31 files 0 error. ruff check (src+tests+scripts) 0 error. ruff format --check 83 files clean. Adapter **zero change** — R52 CrewAI scaffold 穿越 **R52→R62 = 十一轮**零代码改 (R61 预测命中).
+
+- **R62 关键发现 (上墙)**:
+  - **"Sibling module is cheaper than package refactor for leaf-function add" (R62 新, ADR layout-drift pattern)**: ADR 规定 package layout 但现状是 single module 时, 直接 ship sibling 保 algorithm intent, package refactor 推迟到确实需要 (wrapper landing / 多 file split). 省 1-round risk 预算. R63 landing CLI 时再评估是否 upgrade. 候选 invariant pending 第二次应用. ← **new**
+  - **"First code round after planning" archetype (R62 新, 补 R58 三连)**: R56 post-release polish / R57 phase kickoff / R61 post-release slice-planning / R58 / R62 = first-code-after-planning. R57→R58 + R61→R62 两次验证相同 cadence (Draft ADR → pure core + tests, 不碰 surface). 对 Arc C/D 有 forward transfer. ← **new**
+  - **Side-effect env fix scope discipline (R62 新)**: click 8.3 baseline break 是 pre-existing (不是 R62 引入的), 20 行以内的 env fix 不值独立 commit (一个轮次一个战线). 但 progress doc 必须显式说清楚 "pre-existing verified via stash + HEAD~1", 否则未来 agent 会把 blame 错. ← **new**
+  - **Inject-seam via Protocol + optional arg (R62 确认)**: `auto_pivot_compare(store=None, pairwise_reports=None, ...)` 允许 tier-3-and-below tests 完全 bypass store. 延续 R15 duck-typing 纪律到新 API. ← **confirmed pattern**
+
+- **R62 产出**:
+  - `src/chronos/core/auto_pivot.py` (**new**, ~480 lines).
+  - `tests/unit/test_auto_pivot.py` (**new**, ~500 lines, 27 tests).
+  - `tests/unit/test_cli.py` + `tests/unit/test_cli_compare.py` (env fix, `CliRunner()` 去 kwarg).
+  - `docs/progress/2026-05-10-round-62.md` (**new**).
+  - `CHANGELOG.md [Unreleased]` — R62 Added + Fixed entries.
+  - `docs/CONTEXT.md §5/§6` (本 refresh).
+  - **零 adapter / store / ForkPlan / Extractor / CLI / HTTP 改动** — core-only slice by design.
+  - **无 tag cut** — R60 bundle invariant, slice 4 等 CLI+API+dogfood 齐 (R63 后) ship 作 v0.5.1.
 
 - Round: **61** (Phase 4 Arc A slice 4 planning — post-v0.5.0 planning round, md-only, CONTEXT §6 Option A executed with naming correction): 08:30 CST single slot, 0 blocker, **post-release planning archetype** (sibling to R56/R57). 三个 artifact:
   - **P0 ADR-024 Draft** `docs/decisions/ADR-024-multi-pivot-compare.md` (~270 lines): Multi-pivot compare when no designated pivot. Option A 矩阵 / Option B MSA / Option C auto-centroid / Option D hybrid / Option E defer — **Option C 胜出** (reuses `merge_pivot_reports` verbatim, distance metric `d(a,b) = disagreeing / total ∈ [0,1]`, 确定性 tie-break by lexicographic run_id, N=2 契约兼容). Option A 作 slice 5 (dogfood-gated). Option B MSA 显式 reject (ghost-run UX / 空-skeleton 退化 / 新算法负担). **关键: naming-drift 修正** — CONTEXT §6 R61 entry 写 "Arc B kickoff (Breadth)" 与 ADR-023 `Arc B = Ecosystem` 冲突, ADR-024 rebind 为 **Arc A slice 4** (Depth 继续), Arc B (ecosystem) 继续 deferred.
@@ -322,56 +345,49 @@ chronos-agent/
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 62 — Arc A slice 4 core impl (recommended): `auto_pivot_compare` pure function + distance metric + centroid selection + ~15 tests**
+**Round 63 — Arc A slice 4 surface: `chronos compare --auto-pivot` CLI + `GET /runs/compare/auto` HTTP + tests (recommended)**
 
-战略视角: R61 已 ship ADR-024 Draft + research survey + roadmap §4.1 slice 4 立项. R62 = "first code round after planning" = R57→R58 镜像 (R57 Draft-ADR → R58 pure-function core). R60 "Arc slice = core + surface + proof = 1 bundle" invariant 意味 R62 只做 core, R63 做 CLI+API, R64+ dogfood+release 作 v0.5.1 或 v0.6.0-alpha.
+战略视角: R62 已 ship Arc A slice 4 pure core (`auto_pivot_compare` + 27 tests + 100% cov). R63 = "surface round after core" = R58→R59 镜像 (R58 pure core → R59 CLI+API wrapper). R60 "Arc slice = core + surface + proof = 1 bundle" invariant 意味 R63 做 surface + R64 做 dogfood+release 作 v0.5.1.
 
-### Option A (首选, 90–120 min): Arc A slice 4 core impl
+### Option A (首选, 90–120 min): Arc A slice 4 surface impl
 
-- **P0**: `src/chronos/core/diff/auto_pivot.py` (new, ~80-100 LOC):
-  - `compute_distance(report: DiffReport) -> float` — metric v1 per ADR-024 §Decision, 计算 `disagreeing / max(1, total_positions)`, 返回 [0, 1]. Docstring 注明 `metric_version = 1`.
-  - `pairwise_distances(runs: list[Run], store) -> dict[tuple[str, str], float]` — 枚举 i<j, 调 `diff_reports` 拿 DiffReport, 调 `compute_distance`. O(N²) 但每对 distance 只保 scalar.
-  - `select_centroid(distances, run_ids) -> str` — argmin over runs of mean-distance-to-others, 确定性 tie-break by `sorted(run_ids)` 取最小.
-  - `auto_pivot_compare(run_ids: list[str], store) -> AutoPivotReport` — orchestrates all 3, 调 `merge_pivot_reports(pivot=centroid, others=N-1)`, 返回 `MergeReport` + metadata dict `{"pivot_selection": "auto-centroid", "centroid_run_id": ..., "distance_matrix": {...}, "metric_version": 1}`.
-- **P1**: `tests/unit/test_auto_pivot.py` (new, ~15 tests, **new fixture 不 piggyback R58**):
-  - `compute_distance` boundary: d=0 identical, d=1 disjoint, d symmetric, d ∈ [0,1] 严格.
-  - `pairwise_distances` for N=3/4/5: shape, symmetry absent (only i<j keys), deterministic.
-  - `select_centroid`: 3-run fixture 明确 centroid / 4-run tie-break by lexicographic / "outlier picks inside cluster" 算术验证.
-  - `auto_pivot_compare` N=2 degenerate: 两 run id `["r_a", "r_b"]`, centroid 应 = `"r_a"` (lexicographic min), 产 report 与 `merge_pivot_reports("r_a", ["r_b"])` 等效.
-  - `auto_pivot_compare` N=3/4: 对比已知 fixture 的 expected centroid + merge 语义.
-  - 一个 "same-run duplicates" edge: `[r_a, r_a, r_b]` 行为.
-- **P2**: `src/chronos/core/diff/__init__.py` export `auto_pivot_compare` (可选, 可 defer 到 R63 CLI slice).
-- **P3**: CHANGELOG `[Unreleased]` 加 Added 条目, 但不 cut tag.
-- Gate: **507 → ~520 pass** (+13), mypy 30 → 31 files 0 error, ruff 0 drift, dogfood 不加 pytest. Adapter zero change → R52→R62 = **十一**轮零代码改.
+- **P0** `src/chronos/cli/compare.py` 扩展: 加 `--auto-pivot` flag on existing `chronos compare` command. Mutex with positional-pivot mode (when `--auto-pivot` set, 第一 positional 不 treat as pivot, 所有 positional 都 treat as candidate). Text mode header 加 `auto-pivot: centroid = <id>` + 小 distance-matrix 展示 (前 3 行 snippet, `--show-matrix` flag 可展示全). JSON mode 加 additive sibling key `auto_pivot: {centroid_run_id, distance_matrix, metric_version: 1}`, `MergedPivotAlignment.to_dict()` 内容不变 (R58 契约不动). 验证: ≥2 ids, dup 拒绝, missing run 拒绝 (exit 1), `--auto-pivot` 与 pivot-positional 模式互斥 (exit 2).
+- **P1** `src/chronos/api/server.py` 新 endpoint `GET /runs/compare/auto?ids=a,b,c[,...]&restrict_to_downstream=true`. 响应形 = CLI `--json` + `auto_pivot` top-level 字段. 验证: `ids >= 2` → 400 otherwise, dup → 400, missing run → 404. 路由注册在 `/runs/{run_id}` 之前.
+- **P2** `tests/unit/test_cli_compare.py` 加 `--auto-pivot` 覆盖 (~8-10 tests): happy N=3, centroid matches expected fixture, JSON shape 是 existing `/runs/compare/n` shape 的 **superset** (additive-only guard), `--show-matrix` 渲染, validation errors (< 2 / dup / missing / mutex), N=2 degenerate 与 `chronos compare pivot other` byte-for-byte 等价.
+- **P3** `tests/unit/test_api_server.py` 加 `/runs/compare/auto` 覆盖 (~5 tests): happy path shape, 400/404 validation, N=2 degenerate 与 `/runs/compare?a=X&b=Y` 匹配.
+- **P4** CHANGELOG `[Unreleased]` 加 Added entry (不 cut tag).
+- **P5 (optional)**: `AutoPivotReport.to_dict()` 方法 — 如果 R63 commit to a frozen contract; 否则 serialize inline 到 CLI/HTTP 层, R64 再 freeze.
 
-### Option B (备选, 60–90 min): R61 ADR retro / research doc revision
+- Gate: **534 → ~547 pass** (+13, 8-10 CLI + 5 API), mypy 31 files 0 error, ruff 0 drift, dogfood 不加 pytest. Adapter zero change → R52→R63 = **十二**轮零代码改.
 
-仅在 R62 agent 发现 ADR-024 Option C 有隐藏问题才选. Demand-driven.
+### Option B (备选, 60 min): Optional package refactor — `core/diff.py` → `core/diff/` package
 
-### Option C (备选, 60 min): Web UI §3.2 for v0.5.0 pivot-anchored compare
+仅在 R63 发现 sibling layout (R62 deviation) 阻塞 CLI/HTTP impl 时选. 目前预期: sibling layout 对 surface 透明, 不 block. 若 R63 agent 决定上 package 必须先开 ADR-024 Amendment (记录 refactor 动机 + blast radius + migration plan).
 
-前端路由 `/app/#/runs/compare?ids=...`. 独立于 slice 4, 消费 `GET /runs/compare/n`. frontend slot 超时史 (R37.5/R46-A) 记得 budget 保守. 本质是 Arc A slice 1-3 的 polish, 不推进 slice 4.
+### Option C (备选, 60 min): ADR-025 metric_version governance
+
+为 `metric_version=1` 立 ADR, 定义 v2 触发条件 + migration policy + CLI `--metric-version` flag 保留. Demand-driven — 仅当 Arc A item 3 (semantic diff) 或 item 5 (determinism) 需要多 metric 同存时紧迫.
 
 ### 推荐
 
-**Option A (slice 4 core impl)** — R61 刚 ship planning, R62 趁热 land core. 保留 R58 ← R57 的对称节奏.
+**Option A (slice 4 surface impl)** — R62 刚 ship core, R63 趁热 land surface 完成 slice 4 的 "core + surface" 对. R64 做 dogfood + release (v0.5.1) close out.
 
-### R62 非目标 (硬红线)
+### R63 非目标 (硬红线)
 
-- ❌ Adapter 改动 (目标: 十一轮零改动)
+- ❌ Adapter 改动 (目标: 十二轮零改动)
 - ❌ Store schema 改动
-- ❌ v0.5.0 contract 改动 (`merge_pivot_reports`, `compare_command`, `/runs/compare/n` 签名 frozen)
-- ❌ CLI / HTTP 改动 (那是 R63 slice 4 "surface" phase)
+- ❌ v0.5.0 contract 改动 (`merge_pivot_reports`, `compare_command` 正 signature, `/runs/compare/n`, `/runs/compare` 签名 frozen; `--auto-pivot` 是 additive flag, `auto_pivot` JSON key 是 additive sibling)
+- ❌ `core/auto_pivot.py` API 改动 (R62 frozen; R63 只消费)
 - ❌ 主网 / 花钱 / public repo toggle
-- ❌ Release cut (按 R60 bundle invariant, slice 4 整体 ship 作 v0.5.1 / v0.6.0-alpha 早至 R64)
-- ❌ Metric v2 工作 (需 ADR-025, 不 block now)
-- ❌ Option B (MSA / virtual pivot) 试探 (ADR-024 显式 reject, 改需新 ADR)
+- ❌ Release cut (v0.5.1 留到 R64 dogfood 后)
+- ❌ Metric v2 工作 (需 ADR-025)
 - ❌ Alias `chronos diff` → `chronos compare` (OQ-1, need ADR-025)
 - ❌ `--exit-code` flag (OQ-5)
+- ❌ Package refactor `core/diff.py` → `core/diff/` (除非 R63 确实 blocker, 并且先写 ADR-024 Amendment)
 
 ### 工期估计
 
-R62 Option A = 90–120 min. Option B = 60–90 min. Option C = 60–90 min.
+R63 Option A = 90–120 min. Option B = 60 min. Option C = 60 min.
 
 ### Release strategy (rolling)
 
@@ -381,7 +397,7 @@ R62 Option A = 90–120 min. Option B = 60–90 min. Option C = 60–90 min.
 - v0.4.0a2 ✅ cut 2026-04-27 (R48-C)
 - v0.4.0 ✅ cut 2026-05-08 (R55) — CrewAI adapter
 - v0.5.0 ✅ cut 2026-05-10 (R60, bundles R58+R59+R60) — Phase 4 Arc A slices 1-3: N-run pivot-anchored compare (core + CLI + HTTP + dogfood)
-- v0.5.1 🚧 候选 post-R63 (Arc A slice 4 bundle: core R62 + CLI/API R63 + dogfood R64+).
+- v0.5.1 🚧 候选 post-R64 (Arc A slice 4 bundle: core R62 + CLI/API R63 + dogfood R64).
 - v0.6.0 🚧 候选 Arc A slice 5 (pairwise matrix view) 完成后, 或 Arc A item 2 (fork-tree DAG viz) 开始时 bump.
 
 ## 7. 文档索引 (当你需要深入某个主题)

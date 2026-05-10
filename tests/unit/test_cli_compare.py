@@ -18,7 +18,7 @@ from chronos.cli import app
 from chronos.core.models import Fork, Node, NodeKind, Run, RunStatus
 from chronos.store.sqlite import SqliteStore
 
-runner = CliRunner(mix_stderr=False)
+runner = CliRunner()
 
 
 @pytest.fixture
