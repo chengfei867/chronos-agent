@@ -362,6 +362,24 @@ def compare_cmd(
         "--width",
         help="Override terminal width for the rendered table (useful in narrow panes).",
     ),
+    auto_pivot: bool = typer.Option(
+        False,
+        "--auto-pivot",
+        help=(
+            "Pick the pivot automatically via pairwise structural distance "
+            "(Arc A slice 4, ADR-024). Under this flag, every positional is "
+            "a candidate — no designated pivot. Tie-break: lexicographic run id."
+        ),
+    ),
+    show_matrix: bool = typer.Option(
+        False,
+        "--show-matrix",
+        help=(
+            "With --auto-pivot, render the full pairwise distance matrix "
+            "instead of the default first-3-rows snippet. No-op without "
+            "--auto-pivot."
+        ),
+    ),
 ) -> None:
     """Compare N recorded runs against a pivot (fork-sweep debugger).
 
@@ -370,12 +388,17 @@ def compare_cmd(
     the summary row. See ``docs/design/n-run-compare.md`` for the
     full spec.
 
+    With ``--auto-pivot`` (ADR-024, Arc A slice 4), all positionals are
+    treated as candidates and the pivot is selected by argmin mean
+    structural distance (tie-break: lex smallest run id).
+
     Examples::
 
         chronos compare run_001 run_002                        # N=2
         chronos compare run_001 run_002 run_003 run_004        # N=4
         chronos compare run_001 run_002 run_003 --json         # JSON contract
         chronos compare run_001 run_002 --full                 # don't slice
+        chronos compare --auto-pivot run_001 run_002 run_003   # auto-centroid
     """
     from chronos.cli.compare import compare_command
 
@@ -388,6 +411,8 @@ def compare_cmd(
         columns=columns,
         show_equal=show_equal,
         width=width,
+        auto_pivot=auto_pivot,
+        show_matrix=show_matrix,
         open_store_fn=_open_store,
         console=console,
     )

@@ -61,6 +61,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from chronos.cli.fork import build_effects_summary, build_plan
+from chronos.core.auto_pivot import auto_pivot_compare
 from chronos.core.diff import DiffRunNotFoundError, diff_runs, merge_pivot_reports
 from chronos.core.models import SCHEMA_VERSION, Fork, Node, Run
 
@@ -550,6 +551,115 @@ def build_app(store: SqliteStore) -> FastAPI:
         return {
             "pivot_id": pivot_id,
             "other_ids": list(other_ids),
+            "runs": runs_payload,
+            "trees": trees_payload,
+            "diffs": diffs_payload,
+            "alignment": merged_dict["alignment"],
+            "summary": merged_dict["summary"],
+            "warnings": merged_dict["warnings"],
+        }
+
+    # /runs/compare/auto — auto-pivot N-run compare (Phase 4 Arc A slice 4,
+    # R63, ADR-024). Same registration-order constraint as /runs/compare
+    # and /runs/compare/n: MUST precede /runs/{run_id}.
+    @app.get("/runs/compare/auto")
+    def compare_runs_auto(
+        ids: str = Query(
+            ...,
+            description=(
+                "Comma-separated run_ids, ≥ 2. All are candidates — there is "
+                "no designated pivot. The centroid is selected by argmin mean "
+                "pairwise structural distance (metric v1), with lexicographic "
+                "tie-break. Duplicates 400."
+            ),
+        ),
+        restrict_to_downstream: bool = Query(
+            True,
+            description=(
+                "Forwarded per (candidate, candidate) diff pair. Same semantic "
+                "as /runs/compare/n's flag of the same name."
+            ),
+        ),
+    ) -> dict[str, Any]:
+        # --- parse & validate `ids` -----------------------------------
+        id_list = [s.strip() for s in ids.split(",") if s.strip()]
+        if len(id_list) < 2:
+            raise HTTPException(
+                status_code=400,
+                detail="`ids` must be a comma-separated list of at least 2 run_ids",
+            )
+        seen: set[str] = set()
+        for rid in id_list:
+            if rid in seen:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"duplicate run_id in `ids`: {rid!r}",
+                )
+            seen.add(rid)
+
+        # --- fetch all candidate runs (404 surfaces any missing id) ---
+        runs_by_id: dict[str, Run] = {}
+        for rid in id_list:
+            r = store.get_run(rid)
+            if r is None:
+                raise HTTPException(status_code=404, detail=f"Run not found: {rid}")
+            runs_by_id[rid] = r
+
+        # --- delegate to core orchestrator ---------------------------
+        try:
+            report = auto_pivot_compare(
+                id_list,
+                store,
+                restrict_to_downstream=restrict_to_downstream,
+            )
+        except DiffRunNotFoundError as exc:
+            # Defensive: already guarded above.
+            raise HTTPException(status_code=404, detail=f"Run not found: {exc.run_id}") from exc
+
+        # --- assemble response ---------------------------------------
+        # Preserves parity with /runs/compare/n: we include runs + trees for
+        # every candidate so a client can render the N-lane tree viz without
+        # a second round-trip. `diffs` is keyed by "other" id (i.e., every id
+        # except the auto-selected centroid), same shape as /runs/compare/n.
+        def _tree_for(run_id: str) -> dict[str, Any]:
+            nodes = store.get_nodes_for_run(run_id)
+            forks = store.get_forks_for_parent(run_id)
+            return _assemble_tree(store, run_id, nodes, forks)
+
+        centroid_id = report.centroid_run_id
+        other_ids = [rid for rid in id_list if rid != centroid_id]
+        runs_payload: dict[str, Any] = {rid: _run_to_dict(runs_by_id[rid]) for rid in id_list}
+        trees_payload: dict[str, Any] = {rid: _tree_for(rid) for rid in id_list}
+
+        # Rebuild diffs keyed by "other" (centroid-anchored), matching
+        # /runs/compare/n's `diffs` shape. auto_pivot_compare already did
+        # these diffs internally but didn't surface them on the report, so
+        # we replay diff_runs once more per other. Cost: N-1 extra diffs;
+        # total still O(N²) dominated by the pairwise distance step inside
+        # auto_pivot_compare.
+        diffs_payload: dict[str, Any] = {}
+        for oid in other_ids:
+            rep = diff_runs(
+                store,
+                centroid_id,
+                oid,
+                restrict_to_downstream=restrict_to_downstream,
+            )
+            diffs_payload[oid] = rep.to_dict()
+
+        report_dict = report.to_dict()
+        merged_dict = report_dict["merged"]
+
+        return {
+            "auto_pivot": {
+                "centroid_run_id": centroid_id,
+                "distance_matrix": report_dict["distance_matrix"],
+                "pivot_selection": report_dict["pivot_selection"],
+                "metric_version": report_dict["metric_version"],
+                "input_run_ids": report_dict["input_run_ids"],
+            },
+            "pivot_id": centroid_id,
+            "other_ids": other_ids,
             "runs": runs_payload,
             "trees": trees_payload,
             "diffs": diffs_payload,

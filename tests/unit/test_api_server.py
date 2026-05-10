@@ -1081,3 +1081,130 @@ def test_compare_n_400_when_fewer_than_two_ids(
     resp = compare_n_client.get("/runs/compare/n", params={"ids": "solo-run"})
     assert resp.status_code == 400
     assert "at least 2" in resp.json()["detail"].lower()
+
+
+# ---------------------------------------------------------------------------
+# /runs/compare/auto  (R63 — Phase 4 Arc A slice 4 — auto-pivot N-run compare)
+# ---------------------------------------------------------------------------
+# Shape: pivot_id (= auto-selected centroid) + other_ids + runs/trees/diffs +
+# new top-level `auto_pivot` sub-object (ADR-024). Additive superset of
+# /runs/compare/n. N=2 degenerate must still agree with /runs/compare on the
+# summary row (R58 frozen-contract guard extended one layer — R63 fourth
+# layer of the N=2 cross-layer guard: pure / CLI / HTTP-compare-n / HTTP-auto).
+# Fixture reuse: compare_n_scenario + compare_n_client are sufficient because
+# `build_app(store)` registers every endpoint — the DB shape (pivot + twin +
+# variant) is exactly what we need. This is NOT fixture piggybacking because
+# we do not modify the scenario; we merely hit a different endpoint against
+# it (R59 principle intact).
+# ---------------------------------------------------------------------------
+
+
+def test_compare_auto_happy_path_returns_centroid_and_merged(
+    compare_n_scenario: tuple[SqliteStore, dict[str, str]],
+    compare_n_client: TestClient,
+) -> None:
+    _, ids = compare_n_scenario
+    resp = compare_n_client.get(
+        "/runs/compare/auto",
+        params={"ids": f"{ids['pivot']},{ids['twin']},{ids['variant']}"},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+
+    # Top-level auto_pivot sub-object (ADR-024 §Interface).
+    assert "auto_pivot" in body
+    ap = body["auto_pivot"]
+    assert ap["centroid_run_id"] in {ids["pivot"], ids["twin"], ids["variant"]}
+    assert ap["metric_version"] == 1
+    assert set(ap["input_run_ids"]) == {ids["pivot"], ids["twin"], ids["variant"]}
+    # Flattened matrix: "a|b" string keys, canonical min<max orientation.
+    assert isinstance(ap["distance_matrix"], dict)
+    assert len(ap["distance_matrix"]) == 3  # C(3,2) = 3 pairs
+    for k, v in ap["distance_matrix"].items():
+        assert "|" in k
+        a, b = k.split("|", 1)
+        assert a < b  # canonical orientation
+        assert isinstance(v, (int, float))
+        assert 0.0 <= float(v) <= 1.0
+
+    # Additive superset: every /runs/compare/n key still present.
+    centroid_id = ap["centroid_run_id"]
+    assert body["pivot_id"] == centroid_id
+    expected_others = {
+        rid for rid in (ids["pivot"], ids["twin"], ids["variant"]) if rid != centroid_id
+    }
+    assert set(body["other_ids"]) == expected_others
+    assert set(body["runs"].keys()) == {ids["pivot"], ids["twin"], ids["variant"]}
+    assert set(body["trees"].keys()) == {ids["pivot"], ids["twin"], ids["variant"]}
+    assert set(body["diffs"].keys()) == expected_others
+
+
+def test_compare_auto_n2_matches_compare_2run_summary(
+    compare_n_scenario: tuple[SqliteStore, dict[str, str]],
+    compare_n_client: TestClient,
+) -> None:
+    """N=2 via /runs/compare/auto agrees with /runs/compare on the summary row.
+
+    Fourth layer of the R58 N=2 frozen-contract cross-layer guard
+    (pure / CLI / HTTP-compare-n / HTTP-auto). The centroid in N=2 is
+    the lexicographically smallest id (tie-break rule), so we compare
+    against /runs/compare with (a, b) ordered accordingly.
+    """
+    _, ids = compare_n_scenario
+    resp_auto = compare_n_client.get(
+        "/runs/compare/auto",
+        params={"ids": f"{ids['pivot']},{ids['variant']}"},
+    )
+    assert resp_auto.status_code == 200
+    body = resp_auto.json()
+    centroid = body["auto_pivot"]["centroid_run_id"]
+    # Tie-break: lexicographically smallest.
+    assert centroid == min(ids["pivot"], ids["variant"])
+    other = ids["variant"] if centroid == ids["pivot"] else ids["pivot"]
+
+    resp_2 = compare_n_client.get(
+        "/runs/compare",
+        params={"a": centroid, "b": other},
+    )
+    assert resp_2.status_code == 200
+    auto_summary = body["summary"][other]
+    two_summary = resp_2.json()["diff"]["summary"]
+    for key in ("equal", "changed", "added", "removed"):
+        assert auto_summary[key] == two_summary[key], (
+            f"N=2 auto summary[{key}] diverged from /runs/compare: "
+            f"auto={auto_summary[key]} vs 2={two_summary[key]}"
+        )
+
+
+def test_compare_auto_404_when_a_run_is_missing(
+    compare_n_scenario: tuple[SqliteStore, dict[str, str]],
+    compare_n_client: TestClient,
+) -> None:
+    _, ids = compare_n_scenario
+    resp = compare_n_client.get(
+        "/runs/compare/auto",
+        params={"ids": f"{ids['pivot']},ghost-run"},
+    )
+    assert resp.status_code == 404
+    assert "not found" in resp.json()["detail"].lower()
+
+
+def test_compare_auto_400_when_duplicate_ids(
+    compare_n_scenario: tuple[SqliteStore, dict[str, str]],
+    compare_n_client: TestClient,
+) -> None:
+    _, ids = compare_n_scenario
+    resp = compare_n_client.get(
+        "/runs/compare/auto",
+        params={"ids": f"{ids['pivot']},{ids['twin']},{ids['twin']}"},
+    )
+    assert resp.status_code == 400
+    assert "duplicate" in resp.json()["detail"].lower()
+
+
+def test_compare_auto_400_when_fewer_than_two_ids(
+    compare_n_client: TestClient,
+) -> None:
+    resp = compare_n_client.get("/runs/compare/auto", params={"ids": "solo-run"})
+    assert resp.status_code == 400
+    assert "at least 2" in resp.json()["detail"].lower()

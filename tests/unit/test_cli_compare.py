@@ -414,3 +414,282 @@ def test_compare_bad_columns_value_errors(
     assert result.exit_code == 2
     combined = (result.stdout + (result.stderr or "")).lower()
     assert "columns" in combined
+
+
+# ---------------------------------------------------------------------------
+# R63 / Arc A slice 4 — --auto-pivot surface (ADR-024)
+# ---------------------------------------------------------------------------
+
+
+def test_compare_auto_pivot_text_header_names_centroid(
+    seeded_compare_db: tuple[Path, dict[str, str]],
+) -> None:
+    """``--auto-pivot`` text mode prints an ``Auto-pivot: centroid = <id>``
+    header and a distance-matrix table.
+    """
+    db, ids = seeded_compare_db
+    result = runner.invoke(
+        app,
+        [
+            "compare",
+            "--auto-pivot",
+            ids["pivot"],
+            ids["same"],
+            ids["changed"],
+            "--db",
+            str(db),
+        ],
+    )
+    assert result.exit_code == 0, result.stdout + (result.stderr or "")
+    out = result.stdout
+    assert "Auto-pivot:" in out
+    assert "centroid =" in out
+    # Distance matrix table.
+    assert "distance matrix" in out.lower()
+    # Centroid must be one of the candidates.
+    assert any(rid in out for rid in (ids["pivot"], ids["same"], ids["changed"]))
+
+
+def test_compare_auto_pivot_default_matrix_is_truncated(
+    seeded_compare_db: tuple[Path, dict[str, str]],
+) -> None:
+    """Default matrix rendering caps at 3 rows and mentions --show-matrix."""
+    db, ids = seeded_compare_db
+    # 4 candidates → C(4,2)=6 pairs; truncation kicks in.
+    result = runner.invoke(
+        app,
+        [
+            "compare",
+            "--auto-pivot",
+            ids["pivot"],
+            ids["same"],
+            ids["changed"],
+            ids["added"],
+            "--db",
+            str(db),
+        ],
+    )
+    assert result.exit_code == 0, result.stdout + (result.stderr or "")
+    out = result.stdout
+    assert "showing 3 of 6" in out
+    assert "--show-matrix" in out
+
+
+def test_compare_auto_pivot_show_matrix_renders_all_pairs(
+    seeded_compare_db: tuple[Path, dict[str, str]],
+) -> None:
+    """``--show-matrix`` disables truncation — all pairs appear in output."""
+    db, ids = seeded_compare_db
+    result = runner.invoke(
+        app,
+        [
+            "compare",
+            "--auto-pivot",
+            "--show-matrix",
+            ids["pivot"],
+            ids["same"],
+            ids["changed"],
+            ids["added"],
+            "--db",
+            str(db),
+        ],
+    )
+    assert result.exit_code == 0, result.stdout + (result.stderr or "")
+    out = result.stdout
+    # No truncation banner.
+    assert "showing 3 of" not in out
+    # All 6 unique pairs render; verify with each run id occurring ≥3 times
+    # in the matrix (each appears in 3 of the 6 pairs). Header mentions each
+    # once, so the count must exceed 3.
+    for rid in (ids["pivot"], ids["same"], ids["changed"], ids["added"]):
+        assert out.count(rid) >= 3
+
+
+def test_compare_auto_pivot_json_contract(
+    seeded_compare_db: tuple[Path, dict[str, str]],
+) -> None:
+    """``--auto-pivot --json`` emits the AutoPivotReport.to_dict() superset:
+    ``centroid_run_id``, ``distance_matrix``, ``pivot_selection``,
+    ``metric_version``, ``input_run_ids``, ``merged``.
+    """
+    db, ids = seeded_compare_db
+    result = runner.invoke(
+        app,
+        [
+            "compare",
+            "--auto-pivot",
+            "--json",
+            ids["pivot"],
+            ids["same"],
+            ids["changed"],
+            "--db",
+            str(db),
+        ],
+    )
+    assert result.exit_code == 0, result.stdout + (result.stderr or "")
+    payload = json.loads(result.stdout)
+    expected_top = {
+        "centroid_run_id",
+        "distance_matrix",
+        "pivot_selection",
+        "metric_version",
+        "input_run_ids",
+        "merged",
+    }
+    assert expected_top.issubset(payload.keys()), (
+        f"missing keys: {expected_top - set(payload.keys())}"
+    )
+    # Centroid is one of the inputs.
+    assert payload["centroid_run_id"] in {ids["pivot"], ids["same"], ids["changed"]}
+    # Input order preserved.
+    assert payload["input_run_ids"] == [ids["pivot"], ids["same"], ids["changed"]]
+    # Distance matrix keys use 'a|b' form with canonical min<max orientation.
+    for key in payload["distance_matrix"]:
+        a, _, b = key.partition("|")
+        assert a and b and a < b, f"non-canonical matrix key: {key!r}"
+    # merged sub-object has the existing MergedPivotAlignment shape.
+    merged = payload["merged"]
+    assert {"pivot_id", "other_ids", "alignment", "summary", "warnings"}.issubset(merged.keys())
+    # metric_version is a positive int.
+    assert isinstance(payload["metric_version"], int) and payload["metric_version"] >= 1
+
+
+def test_compare_auto_pivot_n2_parity_with_non_auto_summary(
+    seeded_compare_db: tuple[Path, dict[str, str]],
+) -> None:
+    """N=2 auto-pivot mode produces the same per-other summary numbers as
+    the non-auto N=2 path. Centroid identity may differ (argmin tie-break),
+    but structural counts must be invariant.
+    """
+    db, ids = seeded_compare_db
+
+    non_auto = runner.invoke(
+        app,
+        [
+            "compare",
+            ids["pivot"],
+            ids["same"],
+            "--db",
+            str(db),
+            "--full",
+            "--json",
+        ],
+    )
+    assert non_auto.exit_code == 0
+    non_auto_payload = json.loads(non_auto.stdout)
+
+    auto = runner.invoke(
+        app,
+        [
+            "compare",
+            "--auto-pivot",
+            ids["pivot"],
+            ids["same"],
+            "--db",
+            str(db),
+            "--full",
+            "--json",
+        ],
+    )
+    assert auto.exit_code == 0
+    auto_payload = json.loads(auto.stdout)
+
+    # For N=2 the summary has exactly one key either way. Its quadruple
+    # (equal/changed/added/removed) must match.
+    non_auto_summary = next(iter(non_auto_payload["summary"].values()))
+    auto_summary = next(iter(auto_payload["merged"]["summary"].values()))
+    assert non_auto_summary == auto_summary
+
+
+def test_compare_auto_pivot_lex_tie_break(
+    seeded_compare_db: tuple[Path, dict[str, str]],
+) -> None:
+    """When pivot and other_same have identical trees, their mean pairwise
+    distance is tied; tie-break picks the lexicographically smaller id.
+    ``run-other-same`` < ``run-pivot`` lexicographically.
+    """
+    db, ids = seeded_compare_db
+    assert ids["same"] < ids["pivot"], "fixture invariant: 'run-other-same' < 'run-pivot'"
+    result = runner.invoke(
+        app,
+        [
+            "compare",
+            "--auto-pivot",
+            "--json",
+            ids["pivot"],
+            ids["same"],
+            "--db",
+            str(db),
+        ],
+    )
+    assert result.exit_code == 0, result.stdout + (result.stderr or "")
+    payload = json.loads(result.stdout)
+    assert payload["centroid_run_id"] == ids["same"]
+
+
+def test_compare_auto_pivot_duplicate_ids_errors(
+    seeded_compare_db: tuple[Path, dict[str, str]],
+) -> None:
+    """``--auto-pivot`` with duplicate run ids across positionals is
+    rejected with exit code 2 (regardless of pivot/other split).
+    """
+    db, ids = seeded_compare_db
+    result = runner.invoke(
+        app,
+        [
+            "compare",
+            "--auto-pivot",
+            ids["pivot"],
+            ids["same"],
+            ids["pivot"],
+            "--db",
+            str(db),
+        ],
+    )
+    assert result.exit_code == 2
+    assert "duplicate" in (result.stdout + (result.stderr or "")).lower()
+
+
+def test_compare_auto_pivot_missing_run_errors(
+    seeded_compare_db: tuple[Path, dict[str, str]],
+) -> None:
+    """Unknown run id under ``--auto-pivot`` → exit code 1, clean message."""
+    db, ids = seeded_compare_db
+    result = runner.invoke(
+        app,
+        [
+            "compare",
+            "--auto-pivot",
+            ids["pivot"],
+            "no-such-run",
+            "--db",
+            str(db),
+        ],
+    )
+    assert result.exit_code == 1
+    assert "no such run" in (result.stdout + (result.stderr or "")).lower()
+
+
+def test_compare_show_matrix_without_auto_pivot_is_noop(
+    seeded_compare_db: tuple[Path, dict[str, str]],
+) -> None:
+    """``--show-matrix`` without ``--auto-pivot`` is a documented no-op —
+    the command still succeeds and output does not mention distance matrix.
+    """
+    db, ids = seeded_compare_db
+    result = runner.invoke(
+        app,
+        [
+            "compare",
+            "--show-matrix",  # no --auto-pivot
+            ids["pivot"],
+            ids["same"],
+            "--db",
+            str(db),
+        ],
+    )
+    assert result.exit_code == 0, result.stdout + (result.stderr or "")
+    # Non-auto path; no distance-matrix rendering.
+    assert "distance matrix" not in result.stdout.lower()
+    # Normal compare output is present.
+    assert "Pivot:" in result.stdout

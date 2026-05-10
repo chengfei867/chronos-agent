@@ -29,6 +29,7 @@ from rich.console import Console
 from rich.table import Table
 
 from chronos.cli._common import _emit_json
+from chronos.core.auto_pivot import AutoPivotReport, auto_pivot_compare
 from chronos.core.diff import (
     DiffRunNotFoundError,
     MergedPivotAlignment,
@@ -152,6 +153,39 @@ def _render_summary(merged: MergedPivotAlignment, console: Console) -> None:
     console.print(t)
 
 
+def _render_distance_matrix(
+    report: AutoPivotReport,
+    console: Console,
+    *,
+    full: bool,
+) -> None:
+    """Pretty-print the pairwise distance matrix (design: ADR-024 §Interface).
+
+    Default shows the first 3 rows; ``full=True`` (``--show-matrix``) renders
+    every pair. Each row is ``(run_a, run_b, distance)`` with canonical
+    ``min_id < max_id`` orientation — same as ``AutoPivotReport.distance_matrix``.
+    """
+    pairs = sorted(report.distance_matrix.items(), key=lambda kv: (kv[0][0], kv[0][1]))
+    total_pairs = len(pairs)
+    truncated = not full and total_pairs > 3
+    if truncated:
+        pairs = pairs[:3]
+    title = f"Pairwise distance matrix (metric v{report.metric_version})"
+    t = Table(title=title, header_style="bold cyan", show_lines=False)
+    t.add_column("run_a")
+    t.add_column("run_b")
+    t.add_column("distance", justify="right")
+    for (a, b), d in pairs:
+        t.add_row(a, b, f"{d:.4f}")
+    console.print(t)
+    # Emit the truncation hint on its own line so it is not subject to
+    # rich Table title width truncation at narrow terminals (R63 test
+    # regression: default `CliRunner()` terminal defaulted to ~80 cols
+    # and swallowed the suffix when it lived in the Table title).
+    if truncated:
+        console.print(f"[dim](showing 3 of {total_pairs} pairs — pass --show-matrix for full)[/]")
+
+
 def compare_command(
     *,
     pivot_run_id: str,
@@ -164,17 +198,44 @@ def compare_command(
     width: int | None,
     open_store_fn: Callable[[Path | None], SqliteStore],
     console: Console,
+    auto_pivot: bool = False,
+    show_matrix: bool = False,
 ) -> None:
     """N-run pivot-anchored compare (ADR-023 Arc A, design doc §3.1).
 
     Wraps ``merge_pivot_reports`` with text/JSON rendering. The CLI
     *locks* the JSON contract so later API wrappers can't drift.
+
+    When ``auto_pivot=True`` (CLI ``--auto-pivot`` flag, Arc A slice 4,
+    ADR-024), the positionals are treated as **candidates** rather than
+    ``<pivot> <other...>``: the centroid is computed from pairwise
+    structural distance (metric v1) and the merge is delegated to
+    ``auto_pivot_compare``. JSON mode emits the full
+    :class:`AutoPivotReport.to_dict()` shape (a **superset** of the
+    pivot-anchored JSON — the ``merged`` sub-object is byte-for-byte
+    identical to the R58/R59 contract).
     """
     if columns not in _COLUMNS_CHOICES:
         console.print(
             f"[red]error:[/] --columns must be one of {_COLUMNS_CHOICES}; got {columns!r}"
         )
         raise typer.Exit(code=2)
+
+    if auto_pivot:
+        _run_auto_pivot(
+            pivot_run_id=pivot_run_id,
+            other_run_ids=other_run_ids,
+            db=db,
+            json_out=json_out,
+            restrict_to_downstream=restrict_to_downstream,
+            columns=columns,
+            show_equal=show_equal,
+            width=width,
+            show_matrix=show_matrix,
+            open_store_fn=open_store_fn,
+            console=console,
+        )
+        return
 
     # Input validation: positional count + dedup. Both are also enforced
     # in `merge_pivot_reports`, but we prefer friendly CLI-level errors.
@@ -240,3 +301,89 @@ def compare_command(
         )
     )
     _render_summary(merged, console)
+
+
+def _run_auto_pivot(
+    *,
+    pivot_run_id: str,
+    other_run_ids: list[str],
+    db: Path | None,
+    json_out: bool,
+    restrict_to_downstream: bool,
+    columns: str,
+    show_equal: bool,
+    width: int | None,
+    show_matrix: bool,
+    open_store_fn: Callable[[Path | None], SqliteStore],
+    console: Console,
+) -> None:
+    """Auto-pivot branch of ``chronos compare --auto-pivot`` (Arc A slice 4).
+
+    In this mode the first positional is **not** the designated pivot — it
+    is simply the first candidate. We combine ``[pivot_run_id] + other_run_ids``
+    into a single candidate list, then delegate to
+    :func:`chronos.core.auto_pivot.auto_pivot_compare`. The centroid emerges
+    from the data (ADR-024 §Decision).
+    """
+    candidates = [pivot_run_id, *other_run_ids]
+
+    # Need ≥ 2 candidates (pivot + at least one other).
+    if len(candidates) < 2:
+        console.print(
+            "[red]error:[/] --auto-pivot needs at least 2 run ids: "
+            "`chronos compare --auto-pivot <id> <id> [<id> ...]`"
+        )
+        raise typer.Exit(code=2)
+
+    # Dedup: any repetition is a user error regardless of position.
+    seen: set[str] = set()
+    for rid in candidates:
+        if rid in seen:
+            console.print(f"[red]error:[/] duplicate run id: {rid!r}")
+            raise typer.Exit(code=2)
+        seen.add(rid)
+
+    store = open_store_fn(db)
+    try:
+        try:
+            report = auto_pivot_compare(
+                candidates,
+                store,
+                restrict_to_downstream=restrict_to_downstream,
+            )
+        except DiffRunNotFoundError as exc:
+            console.print(f"[red]error:[/] no such run: [bold]{exc.run_id}[/]")
+            raise typer.Exit(code=1) from exc
+    finally:
+        store.close()
+
+    # Soft warning for large N (mirrors design doc §3.1, §7.1; source of
+    # truth is the CLI because core's auto_pivot_compare is metric-only).
+    if len(candidates) > _SOFT_N_WARN + 1:
+        report.merged.warnings.append(
+            f"N={len(candidates)} is large; table may not fit in a typical terminal."
+        )
+
+    if json_out:
+        _emit_json(report.to_dict())
+        return
+
+    # Text mode ---------------------------------------------------------
+    console.print(
+        f"[bold]Auto-pivot:[/] centroid = [cyan]{report.centroid_run_id}[/]  "
+        f"[dim](selected from {len(candidates)} candidates, metric v{report.metric_version})[/]"
+    )
+    for w in report.merged.warnings:
+        console.print(f"[magenta]⚠ {w}[/]")
+
+    _render_distance_matrix(report, console, full=show_matrix)
+
+    console.print(
+        _render_merged_table(
+            report.merged,
+            columns_mode=columns,
+            show_equal=show_equal,
+            width=width,
+        )
+    )
+    _render_summary(report.merged, console)
