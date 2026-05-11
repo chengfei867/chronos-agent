@@ -380,6 +380,16 @@ def compare_cmd(
             "--auto-pivot."
         ),
     ),
+    matrix: bool = typer.Option(
+        False,
+        "--matrix",
+        help=(
+            "Emit only the pairwise distance matrix (Arc A slice 5, R65). "
+            "All positionals are candidates; no pivot selection, no merged "
+            "alignment. Cheaper than --auto-pivot when you only need to see "
+            "how far apart N runs are. Mutually exclusive with --auto-pivot."
+        ),
+    ),
 ) -> None:
     """Compare N recorded runs against a pivot (fork-sweep debugger).
 
@@ -392,6 +402,11 @@ def compare_cmd(
     treated as candidates and the pivot is selected by argmin mean
     structural distance (tie-break: lex smallest run id).
 
+    With ``--matrix`` (Arc A slice 5, R65), all positionals are treated
+    as candidates and only the pairwise distance matrix is printed — no
+    centroid selection or merged alignment. Mutually exclusive with
+    ``--auto-pivot``.
+
     Examples::
 
         chronos compare run_001 run_002                        # N=2
@@ -399,6 +414,7 @@ def compare_cmd(
         chronos compare run_001 run_002 run_003 --json         # JSON contract
         chronos compare run_001 run_002 --full                 # don't slice
         chronos compare --auto-pivot run_001 run_002 run_003   # auto-centroid
+        chronos compare --matrix run_001 run_002 run_003       # matrix only
     """
     from chronos.cli.compare import compare_command
 
@@ -413,6 +429,7 @@ def compare_cmd(
         width=width,
         auto_pivot=auto_pivot,
         show_matrix=show_matrix,
+        matrix=matrix,
         open_store_fn=_open_store,
         console=console,
     )

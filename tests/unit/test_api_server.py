@@ -1208,3 +1208,165 @@ def test_compare_auto_400_when_fewer_than_two_ids(
     resp = compare_n_client.get("/runs/compare/auto", params={"ids": "solo-run"})
     assert resp.status_code == 400
     assert "at least 2" in resp.json()["detail"].lower()
+
+
+# ---------------------------------------------------------------------------
+# /runs/compare/matrix  (R65 — Phase 4 Arc A slice 5 — matrix-only view)
+# ---------------------------------------------------------------------------
+# Thin HTTP wrapper over chronos.core.auto_pivot.pairwise_distances. Locked
+# response contract:
+#   {
+#     "metric_version": 1,
+#     "input_run_ids": [...as-sent order...],
+#     "distance_matrix": {"a|b": d, ...},  # canonical min<max
+#     "mean_distances": {run_id: d, ...},   # argmin = auto-pivot centroid
+#     "runs": {run_id: <run summary>, ...},  # parity with /runs/compare/auto
+#   }
+# Same validation semantics as /runs/compare/auto: dup → 400, <2 → 400,
+# missing → 404. Registration-order bug-trap: must not collide with
+# /runs/{run_id}. Reuses compare_n_scenario + compare_n_client (R59-safe —
+# no fixture mutation).
+# ---------------------------------------------------------------------------
+
+
+def test_compare_matrix_happy_path_returns_flat_contract(
+    compare_n_scenario: tuple[SqliteStore, dict[str, str]],
+    compare_n_client: TestClient,
+) -> None:
+    _, ids = compare_n_scenario
+    resp = compare_n_client.get(
+        "/runs/compare/matrix",
+        params={"ids": f"{ids['pivot']},{ids['twin']},{ids['variant']}"},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+
+    # Exact top-level keys — contract is locked.
+    assert set(body.keys()) == {
+        "metric_version",
+        "input_run_ids",
+        "distance_matrix",
+        "mean_distances",
+        "runs",
+    }
+    assert body["metric_version"] == 1
+    assert body["input_run_ids"] == [ids["pivot"], ids["twin"], ids["variant"]]
+
+    # Flattened matrix: "a|b" keys, canonical a<b.
+    assert len(body["distance_matrix"]) == 3  # C(3,2)
+    for k, v in body["distance_matrix"].items():
+        assert "|" in k
+        a, b = k.split("|", 1)
+        assert a < b
+        assert isinstance(v, (int, float))
+        assert 0.0 <= float(v) <= 1.0
+
+    # Mean-distances invariant: every input has mean = sum(row)/(n-1).
+    dm = body["distance_matrix"]
+    n = 3
+    for rid in body["input_run_ids"]:
+        expected = 0.0
+        for other in body["input_run_ids"]:
+            if other == rid:
+                continue
+            key = f"{rid}|{other}" if rid < other else f"{other}|{rid}"
+            expected += dm[key]
+        expected /= n - 1
+        assert abs(body["mean_distances"][rid] - expected) < 1e-9
+
+    # Runs block parity with /runs/compare/auto.
+    assert set(body["runs"].keys()) == {ids["pivot"], ids["twin"], ids["variant"]}
+
+
+def test_compare_matrix_n2_single_pair(
+    compare_n_scenario: tuple[SqliteStore, dict[str, str]],
+    compare_n_client: TestClient,
+) -> None:
+    """N=2: exactly one pair; both runs have mean == that pair distance."""
+    _, ids = compare_n_scenario
+    resp = compare_n_client.get(
+        "/runs/compare/matrix",
+        params={"ids": f"{ids['pivot']},{ids['variant']}"},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert len(body["distance_matrix"]) == 1
+    (only_d,) = body["distance_matrix"].values()
+    for rid in (ids["pivot"], ids["variant"]):
+        assert abs(body["mean_distances"][rid] - only_d) < 1e-9
+
+
+def test_compare_matrix_argmin_agrees_with_auto_pivot_centroid(
+    compare_n_scenario: tuple[SqliteStore, dict[str, str]],
+    compare_n_client: TestClient,
+) -> None:
+    """The argmin of mean_distances must equal the centroid that
+    /runs/compare/auto picks for the same inputs. This is the *whole
+    point* of surfacing mean_distances — a cheap preview of the
+    auto-pivot decision without paying for the merge.
+
+    Cross-endpoint invariant (R65): free third-layer guard for Arc A
+    (pure / matrix / auto all agree on centroid selection).
+    """
+    _, ids = compare_n_scenario
+    params = {"ids": f"{ids['pivot']},{ids['twin']},{ids['variant']}"}
+    matrix = compare_n_client.get("/runs/compare/matrix", params=params).json()
+    auto = compare_n_client.get("/runs/compare/auto", params=params).json()
+
+    # argmin with lex tie-break (matches select_centroid's rule).
+    best = min(matrix["mean_distances"].items(), key=lambda kv: (kv[1], kv[0]))[0]
+    assert best == auto["auto_pivot"]["centroid_run_id"]
+
+
+def test_compare_matrix_404_when_a_run_is_missing(
+    compare_n_scenario: tuple[SqliteStore, dict[str, str]],
+    compare_n_client: TestClient,
+) -> None:
+    _, ids = compare_n_scenario
+    resp = compare_n_client.get(
+        "/runs/compare/matrix",
+        params={"ids": f"{ids['pivot']},ghost-run"},
+    )
+    assert resp.status_code == 404
+    assert "not found" in resp.json()["detail"].lower()
+
+
+def test_compare_matrix_400_when_duplicate_ids(
+    compare_n_scenario: tuple[SqliteStore, dict[str, str]],
+    compare_n_client: TestClient,
+) -> None:
+    _, ids = compare_n_scenario
+    resp = compare_n_client.get(
+        "/runs/compare/matrix",
+        params={"ids": f"{ids['pivot']},{ids['twin']},{ids['twin']}"},
+    )
+    assert resp.status_code == 400
+    assert "duplicate" in resp.json()["detail"].lower()
+
+
+def test_compare_matrix_400_when_fewer_than_two_ids(
+    compare_n_client: TestClient,
+) -> None:
+    resp = compare_n_client.get("/runs/compare/matrix", params={"ids": "solo-run"})
+    assert resp.status_code == 400
+    assert "at least 2" in resp.json()["detail"].lower()
+
+
+def test_compare_matrix_does_not_shadow_run_detail_endpoint(
+    compare_n_scenario: tuple[SqliteStore, dict[str, str]],
+    compare_n_client: TestClient,
+) -> None:
+    """Registration-order guard: the literal ``/runs/compare/matrix``
+    route must be matched before the parametric ``/runs/{run_id}`` route,
+    otherwise the API would attempt to look up a run with id
+    ``"compare/matrix"`` (and 404). Inverse direction: a real run_id
+    lookup must still work after the matrix endpoint is registered.
+    """
+    _, ids = compare_n_scenario
+    # The matrix endpoint without ids still triggers its own 422 (query
+    # validation) rather than a 404 from the run-detail endpoint.
+    resp = compare_n_client.get("/runs/compare/matrix")
+    assert resp.status_code == 422  # FastAPI: missing required query
+    # The run-detail endpoint still works.
+    resp_run = compare_n_client.get(f"/runs/{ids['pivot']}")
+    assert resp_run.status_code == 200

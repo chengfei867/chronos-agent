@@ -693,3 +693,237 @@ def test_compare_show_matrix_without_auto_pivot_is_noop(
     assert "distance matrix" not in result.stdout.lower()
     # Normal compare output is present.
     assert "Pivot:" in result.stdout
+
+
+# ---------------------------------------------------------------------------
+# R65 / Arc A slice 5 — `--matrix` matrix-only view
+# ---------------------------------------------------------------------------
+# Contract (locked R65):
+#   {
+#     "metric_version": 1,
+#     "input_run_ids": [...original order...],
+#     "distance_matrix": {"a|b": d, ...},   # canonical min<max
+#     "mean_distances": {run_id: d, ...},    # argmin = auto-pivot centroid
+#   }
+# `--matrix` XOR `--auto-pivot`. Mutually exclusive; validated in dispatcher.
+# Exit codes: 2 for user input errors (dup, <2, mutex); 1 for runtime (missing
+# run). Same policy as the `--auto-pivot` branch.
+# ---------------------------------------------------------------------------
+
+
+def test_compare_matrix_text_renders_full_matrix_and_means(
+    seeded_compare_db: tuple[Path, dict[str, str]],
+) -> None:
+    """``--matrix`` text mode prints the matrix header + distance table +
+    mean-distance hint table (argmin = centroid).
+    """
+    db, ids = seeded_compare_db
+    result = runner.invoke(
+        app,
+        [
+            "compare",
+            "--matrix",
+            ids["pivot"],
+            ids["same"],
+            ids["changed"],
+            "--db",
+            str(db),
+        ],
+    )
+    assert result.exit_code == 0, result.stdout + (result.stderr or "")
+    out = result.stdout
+    # Matrix mode header (distinct from --auto-pivot's "Auto-pivot: centroid =").
+    assert "Matrix:" in out
+    assert "3 run(s)" in out
+    # C(3,2) = 3 pairs.
+    assert "3 pair(s)" in out
+    assert "distance matrix" in out.lower()
+    # Mean-distance hint table (column header; title may be truncated by
+    # terminal width in CI so we assert on the structural column instead).
+    assert "mean distance" in out.lower()
+
+
+def test_compare_matrix_json_contract(
+    seeded_compare_db: tuple[Path, dict[str, str]],
+) -> None:
+    """``--matrix --json`` emits the locked R65 contract."""
+    db, ids = seeded_compare_db
+    result = runner.invoke(
+        app,
+        [
+            "compare",
+            "--matrix",
+            "--json",
+            ids["pivot"],
+            ids["same"],
+            ids["changed"],
+            "--db",
+            str(db),
+        ],
+    )
+    assert result.exit_code == 0, result.stdout + (result.stderr or "")
+    payload = json.loads(result.stdout)
+
+    # Exact top-level keys — contract is locked.
+    assert set(payload.keys()) == {
+        "metric_version",
+        "input_run_ids",
+        "distance_matrix",
+        "mean_distances",
+    }
+    assert payload["metric_version"] == 1
+    # input_run_ids echoes user order exactly.
+    assert payload["input_run_ids"] == [ids["pivot"], ids["same"], ids["changed"]]
+    # C(3,2) = 3 canonical pairs, "a|b" with a<b lex.
+    assert len(payload["distance_matrix"]) == 3
+    for k, v in payload["distance_matrix"].items():
+        assert "|" in k
+        a, b = k.split("|", 1)
+        assert a < b, f"non-canonical key orientation: {k!r}"
+        assert isinstance(v, (int, float))
+        assert 0.0 <= float(v) <= 1.0
+    # mean_distances covers every input run, and is (sum of row) / (n-1).
+    assert set(payload["mean_distances"].keys()) == {
+        ids["pivot"],
+        ids["same"],
+        ids["changed"],
+    }
+    # Cross-check mean = sum(pair distances involving run) / (n-1).
+    dm = payload["distance_matrix"]
+    n = 3
+    for rid in payload["input_run_ids"]:
+        expected = 0.0
+        for other in payload["input_run_ids"]:
+            if other == rid:
+                continue
+            key = f"{rid}|{other}" if rid < other else f"{other}|{rid}"
+            expected += dm[key]
+        expected /= n - 1
+        assert abs(payload["mean_distances"][rid] - expected) < 1e-9
+
+
+def test_compare_matrix_n2_degenerate_single_pair(
+    seeded_compare_db: tuple[Path, dict[str, str]],
+) -> None:
+    """N=2: matrix has exactly one pair; mean_distances equals that pair
+    distance for both runs (n-1=1)."""
+    db, ids = seeded_compare_db
+    result = runner.invoke(
+        app,
+        [
+            "compare",
+            "--matrix",
+            "--json",
+            ids["pivot"],
+            ids["changed"],
+            "--db",
+            str(db),
+        ],
+    )
+    assert result.exit_code == 0, result.stdout + (result.stderr or "")
+    payload = json.loads(result.stdout)
+    assert len(payload["distance_matrix"]) == 1
+    (only_distance,) = payload["distance_matrix"].values()
+    for rid in payload["input_run_ids"]:
+        assert abs(payload["mean_distances"][rid] - only_distance) < 1e-9
+
+
+def test_compare_matrix_duplicate_ids_errors(
+    seeded_compare_db: tuple[Path, dict[str, str]],
+) -> None:
+    """Duplicate positional ids under ``--matrix`` → exit code 2, clear
+    message. User-input error, not runtime."""
+    db, ids = seeded_compare_db
+    result = runner.invoke(
+        app,
+        [
+            "compare",
+            "--matrix",
+            ids["pivot"],
+            ids["same"],
+            ids["pivot"],  # dup
+            "--db",
+            str(db),
+        ],
+    )
+    assert result.exit_code == 2
+    combined = (result.stdout or "") + (result.stderr or "")
+    assert "duplicate" in combined.lower()
+
+
+def test_compare_matrix_requires_two_ids(
+    seeded_compare_db: tuple[Path, dict[str, str]],
+) -> None:
+    """``--matrix`` with a single run id → exit code 2.
+
+    With one positional, Typer's own "missing argument" guard on the
+    required ``other_run_ids`` parameter trips before our dispatcher.
+    Either error path is acceptable: the user gets exit code 2 and a
+    message naming the missing positional *or* our dispatcher's
+    "needs at least 2" text. Both signal the same bug to the user.
+    """
+    db, ids = seeded_compare_db
+    result = runner.invoke(
+        app,
+        [
+            "compare",
+            "--matrix",
+            ids["pivot"],
+            "--db",
+            str(db),
+        ],
+    )
+    assert result.exit_code == 2
+    combined = ((result.stdout or "") + (result.stderr or "")).lower()
+    assert (
+        "at least 2" in combined
+        or "needs at least" in combined
+        or "missing argument" in combined
+        or "other_run_ids" in combined
+    )
+
+
+def test_compare_matrix_missing_run_errors(
+    seeded_compare_db: tuple[Path, dict[str, str]],
+) -> None:
+    """Unknown run id under ``--matrix`` → exit code 1, clean message."""
+    db, ids = seeded_compare_db
+    result = runner.invoke(
+        app,
+        [
+            "compare",
+            "--matrix",
+            ids["pivot"],
+            "ghost-run",
+            "--db",
+            str(db),
+        ],
+    )
+    assert result.exit_code == 1
+    combined = (result.stdout or "") + (result.stderr or "")
+    assert "no such run" in combined.lower() or "ghost-run" in combined
+
+
+def test_compare_matrix_and_auto_pivot_mutually_exclusive(
+    seeded_compare_db: tuple[Path, dict[str, str]],
+) -> None:
+    """``--matrix`` + ``--auto-pivot`` together → exit code 2 with a
+    message naming both flags. Dispatcher guard (R65)."""
+    db, ids = seeded_compare_db
+    result = runner.invoke(
+        app,
+        [
+            "compare",
+            "--matrix",
+            "--auto-pivot",
+            ids["pivot"],
+            ids["same"],
+            "--db",
+            str(db),
+        ],
+    )
+    assert result.exit_code == 2
+    combined = (result.stdout or "") + (result.stderr or "")
+    assert "--matrix" in combined
+    assert "--auto-pivot" in combined
+    assert "mutually exclusive" in combined.lower()

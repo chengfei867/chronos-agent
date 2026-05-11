@@ -29,7 +29,12 @@ from rich.console import Console
 from rich.table import Table
 
 from chronos.cli._common import _emit_json
-from chronos.core.auto_pivot import AutoPivotReport, auto_pivot_compare
+from chronos.core.auto_pivot import (
+    METRIC_VERSION,
+    AutoPivotReport,
+    auto_pivot_compare,
+    pairwise_distances,
+)
 from chronos.core.diff import (
     DiffRunNotFoundError,
     MergedPivotAlignment,
@@ -200,6 +205,7 @@ def compare_command(
     console: Console,
     auto_pivot: bool = False,
     show_matrix: bool = False,
+    matrix: bool = False,
 ) -> None:
     """N-run pivot-anchored compare (ADR-023 Arc A, design doc §3.1).
 
@@ -214,12 +220,39 @@ def compare_command(
     :class:`AutoPivotReport.to_dict()` shape (a **superset** of the
     pivot-anchored JSON — the ``merged`` sub-object is byte-for-byte
     identical to the R58/R59 contract).
+
+    When ``matrix=True`` (CLI ``--matrix`` flag, Arc A slice 5, R65),
+    the positionals are **all candidates** and neither a pivot selection
+    nor an alignment merge is performed — only the pairwise distance
+    matrix is emitted. This is cheaper than ``--auto-pivot`` because no
+    downstream merge is computed; good for at-a-glance "how far apart
+    are these N runs?" questions. Mutually exclusive with ``auto_pivot``.
     """
     if columns not in _COLUMNS_CHOICES:
         console.print(
             f"[red]error:[/] --columns must be one of {_COLUMNS_CHOICES}; got {columns!r}"
         )
         raise typer.Exit(code=2)
+
+    if matrix and auto_pivot:
+        console.print(
+            "[red]error:[/] --matrix and --auto-pivot are mutually exclusive "
+            "(--matrix emits only the pairwise distance matrix; --auto-pivot "
+            "adds centroid selection + merged alignment on top)."
+        )
+        raise typer.Exit(code=2)
+
+    if matrix:
+        _run_matrix(
+            pivot_run_id=pivot_run_id,
+            other_run_ids=other_run_ids,
+            db=db,
+            json_out=json_out,
+            restrict_to_downstream=restrict_to_downstream,
+            open_store_fn=open_store_fn,
+            console=console,
+        )
+        return
 
     if auto_pivot:
         _run_auto_pivot(
@@ -387,3 +420,137 @@ def _run_auto_pivot(
         )
     )
     _render_summary(report.merged, console)
+
+
+# ---------------------------------------------------------------------------
+# Arc A slice 5 (R65) — `--matrix` matrix-only view
+# ---------------------------------------------------------------------------
+
+
+def _run_matrix(
+    *,
+    pivot_run_id: str,
+    other_run_ids: list[str],
+    db: Path | None,
+    json_out: bool,
+    restrict_to_downstream: bool,
+    open_store_fn: Callable[[Path | None], SqliteStore],
+    console: Console,
+) -> None:
+    """Matrix-only branch of ``chronos compare --matrix`` (Arc A slice 5).
+
+    Thin wrapper over :func:`chronos.core.auto_pivot.pairwise_distances`.
+    Emits *only* the pairwise distance matrix — no centroid selection,
+    no merged alignment. Cheap and composable: a user who just wants to
+    see "how different are these N runs?" does not need to pay for the
+    merge pass.
+
+    JSON contract (CLI, R65, locked here)::
+
+        {
+            "metric_version": 1,
+            "input_run_ids": ["a", "b", "c", ...],        # as passed, original order
+            "distance_matrix": {"a|b": 0.1234, "a|c": ...},  # canonical min<max
+            "mean_distances": {"a": 0.12, "b": 0.34, ...},    # per-run mean-to-others
+        }
+
+    The ``mean_distances`` field is what :func:`select_centroid` uses to
+    pick the centroid — surfacing it here lets a user answer "which run
+    is the most-representative?" without also asking for a merge. This
+    is a pure wrapper concern; the core ``pairwise_distances`` stays
+    merge-free.
+    """
+    candidates = [pivot_run_id, *other_run_ids]
+
+    if len(candidates) < 2:
+        console.print(
+            "[red]error:[/] --matrix needs at least 2 run ids: "
+            "`chronos compare --matrix <id> <id> [<id> ...]`"
+        )
+        raise typer.Exit(code=2)
+
+    # Dedup: any repetition is a user error regardless of position.
+    seen: set[str] = set()
+    for rid in candidates:
+        if rid in seen:
+            console.print(f"[red]error:[/] duplicate run id: {rid!r}")
+            raise typer.Exit(code=2)
+        seen.add(rid)
+
+    store = open_store_fn(db)
+    try:
+        try:
+            distances = pairwise_distances(
+                candidates,
+                store,
+                restrict_to_downstream=restrict_to_downstream,
+            )
+        except DiffRunNotFoundError as exc:
+            console.print(f"[red]error:[/] no such run: [bold]{exc.run_id}[/]")
+            raise typer.Exit(code=1) from exc
+    finally:
+        store.close()
+
+    # Build mean_distances (argmin of this = centroid; surfaced so users can
+    # compare without paying for the merge pass).
+    n = len(candidates)
+    mean_distances: dict[str, float] = {}
+    for rid in candidates:
+        total = 0.0
+        for other in candidates:
+            if other == rid:
+                continue
+            key = (rid, other) if rid < other else (other, rid)
+            total += distances[key]
+        mean_distances[rid] = total / (n - 1)
+
+    # Flatten matrix to "a|b" strings (same convention as
+    # AutoPivotReport.to_dict(): pipe separator; run ids are UUID-shaped
+    # and never contain pipes).
+    flat_matrix: dict[str, float] = {f"{a}|{b}": d for (a, b), d in distances.items()}
+
+    if json_out:
+        _emit_json(
+            {
+                "metric_version": METRIC_VERSION,
+                "input_run_ids": list(candidates),
+                "distance_matrix": flat_matrix,
+                "mean_distances": mean_distances,
+            }
+        )
+        return
+
+    # Text mode ---------------------------------------------------------
+    total_pairs = len(distances)
+    console.print(
+        f"[bold]Matrix:[/] {n} run(s), [dim]{total_pairs} pair(s), metric v{METRIC_VERSION}[/]"
+    )
+
+    pairs = sorted(distances.items(), key=lambda kv: (kv[0][0], kv[0][1]))
+    t = Table(
+        title=f"Pairwise distance matrix (metric v{METRIC_VERSION})",
+        header_style="bold cyan",
+        show_lines=False,
+    )
+    t.add_column("run_a")
+    t.add_column("run_b")
+    t.add_column("distance", justify="right")
+    for (a, b), d in pairs:
+        t.add_row(a, b, f"{d:.4f}")
+    console.print(t)
+
+    # Per-run mean-distance summary. The argmin of this column is what
+    # --auto-pivot would pick as the centroid; we render it as a hint so
+    # users know which run is the "most central" without running the
+    # auto-pivot merge.
+    s = Table(
+        title="Mean distance to other runs (argmin = auto-pivot centroid)",
+        header_style="bold cyan",
+        show_lines=False,
+    )
+    s.add_column("run")
+    s.add_column("mean distance", justify="right")
+    # Preserve input order so the user can correlate with their arg order.
+    for rid in candidates:
+        s.add_row(rid, f"{mean_distances[rid]:.4f}")
+    console.print(s)

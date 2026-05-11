@@ -61,7 +61,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from chronos.cli.fork import build_effects_summary, build_plan
-from chronos.core.auto_pivot import auto_pivot_compare
+from chronos.core.auto_pivot import auto_pivot_compare, pairwise_distances
 from chronos.core.diff import DiffRunNotFoundError, diff_runs, merge_pivot_reports
 from chronos.core.models import SCHEMA_VERSION, Fork, Node, Run
 
@@ -666,6 +666,92 @@ def build_app(store: SqliteStore) -> FastAPI:
             "alignment": merged_dict["alignment"],
             "summary": merged_dict["summary"],
             "warnings": merged_dict["warnings"],
+        }
+
+    # /runs/compare/matrix — N-run pairwise distance matrix only
+    # (Phase 4 Arc A slice 5, R65). Thin wrapper over
+    # chronos.core.auto_pivot.pairwise_distances. No centroid selection,
+    # no merged alignment. Same registration-order constraint as
+    # /runs/compare, /runs/compare/n, and /runs/compare/auto: MUST
+    # precede /runs/{run_id}.
+    @app.get("/runs/compare/matrix")
+    def compare_runs_matrix(
+        ids: str = Query(
+            ...,
+            description=(
+                "Comma-separated run_ids, ≥ 2. All are candidates — no pivot. "
+                "Returns only the pairwise distance matrix (metric v1) and "
+                "per-run mean-distances (argmin = auto-pivot centroid). "
+                "Duplicates 400; missing runs 404."
+            ),
+        ),
+        restrict_to_downstream: bool = Query(
+            True,
+            description=(
+                "Forwarded per (candidate, candidate) diff pair. Same semantic "
+                "as /runs/compare/n and /runs/compare/auto."
+            ),
+        ),
+    ) -> dict[str, Any]:
+        # --- parse & validate `ids` -----------------------------------
+        id_list = [s.strip() for s in ids.split(",") if s.strip()]
+        if len(id_list) < 2:
+            raise HTTPException(
+                status_code=400,
+                detail="`ids` must be a comma-separated list of at least 2 run_ids",
+            )
+        seen: set[str] = set()
+        for rid in id_list:
+            if rid in seen:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"duplicate run_id in `ids`: {rid!r}",
+                )
+            seen.add(rid)
+
+        # --- fetch all candidate runs (404 surfaces any missing id) ---
+        # Surface 404 BEFORE computing distances so the error path is
+        # cheap (no O(N²) diff work on a doomed request).
+        runs_by_id: dict[str, Run] = {}
+        for rid in id_list:
+            r = store.get_run(rid)
+            if r is None:
+                raise HTTPException(status_code=404, detail=f"Run not found: {rid}")
+            runs_by_id[rid] = r
+
+        # --- delegate to core pairwise function -----------------------
+        try:
+            distances = pairwise_distances(
+                id_list,
+                store,
+                restrict_to_downstream=restrict_to_downstream,
+            )
+        except DiffRunNotFoundError as exc:
+            # Defensive: already guarded above.
+            raise HTTPException(status_code=404, detail=f"Run not found: {exc.run_id}") from exc
+
+        # --- compute per-run mean distances (argmin = centroid) -------
+        n = len(id_list)
+        mean_distances: dict[str, float] = {}
+        for rid in id_list:
+            total = 0.0
+            for other in id_list:
+                if other == rid:
+                    continue
+                key = (rid, other) if rid < other else (other, rid)
+                total += distances[key]
+            mean_distances[rid] = total / (n - 1)
+
+        # --- flatten matrix to "a|b" strings (same convention as
+        # AutoPivotReport.to_dict() and /runs/compare/auto) ------------
+        flat_matrix: dict[str, float] = {f"{a}|{b}": d for (a, b), d in distances.items()}
+
+        return {
+            "metric_version": 1,
+            "input_run_ids": list(id_list),
+            "distance_matrix": flat_matrix,
+            "mean_distances": mean_distances,
+            "runs": {rid: _run_to_dict(runs_by_id[rid]) for rid in id_list},
         }
 
     @app.get("/runs/{run_id}")

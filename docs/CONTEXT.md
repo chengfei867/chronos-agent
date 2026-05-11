@@ -147,11 +147,37 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
-**截至 Round 64 结束 (2026-05-11 CST ~09:20, cron slot inside 0–11 window) — Phase 4 Arc A slice 4 bundle 完工: R62 core + R63 CLI/HTTP + R64 dogfood + **v0.5.1 tag cut** + GitHub Release**
+**截至 Round 65 结束 (2026-05-11 CST ~03:56, cron slot inside 0–11 window) — Phase 4 Arc A slice 5 已 ship: `chronos compare --matrix` CLI + `GET /runs/compare/matrix` HTTP (matrix-only view), Option A2 close-out over inherited WIP**
 
-- 最近 progress doc: `docs/progress/2026-05-11-round-64.md` (R64 — Arc A slice 4 proof: dogfood `scripts/dogfood_auto_pivot.py` + v0.5.1 release cut)
-- 最近上份 progress doc: `docs/progress/2026-05-11-round-63.md` (R63 — Arc A slice 4 surface: CLI + HTTP wrappers)
-- 最近上上份 progress doc: `docs/progress/2026-05-10-round-62.md` (R62 — Arc A slice 4 core impl: `auto_pivot_compare` pure function)
+- 最近 progress doc: `docs/progress/2026-05-11-round-65.md` (R65 — Arc A slice 5 matrix-only view surface + A2 close-out)
+- 最近上份 progress doc: `docs/progress/2026-05-11-round-64.md` (R64 — Arc A slice 4 proof: dogfood + v0.5.1 release cut)
+- 最近上上份 progress doc: `docs/progress/2026-05-11-round-63.md` (R63 — Arc A slice 4 surface: CLI + HTTP wrappers)
+
+- Round: **65** (Phase 4 Arc A slice 5 — matrix-only view, **Option A2 close-out** over inherited WIP): ~03:56 CST single slot, 0 blocker. Prior slot (same day, pre-compaction) shipped ~680 LOC uncommitted (`compare.py` +169, `server.py` +88, `cli/__init__.py` +17, `test_cli_compare.py` +234, `test_api_server.py` +162, CHANGELOG +14) with gates already green; this slot executed A2 checklist (progress doc + CONTEXT + commit + push) per `cron-slot-handoff-recovery` skill.
+  - **CLI**: `chronos compare --matrix <ids>...` flag in `src/chronos/cli/compare.py` (+169 LOC). Mutually exclusive with `--auto-pivot` (exit 2). New `_run_matrix()` branch: validates (min 2 ids, no dups, no missing runs), calls `pairwise_distances(ids, store)`, renders text (header + distance Table + mean-distance hint Table preserving user order) or JSON (`{metric_version, input_run_ids, distance_matrix: {"a|b": float}, mean_distances}`). Thin wrapper over R62-frozen `pairwise_distances`; `mean_distances` computed in wrapper (not core — stays merge-free).
+  - **HTTP**: `GET /runs/compare/matrix?ids=a,b,c&restrict_to_downstream=true` in `src/chronos/api/server.py` (+88 LOC). Registered **before** `/runs/{run_id}` catch-all (fourth /runs/compare/* sibling). Returns `{metric_version, input_run_ids, distance_matrix, mean_distances, runs}` — `runs` block mirrors `/runs/compare/auto` for parity. 400 on dup / <2, 404 on missing (surfaced **before** O(N²) diff sweep).
+  - **Tests**: 7 CLI + 7 API = 14 new, 0 regression. Locked **cross-endpoint argmin invariant** (`test_compare_matrix_argmin_agrees_with_auto_pivot_centroid`): `argmin(matrix.mean_distances) == auto.centroid_run_id` for identical inputs → free third-layer centroid-selection guard (pure `select_centroid` / matrix argmin / auto centroid all agree).
+  - Gates: **562 pass / 3 skip / 0 fail / 94% cov** (+14 from R64 baseline 548). mypy 31 files 0 error. ruff check src+tests+scripts 0 error. ruff format --check 83 files clean. Adapter **zero change** — R52→R65 = **14 rounds**零代码改动 (项目史上最长 streak 继续).
+  - **No tag cut** (pure-additive wrapper; v0.6.0 bundles slice 5 + Arc A item 2 fork-tree DAG viz).
+  - **No dogfood** (R64 `dogfood_auto_pivot.py` already exercises `pairwise_distances` via `C(4,2)=6` matrix assertion; slice 5 is a re-projection of the same pairwise output — redundant to dogfood separately. Bundle dogfood lands with v0.6.0).
+
+- **R65 关键发现 (上墙)**:
+  - **Cross-endpoint argmin = centroid 三层守卫 (R65 新)**: pure `select_centroid` / HTTP `/runs/compare/matrix` argmin / HTTP `/runs/compare/auto` centroid 三者对同一输入集必须指向同一 run. Lock by `test_compare_matrix_argmin_agrees_with_auto_pivot_centroid`. 若 lex tie-break 漂移, 两个角度同时 trip. 升级 R59/R63 byte-identical 守卫到 semantic-identical 第五层. ← **new**
+  - **Derived-but-cheap = wrapper, 不是 core (R65 新)**: `mean_distances` 是 `select_centroid` 的中间产物但不进 `pairwise_distances` 返回, 保 core merge-free + reusable (未来 2D embedding viz 想要 raw matrix). Wrapper 层 O(N²) 计算, 无 asymptotic 成本. **Pin 为 design 原则**: derived-but-cheap computations 属 wrapper, core 保 minimal. ← **new**
+  - **`seeded_compare_db` + `compare_n_scenario` 跨 slice reuse 二次验证 (R65, R63 refinement)**: slice 4 + slice 5 tests 共享 fixture 无 mutation, 仅 exercise parallel endpoints. 第二次验证 "reuse unchanged fixture OK, only mutation forbidden". ← **refinement**
+  - **A2 inheritance **七连** (R65, 升级 R63 六连)**: R48-A → R51 → R52 → R53 → R59 → R63 → R65. 第七次 post-impl-slot 结构性常态. "ship slice + tests + CHANGELOG" 的 surface round 产生 slot-1/slot-2 split; slot-2 纯 "codify and ship" near-zero risk. Pre-budget 2 slot per Arc-slice impl round 是 correct rule (R64 single-slot proof 是 additive-only 例外). ← **refinement**
+
+- **R65 产出**:
+  - `src/chronos/cli/compare.py` — inherited +169 LOC (matrix branch + mutex guard).
+  - `src/chronos/api/server.py` — inherited +88 LOC (`/runs/compare/matrix` endpoint).
+  - `src/chronos/cli/__init__.py` — inherited +17 LOC (`--matrix` Typer flag).
+  - `tests/unit/test_cli_compare.py` — inherited +234 LOC, 7 new tests.
+  - `tests/unit/test_api_server.py` — inherited +162 LOC, 7 new tests.
+  - `CHANGELOG.md [Unreleased]` — inherited R65 Added + Design-notes sub-blocks.
+  - `docs/progress/2026-05-11-round-65.md` (**new this slot**).
+  - `docs/CONTEXT.md §5/§6` (**this refresh**).
+  - **零 adapter / store / ADR / `core/auto_pivot.py` / `core/diff.py` / `ForkPlan` / `Extractor` 改动** — R65 纯 surface slice.
+  - **无 tag cut** — v0.6.0 bundle 预留给 Arc A item 2 + slice 5.
 
 - Round: **64** (Phase 4 Arc A slice 4 **proof + release** — post-R63-surface bundle-closer, mirrors R60 cadence after R58/R59): ~09:20 CST **single slot** (not 2-slot — pure-additive, no test scaffolding, no surface), 0 blocker. Shipped `scripts/dogfood_auto_pivot.py` + v0.5.1 version bumps + CHANGELOG roll + GitHub Release.
   - **New this round**: `scripts/dogfood_auto_pivot.py` (~310 LOC, ruff-clean, runtime-validated). 4-run topology: baseline + identity-twin (distance=0) + early-exit (rounds=MAX) + extra-round (rounds=MAX-3). 两层调用: (a) `chronos compare --auto-pivot a b c d --show-matrix` text 保存 `/tmp/chronos_r64_dogfood_auto_pivot_text.txt`; (b) `--format json` 保存 `/tmp/chronos_r64_dogfood_auto_pivot.json`. 加入 **runtime assert living-guard**: `metric_version==1`, `pivot_selection=="auto-centroid"`, centroid ∈ {baseline, twin} 且 `== min(baseline, twin) lex` (ADR-024), 矩阵 `C(4,2)=6` 条 canonical `min<max` orientation, `baseline<->twin == 0.0`, 其他 pair `> 0`, `input_run_ids` 按参数顺序, `merged.other_ids = input \ centroid`. Dogfood 运行成功, exit 0.
@@ -336,56 +362,59 @@ chronos-agent/
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 65 — Arc A slice 5: pairwise matrix view (recommended) or ADR-025 metric governance**
+**Round 66 — Arc A item 2 planning (fork-tree DAG viz design doc) 推荐, 或 ADR-025 metric governance**
 
-战略视角: R62+R63+R64 bundle CLOSED (v0.5.1 cut). R60 "Arc slice = core + surface + proof = 1 bundle = 1 minor version" invariant **第二次**验证. Arc A 剩下的 slice candidate 见下. R64 发现 "proof round single-slot 可行" — R65 若选 impl slice 需 pre-budget 2-slot (A2 七连可能性); 若选 ADR-only / refactor-only single-slot OK.
+战略视角: R65 shipped Arc A slice 5 surface (Option A2 close-out, 7 CLI + 7 API tests, 562/3/0, **14 rounds** adapter zero-change). No tag cut — slice 5 等 Arc A item 2 bundle v0.6.0. R66 应启 Arc A 下一个大 feature (item 2 fork-tree DAG viz) 的 planning round, 或者补 ADR-025 metric governance. 两者都是 md-only single-slot 友好.
 
-### Option A (首选, 90 min, 单 slot 可能): Arc A slice 5 — pairwise matrix-only view
+### Option A (首选, 90-120 min, md-only single slot): Arc A item 2 — fork-tree DAG viz design doc + ADR
 
-R62 已 ship `pairwise_distances_from_reports` (frozen pure function). `--auto-pivot` 调用它但强制做 centroid 选择 + merge. 有时 user 只想看 N-run 之间的距离矩阵, 不需要 centroid/merge. 开一个 thin CLI/HTTP 视角:
-
-- **P0** CLI: `chronos compare --matrix <id>...` (N ≥ 2, 不需要 pivot) — 直接 print canonical matrix + per-run summary. 复用 `pairwise_distances_from_reports`. ~80 LOC in `compare.py`.
-- **P1** HTTP: `GET /runs/compare/matrix?ids=...` — 返回 `{metric_version, input_run_ids, distance_matrix}` only. ~40 LOC in `server.py`.
-- **P2** Tests: unit tests on R58 frozen fixtures (~10 tests), **N=2 cross-layer 五连守卫** (pure/CLI-compare-n/HTTP-compare-n/HTTP-auto/HTTP-matrix).
-- **P3** Dogfood extension in `scripts/dogfood_auto_pivot.py` 或 new `scripts/dogfood_matrix.py` (TBD). Option A2-bundled (可放 R66 或本 round 内).
-- Gate: expect 558+ pass. adapter zero change → 14 rounds. 单 slot 可行因复用 R62 核心; 若 A2 inheritance 触发则 2-slot.
-- **不做** tag cut (pure-additive feature, v0.6.0 候选, 等 Arc A item 2 或更多 feature 组 bundle).
+Arc A 下一个大 feature. 需要:
+- **P0** `docs/design/fork-tree-viz.md` — scope, data model (reuse `Fork` rows + `parent_node_id`), API shape (`GET /runs/{run_id}/fork-tree`), UI route (`/app/#/runs/<id>/tree`), ZoomPan + node click interactions, diff-layer overlay可选.
+- **P1** ADR-025 (或 ADR-026 if we squeeze ADR-025 metric-gov first) — fork-tree-viz scope + 边界 (is it a standalone page or a mode of existing TreeViewer? Arc A slice 4/5 合并 + 这个 = Arc A 完整 Depth 主题).
+- **P2** roadmap.md §4.1 刷新: 把 item 2 从 placeholder 改成 "scoped R66, impl target R67-R69".
+- Gate: md-only, expect 562 pass 零漂移.
+- 单 slot realistic. R56/R57/R61 "post-release / post-slice planning round" 模式验证 (第四次).
 
 ### Option B (备选, 60 min, 单 slot ADR-only): ADR-025 metric_version governance
 
-将 `metric_version=1` 正式化 ADR: 定义 v2 触发 (weighted distance / per-node-kind weights / semantic-diff 加权), migration policy (coexistence vs replace), `--metric-version` CLI flag 保留. Demand-driven — R63/R64 没 surface 新 forcing function, 所以仅当 agent 判断 Option A 需要等 forcing function (e.g. 需要 per-node-kind weights 做 matrix view 才有意义) 时先做 B.
+R65 surface 让三个 endpoints (`compare/n`, `compare/auto`, `compare/matrix`) 都 commit 到 `metric_version=1`. ADR-025 formalize:
+- v2 trigger (weighted distance / per-node-kind weights / semantic-diff 加权)
+- migration policy (coexistence vs replace)
+- `--metric-version` CLI flag 保留 policy
+
+Demand-driven. 若 Option A 的 design doc 需要引用 metric-gov 的 forcing function (fork-tree viz 可能需要 per-node-kind weights 区分 tool vs llm divergence), 则先做 B. 否则 Option A.
 
 ### Option C (备选, 60 min): `core/diff.py` → `core/diff/` package refactor
 
-R62 deviation catch-up. 仅在 R65+ 计划 add ≥ 2 个 diff family module (semantic-diff / determinism-diff / ...) 时值. 目前 N=1, sibling 布局 net simpler. Defer 到第二个 forcing function.
+R62 deviation catch-up. 仍然只有 `auto_pivot` 一个 leaf — 等第二个 forcing function 再做. Defer.
 
-### Option D (大件, 3+ round bundle): Arc A item 2 — fork-tree DAG 可视化
+### Option D (大件, 3+ round bundle): Arc A item 2 impl (fork-tree DAG viz 后端 + 前端)
 
-Arc A 下一个大 feature. 需 design doc + ADR + Web UI route + backend endpoint + dogfood, 估 3+ round bundle, v0.6.0 自然 target.
+Option A 之后的 impl 阶段. 需设计 + ADR + HTTP endpoint + Web UI + dogfood, 估 3+ round bundle, v0.6.0 target.
 
 ### 推荐
 
-**Option A (Arc A slice 5 matrix-only view)** — cost/value 最佳:
-- 零新 algorithm (R62 pairwise function 已 ship)
-- 延续 "don't force pivot choice" UX direction (slice 4 开的口子)
-- 单 slot 可行 (wrapper pattern)
-- 保 adapter zero-change 14 rounds
-- 不 tag cut, 等更多 feature 组 v0.6.0 bundle
+**Option A (Arc A item 2 design doc + planning)** — cost/value 最佳:
+- 延续 Arc A Depth momentum (Phase 4 2026 flagship)
+- 解锁 v0.6.0 bundle 设计 (item 2 是剩下最大的 Arc A feature)
+- R56/R57/R61 "planning round" 第四次验证
+- md-only single-slot 安全
+- Option B 可融入 Option A (governance 是 item 2 design doc 会 force 的 decision)
 
-R65 agent 先 `git ls-remote origin main` 确认无 drift + 查 `docs/roadmap.md` 有无 Arc item 顺序 change, 再 commit Option A.
+R66 agent 先 `git ls-remote origin main` 确认无 drift + 读 `docs/roadmap.md §4.1` item 2 scope + 查 R37.5 family-tree 做过什么 (first step 的 fork-tree work) + 开 `docs/design/fork-tree-viz.md` skeleton.
 
-### R65 非目标 (硬红线)
+### R66 非目标 (硬红线)
 
-- ❌ Adapter 改动 (目标: 十四轮零改动)
-- ❌ `core/auto_pivot.py` / `merge_pivot_reports` / `compare_command` / `/runs/compare{,/n,/auto}` 签名改动 (v0.5.1 frozen; 纯 additive 新 surface)
+- ❌ Adapter 改动 (目标: 15 轮零改动)
+- ❌ `core/auto_pivot.py` / `core/diff.py` / `compare_command` / `/runs/compare{,/n,/auto,/matrix}` 签名改动 (v0.5.1 frozen + R65 additive-only)
 - ❌ 主网 / 花钱 / public repo toggle
-- ❌ Metric v2 实现 (需 ADR-025 先)
-- ❌ 跳过 dogfood (proof 规则; 若 Option A 本 round 不 ship dogfood 则 R66 必 ship 才能 bundle v0.6.0)
+- ❌ Metric v2 impl (需 ADR-025 先, governance-only 本轮)
+- ❌ 跳过 Arc A item 2 impl 的 dogfood (R60 bundle rule: core+surface+proof=1 minor)
 - ❌ 无 ADR 换技术栈
 
 ### 工期估计
 
-R65 Option A = 90 min (单 slot 乐观, A2 触发 2 slot). Option B = 60 min (ADR only). Option C = 60 min (纯 refactor). Option D = 首 round 只做 design doc + ADR ~90 min.
+R66 Option A = 90-120 min (md-only planning). Option B = 60 min (ADR-only). Option C = 60 min (refactor — 第二 forcing function 没到). Option D = 首 round ≥ 90 min.
 
 ### Release strategy (rolling)
 
@@ -396,7 +425,7 @@ R65 Option A = 90 min (单 slot 乐观, A2 触发 2 slot). Option B = 60 min (AD
 - v0.4.0 ✅ cut 2026-05-08 (R55) — CrewAI adapter
 - v0.5.0 ✅ cut 2026-05-10 (R60, bundles R58+R59+R60) — Phase 4 Arc A slices 1-3
 - v0.5.1 ✅ cut 2026-05-11 (R64, bundles R62+R63+R64) — Phase 4 Arc A slice 4 (auto-pivot compare)
-- v0.6.0 🚧 候选 Arc A slice 5 (matrix view) + Arc A item 2 (fork-tree DAG viz) bundle, 估 3-4 round
+- v0.6.0 🚧 候选 Arc A slice 5 (R65 matrix view) + Arc A item 2 (fork-tree DAG viz) bundle, 估 3-4 round
 
 ## 7. 文档索引 (当你需要深入某个主题)
 
@@ -438,7 +467,9 @@ R65 Option A = 90 min (单 slot 乐观, A2 触发 2 slot). Option B = 60 min (AD
 
 ---
 
-*Last updated: 2026-05-11 (CST ~09:40, R64 single-slot inside 0–11 window) by Round 64 agent — Arc A slice 4 proof + release (bundle closer after R62 core + R63 surface). Shipped: `scripts/dogfood_auto_pivot.py` (~310 LOC runtime-validated 4-run topology: baseline + identity-twin + early-exit + extra-round, with runtime assertions on `metric_version==1` / `pivot_selection=="auto-centroid"` / centroid == lex-min of baseline-twin / matrix canonical min<max orientation with C(4,2)=6 entries / baseline-twin distance == 0.0 / all other pairs > 0) + v0.5.1 version bumps (`__version__` / `pyproject.toml` / CLI `info` status line) + CHANGELOG `[Unreleased]` empty + `[0.5.1] — 2026-05-11 (R62+R63+R64)` three-round merge + v0.5.1 tag + GitHub Release. Gates: **548 pass / 3 skip / 0 fail / 94% cov** (zero drift vs R63, dogfood is script not pytest per R60 invariant), mypy 31 files clean, ruff check src+tests+scripts clean, ruff format --check 83 files clean. Adapter **zero change** — R52→R64 = **十三**轮零代码改动 (项目史上最长 streak 继续). **Single slot**, contrary to R63 六连 pre-budget — R64 是 additive-only proof round (script + metadata + release, no new test scaffolding, no surface), 验证 "proof round ≠ impl round" budgeting rule. **Four new invariants on wall**: single-slot release-after-impl viable when proof ≠ impl / `AutoPivotReport.to_dict()` CLI JSON nested `merged` vs HTTP flat+`auto_pivot` / `pivot_selection == "auto-centroid"` literal / dogfood runtime-assert = release gate (R60 upgrade). **v0.5.1 tag cut** — Arc A slice 4 bundle (R62+R63+R64) fully closed, R60 invariant "Arc slice = core + surface + proof = 1 bundle = 1 minor version" **第二次**验证. Next: R65 Option A = Arc A slice 5 matrix-only view (`chronos compare --matrix <ids>...` + `GET /runs/compare/matrix`, reuse R62 frozen pairwise function, single-slot hopeful, no tag cut until Arc A item 2 bundles into v0.6.0).*
+*Last updated: 2026-05-11 (CST ~03:56, R65 cron slot inside 0–11 window, Option A2 close-out slot-2) by Round 65 agent — Phase 4 Arc A slice 5 surface shipped via A2 adopt-as-own close-out over inherited WIP (~680 LOC uncommitted from pre-compaction slot-1 same day: `cli/compare.py` +169 matrix branch with `--matrix/--auto-pivot` mutex guard, `api/server.py` +88 `GET /runs/compare/matrix` endpoint registered before `/runs/{run_id}` catch-all, `cli/__init__.py` +17 Typer wiring, `test_cli_compare.py` +234 LOC 7 tests, `test_api_server.py` +162 LOC 7 tests including cross-endpoint `argmin(mean_distances) == auto_pivot.centroid_run_id` invariant, CHANGELOG `[Unreleased]` → R65 Added block). This slot verified gates (**562 pass / 3 skip / 0 fail / 94% cov**, +14 from R64's 548; mypy 31 files 0 error, ruff check clean, ruff format --check 83 files clean) + wrote progress doc + refreshed CONTEXT §5/§6 + committed + pushed. Adapter **zero change** — R52→R65 = **14 rounds** 零代码改动 (项目史上最长 streak 继续). **No tag cut** (pure additive wrapper over R62-frozen `pairwise_distances`; `mean_distances` computed in wrapper layer, keeps core merge-free + reusable for future 2D embedding viz). **Three new invariants on wall**: (1) cross-endpoint argmin = centroid 三层守卫 (pure `select_centroid` / `/runs/compare/matrix` argmin / `/runs/compare/auto` centroid 三者 semantic-identical for same inputs — upgrades R59/R63 byte-identical to semantic-identical 第五层), (2) derived-but-cheap = wrapper 不是 core design principle (`mean_distances` 属 wrapper 层, `pairwise_distances` 保 minimal), (3) A2 inheritance **七连** (R48-A → R51 → R52 → R53 → R59 → R63 → R65 — "ship slice + tests + CHANGELOG" surface round 结构性 slot-1/slot-2 split, pre-budget 2-slot per Arc-slice impl round 确立为 correct rule; R64 single-slot proof 是 additive-only 例外). Next: R66 Option A = Arc A item 2 fork-tree DAG viz design doc + ADR-025 (or ADR-026), md-only single-slot planning round, v0.6.0 bundle target (R65 slice 5 + R66+ item 2 impl rounds).*
+
+*Previous footer: 2026-05-11 (CST ~09:40, R64 single-slot inside 0–11 window) by Round 64 agent — Arc A slice 4 proof + release (bundle closer after R62 core + R63 surface). Shipped: `scripts/dogfood_auto_pivot.py` (~310 LOC runtime-validated 4-run topology: baseline + identity-twin + early-exit + extra-round, with runtime assertions on `metric_version==1` / `pivot_selection=="auto-centroid"` / centroid == lex-min of baseline-twin / matrix canonical min<max orientation with C(4,2)=6 entries / baseline-twin distance == 0.0 / all other pairs > 0) + v0.5.1 version bumps (`__version__` / `pyproject.toml` / CLI `info` status line) + CHANGELOG `[Unreleased]` empty + `[0.5.1] — 2026-05-11 (R62+R63+R64)` three-round merge + v0.5.1 tag + GitHub Release. Gates: **548 pass / 3 skip / 0 fail / 94% cov** (zero drift vs R63, dogfood is script not pytest per R60 invariant), mypy 31 files clean, ruff check src+tests+scripts clean, ruff format --check 83 files clean. Adapter **zero change** — R52→R64 = **十三**轮零代码改动 (项目史上最长 streak 继续). **Single slot**, contrary to R63 六连 pre-budget — R64 是 additive-only proof round (script + metadata + release, no new test scaffolding, no surface), 验证 "proof round ≠ impl round" budgeting rule. **Four new invariants on wall**: single-slot release-after-impl viable when proof ≠ impl / `AutoPivotReport.to_dict()` CLI JSON nested `merged` vs HTTP flat+`auto_pivot` / `pivot_selection == "auto-centroid"` literal / dogfood runtime-assert = release gate (R60 upgrade). **v0.5.1 tag cut** — Arc A slice 4 bundle (R62+R63+R64) fully closed, R60 invariant "Arc slice = core + surface + proof = 1 bundle = 1 minor version" **第二次**验证. Next: R65 Option A = Arc A slice 5 matrix-only view (`chronos compare --matrix <ids>...` + `GET /runs/compare/matrix`, reuse R62 frozen pairwise function, single-slot hopeful, no tag cut until Arc A item 2 bundles into v0.6.0).*
 
 *Previous footer: 2026-05-10 (CST ~11:45, R62 cron slot inside 0–11 window) by Round 62 agent — first-code-after-planning archetype (R57→R58 + R61→R62 二次验证). Shipped Arc A slice 4 pure core: `src/chronos/core/auto_pivot.py` (~480 lines: `compute_distance` metric v1 + `pairwise_distances_from_reports` canonical orientation + `select_centroid` lex tie-break + `auto_pivot_compare` orchestrator) + `tests/unit/test_auto_pivot.py` (27 tests, 100% cov on new module) + click 8.3.2 env fix (`CliRunner(mix_stderr=False)` → `CliRunner()`, pre-existing baseline break verified via stash+HEAD). Tactical ADR-024 deviation: shipped `src/chronos/core/auto_pivot.py` (sibling) instead of spec'd `src/chronos/core/diff/auto_pivot.py` (package) — algorithm intent zero-change, package refactor deferred to forcing function (R63 surface impl validated sibling transparent). Gates 534/3/0 94%. Adapter R52→R62 十一轮零代码改动. Next: R63 Option A = CLI+HTTP surface wrappers.*
 
