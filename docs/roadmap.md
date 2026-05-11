@@ -1,6 +1,6 @@
 # Roadmap — Chronos Agent
 
-**Last updated**: 2026-05-10 (Round 61 — Arc A slice 4 scoped via ADR-024 Draft)
+**Last updated**: 2026-05-12 (Round 66 — Arc A slice 5 shipped R65, Arc A item 2 audit surfaces drift, ADR-025 drafted)
 
 > This roadmap has been refined after completing Phase 0 research.
 > Each phase lists concrete deliverables, exit criteria, and estimated rounds (4-hour cron cycles).
@@ -184,8 +184,11 @@ the plan-artifact `fork plan emit → edit → fork plan exec` loop is the shipp
 [ADR-022]: decisions/ADR-022-crewai-version-pin-bump.md
 [ADR-023]: decisions/ADR-023-phase-4-charter-skeleton.md
 [ADR-024]: decisions/ADR-024-multi-pivot-compare.md
+[ADR-025]: decisions/ADR-025-fork-tree-viz-scope.md
 [n-run-compare]: design/n-run-compare.md
 [r61-multi-pivot]: research/r61-multi-pivot-alignment.md
+[fork-tree-viz]: design/fork-tree-viz.md
+[r66-audit]: research/r66-fork-tree-viz-audit.md
 
 ---
 
@@ -197,9 +200,9 @@ the plan-artifact `fork plan emit → edit → fork plan exec` loop is the shipp
 
 ### 4.1 Depth — fork-tree semantics (priority: **ACTIVE** — Arc A pinned R57, slice 4 scoped R61)
 - [x] **Multi-run tree comparison (pivot-anchored N-run compare)** — select N runs with designated pivot, render merged report with lane alignment. Generalises the R39-A two-run compare to N runs. **Design doc: [n-run-compare][n-run-compare] (R57). Shipped: R58 core / R59 CLI+API / R60 dogfood+v0.5.0 release.**
-- [ ] **Multi-pivot (auto-centroid) compare — Arc A slice 4** — N-run compare without designated pivot; auto-select centroid by pairwise-distance argmin. Extends slice 1-3. **ADR: [ADR-024][ADR-024] (R61 Draft). Research: [r61-multi-pivot][r61-multi-pivot]. Impl target: R62 core+tests / R63 CLI+API / R64+ dogfood+release.**
-- [ ] **Pairwise matrix view — Arc A slice 5 (gated on slice 4 dogfood)** — O(N²) all-pairs matrix view; uses distance matrix already computed by slice 4. Ships if auto-centroid insufficient.
-- [ ] **Fork-tree visualization** — for a single run with descendants, render the full fork DAG (not just the 2-run diff). R37.5 family-tree was a first step; this is the full thing. Arc A second major theme; design doc gated on Arc A slice 4/5 results.
+- [ ] **Multi-pivot (auto-centroid) compare — Arc A slice 4** — N-run compare without designated pivot; auto-select centroid by pairwise-distance argmin. Extends slice 1-3. **ADR: [ADR-024][ADR-024] (R61 Draft). Research: [r61-multi-pivot][r61-multi-pivot]. Shipped: R62 core / R63 CLI+API / R64 dogfood + v0.5.1 release.**
+- [x] **Pairwise matrix view — Arc A slice 5** — O(N²) all-pairs matrix view; uses distance matrix already computed by slice 4. **Shipped R65**: `chronos compare --matrix <ids>...` CLI + `GET /runs/compare/matrix` HTTP. No tag cut — bundled into v0.6.0 with Arc A item 2 CLI closeout.
+- [ ] **Fork-tree visualization — Arc A item 2** — for a single run with descendants, render the full fork DAG. **Audit surfaces drift (R66)**: backend `/runs/{id}/tree?include_descendants=true` shipped R34-A, frontend `/app/#/runs/<id>` family-tree viewer shipped R34-C/R36-D/R37.5/R46-A/R48-B. Remaining work = CLI `chronos tree` + dogfood + contract freeze. **Design doc**: [fork-tree-viz][fork-tree-viz] (R66 retro). **ADR**: [ADR-025][ADR-025] (R66 Draft). **Audit**: [r66-fork-tree-viz-audit][r66-audit]. Impl target: R67 CLI + dogfood + v0.6.0 bundle.
 - [ ] **Semantic diff (LLM-as-judge)** — for divergent LLM outputs, let the user delegate "are these equivalent?" to a judge model. Adapter-agnostic. Needs an ADR for trust model.
 - [ ] **Dependency-aware partial fork** — don't re-execute unaffected subtrees. Needs adapter-level "purity" annotation or heuristic.
 - [ ] **Determinism modes** (stable / explore / custom) — seed + temperature policy on fork.
