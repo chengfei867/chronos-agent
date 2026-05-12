@@ -1,6 +1,6 @@
 # Roadmap — Chronos Agent
 
-**Last updated**: 2026-05-12 (Round 67 — Arc A slice 5 + Arc A item 2 both shipped, v0.6.0 released, ADR-025 Accepted)
+**Last updated**: 2026-05-13 (Round 68 — Arc A closed through v0.6.0; Arc B slice 1 scoped to Anthropic Agents SDK, ADR-026 Draft)
 
 > This roadmap has been refined after completing Phase 0 research.
 > Each phase lists concrete deliverables, exit criteria, and estimated rounds (4-hour cron cycles).
@@ -185,10 +185,13 @@ the plan-artifact `fork plan emit → edit → fork plan exec` loop is the shipp
 [ADR-023]: decisions/ADR-023-phase-4-charter-skeleton.md
 [ADR-024]: decisions/ADR-024-multi-pivot-compare.md
 [ADR-025]: decisions/ADR-025-fork-tree-viz-scope.md
+[ADR-026]: decisions/ADR-026-arc-b-scope.md
 [n-run-compare]: design/n-run-compare.md
 [r61-multi-pivot]: research/r61-multi-pivot-alignment.md
 [fork-tree-viz]: design/fork-tree-viz.md
 [r66-audit]: research/r66-fork-tree-viz-audit.md
+[fourth-adapter]: design/fourth-adapter-landscape.md
+[r68-arc-b]: research/r68-arc-b-scope.md
 
 ---
 
@@ -207,16 +210,17 @@ the plan-artifact `fork plan emit → edit → fork plan exec` loop is the shipp
 - [ ] **Dependency-aware partial fork** — don't re-execute unaffected subtrees. Needs adapter-level "purity" annotation or heuristic.
 - [ ] **Determinism modes** (stable / explore / custom) — seed + temperature policy on fork.
 
-### 4.2 Ecosystem — broader surface (priority: DEFERRED until Arc A ships or external demand)
+### 4.2 Ecosystem — broader surface (priority: **ACTIVE** — Arc B pinned R68, slice 1 scoped to Anthropic Agents SDK)
 - [x] **Third adapter: CrewAI** — shipped in v0.4.0 (R49-R55)
-- [ ] **Fourth adapter candidate** — options: OpenAI Assistants API v2, Swarm, Anthropic Agents SDK, Letta, LiveKit Agents. Evaluation table lives in [ADR-023] §Arc B; promoted to `docs/research/adapter-4-survey.md` when Arc B reopens.
-- [ ] **Vercel AI SDK adapter (TS)** — requires the Python-or-TS decision (out of scope for Phase 4 unless a clear demand signal arrives).
-- [ ] **Generic OTel receiver** (Tier-2 adapter for non-LangGraph/AutoGen/CrewAI agents) — catch-all via OTel GenAI semconv.
-- [ ] **Jupyter notebook integration** (`chronos.load_run(id)`).
-- [ ] **Export to Parquet / OTel JSON** for ML pipelines.
-- [ ] **LAN-sharing of traces** for small teams.
-- [ ] **Docker image** for reproducible traces.
-- [ ] **Public demo / marketing site**.
+- [ ] **Fourth adapter: Anthropic Agents SDK — Arc B slice 1** — `claude-agent-sdk` recorder + fork primitive + live-smoke + dogfood, bundled as v0.7.0. **Research**: [r68-arc-b-scope][r68-arc-b] (6-candidate survey, 9-axis table). **Design**: [fourth-adapter-landscape][fourth-adapter]. **ADR**: [ADR-026][ADR-026] (R68 Draft). **Rollout**: R69 risks spike → R70 core → R71 live-smoke → R72 v0.7.0a1 → R73 fork → R74 v0.7.0 GA. **Pre-authorised fallback**: OpenAI Agents SDK if MCP fork-lifecycle blocks (see ADR-026 §Fallback).
+- [ ] **Arc B slice 2 candidate** — Pydantic AI (low-risk, type-safe) or Letta (memory-first, ambitious). Decision at R74 retro; target v0.8.0.
+- [ ] **Vercel AI SDK adapter (TS)** — blocked by [ADR-001](decisions/ADR-001-language.md) Python pin. Revisit if external TS-native demand arrives.
+- [ ] **Generic OTel receiver** (Tier-2 catch-all for non-supported frameworks) — deferred to Arc B slice 3+.
+- [ ] **Jupyter notebook integration** (`chronos.load_run(id)`) — demand-driven, Arc B slice 3+.
+- [ ] **Export to Parquet / OTel JSON** for ML pipelines — demand-driven, Arc B slice 3+.
+- [ ] **LAN-sharing of traces** for small teams — demand-driven, Arc C territory.
+- [ ] **Docker image** for reproducible traces — demand-driven, Arc C territory.
+- [ ] **Public demo / marketing site** — demand-driven, Arc C territory.
 
 ### 4.3 Plumbing (priority: DEFERRED — demand-driven)
 - [ ] Plugin system for custom diff / redaction.
