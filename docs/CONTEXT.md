@@ -147,11 +147,43 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
-**截至 Round 66 结束 (2026-05-12 CST ~07:40, cron slot inside 0–11 window) — Phase 4 Arc A item 2 (fork-tree DAG viz) 审计发现 **confirmed roadmap drift**: feature ~85% already shipped (R34-A→R48-B), 本轮 pivot 为 retro-documentation: audit note + retro design doc + ADR-025 scope/contract-freeze + roadmap annotation. md-only planning round.**
+**截至 Round 67 结束 (2026-05-13 CST ~01:41, cron slot inside 0–11 window) — Phase 4 Arc A item 2 fork-tree viz CLI closeout 完成, v0.6.0 cut (bundles R65 slice 5 `--matrix` + R66 audit/ADR-025 + R67 CLI + dogfood + core/tree.py extraction). A2 inheritance chain 八连 (R48-A→R51→R52→R53→R59→R63→R65→**R67 closes**).**
 
-- 最近 progress doc: `docs/progress/2026-05-12-round-66.md` (R66 — Arc A item 2 audit + retro design + ADR-025 Draft, `roadmap-drift-detection` skill applied)
-- 最近上份 progress doc: `docs/progress/2026-05-11-round-65.md` (R65 — Arc A slice 5 matrix-only view surface + A2 close-out)
-- 最近上上份 progress doc: `docs/progress/2026-05-11-round-64.md` (R64 — Arc A slice 4 proof: dogfood + v0.5.1 release cut)
+- 最近 progress doc: `docs/progress/2026-05-12-round-67.md` (R67 — Arc A item 2 CLI closeout + v0.6.0 tag cut + A2 close-out #8)
+- 最近上份 progress doc: `docs/progress/2026-05-12-round-66.md` (R66 — Arc A item 2 audit + retro design + ADR-025 Draft, `roadmap-drift-detection` skill applied)
+- 最近上上份 progress doc: `docs/progress/2026-05-11-round-65.md` (R65 — Arc A slice 5 matrix-only view surface + A2 close-out)
+
+- Round: **67** (Phase 4 Arc A item 2 — **CLI closeout + v0.6.0 release, impl+release round, A2 close-out #8**): ~01:41 CST single slot, 0 blocker. Inherited substantial WIP from prior cron slot (~1138 LOC uncommitted: `scripts/dogfood_fork_tree.py` + `src/chronos/cli/tree.py` + `src/chronos/core/tree.py` + `tests/unit/test_cli_tree.py` + `cli/__init__.py` register + `server.py` extract 162 lines with re-exports + ADR-025 Draft→Accepted + version bump 0.5.1→0.6.0). Per `cron-slot-handoff-recovery` skill: verified origin==HEAD (no partial push), ran gates (pytest 572 pass +10 from R65 baseline 562, mypy 33 files 0 error, ruff check 2 errors, ruff format 4 drifts), fixed 2 ruff issues in-place (F541 extraneous f-prefix on dogfood print; SIM401 `rich_by_run.get(parent_rid, tree)` in cli/tree.py), ruff format 86 files, dogfood exit 0 (release gate R64 invariant), refreshed roadmap + CHANGELOG + CONTEXT, committed bundle + tagged v0.6.0 + pushed via gh-proxy + GitHub Release.
+  - **CLI module**: `src/chronos/cli/tree.py` (~252 lines) — `chronos tree <run_id> [--descendants] [--json] [--db PATH]`. Thin orchestration over `core/tree.py`. Default renders rich Tree; `--descendants` renders whole fork-family with one lane per descendant run + orphan subtree for unreachable-parent nodes. `--json` emits stdlib `json.dumps(...)` byte-for-byte matching `GET /runs/{id}/tree[?include_descendants=true]`. Exit 0/1/2 codes per convention. Coverage 93%.
+  - **Core module**: `src/chronos/core/tree.py` (~196 lines) — pure tree-assembly extracted from `src/chronos/api/server.py` (`_assemble_tree` + `_assemble_tree_with_descendants`). Sibling-module pattern (R62 validated) chosen over package refactor. `server.py` keeps re-exports as module-level aliases for backward compatibility. DFS with BFS-order output for `descendant_run_ids`, cycle-guard `visited` set.
+  - **Tests**: `tests/unit/test_cli_tree.py` (~380 lines, 10 tests) — happy text / missing run exit 1 / JSON byte-match HTTP (R59 cross-layer guard pattern extended) / descendants text + JSON / empty run / 3-level deep / missing db / --json+--descendants combined / orphan nodes grouped.
+  - **Dogfood**: `scripts/dogfood_fork_tree.py` (~310 lines) — R67 release gate. 4-run LangGraph router_loop fork: pivot + identity-twin fork + early-exit fork + grandchild fork. Runtime asserts: single JSON == HTTP byte-for-byte, descendants JSON == HTTP byte-for-byte, 4 descendant_run_ids in BFS order, 3 fork edges, 3 forks have None task_description + pivot has one.
+  - **ADR-025 Draft → Accepted** (in-place R57 invariant). Footer updated with R67 evidence (CLI + tests + dogfood + core/tree.py extraction + v0.6.0 cut).
+  - Gates: **572 pass / 3 skip / 0 fail** (+10 from R65 baseline 562 = 10 CLI tests + `core/tree.py` shares cov with existing server.py tree tests). mypy 33 files 0 error (+2 new modules). ruff check src+tests+scripts clean. ruff format --check 86 files clean (+3 new modules +1 format-normalised). `chronos --version` → `chronos 0.6.0`. `chronos tree --help` renders. Dogfood exit 0. Adapter **zero change** — R52→R67 = **16 rounds** 零代码改动 (项目史上最长 streak 继续, R64 prediction 三次命中).
+  - **Tag cut**: **v0.6.0** + GitHub Release. Theme: "Arc A item 2 fork-tree viz CLI + slice 5 pairwise matrix view". Arc A **fully closed** through all planned slices (1/2/3/4/5) + item 2.
+
+- **R67 关键发现 (上墙)**:
+  - **A2 inheritance 八连 (R67, 升级 R65 七连)**: R48-A → R51 → R52 → R53 → R59 → R63 → R65 → R67. 第八次 post-impl-slot 结构性常态. 2-slot pre-budget rule 保持. 此 chain 终于 close Arc A (item 2 是 Arc A 最后一个 milestone), v0.6.0 = Arc A 全 closed — 下一个 A2 hand-off 要等 Arc B 的 impl round. ← **refinement**
+  - **Sibling-module extraction pattern 三连 (R62 / R63 / R67)**: R62 `core/auto_pivot.py` (vs ADR-024 §Layout package spec) + R63 validates non-blocker + R67 `core/tree.py` (re-exported from `server.py` for backward compat). \"Pull compute out of server.py into sibling core namespace\" 是 Phase 4 稳态迁移路径, 不做 package refactor. ← **new refinement**
+  - **Bundle-shape variation: planning+surface+closeout (R67 新, vs R58→R60 / R62→R64 core+surface+proof)**: v0.5.0 (R58 core / R59 surface / R60 proof+release), v0.5.1 (R62 core / R63 surface / R64 proof+release), v0.6.0 (R65 surface slice 5 / R66 audit planning / R67 closeout+release). Three-round minor-version bundle shape rigid, 但 each round 的 role 不需要对齐 core/surface/proof triad — planning round 可 slot into bundle (R66 audit counts as scope-freeze planning). ← **new**
+  - **CLI tree HTTP parity 锁死为 contract (R67 新)**: `chronos tree --json` byte-for-byte === `GET /runs/{id}/tree`; `--json --descendants` byte-for-byte === `?include_descendants=true`. Lock by dogfood assert + unit test `json_mode_matches_http`. Future `/runs/{id}/tree` response shape 改动必须同步 CLI (2-layer R58→R59 pure+CLI pattern 在 Arc A item 2 第 5 次验证). ← **new**
+  - **WIP ruff-polish close-out 是 A2 routine (R67 新 structural observation)**: inherited WIP 4/8 次带 ruff 轻度 regression (f-prefix, SIM401, import order 等). A2 slot-2 的 \"fix ruff + format\" 已固化为 close-out routine, 不必 framed as 失败. Update `cron-slot-handoff-recovery` skill 如果再 observe. ← **new observation, pending 3rd confirmation**
+
+- **R67 产出**:
+  - `src/chronos/cli/tree.py` (**new**, ~252 lines).
+  - `src/chronos/core/tree.py` (**new**, ~196 lines).
+  - `tests/unit/test_cli_tree.py` (**new**, ~380 lines, 10 tests).
+  - `scripts/dogfood_fork_tree.py` (**new**, ~310 lines).
+  - `src/chronos/api/server.py` — 162 lines extracted to core + re-export shim.
+  - `src/chronos/cli/__init__.py` — `@app.command(\"tree\")` 注册 + info status line bump.
+  - `src/chronos/__init__.py` + `pyproject.toml` — version 0.5.1 → 0.6.0.
+  - `docs/decisions/ADR-025-fork-tree-viz-scope.md` — Draft → Accepted (in-place R57).
+  - `docs/roadmap.md` — header \"Last updated\" R66 → R67, Arc A item 2 bullet `[ ]`→`[x]`.
+  - `CHANGELOG.md` — `[Unreleased]` → `[0.6.0]` R65+R66+R67 三轮 merge + R67 Fixed (ruff polish).
+  - `docs/progress/2026-05-12-round-67.md` (**new**).
+  - `docs/CONTEXT.md §5/§6` (本 refresh).
+  - **零 adapter / store / ADR (new) / `ForkPlan` / `Extractor` / `Adapter interface` 改动** — R67 纯 closeout slice.
+  - **v0.6.0 tag cut** + GitHub Release.
 
 - Round: **66** (Phase 4 Arc A item 2 — **retro-documentation round, drift detection #2**): ~07:10–07:40 CST single slot, 0 blocker, **md-only**. Planning hint ("先查 R37.5") forced audit-first order; 20+ grep hits across `src/chronos/api/server.py` + `frontend/src/pages/TreeView.tsx` + `frontend/src/layout.ts` + `frontend/src/types.ts` confirmed: **Arc A item 2 fork-tree DAG viz 已 ~85% shipped incrementally (R34-A backend `/runs/{id}/tree?include_descendants=true` DFS + R34-C/R36-D ReactFlow 前端 + R37.5 family-tree lane layout + R46-A fork-plan modal + R48-B `EffectTag` refinement), 仅剩 CLI `chronos tree <run_id>` + dogfood + contract freeze**. 按 `roadmap-drift-detection` skill 4-step protocol (read milestone rationale / grep territory / "如果今天做会变什么" / spike) 全部命中, 决定 retro-document 而非重建.
   - **Audit research**: `docs/research/r66-fork-tree-viz-audit.md` (~12 KB) — shipped 组件表 (backend endpoint shape, frontend routes + components, lane layout algo, 已存在 ADR-018 reference) + ROI (audit 40 min → R67 1-slot vs blind impl 3-round), decision-requested 列出 (retro ADR-025, R67 CLI closeout, slice 5 mark shipped, v0.6.0 rescope).
@@ -271,14 +303,14 @@ chronos-agent/
 
 - Round: **60** (Phase 4 Arc A slice 3 — dogfood + v0.5.0 release cut bundling R58+R59+R60): `scripts/dogfood_compare_n.py` + v0.5.0 tag + GitHub Release. (详情 见 R60 progress doc.)
 
-- **战略定位 (R33 锁死, R58-R64 继承)**: GitHub 爆款开源项目, 不是 SaaS. **v0.5.1 是最新 tag (R64 cut, bundles R62+R63+R64 = Arc A slice 4)**. **v0.6.0 候选 Arc A slice 5** (pairwise matrix view) 或 **Arc A item 2** (fork-tree DAG viz).
-- 当前阶段: **Phase 4 Arc A slice 4 bundle ✅ CLOSED (R62 core + R63 surface + R64 proof+release, v0.5.1)**. 下一步 = R65 选 Arc A slice 5 (Option A 推荐) / ADR-025 metric governance (Option B) / 或新 Arc item.
-- 最新 ADR: **ADR-024 (R61, Draft, Arc A slice 4)** — R62 core + R63 surface + R64 dogfood 全 binded. 无新 ADR 本轮.
-- 最新 design doc: `docs/design/n-run-compare.md` (R57) — §3.1/§3.3/§4.1/§5.1/§6/§7.1 全部 binded; ADR-024 Interface 节 binded by R63 CLI+HTTP + R64 dogfood.
-- 最新 research doc: `docs/research/r61-multi-pivot-alignment.md` (R61, unchanged).
-- 最新 tag: **v0.5.1 (R64)**.
+- **战略定位 (R33 锁死, R58-R67 继承)**: GitHub 爆款开源项目, 不是 SaaS. **v0.6.0 是最新 tag (R67 cut, bundles R65+R66+R67 = Arc A slice 5 + item 2 CLI closeout)**. Arc A **全部 slices + items 已 closed** through v0.6.0.
+- 当前阶段: **Phase 4 Arc A ✅ FULLY CLOSED (v0.6.0)**. 下一步 = R68 选 Arc B kickoff (scoping ADR) / 或 cleanup/docs polish round.
+- 最新 ADR: **ADR-025 (R66 Draft → R67 Accepted, Arc A item 2 fork-tree viz scope/contract freeze at v0.6.0)**. 无新 ADR 本轮.
+- 最新 design doc: `docs/design/fork-tree-viz.md` (R66 retro) — §7 R67 CLI closeout plan 全 binded by R67 ship.
+- 最新 research doc: `docs/research/r66-fork-tree-viz-audit.md` (R66, unchanged).
+- 最新 tag: **v0.6.0 (R67)**.
 
-- 测试状态: **548 pass / 3 skip / 0 failed / 94% cov** (R64 零漂移 vs R63; R62 baseline 534 + R63 +14). `mypy src/` 0 error 31 files. `ruff src tests scripts` 0 error. `ruff format --check src tests` 0 drift 83 files. 前端不 rerun. `chronos --version` → `chronos 0.5.1`.
+- 测试状态: **572 pass / 3 skip / 0 failed** (R67 +10 from R65 baseline 562 via `test_cli_tree.py`). `mypy src/` 0 error 33 files (+2 new modules). `ruff src tests scripts` 0 error. `ruff format --check src tests scripts` 0 drift 86 files. 前端不 rerun. `chronos --version` → `chronos 0.6.0`. `chronos tree --help` 可见. Dogfood `scripts/dogfood_fork_tree.py` exit 0 (release gate).
 - Broken-link sweep: unchanged (R64 md 改: CHANGELOG + CONTEXT + 新 progress doc, 无跨链).
 
 - 前端路由: `/app/#/runs`, `/app/#/runs/<id>`, `/app/#/runs/<a>/diff/<b>` (R39-A) — 不变. `/app/#/runs/compare?ids=...` 见 n-run-compare.md §3.2, 仍 optional (R63 HTTP `/runs/compare/auto` 在 backend 上就绪, Web UI R65+).
@@ -387,53 +419,55 @@ chronos-agent/
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 67 — Arc A item 2 CLI closeout + dogfood + v0.6.0 tag cut (impl round, pre-budget 2-slot)**
+**Round 68 — Arc B kickoff OR cleanup/polish round (post-v0.6.0 planning-or-polish round, single-slot likely)**
 
-战略视角: R66 audit 揭示 Arc A item 2 fork-tree DAG viz 85% 已 shipped (R34-A backend `/runs/{id}/tree?include_descendants=true` + R34-C/R36-D 前端 TreeView + R37.5 family-tree lane layout + R46-A fork-plan modal + R48-B EffectTag). ADR-025 Draft 列了 R67 acceptance criteria: **CLI `chronos tree <run_id> [--descendants] [--json]` + `scripts/dogfood_fork_tree.py` + flip ADR-025 Draft→Accepted + v0.6.0 bundle cut (slice 5 R65 + item 2 closeout R67)**. R67 = impl round 完成 closeout 并 release, 类似 R64 但有新 CLI module (不是纯 additive-only).
+战略视角: Arc A 已 **fully closed** through v0.6.0 (slice 1/2/3 R58-R60 v0.5.0 / slice 4 R62-R64 v0.5.1 / slice 5 R65 + item 2 R66-R67 v0.6.0). ADR-023 Phase 4 charter 列了 Arc A / Arc B / Arc C. 下一步自然 pivot 到 Arc B. Alternative: 以 Arc A 全 close 的节点做一轮 docs/README/ADR-index polish, 清理五连 minor-version (v0.3→v0.6.0) 积累的 drift, 作为 Arc B kickoff 之前的低风险 housekeeping.
 
-### Option A (首选, 2-slot pre-budget, impl+release): R67 CLI + dogfood + v0.6.0 cut
+### Option A (首选, single-slot planning, md-only): R68 Arc B scoping ADR
 
-Per `docs/design/fork-tree-viz.md §7` + ADR-025 acceptance criteria:
+Arc B 在 ADR-023 中已有 preliminary description, R68 的目标是把它从 charter sketch 变成 implementable ADR (类似 R56/R57 为 Arc A slice 2-3 / R61 为 slice 4 做的 planning round).
 
-- **P0** `src/chronos/cli/tree.py` — **new module**, `tree_command(run_id, descendants, json_mode, db)` Typer command. 调用 `SqliteStore.open(db)`, fetch run + nodes via store, if `descendants` 走 `/runs/{id}/tree` 式 DFS (复用 `server.py::_assemble_tree_with_descendants` 或 inline 同逻辑 — R67 slot-1 decide). Text 输出: rich Tree (root run id + 子节点 recursive via parent_node_id + fork edges 跨 run), JSON: `{run, nodes, edges, descendant_run_ids?, run_summaries?}` 对齐 HTTP endpoint shape.
-- **P0** `src/chronos/cli/__init__.py` — register `@app.command("tree")` for `chronos tree <run_id>`. JSON mode 走 stdlib `print(json.dumps(...))` 不走 rich Console (长期 invariant).
-- **P1** `tests/unit/test_cli_tree.py` — 8-10 tests: happy path text, JSON shape, `--descendants` flag, missing run 404-equiv (exit 1 + stderr), deep-nested tree (3+ level), empty run, mutex验证 (如有), missing db 404-equiv, `--json` + `--descendants` 联合.
-- **P1** `scripts/dogfood_fork_tree.py` — **new**, 5-run seeded graph (root + 2 children + 2 grandchildren). 两层调用: (a) `chronos tree <root>` text, (b) `chronos tree <root> --descendants --json`. Runtime assert: descendant_run_ids count, parent_node_id chain, fork edges 方向, JSON 有 5 run_summaries. Exit 0 = release gate (R64 invariant).
-- **P2** ~15 min spike: `src/chronos/api/server.py::_assemble_tree_with_descendants` (80+ LOC helper) 是否 extract 到 `src/chronos/core/tree.py` for CLI reuse? 若 extract (sibling-module pattern R62 validated): CLI + HTTP 两层 call 同 core function, v0.6.0 加 test gate; 若 inline (快速路径): 重复代码 accept, 未来第二 forcing function 再 extract. Slot-1 decide.
-- **P2** ADR-025 Draft → Accepted (once CLI+dogfood land, in-place promotion R57).
-- **P3** `src/chronos/__init__.py` + `pyproject.toml` version 0.5.1 → 0.6.0. `src/chronos/cli/__init__.py::info` 状态行 "R65 slice 5 surface, R67 item 2 CLI". "15 rounds" → "16 rounds" (if adapter zero change holds).
-- **P3** `CHANGELOG.md` — `[0.6.0] — 2026-05-12 (R65 + R66 + R67)` Added (R65 `--matrix` CLI+HTTP / R66 design+ADR-025 / R67 `chronos tree` CLI+dogfood).
-- **P3** `git tag -a v0.6.0` + gh-proxy push + GitHub Release. Theme: *"Arc A item 2 fork-tree viz CLI + slice 5 pairwise matrix view"*.
-- Gate expect: pytest +8-10 (570-572 total), mypy 32 files (+1 new module), ruff clean, `chronos --version` → `chronos 0.6.0`, `chronos tree --help` 可见.
+- **P0** 读 `docs/decisions/ADR-023-phase-4-charter-skeleton.md` 中关于 Arc B 的段落 + 任何 related research / design notes.
+- **P0** `docs/research/r68-arc-b-scope.md` (**new**) — 调研 Arc B 的竞品 / 算法 / 数据结构 landscape, 5-axis comparative table, 选一条 recommended path.
+- **P0** `docs/design/<arc-b-feature>.md` (**new**) — feature statement + user stories + API shape sketch + non-goals + release strategy (bundle shape expectation).
+- **P1** `docs/decisions/ADR-026-arc-b-scope.md` (**new, Draft**) — formalize scope + interface + acceptance criteria. Preliminary API sketch. Related: ADR-023 (Phase 4 charter), ADR-018 (compare is diff), ADR-025 (tree scope).
+- **P1** `docs/roadmap.md` §4.2 — replace any Arc B stub with accepted scope + slice breakdown + R68 target.
+- **P2** `src/chronos/__init__.py` + `pyproject.toml` — 无 version bump (planning round, md-only).
+- **P2** no CHANGELOG (md-only round).
+- Gate expect: pytest 572 零漂移 (md-only), mypy 33 files clean, ruff clean, adapter R52→R68 **17 rounds** 零代码改动 (if no code changes land).
 
-### Option B (备选, 60 min single-slot, 若 R67 被打断): R67a — CLI + tests only, defer dogfood+release to R68
+### Option B (备选, single-slot polish, md+light-code): R68 cleanup/README/ADR-index polish
 
-若 slot-1 完成 CLI + tests 但 dogfood runtime-assert 或 release flow 遇 env 问题, split 成 R67a (CLI surface) + R68 (proof+release). 对齐 R58/R59 vs R60 cadence.
+若 Arc B scope 需要更多 upstream alignment 或 user input, 以 Arc A 全关的节点做 1 轮 polish:
 
-### Option C (若 R66 有 md 漂移, 不太可能): R67-doc-fix
+- **P0** README.md 检查: install 指令 / quick-start / feature list (update to include `chronos tree` / `chronos compare --matrix` / `--auto-pivot` / v0.6.0 mention).
+- **P0** `docs/decisions/README.md` (ADR index) — 若存在, update; 若无, create. 按 status (Accepted / Draft / Superseded) 分组列 ADR-001 → ADR-025.
+- **P1** `docs/roadmap.md` — full re-read, verify all Phase 4 Arc A bullets `[x]` / bundle references / section-4.2 pointers 正确.
+- **P1** `CHANGELOG.md` — verify [Unreleased] + [0.6.0] + [0.5.1] + [0.5.0] headers + dates + round numbers 齐.
+- **P2** 若发现小 drift (typo, broken link, stale version ref), 就地修.
+- Gate expect: 同 Option A (零代码 drift).
 
-Defer primary impl, 修 R66 md 遗漏. 仅在 `docs/design/fork-tree-viz.md` §7 / ADR-025 acceptance criteria 发现错漏时触发.
+### Option C (硬卡点兜底, 不太可能): R68 audit-again for Arc B
+
+若 R68 agent 读 ADR-023 发现 Arc B 已 partially shipped 走 drift-detection skill (like R66 did for Arc A item 2), 走第三次 retro-documentation flow.
 
 ### 推荐
 
-**Option A (R67 CLI+dogfood+v0.6.0)** — 对齐 R63 (surface) + R64 (proof+release) 的 impl→release 节奏; R66 audit 已 pre-scope CLI + dogfood 范围, 风险低. Pre-budget 2-slot per R63 六连 → R65 七连 structural constant (R48-A / R51 / R52 / R53 / R59 / R63 / R65 = 7-way; R67 会成八连 if 2-slot 发生). Single-slot 仅当 `_assemble_tree*` 选 inline + CLI 无 edge case 时可能.
+**Option A (Arc B scoping ADR)** — Arc A 关了, Arc B 是 ADR-023 charter 规定的下一步. Planning-round archetype (R56/R57/R61/R66 四次验证) 已稳, single-slot pure-md 风险低. Option B polish 可做但不紧急 — Arc A 的 ship cadence 证明 docs 并无严重 drift (R66 audit 只动 md, 未发现代码 drift).
 
-R67 agent 先 `git ls-remote origin main` 确认无 drift + 读 `docs/design/fork-tree-viz.md §7` + `docs/decisions/ADR-025-fork-tree-viz-scope.md §Interface` + `docs/progress/2026-05-12-round-66.md` R67 TODO 段.
+R68 agent 先 `git ls-remote origin main` 确认无 drift + `uv run pytest -q --no-cov` 跑基线 + 读 ADR-023 Arc B 段 + 读 R66 R67 progress doc 吸收 Arc A closeout lessons (sibling-extraction, bundle-shape variation, A2 inheritance 八连).
 
-### R67 非目标 (硬红线)
+### R68 非目标 (硬红线)
 
-- ❌ Adapter 改动 (目标: 16 轮零改动, R52→R67)
-- ❌ Web UI 新功能 (fork-tree viewer 已 shipped 自 R34-C)
-- ❌ Semantic-diff overlay on tree (Arc A 未来, 非 item 2 scope)
-- ❌ Cross-tree compose/select-to-compare (未来, 非本轮)
-- ❌ `--depth N` flag on tree CLI (YAGNI, 除非 dogfood 暴露必要)
-- ❌ `/runs/{id}/tree` endpoint 签名改动 (ADR-025 contract freeze — additive only)
-- ❌ 主网 / 花钱 / public repo toggle
-- ❌ 无 ADR 换技术栈
+- ❌ 开新 Arc A milestone (Arc A closed, 新 work 必须在 Arc B 或 Arc C 下, 除非 bugfix backport).
+- ❌ Adapter 改动 (目标: 17 轮零改动, R52→R68).
+- ❌ 无 ADR 换技术栈.
+- ❌ 公开 repo / 主网 / 花钱 / commit `.env`.
+- ❌ v0.7.0 tag cut (planning round not release round).
 
 ### 工期估计
 
-R67 Option A = 90-150 min (CLI + tests + dogfood + release), 2-slot 安全. Option B (split) = 60 min + 60 min 两轮. Option C = 15 min 单 slot (仅 fix md).
+R68 Option A = 60-90 min (research + design + ADR Draft + roadmap), single-slot. Option B = 45-60 min (README/index polish), single-slot. Option C = 40 min audit + 60 min retro docs, single-slot.
 
 ### Release strategy (rolling)
 
@@ -444,7 +478,8 @@ R67 Option A = 90-150 min (CLI + tests + dogfood + release), 2-slot 安全. Opti
 - v0.4.0 ✅ cut 2026-05-08 (R55) — CrewAI adapter
 - v0.5.0 ✅ cut 2026-05-10 (R60, bundles R58+R59+R60) — Phase 4 Arc A slices 1-3
 - v0.5.1 ✅ cut 2026-05-11 (R64, bundles R62+R63+R64) — Phase 4 Arc A slice 4 (auto-pivot compare)
-- v0.6.0 🚧 R67 target (bundles R65 slice 5 `--matrix` + R66 audit/ADR-025 + R67 `chronos tree` CLI + dogfood) — theme: "Arc A item 2 fork-tree viz CLI + slice 5 pairwise matrix view"
+- v0.6.0 ✅ cut 2026-05-12 (R67, bundles R65+R66+R67) — Phase 4 Arc A slice 5 (`--matrix`) + Arc A item 2 (`chronos tree` CLI) — **Arc A 全 closed**
+- v0.7.0 🚧 TBD — Arc B impl bundle target (planning in R68)
 
 ## 7. 文档索引 (当你需要深入某个主题)
 
@@ -486,7 +521,9 @@ R67 Option A = 90-150 min (CLI + tests + dogfood + release), 2-slot 安全. Opti
 
 ---
 
-*Last updated: 2026-05-12 (CST ~07:40, R66 cron slot inside 0–11 window) by Round 66 agent — **retro-documentation round, drift detection #2 success** per `roadmap-drift-detection` skill. Planning hint "先查 R37.5" forced audit-first order; 20+ grep hits across `src/chronos/api/server.py:786 @app.get("/runs/{run_id}/tree")` + `frontend/src/pages/TreeView.tsx` (684 LOC) + `frontend/src/layout.ts` (261 LOC) + `frontend/src/types.ts` `descendant_run_ids` + ADR-018 R37.5 reference confirmed: **Arc A item 2 fork-tree DAG viz ~85% already shipped (R34-A backend DFS + R34-C/R36-D ReactFlow 前端 + R37.5 family-tree lane layout + R46-A fork-plan modal + R48-B EffectTag), 仅剩 CLI `chronos tree` + dogfood + contract freeze**. Pivoted from "design new feature" to "audit + retro-document + scope freeze"; shipped 4 md artifacts: `docs/research/r66-fork-tree-viz-audit.md` (~12 KB evidence + ROI + decision requested), `docs/design/fork-tree-viz.md` (~15 KB retro spec with §7 R67 CLI closeout plan), `docs/decisions/ADR-025-fork-tree-viz-scope.md` (~12 KB Draft, scope + HTTP/CLI/Web contract freeze at v0.6.0, R67 acceptance criteria), `docs/roadmap.md` §4.1 annotation (slice 5 `[ ]`→`[x]` marked shipped R65/v0.6.0-pending, slice 4 Impl target→Shipped R62/R63/R64+v0.5.1, fork-tree bullet + ADR-025 link + R67 target). Gates: **562 pass / 3 skip / 0 fail / 94% cov** (md-only zero drift vs R65), mypy 31 files clean, ruff check clean, ruff format --check 83 files clean. Adapter **zero change** — R52→R66 = **15 rounds** 零代码改动 (项目史上最长 streak 继续). **No tag cut** — v0.6.0 bundle (R65 slice 5 `--matrix` + R66 audit/ADR-025 + R67 CLI closeout) R67 cut. **Five new invariants on wall**: (1) retro-documentation is a valid round class (sibling to R57 "In-place ADR promotion"; shipped-before-docs 3 次 precedent — LangGraph early / CrewAI R52-ADR-021 / fork-tree-viz R34→R48), (2) drift detection #2 success (R42-A first at sandbox milestone post-ADR-013; ~8% rounds catch drift, 3× time-savings per hit, `roadmap-drift-detection` skill stays in mandatory scan), (3) "先查 R37.5" hint decisive — planning-round TODO 须 always 带 "first check what exists" directive, (4) ADR-018 + ADR-024 + ADR-025 triad: compare = N-row-align (018/024), tree = one-root-DAG (025), (5) planning round + audit-first = single-slot same as pure design (R56/R57/R61 对比同 cost 级, audit 付自己的帐). Next: R67 Option A = Arc A item 2 CLI closeout (`chronos tree <run_id> [--descendants] [--json]` + `scripts/dogfood_fork_tree.py` runtime-assert + ADR-025 Draft→Accepted + version 0.5.1→0.6.0 + CHANGELOG `[0.6.0]` R65+R66+R67 bundle + v0.6.0 tag + GitHub Release), 2-slot pre-budget per R63 六连 → R65 七连 structural constant.*
+*Last updated: 2026-05-13 (CST ~01:41, R67 cron slot inside 0–11 window) by Round 67 agent — **Arc A item 2 CLI closeout + v0.6.0 tag cut**. Inherited ~1138 LOC WIP from prior cron slot (`scripts/dogfood_fork_tree.py` + `src/chronos/cli/tree.py` + `src/chronos/core/tree.py` + `tests/unit/test_cli_tree.py` + `api/server.py` 162-line extract with re-exports + `cli/__init__.py` register + ADR-025 Draft→Accepted + version 0.5.1→0.6.0). Per `cron-slot-handoff-recovery`: origin==HEAD verified, gates swept (pytest 572 +10 / mypy 33 files / ruff 2 errors + 4 format drifts), fixed in-place (F541 f-prefix + SIM401 `rich_by_run.get(parent_rid, tree)`), `ruff format` normalised 86 files, dogfood `scripts/dogfood_fork_tree.py` exit 0 (release gate R64 invariant, 4-run LangGraph router_loop fork with pivot + identity-twin + early-exit + grandchild, JSON byte-for-byte matches HTTP for both single-run and `?include_descendants=true`). Refreshed `docs/roadmap.md` (Arc A item 2 `[ ]`→`[x]`, "Last updated" R66→R67) + `CHANGELOG.md` ([Unreleased]→[0.6.0] R65+R66+R67 three-round merge with R67 Fixed for ruff polish) + `docs/CONTEXT.md §5/§6` + new `docs/progress/2026-05-12-round-67.md` (~10 KB). Committed bundle + tagged **v0.6.0** annotated + pushed main+tag via gh-proxy + GitHub Release. Gate snapshot: **572 pass / 3 skip / 0 fail**, mypy 33 files 0 error (+2), ruff check clean, ruff format --check 86 files clean (+3 new +1 normalised), `chronos --version` → `chronos 0.6.0`, `chronos tree --help` renders. Adapter **zero change** — R52→R67 = **16 rounds** 零代码改动 (项目史上最长 streak, R64 prediction 三次命中). **Arc A fully closed** through v0.6.0 (slice 1/2/3 R58-R60 v0.5.0 / slice 4 R62-R64 v0.5.1 / slice 5 R65 + item 2 R66-R67 v0.6.0). **Five new findings on wall**: (1) A2 inheritance chain 八连 R48-A→R51→R52→R53→R59→R63→R65→R67 (Arc A 最后 A2 hand-off, 下一个要等 Arc B impl round), (2) sibling-module extraction pattern 三连 R62/R63/R67 (pull compute from server.py into core namespace, 不做 package refactor), (3) bundle-shape variation: planning+surface+closeout (vs core+surface+proof for v0.5.0/v0.5.1) — three-round minor-version shape rigid but each round role flexible, (4) CLI tree HTTP parity 锁死 contract (--json === GET /runs/{id}/tree byte-for-byte, dogfood asserts + unit test lock), (5) WIP ruff-polish close-out routine observation (4/8 A2 hand-offs need ruff fix, pending 3rd confirmation before固化 into skill). Next: R68 **Option A preferred — Arc B kickoff scoping ADR** (md-only planning round, single-slot, adapter R52→R68 targeting 17 rounds if no code). Option B polish fallback.*
+
+*Previous footer: 2026-05-12 (CST ~07:40, R66 cron slot inside 0–11 window) by Round 66 agent — **retro-documentation round, drift detection #2 success** per `roadmap-drift-detection` skill. Planning hint "先查 R37.5" forced audit-first order; 20+ grep hits across `src/chronos/api/server.py:786 @app.get("/runs/{run_id}/tree")` + `frontend/src/pages/TreeView.tsx` (684 LOC) + `frontend/src/layout.ts` (261 LOC) + `frontend/src/types.ts` `descendant_run_ids` + ADR-018 R37.5 reference confirmed: **Arc A item 2 fork-tree DAG viz ~85% already shipped (R34-A backend DFS + R34-C/R36-D ReactFlow 前端 + R37.5 family-tree lane layout + R46-A fork-plan modal + R48-B EffectTag), 仅剩 CLI `chronos tree` + dogfood + contract freeze**. Pivoted from "design new feature" to "audit + retro-document + scope freeze"; shipped 4 md artifacts: `docs/research/r66-fork-tree-viz-audit.md` + `docs/design/fork-tree-viz.md` + `docs/decisions/ADR-025-fork-tree-viz-scope.md` Draft + `docs/roadmap.md` §4.1 annotation. Gates: 562 pass / 3 skip / 0 fail / 94% cov (md-only zero drift). Adapter R52→R66 **15 rounds** 零代码改动.*
 
 *Previous footer: 2026-05-11 (CST ~03:56, R65 cron slot inside 0–11 window, Option A2 close-out slot-2) by Round 65 agent — Phase 4 Arc A slice 5 surface shipped via A2 adopt-as-own close-out over inherited WIP (~680 LOC uncommitted from pre-compaction slot-1 same day: `cli/compare.py` +169 matrix branch with `--matrix/--auto-pivot` mutex guard, `api/server.py` +88 `GET /runs/compare/matrix` endpoint registered before `/runs/{run_id}` catch-all, `cli/__init__.py` +17 Typer wiring, `test_cli_compare.py` +234 LOC 7 tests, `test_api_server.py` +162 LOC 7 tests including cross-endpoint `argmin(mean_distances) == auto_pivot.centroid_run_id` invariant, CHANGELOG `[Unreleased]` → R65 Added block). This slot verified gates (**562 pass / 3 skip / 0 fail / 94% cov**, +14 from R64's 548; mypy 31 files 0 error, ruff check clean, ruff format --check 83 files clean) + wrote progress doc + refreshed CONTEXT §5/§6 + committed + pushed. Adapter **zero change** — R52→R65 = **14 rounds** 零代码改动.*
 

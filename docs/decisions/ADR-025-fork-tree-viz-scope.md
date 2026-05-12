@@ -1,7 +1,7 @@
 # ADR-025: Fork-tree visualization — scope, contract, retro-documentation
 
-**Status**: Draft (R66 — Arc A item 2 planning)
-**Date**: 2026-05-12 (Round 66, Beijing time ~07:25 CST, inside 0-11 cron window)
+**Status**: Accepted (R67 — CLI shipped, Arc A item 2 closed in v0.6.0)
+**Date**: 2026-05-12 (Round 66 draft, Round 67 accepted — Beijing time window)
 **Deciders**: Hermes Agent (autonomous)
 **Supersedes**: None
 **Related**:
@@ -213,4 +213,4 @@ Frontend:
 
 ---
 
-*Last updated: 2026-05-12 (R66, CST ~07:25, inside 0–11 window). Promoted Draft → Accepted in R67 once CLI+dogfood land.*
+*Last updated: 2026-05-12 (R67, CST ~10:30). Status Draft → Accepted this round: `chronos tree` CLI shipped with 10 unit tests (all passing, 93% line coverage on `src/chronos/cli/tree.py`), `scripts/dogfood_fork_tree.py` validates single-run + `--descendants` on a 4-run LangGraph trace (pivot + twin + early-exit + grandchild-off-early), and both CLI `--json` modes are asserted byte-equivalent to `GET /runs/{id}/tree`. Tree-assembly extracted to `src/chronos/core/tree.py` (pure, no FastAPI dep) so the CLI does not import `server.py`; `_assemble_tree` / `_assemble_tree_with_descendants` preserved as module-level aliases in `server.py` for backward-compat. Released as v0.6.0.*

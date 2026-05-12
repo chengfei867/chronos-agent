@@ -100,7 +100,7 @@ def info() -> None:
         "Status: Phase 4 Arc A -- auto-pivot shipped (R62 core, R63 CLI+HTTP, "
         "R64 dogfood + release), "
         "CrewAI adapter (ADR-021 + ADR-022) 13 rounds zero-change, "
-        "v0.5.1"
+        "v0.6.0"
     )
     console.print(
         "Commands: [green]runs list/show, forks show, diff, replay, fork plan, web[/green] "
@@ -259,6 +259,42 @@ def forks_show(
     forks_show_command(
         fork_id=fork_id,
         db=db,
+        json_out=json_out,
+        open_store_fn=_open_store,
+        console=console,
+    )
+
+
+# ---------------------------------------------------------------------------
+# `chronos tree`
+# ---------------------------------------------------------------------------
+
+
+@app.command("tree")
+def tree(
+    run_id: str = typer.Argument(..., help="Run id (see `chronos runs list`)."),
+    descendants: bool = typer.Option(
+        False,
+        "--descendants",
+        help=(
+            "Include every run that descends from this one via forks "
+            "(the whole fork family, rooted at run_id)."
+        ),
+    ),
+    db: Path | None = typer.Option(
+        None, "--db", help="Path to chronos.db (overrides $CHRONOS_DB)."
+    ),
+    json_out: bool = typer.Option(
+        False, "--json", help="Emit JSON (byte-for-byte the HTTP response shape)."
+    ),
+) -> None:
+    """Show the fork-family tree rooted at a run (ADR-025)."""
+    from chronos.cli.tree import tree_command
+
+    tree_command(
+        run_id=run_id,
+        db=db,
+        descendants=descendants,
         json_out=json_out,
         open_store_fn=_open_store,
         console=console,

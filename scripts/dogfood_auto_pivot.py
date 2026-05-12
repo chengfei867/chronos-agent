@@ -190,9 +190,7 @@ def _seed_runs() -> tuple[str, str, str, str]:
     return baseline, twin, early, extra
 
 
-def _run_auto_pivot(
-    run_ids: list[str], *, json_mode: bool, show_matrix: bool = False
-) -> str:
+def _run_auto_pivot(run_ids: list[str], *, json_mode: bool, show_matrix: bool = False) -> str:
     chronos_bin = shutil.which("chronos")
     if chronos_bin is None:
         raise RuntimeError("chronos entry point not on PATH — activate the venv first")
@@ -233,9 +231,7 @@ def main() -> None:
     print(f"db          : {DB_PATH}")
 
     _banner("chronos compare --auto-pivot --show-matrix — text mode")
-    text_out = _run_auto_pivot(
-        [baseline, twin, early, extra], json_mode=False, show_matrix=True
-    )
+    text_out = _run_auto_pivot([baseline, twin, early, extra], json_mode=False, show_matrix=True)
     TEXT_OUT.write_text(text_out)
     print(text_out)
     print(f"(saved to {TEXT_OUT})")
@@ -269,12 +265,9 @@ def main() -> None:
     # Lightweight structural assertions — the dogfood is a living regression
     # guard; any drift in the contract should trip here before release.
     assert metric_version == 1, f"metric_version drift: {metric_version!r}"
-    assert pivot_selection == "auto-centroid", (
-        f"pivot_selection drift: {pivot_selection!r}"
-    )
+    assert pivot_selection == "auto-centroid", f"pivot_selection drift: {pivot_selection!r}"
     assert centroid in {baseline, twin}, (
-        f"centroid must be one of the two identical candidates (baseline/twin), "
-        f"got {centroid!r}"
+        f"centroid must be one of the two identical candidates (baseline/twin), got {centroid!r}"
     )
     assert centroid == min(baseline, twin), (
         f"lex tie-break expected centroid == min(baseline, twin)={min(baseline, twin)!r}, "
@@ -309,14 +302,11 @@ def main() -> None:
         )
         assert dist > 0.0, f"expected positive distance for {key!r}, got {dist!r}"
     # input_run_ids should mirror the arg order
-    assert input_ids == [baseline, twin, early, extra], (
-        f"input_run_ids drift: {input_ids!r}"
-    )
+    assert input_ids == [baseline, twin, early, extra], f"input_run_ids drift: {input_ids!r}"
     # other_ids (inside `merged`) = input minus centroid
     expected_others = [r for r in [baseline, twin, early, extra] if r != centroid]
     assert set(merged_other_ids) == set(expected_others), (
-        f"other_ids mismatch: got {merged_other_ids!r}, "
-        f"expected set {set(expected_others)!r}"
+        f"other_ids mismatch: got {merged_other_ids!r}, expected set {set(expected_others)!r}"
     )
 
     _banner("Done — Arc A slice 4 surface validated on real LangGraph trace ✅")

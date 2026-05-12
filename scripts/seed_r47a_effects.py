@@ -60,11 +60,7 @@ def _make_node(
         ended_at=_now(-600 + step_index * 30 + 15),
         state_after={"step": step_index, "last": name},
         model_name=model,
-        usage=(
-            Usage(prompt_tokens=100, completion_tokens=60, total_tokens=160)
-            if model
-            else None
-        ),
+        usage=(Usage(prompt_tokens=100, completion_tokens=60, total_tokens=160) if model else None),
         cost_usd_cents=5 if model else None,
         tool_name=tool_name,
         tool_input={"q": "x"} if tool_name else None,
@@ -98,17 +94,18 @@ def seed(db_path: Path) -> list[str]:
     run_ids.append(run1.id)
 
     specs_warn: list[tuple[str, NodeKind, list[str] | None, str | None, str | None]] = [
-        ("plan_agent",     NodeKind.LLM,    None,           "gpt-4o", None),
-        ("db_write",       NodeKind.TOOL,   ["db"],         None,     "sqlite_write"),
-        ("http_fetch",     NodeKind.TOOL,   ["network"],    None,     "http_get"),
-        ("write_file",     NodeKind.TOOL,   ["fs"],         None,     "write_file"),
-        ("send_email",     NodeKind.TOOL,   ["external"],   None,     "smtp_send"),
-        ("summarize",      NodeKind.LLM,    None,           "gpt-4o", None),
+        ("plan_agent", NodeKind.LLM, None, "gpt-4o", None),
+        ("db_write", NodeKind.TOOL, ["db"], None, "sqlite_write"),
+        ("http_fetch", NodeKind.TOOL, ["network"], None, "http_get"),
+        ("write_file", NodeKind.TOOL, ["fs"], None, "write_file"),
+        ("send_email", NodeKind.TOOL, ["external"], None, "smtp_send"),
+        ("summarize", NodeKind.LLM, None, "gpt-4o", None),
     ]
     parent_id: str | None = None
     for i, (name, kind, effects, model, tool) in enumerate(specs_warn):
-        node = _make_node(run1.id, i, name, kind, parent_id,
-                          effects=effects, model=model, tool_name=tool)
+        node = _make_node(
+            run1.id, i, name, kind, parent_id, effects=effects, model=model, tool_name=tool
+        )
         store.put_node(node)
         parent_id = node.id
 
@@ -130,10 +127,10 @@ def seed(db_path: Path) -> list[str]:
     run_ids.append(run2.id)
 
     specs_safe: list[tuple[str, NodeKind, str | None]] = [
-        ("plan",      NodeKind.LLM, "gpt-4o"),
-        ("draft",     NodeKind.LLM, "gpt-4o"),
-        ("critique",  NodeKind.LLM, "gpt-4o"),
-        ("finalize",  NodeKind.END, None),
+        ("plan", NodeKind.LLM, "gpt-4o"),
+        ("draft", NodeKind.LLM, "gpt-4o"),
+        ("critique", NodeKind.LLM, "gpt-4o"),
+        ("finalize", NodeKind.END, None),
     ]
     parent_id = None
     for i, (name, kind, model) in enumerate(specs_safe):
@@ -161,13 +158,12 @@ def seed(db_path: Path) -> list[str]:
     run_ids.append(run3.id)
 
     specs_last: list[tuple[str, NodeKind, list[str] | None, str | None]] = [
-        ("load",   NodeKind.TOOL, ["fs"],  None),
-        ("answer", NodeKind.LLM,  None,    "gpt-4o"),
+        ("load", NodeKind.TOOL, ["fs"], None),
+        ("answer", NodeKind.LLM, None, "gpt-4o"),
     ]
     parent_id = None
     for i, (name, kind, effects, model) in enumerate(specs_last):
-        node = _make_node(run3.id, i, name, kind, parent_id,
-                          effects=effects, model=model)
+        node = _make_node(run3.id, i, name, kind, parent_id, effects=effects, model=model)
         store.put_node(node)
         parent_id = node.id
 

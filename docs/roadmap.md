@@ -1,6 +1,6 @@
 # Roadmap — Chronos Agent
 
-**Last updated**: 2026-05-12 (Round 66 — Arc A slice 5 shipped R65, Arc A item 2 audit surfaces drift, ADR-025 drafted)
+**Last updated**: 2026-05-12 (Round 67 — Arc A slice 5 + Arc A item 2 both shipped, v0.6.0 released, ADR-025 Accepted)
 
 > This roadmap has been refined after completing Phase 0 research.
 > Each phase lists concrete deliverables, exit criteria, and estimated rounds (4-hour cron cycles).
@@ -202,7 +202,7 @@ the plan-artifact `fork plan emit → edit → fork plan exec` loop is the shipp
 - [x] **Multi-run tree comparison (pivot-anchored N-run compare)** — select N runs with designated pivot, render merged report with lane alignment. Generalises the R39-A two-run compare to N runs. **Design doc: [n-run-compare][n-run-compare] (R57). Shipped: R58 core / R59 CLI+API / R60 dogfood+v0.5.0 release.**
 - [ ] **Multi-pivot (auto-centroid) compare — Arc A slice 4** — N-run compare without designated pivot; auto-select centroid by pairwise-distance argmin. Extends slice 1-3. **ADR: [ADR-024][ADR-024] (R61 Draft). Research: [r61-multi-pivot][r61-multi-pivot]. Shipped: R62 core / R63 CLI+API / R64 dogfood + v0.5.1 release.**
 - [x] **Pairwise matrix view — Arc A slice 5** — O(N²) all-pairs matrix view; uses distance matrix already computed by slice 4. **Shipped R65**: `chronos compare --matrix <ids>...` CLI + `GET /runs/compare/matrix` HTTP. No tag cut — bundled into v0.6.0 with Arc A item 2 CLI closeout.
-- [ ] **Fork-tree visualization — Arc A item 2** — for a single run with descendants, render the full fork DAG. **Audit surfaces drift (R66)**: backend `/runs/{id}/tree?include_descendants=true` shipped R34-A, frontend `/app/#/runs/<id>` family-tree viewer shipped R34-C/R36-D/R37.5/R46-A/R48-B. Remaining work = CLI `chronos tree` + dogfood + contract freeze. **Design doc**: [fork-tree-viz][fork-tree-viz] (R66 retro). **ADR**: [ADR-025][ADR-025] (R66 Draft). **Audit**: [r66-fork-tree-viz-audit][r66-audit]. Impl target: R67 CLI + dogfood + v0.6.0 bundle.
+- [x] **Fork-tree visualization — Arc A item 2** — for a single run with descendants, render the full fork DAG. **Audit (R66) surfaced drift**: backend `/runs/{id}/tree?include_descendants=true` shipped R34-A, frontend `/app/#/runs/<id>` family-tree viewer shipped R34-C/R36-D/R37.5/R46-A/R48-B. **Closeout R67**: `chronos tree <run_id> [--descendants] [--json]` CLI + `scripts/dogfood_fork_tree.py` + tree-assembly extracted to `src/chronos/core/tree.py` for CLI-HTTP parity + ADR-025 Accepted + v0.6.0 released. **Design doc**: [fork-tree-viz][fork-tree-viz] (R66 retro). **ADR**: [ADR-025][ADR-025] (R66 Draft → R67 Accepted). **Audit**: [r66-fork-tree-viz-audit][r66-audit]. **Shipped R67, v0.6.0**.
 - [ ] **Semantic diff (LLM-as-judge)** — for divergent LLM outputs, let the user delegate "are these equivalent?" to a judge model. Adapter-agnostic. Needs an ADR for trust model.
 - [ ] **Dependency-aware partial fork** — don't re-execute unaffected subtrees. Needs adapter-level "purity" annotation or heuristic.
 - [ ] **Determinism modes** (stable / explore / custom) — seed + temperature policy on fork.
