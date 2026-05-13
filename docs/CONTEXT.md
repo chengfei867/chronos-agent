@@ -147,6 +147,43 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
+**截至 Round 70 结束 (2026-05-14 CST ~02:45, cron slot inside 0–11 window) — Phase 4 Arc B slice 1 **core scaffold shipped**. Fourth Chronos adapter (`claude-agent-sdk`, ADR-026) live in code. Option A2 close-out over inherited WIP (ninth A2 in project history, first of Arc B family). Adapter-1-3 (LangGraph/AutoGen/CrewAI) zero-regression streak intentionally broken at R70 (Arc B kickoff planned); new "adapters 1-3 zero-regression" streak starts this round.**
+
+- 最近 progress doc: `docs/progress/2026-05-14-round-70.md` (R70 — Arc B slice 1 core scaffold, A2 close-out over inherited WIP)
+- 最近上份 progress doc: `docs/progress/2026-05-13-round-69.md` (R69 — Arc B risks spike + ADR-026 Accepted)
+- 最近上上份 progress doc: `docs/progress/2026-05-12-round-68.md` (R68 — Arc B slice 1 scoping, ADR-026 Draft)
+
+- Round: **70** (Phase 4 Arc B slice 1 — **core scaffold code round, A2 close-out #9, first Arc B entry in A2 chain**): ~02:45 CST single slot (slot-2 of a 2-slot split — prior slot left ~1345 LOC uncommitted WIP), 0 blocker. Inherited: `pyproject.toml` (+13 LOC optional extra) + `src/chronos/adapters/__init__.py` (+8 LOC wire-up) + `uv.lock` (+2476 LOC real transitive deps, not noise — pyproject manifest diff non-empty) + **new** `src/chronos/adapters/anthropic_agents/` package (`__init__.py` 158 / `_probe.py` 59 / `recorder.py` 552 = 769 LOC) + **new** `tests/unit/test_adapter_anthropic_agents.py` (577 LOC, 34 tests). This slot's share per A2 5-item checklist: verified gates, fixed 1 pre-existing-this-round mypy error (`cli/tree.py:198` arg-type from R67, `rich_by_run.get(parent_rid, tree) if parent_rid is not None else tree`), added mypy override for `claude_agent_sdk.*`, ran `ruff format` on one new test file (1 drift), wrote CHANGELOG [Unreleased] + progress doc + this CONTEXT refresh + commit + push.
+  - **Adapter**: `chronos.adapters.anthropic_agents`. Record-only scaffold (live smoke R71 / alpha R72 / fork R73 / GA R74 per ADR-026 §4). Seam = async iterator of `Message` objects (R69 spike #2 confirmed). Class-name dispatch (`UserMessage`/`AssistantMessage`/`SystemMessage`/`ResultMessage`) — recorder module has **zero runtime imports** of `claude_agent_sdk`, probe-gated only. Four-block content summariser (`TextBlock`/`ToolUseBlock`/`ToolResultBlock`/`ThinkingBlock`). Usage projection with cache-token sum. `fork()` = `raise NotImplementedError("R73: delegate to `claude_agent_sdk.fork_session()`")` stub.
+  - **Tests**: 34 unit tests, all duck-typed async-generator runtimes, **no SDK install required to run the suite** (stricter than CrewAI's `skipif not HAS_CREWAI` pattern, possible because recorder is SDK-import-free at runtime).
+  - **Pin**: `claude-agent-sdk>=0.1.80,<1.0` in `[project.optional-dependencies].anthropic_agents`. Next-major ceiling (ADR-026 §7) — first Chronos extra to use this rather than next-minor (ADR-022 CrewAI precedent for 1.x stable); rationale = 0.1.x alpha with weekly additive-only cadence, re-evaluate at 1.0.0.
+  - Gates: **606 pass / 3 skip / 0 fail** (+34 from R69 baseline 572, all new in `test_adapter_anthropic_agents.py`). mypy 36 files 0 error (+3 new modules in anthropic_agents package). ruff check clean. ruff format --check 90 files clean (+4 new +1 format-normalised). `chronos --version` → `chronos 0.6.0` (no bump, alpha R72).
+  - **No tag cut** — v0.6.0 remains current; v0.7.0a1 target R72.
+  - **Adapter streak updated**: R52→R69 = 18 rounds zero-change ✅ **intentionally broken at R70** (Arc B kickoff = planned stopper). New metric = "adapters 1-3 zero-regression" (LangGraph/AutoGen/CrewAI untouched), starts R70, trivially 1 round.
+
+- **R70 关键发现 (上墙)**:
+  - **A2 inheritance chain 九连, first Arc B entry (R70 new)**: R48-A → R51 → R52 → R53 → R59 → R63 → R65 → R67 → **R70**. All nine conform — impl round = 2-slot pre-budget rule (R63 六连 codified) holds across Arc A → Arc B feature-area transition. The structural constant of autonomous cron scheduling is NOT tied to feature area. ← **new refinement of invariant**
+  - **Class-name dispatch pattern 三连 (R70 new, candidate invariant)**: CrewAI (ADR-021) / AutoGen (ADR-020 three-segment) / **Anthropic Agents (R70)** adapters all use `type(msg).__name__` string dispatch instead of isinstance against SDK classes. Rationale: recorder is SDK-import-free at runtime (probe-gated), isinstance impossible. Candidate invariant: "SDK-optional-dep adapters dispatch by runtime class name". Pending 4th confirmation. ← **new**
+  - **Four-block Anthropic Message.content contract (R70 new, R69 spike #2 lock)**: `Message.content` = `str | None | list[TextBlock | ToolUseBlock | ToolResultBlock | ThinkingBlock]`. Summariser handles all 4 + `None` + `str`. Unknown blocks → class-name tag fallback (fails loud, not silent-lossy). R71 live smoke will confirm no 5th type in real traces. ← **new**
+  - **Pre-1.0 pin ceiling library-maturity-aware (R69 promoted → R70 applied)**: first Chronos extra using next-major `<1.0` rather than next-minor. Rule now codified in pyproject comment + ADR-026 §7: "**next-major ceiling for 0.x alpha with additive patch cadence; next-minor ceiling for 1.x stable SemVer**." ← **new application**
+  - **Tests run without optional extra installed (R70 new, stricter than CrewAI pattern)**: recorder zero-runtime-SDK-import enables suite-unconditional unit tests — catches structural regressions in minimal dev envs. Refinement: "when adapter's recorder probe-gates all SDK imports, drop `skipif not HAS_<SDK>` from unit tests — use duck runtimes. Preserve `skipif` only for live-smoke tier." ← **new**
+  - **uv.lock real-diff vs noise-diff distinguisher (R70 new, refines R65/R68 lockfile-trap)**: `git diff pyproject.toml` non-empty → real manifest change → lockfile churn required (commit). `git diff pyproject.toml` empty → uv-version noise → `git checkout -- uv.lock`. R70 case was real (2476 LOC transitive deps from claude-agent-sdk), correctly committed. 2-tool-call recipe handles both branches. ← **refinement**
+
+- **R70 产出**:
+  - `src/chronos/adapters/anthropic_agents/__init__.py` (**new**, 158 LOC).
+  - `src/chronos/adapters/anthropic_agents/_probe.py` (**new**, 59 LOC).
+  - `src/chronos/adapters/anthropic_agents/recorder.py` (**new**, 552 LOC).
+  - `tests/unit/test_adapter_anthropic_agents.py` (**new**, 577 LOC, 34 tests).
+  - `pyproject.toml` — `[project.optional-dependencies].anthropic_agents` + `[[tool.mypy.overrides]]` for `claude_agent_sdk.*`.
+  - `src/chronos/adapters/__init__.py` — 4-adapter baseline wire-up.
+  - `uv.lock` — real transitive-dep additions from claude-agent-sdk.
+  - `src/chronos/cli/tree.py` — 1-line fix for pre-existing-this-round mypy arg-type (R67 regression).
+  - `CHANGELOG.md [Unreleased]` — R70 Added + Fixed blocks.
+  - `docs/progress/2026-05-14-round-70.md` (**new**).
+  - `docs/CONTEXT.md §5/§6` (本 refresh).
+  - **零 ADR (new) / roadmap / other existing adapter / frontend / CLI (other than tree.py 1-line) / HTTP API / core / store 改动** — R70 纯 Arc B scaffold slice.
+  - **无 tag cut** — v0.7.0a1 target R72.
+
 **截至 Round 69 结束 (2026-05-13 CST ~08:30, cron slot inside 0–11 window) — Phase 4 Arc B risks spike, ADR-026 Draft → Accepted (in-place R57), 3/3 blocker-class open questions resolved via SDK source inspection. Md-only research round, 5 artifacts (r69 research + ADR-026 edit + roadmap edit + progress + CONTEXT). Post-release planning-round archetype 六连 (R56/R57/R61/R66/R68/R69).**
 
 - 最近 progress doc: `docs/progress/2026-05-13-round-69.md` (R69 — Arc B risks spike + ADR-026 Accepted)
@@ -471,74 +508,63 @@ chronos-agent/
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 70 — Arc B slice 1 core recorder + adapter skeleton (production code round, single-slot; 2-slot if extractor contract amendment needed)**
+**Round 71 — Arc B slice 1 live-smoke + dogfood scaffold (code + live round; 1-2 slots)**
 
-战略视角: R69 把 ADR-026 flip 到 Accepted + 三 blocker-class open questions 全关 (SDK-native `fork_session` / recorder seam = `ClaudeSDKClient.receive_response()` / pin `claude-agent-sdk>=0.1.80,<1.0`). R70 **启动 Arc B 第一个 code round** — scaffold adapter + recorder + probe + tests (TDD 优先). 打破 R52→R69 = 18-round adapter zero-change streak, 但这是计划内 (R70 开始本来就是 Arc B code kickoff).
+战略视角: R70 把 Arc B slice 1 core scaffold land (probe + recorder 552 LOC + adapter wire-up + 34 unit tests, 全 duck 无需 SDK install). R71 **首次 live API smoke**: install `uv sync --extra anthropic_agents`, 装完 SDK 跑真 `ClaudeSDKClient.query()`, 验 recorder 对真 traces 是否 contract-conform, ThinkingBlock 真面目定夺. 若 infra (Node.js CLI 缺 / baidu-int 不支持 claude-agent-sdk session format) 卡点, 走 Option B blocker-investigation round.
 
-### Option A (首选, single-slot code round): R70 adapter scaffold + recorder + probe + tests
+### Option A (首选, code + live round): R71 live-smoke + dogfood scaffold
 
-- **P0** Pre-flight: `git ls-remote origin main` (stale-ref trap #7) + `git fetch origin main` + `uv run pytest -q --no-cov` 跑基线 (expect 572/3/0). 读 `docs/research/r69-mcp-fork-lifecycle.md` §2 §3 + `docs/decisions/ADR-026-arc-b-scope.md` §Decision + `src/chronos/adapters/crewai/__init__.py` (closest structural analogue — probe-gated optional-dep event-iterator recorder).
-- **P0** `pyproject.toml` — 加 `[project.optional-dependencies].anthropic_agents = ["claude-agent-sdk>=0.1.80,<1.0"]`. `uv lock` regenerate + 目视检查无 transitive surprise. **不加入 default install set**.
-- **P0** `src/chronos/adapters/anthropic_agents/` (**new package**):
-  - `__init__.py` — 公开 exports `AnthropicAgentsAdapter` + `AnthropicAgentsRecorder`.
-  - `_probe.py` — `HAS_CLAUDE_SDK` boolean + 清晰 import-error message (copy CrewAI probe shape).
-  - `adapter.py` — `AnthropicAgentsAdapter` 实现 `AdapterProtocol`. `record()` 委托 recorder, `fork()` = `raise NotImplementedError("R73: delegates to claude_agent_sdk.fork_session()")` stub.
-  - `recorder.py` — `AnthropicAgentsRecorder` 实现 `RecorderProtocol`. Wrap `ClaudeSDKClient.receive_response()` async iterator; translate `UserMessage`/`AssistantMessage`/`ToolUseBlock`/`ToolResultBlock`/`ThinkingBlock` 经 extractor-contract-v2 ([ADR-015]) 成 chronos node records.
-- **P0** Extractor conformance check: 检查 `ToolUseBlock` / `ToolResultBlock` 是否 clean-map 到现有 `tool_call` / `tool_result` node kinds. `ThinkingBlock` 可能需 [ADR-015] amendment — **若需要, 暂停 code, 写 ADR-015-R70 amendment 再继续, 不要 silently 扩 contract**.
-- **P0** Tests (TDD 优先):
-  - `tests/adapters/anthropic_agents/test_probe.py` — `HAS_CLAUDE_SDK` 正确工作 even without dep installed.
-  - `tests/adapters/anthropic_agents/test_recorder_conformance.py` — fake `ClaudeSDKClient` 发 scripted message stream; asserts node records contract-conformant.
-  - `tests/adapters/anthropic_agents/test_adapter_conformance.py` — `AdapterProtocol` shape checks.
-  - 全部 `skipif not HAS_CLAUDE_SDK`.
-- **P1** `scripts/dogfood/arc_b_slice_1_smoke.py` — 空 scaffold (R71 填). R70 round-end checklist 有 script 可指.
-- **P1** `docs/progress/2026-05-XX-round-70.md` (YYYY-MM-DD fix).
-- **P1** `docs/roadmap.md` §4.2 — R69 ✅ → R70 ✅ progress marker (或删 ✅ 用 → 箭头). Header \"Last updated\" R69 → R70.
-- **P1** `docs/CONTEXT.md §5/§6` — R70 findings + R71 TODO block.
-- **P2** 无 CHANGELOG ([Unreleased] 附录可选) / 无 tag / 无 version bump (alpha 等 R72).
-- Gate expect: pytest 572 + N_new pass / 3 skip / 0 fail (expect N_new ≥ 6). mypy 新 package 0 error. ruff check + format clean. Adapter streak **R52→R69 = 18 rounds 封盘**, R70 starts Arc B. 新 adapter 加入 adapter-1-3 zero-regression streak 追踪 (new metric: "adapters 1-3 zero change" 从 R70 开始继续记).
+- **P0** Pre-flight: `git ls-remote origin main` (stale-ref trap #8) + `git fetch` + `uv run pytest -q --no-cov` 跑基线 (expect 606/3/0). 读 `docs/progress/2026-05-14-round-70.md` + `docs/decisions/ADR-026-arc-b-scope.md §4` + `docs/research/r69-mcp-fork-lifecycle.md §2` + `src/chronos/adapters/anthropic_agents/recorder.py`.
+- **P0** Install extra: `uv sync --extra anthropic_agents`. Verify `python -c "from claude_agent_sdk import ClaudeSDKClient, query, UserMessage, AssistantMessage, ResultMessage; print('OK')"` succeeds. 目视 `uv.lock` 增量 transitive dep 合理. 若 Node.js `claude-code` CLI 缺 (R69 spike #3.4 flagged), **surface blocker to user via QQ, do NOT autonomously install Node** (CONTEXT §3.3 hard constraint).
+- **P0** `scripts/dogfood/arc_b_slice_1_smoke.py` (**new**): 用 `ClaudeSDKClient` / `query()` 跑 1-2 prompts 真小流量 call. **Relay check**: 先测 baidu-int relay endpoint 是否支持 `claude-agent-sdk` session format (它针对 baidu-int Anthropic proxy 是否兼容 SDK streaming protocol 未知; 若不兼容 → Option B). 若兼容, 跑脚本 assert: `run_id` 非空 / ≥2 nodes / 至少 1 `assistant` + 1 `user` kind / usage 非-None where applicable / 脚本 exit 0. Runtime-assert = release gate (R60 invariant).
+- **P0** `tests/live/test_anthropic_agents_smoke.py` (**new**): `CHRONOS_LIVE=1` gated (mirror `test_crewai_smoke.py`). ≥1 test 跑 round-trip through `ClaudeSDKClient.query()` + assert recorder landed expected node kinds + usage non-None.
+- **P1** 若 live trace surface `ThinkingBlock` 或其他 block type 非 R69 spike #2 4-type contract, **in-place amend ADR-015** (R57 pattern) — progress doc 记 amendment 理由. 若 unchanged, leave contract as-is.
+- **P1** `docs/progress/2026-05-XX-round-71.md` (YYYY-MM-DD fix).
+- **P1** `docs/roadmap.md §4.2` — R70 ✅ marker + R71 progress. "Last updated" R70→R71.
+- **P1** `docs/CONTEXT.md §5/§6` — R71 findings + R72 alpha-tag TODO.
+- **P2** 无 CHANGELOG roll (仍 [Unreleased], R72 alpha tag 才 roll). 无 tag. 无 version bump (alpha R72).
+- Gate expect: pytest 606 + N_live pass / 3 skip + K_new_skipif / 0 fail. mypy 0 error. ruff clean. Adapter-1-3 zero-regression streak R70→R71 = 2 rounds.
 
-### Option B (备选, 若 extractor contract 需 amendment 2-slot split): R70a ADR + R70b code
+### Option B (备选, 硬卡点兜底): infra 卡点 (Node.js 缺 / baidu-int relay 不兼容)
 
-- R70 slot 1 = ADR-015 amendment (R70 amendment, in-place per R57) + pyproject + probe + tests skeleton only (no recorder body).
-- R70 slot 2 (or R71) = recorder body + conformance tests + dogfood scaffold.
-- 模式: R53→R54 CrewAI split precedent; 或 R58→R59 core→surface precedent.
-- Trigger: 若 `ThinkingBlock` 或 `UserMessage` 某 field 在现有 ADR-015 v2 contract 外. R69 spike 未 exhaustive enumerate, R70 agent 首要任务之一是 grep `ThinkingBlock` source 确认 block 形状.
+- **不 revert R70 scaffold** — unit tests 已绿, scaffold 独立成立.
+- **不 autonomous install Node** — 违反 §3.3.
+- **不 probe external Anthropic endpoint** — 违反 §3.3 花钱红线 (除非 user 明示授权).
+- Write `docs/progress/2026-05-XX-round-71.md` as blocker-investigation round. 记精确 reproduce: `uv sync --extra anthropic_agents` output + `claude-code --help` result (or "command not found") + `python -c "from claude_agent_sdk ..."` error trace (if any).
+- QQ reach-out with 2-item unblock ask: (i) Node.js install policy (cron VM 可否装 Node?) (ii) baidu-int relay 是否支持 claude-agent-sdk session streaming.
+- Bundle shape becomes 5+1 rounds = 6 (risks / core / **blocker-investigation** / live-smoke / alpha / fork / GA), v0.7.0 target slips R74→R75.
 
-### Option C (硬卡点兜底): R70 SDK install breaks
+### Option C (最后兜底): R71 = documentation polish only
 
-若 `uv sync` 装 `claude-agent-sdk` 遇 transitive dep 冲突 (e.g. anyio / pydantic / mcp python package):
-- 不降 pin, 不绕路. 跟 user 报 blocker.
-- 回退: revert pyproject edit, R70 降为 md-only "install blocker investigation" round, 打 QQ 找 user.
+若 neither live smoke nor blocker-investigation 在 R71 slot actionable, 写 `docs/adapters/anthropic_agents.md` user-facing install+usage doc (`uv sync --extra anthropic_agents` + `ClaudeSDKClient` 典型用法 + recorder wrap 示例 + fork() R73 timeline 说明). 零风险, 零 blocking.
 
 ### 推荐
 
-**Option A** — R69 源查已 confirm `claude-agent-sdk` Python `>=3.10` + MIT + 无明显 exotic deps. Install 大概率顺利. 若 extractor contract 纯 additive fit, 单 slot 全 land. 保底 Option B split.
+**Option A** — R69 source inspection confirm `claude-agent-sdk` Python >=3.10 + MIT + clean install. Infra block probability 低; 若触发, Option B 优雅降级.
 
-### R70 非目标 (硬红线)
+### R71 非目标 (硬红线)
 
-- ❌ 无 live API call — fake SDK client drive recorder tests only.
-- ❌ 无 live MCP server — MCP tool record-flow 在 R71 live-smoke 才验.
-- ❌ 不动 Web UI / CLI / HTTP API.
-- ❌ 不动 adapter-1-3 (langgraph / autogen / crewai) — zero-regression 维持.
-- ❌ 不 touch ADR-016 — Anthropic adapter 必须 fit 现有 interface (R69 已 confirm 可以).
-- ❌ 不写 `fork()` impl — R73 才 land (`fork_session()` delegate). R70 留 `raise NotImplementedError("R73")` stub.
-- ❌ Node.js CLI 不装 (R71 infra).
-- ❌ 不 tag / 不 bump version (alpha R72, GA R74).
-- ❌ 不开新 ADR (除非 extractor contract amendment — 那是 ADR-015 in-place amendment, 不是 new ADR).
+- ❌ 不 autonomous install Node.js — infra change 要 user 授权.
+- ❌ 不 autonomous probe external Anthropic paid endpoint — 要 user 授权 baidu-int relay test.
+- ❌ 不 silently 扩 extractor contract — 若真 trace 出 block type 非 4-type set, 必 amend ADR-015 in-place.
+- ❌ 不动 adapter-1-3 (langgraph/autogen/crewai) — zero-regression streak 继续.
+- ❌ 不写 `fork()` impl — R73 才 land (`fork_session()` delegate). R71 保持 `NotImplementedError("R73")` stub.
+- ❌ 不 tag / 不 bump version (alpha R72).
+- ❌ 不开新 ADR (除非 R69 blocker-class external question 新出 — 目前无).
 
 ### 工期估计
 
-R70 Option A = 2-2.5 hours single-slot (pyproject + probe + adapter shell + recorder body + 3 test files + scaffold + md). Option B = 1+1.5 hours split. Option C = 30 min investigation + 打扰 user.
+R71 Option A = 1.5-2 hours (install + dogfood script + 1 live test + md). Option B = 30-45 min investigation + QQ. Option C = 30 min md polish.
 
-### R70 Hand-off invariants (R69 agent 给 R70 agent)
+### R71 Hand-off invariants (R70 agent → R71 agent)
 
 - 工作窗口 0-11 CST.
-- R70 是 **code round**, 不是 md-only (R69 是 md-only). Test count 会动.
-- `claude-agent-sdk>=0.1.80,<1.0` 在 `anthropic_agents` extra, 不进 default.
-- Recorder 模块命名: `recorder.py`, 类 `AnthropicAgentsRecorder` (与 `crewai/recorder.py` grep-对称).
-- `fork()` = `raise NotImplementedError("R73")`. R73 swap 到 `fork_session()` delegate.
-- R70 round-end QQ 战报模板: test count delta + adapters 1-3 zero-regression 继续.
-- 若 extractor contract 需 amendment: **暂停 code, 先写 ADR-015-R70 in-place amendment**. 不 silent 扩展.
+- R71 是 **live-smoke round** (需 SDK install + network). Unit test count 会从 606 涨.
+- 开场两命令: `uv sync --extra anthropic_agents` + `claude-code --help` (probe Node.js CLI).
+- Adapter-1-3 zero-regression streak 继续 (R70 = 1st, R71 = 2nd 若 code).
+- Dogfood script path: `scripts/dogfood/arc_b_slice_1_smoke.py` (**注意 `dogfood/` 子目录 — 首个用此 convention**; 之前 dogfood 在 `scripts/dogfood_*.py` flat).
+- 若 `ThinkingBlock` 真出现在 live trace: 决定 ADR-015 amendment vs summariser fallback 覆盖是否够, progress doc 论证.
+- R71 round-end QQ 战报模板: test count delta + live smoke result + SDK extra install result + adapters 1-3 zero-regression 状态.
 
 ### Release strategy (rolling)
 
@@ -593,7 +619,9 @@ R70 Option A = 2-2.5 hours single-slot (pyproject + probe + adapter shell + reco
 
 ---
 
-*Last updated: 2026-05-13 (CST ~01:41, R67 cron slot inside 0–11 window) by Round 67 agent — **Arc A item 2 CLI closeout + v0.6.0 tag cut**. Inherited ~1138 LOC WIP from prior cron slot (`scripts/dogfood_fork_tree.py` + `src/chronos/cli/tree.py` + `src/chronos/core/tree.py` + `tests/unit/test_cli_tree.py` + `api/server.py` 162-line extract with re-exports + `cli/__init__.py` register + ADR-025 Draft→Accepted + version 0.5.1→0.6.0). Per `cron-slot-handoff-recovery`: origin==HEAD verified, gates swept (pytest 572 +10 / mypy 33 files / ruff 2 errors + 4 format drifts), fixed in-place (F541 f-prefix + SIM401 `rich_by_run.get(parent_rid, tree)`), `ruff format` normalised 86 files, dogfood `scripts/dogfood_fork_tree.py` exit 0 (release gate R64 invariant, 4-run LangGraph router_loop fork with pivot + identity-twin + early-exit + grandchild, JSON byte-for-byte matches HTTP for both single-run and `?include_descendants=true`). Refreshed `docs/roadmap.md` (Arc A item 2 `[ ]`→`[x]`, "Last updated" R66→R67) + `CHANGELOG.md` ([Unreleased]→[0.6.0] R65+R66+R67 three-round merge with R67 Fixed for ruff polish) + `docs/CONTEXT.md §5/§6` + new `docs/progress/2026-05-12-round-67.md` (~10 KB). Committed bundle + tagged **v0.6.0** annotated + pushed main+tag via gh-proxy + GitHub Release. Gate snapshot: **572 pass / 3 skip / 0 fail**, mypy 33 files 0 error (+2), ruff check clean, ruff format --check 86 files clean (+3 new +1 normalised), `chronos --version` → `chronos 0.6.0`, `chronos tree --help` renders. Adapter **zero change** — R52→R67 = **16 rounds** 零代码改动 (项目史上最长 streak, R64 prediction 三次命中). **Arc A fully closed** through v0.6.0 (slice 1/2/3 R58-R60 v0.5.0 / slice 4 R62-R64 v0.5.1 / slice 5 R65 + item 2 R66-R67 v0.6.0). **Five new findings on wall**: (1) A2 inheritance chain 八连 R48-A→R51→R52→R53→R59→R63→R65→R67 (Arc A 最后 A2 hand-off, 下一个要等 Arc B impl round), (2) sibling-module extraction pattern 三连 R62/R63/R67 (pull compute from server.py into core namespace, 不做 package refactor), (3) bundle-shape variation: planning+surface+closeout (vs core+surface+proof for v0.5.0/v0.5.1) — three-round minor-version shape rigid but each round role flexible, (4) CLI tree HTTP parity 锁死 contract (--json === GET /runs/{id}/tree byte-for-byte, dogfood asserts + unit test lock), (5) WIP ruff-polish close-out routine observation (4/8 A2 hand-offs need ruff fix, pending 3rd confirmation before固化 into skill). Next: R68 **Option A preferred — Arc B kickoff scoping ADR** (md-only planning round, single-slot, adapter R52→R68 targeting 17 rounds if no code). Option B polish fallback.*
+*Last updated: 2026-05-14 (CST ~02:45, R70 cron slot inside 0–11 window) by Round 70 agent — **Phase 4 Arc B slice 1 core scaffold shipped**. Option A2 close-out #9 over inherited WIP from prior cron slot (~1345 LOC uncommitted: new `src/chronos/adapters/anthropic_agents/` package 769 LOC + `tests/unit/test_adapter_anthropic_agents.py` 577 LOC + `pyproject.toml` optional extra + adapters/__init__ wire-up + uv.lock transitive deps). Per `cron-slot-handoff-recovery` lockfile-trap rule: pyproject diff non-empty → uv.lock churn real, committed. Gates green (606/3/0, +34 unit tests). This slot: verified gates + fixed 1 pre-existing-this-round mypy arg-type in `cli/tree.py:198` (R67 regression, surfaced during baseline sweep) + added mypy override for `claude_agent_sdk.*` + `ruff format` normalised 1 drifted test file + CHANGELOG [Unreleased] Added+Fixed blocks + progress doc + CONTEXT §5/§6 + commit + push via gh-proxy. **First Arc B code round** — R52→R69 = 18-round adapter zero-change streak intentionally closed at R70 (Arc B kickoff was always planned stopper); new "adapters 1-3 zero-regression" streak starts trivially R70=1. Five new findings on wall: (1) A2 inheritance chain 九连 R48-A→R51→R52→R53→R59→R63→R65→R67→R70 with first Arc B entry conforming — pre-budget 2-slot rule for impl rounds is structural constant independent of feature area. (2) Class-name dispatch pattern 三连 — CrewAI / AutoGen / Anthropic Agents adapters all use `type(msg).__name__` string dispatch; candidate invariant for probe-gated optional-dep adapters. (3) Four-block Anthropic Message.content contract (TextBlock/ToolUseBlock/ToolResultBlock/ThinkingBlock) handled via summariser with unknown-block class-name fallback — fails loud not silent-lossy. (4) Pre-1.0 pin ceiling library-maturity-aware: first Chronos extra using next-major `<1.0` (ADR-026 §7); rule codified "next-major for 0.x alpha with additive patch cadence, next-minor for 1.x stable SemVer". (5) Tests run without optional extra installed (stricter than CrewAI's skipif pattern) — possible because recorder is SDK-import-free at runtime, catches structural regressions in minimal dev envs. No tag cut — v0.7.0a1 target R72. R71 Option A = live-smoke + dogfood script `scripts/dogfood/arc_b_slice_1_smoke.py` + tests/live/test_anthropic_agents_smoke.py; Option B = blocker-investigation if Node.js CLI missing or baidu-int relay incompatible.*
+
+*Previous footer: 2026-05-13 (CST ~01:41, R67 cron slot inside 0–11 window) by Round 67 agent — **Arc A item 2 CLI closeout + v0.6.0 tag cut**. Inherited ~1138 LOC WIP from prior cron slot, gates swept + fixed, dogfood exit 0, committed bundle + tagged v0.6.0 + pushed via gh-proxy + GitHub Release. **Arc A fully closed** through v0.6.0. Adapter R52→R67 = 16 rounds zero-change.*
 
 *Previous footer: 2026-05-12 (CST ~07:40, R66 cron slot inside 0–11 window) by Round 66 agent — **retro-documentation round, drift detection #2 success** per `roadmap-drift-detection` skill. Planning hint "先查 R37.5" forced audit-first order; 20+ grep hits across `src/chronos/api/server.py:786 @app.get("/runs/{run_id}/tree")` + `frontend/src/pages/TreeView.tsx` (684 LOC) + `frontend/src/layout.ts` (261 LOC) + `frontend/src/types.ts` `descendant_run_ids` + ADR-018 R37.5 reference confirmed: **Arc A item 2 fork-tree DAG viz ~85% already shipped (R34-A backend DFS + R34-C/R36-D ReactFlow 前端 + R37.5 family-tree lane layout + R46-A fork-plan modal + R48-B EffectTag), 仅剩 CLI `chronos tree` + dogfood + contract freeze**. Pivoted from "design new feature" to "audit + retro-document + scope freeze"; shipped 4 md artifacts: `docs/research/r66-fork-tree-viz-audit.md` + `docs/design/fork-tree-viz.md` + `docs/decisions/ADR-025-fork-tree-viz-scope.md` Draft + `docs/roadmap.md` §4.1 annotation. Gates: 562 pass / 3 skip / 0 fail / 94% cov (md-only zero drift). Adapter R52→R66 **15 rounds** 零代码改动.*
 

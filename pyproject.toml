@@ -53,6 +53,19 @@ crewai = [
     # pre-emptive, not empirical.
     "crewai>=0.80,<2.0",
 ]
+anthropic_agents = [
+    # ADR-026 (R68 Accepted R69): Anthropic Agents SDK (`claude-agent-sdk`)
+    # is the fourth adapter, Arc B slice 1 target. R69 source inspection
+    # (spike #3) confirmed 0.1.80 ships `fork_session()` + `SessionStore`
+    # protocol (R73 fork delegate target) and 0.1.81 is the latest PyPI
+    # release (all 83 releases in 0.1.x line). Python `>=3.10`, MIT.
+    # Pin strategy per ADR-026 §7 + R69 spike #3.3 decision (b):
+    # next-major ceiling, not next-minor — 0.1.x is explicitly alpha
+    # (Development Status :: 3), weekly additive-only patch cadence,
+    # next-minor ceiling (ADR-022 CrewAI precedent for 1.x stable) would
+    # cause bump-round churn with no breakage risk. Re-evaluate at 1.0.0.
+    "claude-agent-sdk>=0.1.80,<1.0",
+]
 web = [
     "fastapi>=0.110",
     "uvicorn[standard]>=0.30",
@@ -134,6 +147,13 @@ ignore_missing_imports = true
 # fastapi/starlette/uvicorn/httpx — treat them as missing-is-ok so the
 # base suite still type-checks green without the extra.
 module = ["fastapi.*", "starlette.*", "uvicorn.*", "httpx.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# claude-agent-sdk is an optional extra (ADR-026, R70). When the
+# `anthropic_agents` extra is absent mypy can't find stubs — treat
+# missing-is-ok so base type-checking stays green in minimal envs.
+module = ["claude_agent_sdk.*"]
 ignore_missing_imports = true
 
 # ---------- Pytest ----------

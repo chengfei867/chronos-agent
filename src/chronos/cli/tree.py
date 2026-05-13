@@ -195,7 +195,7 @@ def _render_text(
         lane_label += f"\n  [dim]task:[/] {task_desc}"
 
         parent_rid = parent_of_run.get(rid)
-        attach_to = rich_by_run.get(parent_rid, tree)
+        attach_to = rich_by_run.get(parent_rid, tree) if parent_rid is not None else tree
         lane_rich = attach_to.add(lane_label)
         rich_by_run[rid] = lane_rich
         _build_run_subtree(rid, payload, lane_rich, include_forks=True)

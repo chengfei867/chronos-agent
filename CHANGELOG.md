@@ -4,7 +4,50 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
-_Nothing yet — R68 will decide._
+### Added — Round 70 (Arc B slice 1 — core scaffold, 2026-05-14)
+
+- **`chronos.adapters.anthropic_agents` package (new, ADR-026, R70)** — fourth
+  Chronos adapter, targeting Anthropic's official `claude-agent-sdk`
+  (PyPI `>=0.1.80,<1.0`). Record-only scaffold in this round; live smoke
+  comes in R71 and `fork()` (SDK-native `fork_session()` delegate) in R73.
+  - `_probe.py` — `HAS_CLAUDE_SDK` / `CLAUDE_SDK_IMPORT_ERROR` / `install_hint()`
+    following the CrewAI / AutoGen probe shape.
+  - `recorder.py` (~552 LOC) — `AnthropicAgentsRecorder` implementing
+    `RecorderProtocol`. Seam: async iterator of `Message` objects, so
+    the recorder works against both `ClaudeSDKClient.receive_messages()`
+    and the top-level `query(prompt, options)` entry points. Class-name
+    dispatch (`UserMessage` / `AssistantMessage` / `SystemMessage` /
+    `ResultMessage`) mirroring ADR-021 CrewAI event dispatch.
+  - `__init__.py` — public exports `AnthropicAgentsRecorder` +
+    `anthropic_agents_adapter` (module-level `AdapterProtocol` instance
+    for R32-B dynamic registry).
+  - `fork()` = `raise NotImplementedError("R73: delegate to `claude_agent_sdk.fork_session()`")`
+    stub, ADR-026 §6 pointer.
+- **`tests/unit/test_adapter_anthropic_agents.py` (new, 577 LOC, 34 tests)** —
+  structural conformance / usage projection / content summarisation /
+  node-name dispatch (including `AssistantMessage + ToolUseBlock` →
+  `:<tool>` postfix) / translate dispatch / record happy + failure +
+  `ClaudeSDKClient`-style runtime + non-iterable rejection + SDK drift
+  guard / fork-stub / factory channel validation / probe shape / kind-map
+  override. All tests use in-memory async-generator duck runtimes — **no
+  live API call, no SDK install required to run the suite**.
+- **`pyproject.toml`** — new `[project.optional-dependencies]
+  anthropic_agents = ["claude-agent-sdk>=0.1.80,<1.0"]` extra per ADR-026
+  §7 (next-major ceiling, not next-minor — SDK is alpha with weekly
+  additive-only patches). Plus `[[tool.mypy.overrides]]` for
+  `claude_agent_sdk.*` so base type-checking stays green without the extra.
+- **`src/chronos/adapters/__init__.py`** — registered the new adapter in
+  the public package docstring + `__all__` + module-level imports. The
+  langgraph / autogen / crewai / anthropic_agents four-adapter enumeration
+  is now the ADR-016 P2 baseline for v0.7.x.
+
+### Fixed — Round 70
+
+- `src/chronos/cli/tree.py:198` — `rich_by_run.get(parent_rid, tree)` now
+  guarded with `if parent_rid is not None else tree`. Pre-existing mypy
+  `arg-type` error on HEAD (R67 regression, caught during R70 baseline
+  gate). Behaviour unchanged — `parent_rid is None` already hit the
+  fallback because `dict.get(None, default)` returned `default`.
 
 ## [0.6.0] — 2026-05-12 (Round 65 + Round 66 + Round 67)
 
