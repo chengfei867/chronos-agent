@@ -1,12 +1,12 @@
-# ADR-026: Arc B Scope — Fourth Adapter is Anthropic Agents SDK (Draft)
+# ADR-026: Arc B Scope — Fourth Adapter is Anthropic Agents SDK (Accepted)
 
-**Status**: Draft
-**Date**: 2026-05-13 (Round 68)
+**Status**: Accepted (R69, 2026-05-13 — promoted in-place from R68 Draft per R57 invariant)
+**Date**: 2026-05-13 (Drafted R68; Accepted R69)
 **Deciders**: chengfei867, Hermes Agent
 **Supersedes**: the preliminary Arc B candidate table in [ADR-023][ADR-023] §Arc B (R56 snapshot, superseded by R68 research)
 **Depends on**: [ADR-016][ADR-016] (adapter interface), [ADR-023][ADR-023] (Phase 4 charter, Arc B deferred until Arc A ships), [ADR-001][ADR-001] (Python 3.11+ pin)
 **Related**: [ADR-017][ADR-017] (AutoGen sync-wrap), [ADR-021][ADR-021] (CrewAI adapter), [ADR-022][ADR-022] (CrewAI version pin bump)
-**Feeds**: [docs/design/fourth-adapter-landscape.md][design], [docs/research/r68-arc-b-scope.md][research]
+**Feeds**: [docs/design/fourth-adapter-landscape.md][design], [docs/research/r68-arc-b-scope.md][research], [docs/research/r69-mcp-fork-lifecycle.md][r69]
 
 ---
 
@@ -48,9 +48,9 @@ Plus two newly-evaluated candidates not in ADR-023's original table:
 
 - **Framework**: Anthropic Agents SDK (`claude-agent-sdk-python`).
 - **Adapter module**: `src/chronos/adapters/anthropic_agents/` (sibling to `langgraph.py`, `autogen/`, `crewai/`).
-- **Version pin**: TBD in R69 after risks spike. Constraint: `claude-agent-sdk>=X.Y,<Z.0` per [ADR-022][ADR-022]-style minor-version upper bound.
-- **Event-capture pattern**: Async event stream iteration (no monkeypatch). Third verification of the "stream → log" pattern after LangGraph callbacks and CrewAI event bus. No ADR-016 revisions required.
-- **Fork primitive**: Re-seed message history + re-invoke `agent.run`. Similar shape to LangGraph fork (`update_state(as_node=...) + invoke(None)`). MCP session-lifecycle policy decided in R69 — see §Open questions.
+- **Version pin**: `claude-agent-sdk>=0.1.80,<1.0` (optional-dep in `pyproject.toml::[project.optional-dependencies].anthropic_agents`). R69 crystallised; floor chosen because `fork_session()` + `SessionStore` shipped well before 0.1.80; ceiling at next-major per [ADR-022][ADR-022] precedent. See [r69][r69] §3.
+- **Event-capture pattern**: Async iteration over the SDK's `Message` stream — either `query()` (stateless generator) or `ClaudeSDKClient.receive_response()` / `receive_messages()` (stateful client context-manager). No monkeypatch. Third verification of the "stream → log" pattern after LangGraph callbacks and CrewAI event bus. No ADR-016 revisions required.
+- **Fork primitive**: SDK-native `fork_session(session_id, up_to_message_id=...)` — a **first-class transcript-level fork already shipped in 0.1.x**. The adapter wraps it; no custom re-seed logic. MCP servers are per-CLI-subprocess (not per-session) so fork does not touch MCP state. See [r69][r69] §1.
 
 ### 2. Interface fit
 
@@ -114,15 +114,28 @@ ADR-026 promotes Draft → Accepted in R74 **after** AC-1..AC-5 all tick.
 
 ### In-place promotion marker
 
-Per the R57 "in-place ADR promotion" invariant, this ADR's status line flips to `Accepted` in R74 (the release round) without branching. R74's commit message will reference "ADR-026 Draft → Accepted".
+Per the R57 "in-place ADR promotion" invariant, this ADR's Draft→Accepted flip happens by editing the status field of this same file (no new file, no branching). **Scope flip happened in R69** — i.e. the Arc B scope selection (Anthropic Agents SDK as slice 1) is now settled. AC-1..AC-5 are **release-time gates** tracked separately; the R74 release commit will note "ADR-026 acceptance gates AC-1..AC-5 closed" rather than flipping status again.
 
 ---
 
 ## Open questions (resolved by R69 risks spike)
 
-1. **MCP server fork-lifecycle policy** (A fresh-server vs B session-reseed). Blocker-class; R69 targets. Fallback clause §4 authorises swap if Policy B infeasible and Policy A degrades value prop.
-2. **Recorder entry point**: `agent.iter(...)` (yields typed nodes) vs `agent.stream(...)` (async events). Design-class; R69 decides. Both map cleanly to `RecorderProtocol`.
-3. **Version pin lower bound**: Latest `claude-agent-sdk` stable at R69. Upper bound `<` next major per ADR-022 pattern.
+All three blocker-class questions resolved by source-inspection spike of `anthropics/claude-agent-sdk-python` (commit at v0.1.81 on PyPI, R69). Full notes: [docs/research/r69-mcp-fork-lifecycle.md][r69].
+
+1. **MCP server fork-lifecycle policy** (was: A fresh-server vs B session-reseed).
+   **Resolved**: *neither*. The SDK ships `fork_session(session_id, up_to_message_id=...)` in `_internal/session_mutations.py` — a pure transcript-JSONL rewrite that assigns new UUIDs and truncates history at the requested message. **MCP servers have zero coupling to fork** (grep `"mcp"` in `session_mutations.py` → 0 hits); MCP servers are per-CLI-subprocess and reconnect stateless on session resume. The chronos-agent adapter therefore **delegates to the SDK primitive** — no custom Policy A / Policy B / re-seed logic needed. §4 fallback clause remains dormant but unactivated.
+
+2. **Recorder entry point** (was: `agent.iter(...)` vs `agent.stream(...)`).
+   **Resolved**: both names were speculative and **do not exist** in the SDK. Actual primitives:
+   - `query(prompt, options) -> AsyncIterator[Message]` — stateless fire-and-forget.
+   - `ClaudeSDKClient` (stateful async context manager) + `await client.query(prompt)` + `async for msg in client.receive_response(): ...` — multi-turn pattern used for both recording and fork-resume.
+   - Message union: `UserMessage | AssistantMessage | SystemMessage | ResultMessage`; content blocks: `TextBlock | ToolUseBlock | ToolResultBlock | ThinkingBlock`.
+   Recorder seam = wrap the `receive_response()` async iterator (parallel to the CrewAI event bus and LangGraph callback patterns). See [r69][r69] §2.
+
+3. **Version pin** (was: `claude-agent-sdk>=X.Y,<Z.0`).
+   **Resolved**: `claude-agent-sdk>=0.1.80,<1.0` declared as extra in `pyproject.toml::[project.optional-dependencies].anthropic_agents`. PyPI latest = 0.1.81 (83 releases in the 0.1.x line; still alpha/pre-1.0). Python requirement `>=3.10` (compatible with our 3.11+ floor per [ADR-001][ADR-001]); MIT licensed. Ceiling at next-major rather than next-minor because the SDK is still rapidly iterating and 0.x minor bumps have been additive in practice (e.g. `fork_session` shipped mid-0.1.x). Revisit ceiling at R74 retro if 0.2 releases before then. See [r69][r69] §3.
+
+**R71 live-smoke prerequisite** (new finding, not a blocker): the SDK spawns a bundled Node.js `claude-code` CLI as subprocess (see `README.md:10-20`). Live-smoke tests need Node available on the runner; override path via `ClaudeAgentOptions(cli_path=...)`. R71's skipif matrix mirrors the existing `HAS_CREWAI` pattern.
 
 Deferred to R74 retro (no block on v0.7.0):
 
@@ -161,6 +174,7 @@ Deferred to R74 retro (no block on v0.7.0):
 - [ADR-021][ADR-021] — CrewAI adapter (adapter pattern precedent)
 - [ADR-022][ADR-022] — CrewAI version pin bump (pin policy precedent)
 - [research] — `docs/research/r68-arc-b-scope.md`
+- [r69] — `docs/research/r69-mcp-fork-lifecycle.md`
 - [design] — `docs/design/fourth-adapter-landscape.md`
 
 [ADR-001]: ADR-001-language.md
@@ -172,8 +186,9 @@ Deferred to R74 retro (no block on v0.7.0):
 [ADR-022]: ADR-022-crewai-version-pin-bump.md
 [ADR-023]: ADR-023-phase-4-charter-skeleton.md
 [research]: ../research/r68-arc-b-scope.md
+[r69]: ../research/r69-mcp-fork-lifecycle.md
 [design]: ../design/fourth-adapter-landscape.md
 
 ---
 
-*Authored R68 (2026-05-13 CST, planning round). Draft; promotes to Accepted in R74 if AC-1..AC-5 tick. Fallback clause (§4) pre-authorises OpenAI Agents SDK swap if R69 risks spike blocks primary. Arc B slice 1 flagship; slice 2+ (Pydantic AI / Letta) not committed here.*
+*Authored R68 (2026-05-13 CST, planning round); promoted to Accepted in R69 after source-inspection spike closed all 3 blocker-class open questions. Arc B slice 1 scope now frozen: Anthropic Agents SDK + SDK-native `fork_session` + `ClaudeSDKClient.receive_response()` recorder seam + `claude-agent-sdk>=0.1.80,<1.0` pin. Release gates AC-1..AC-5 tick in R70-R74. Fallback clause (§4) remains dormant — no trigger activated.*

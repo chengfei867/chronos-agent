@@ -1,6 +1,6 @@
 # Roadmap — Chronos Agent
 
-**Last updated**: 2026-05-13 (Round 68 — Arc A closed through v0.6.0; Arc B slice 1 scoped to Anthropic Agents SDK, ADR-026 Draft)
+**Last updated**: 2026-05-13 (Round 69 — Arc A closed through v0.6.0; Arc B slice 1 scoped to Anthropic Agents SDK, ADR-026 **Accepted** after R69 risks spike)
 
 > This roadmap has been refined after completing Phase 0 research.
 > Each phase lists concrete deliverables, exit criteria, and estimated rounds (4-hour cron cycles).
@@ -192,6 +192,7 @@ the plan-artifact `fork plan emit → edit → fork plan exec` loop is the shipp
 [r66-audit]: research/r66-fork-tree-viz-audit.md
 [fourth-adapter]: design/fourth-adapter-landscape.md
 [r68-arc-b]: research/r68-arc-b-scope.md
+[r69-mcp]: research/r69-mcp-fork-lifecycle.md
 
 ---
 
@@ -212,7 +213,7 @@ the plan-artifact `fork plan emit → edit → fork plan exec` loop is the shipp
 
 ### 4.2 Ecosystem — broader surface (priority: **ACTIVE** — Arc B pinned R68, slice 1 scoped to Anthropic Agents SDK)
 - [x] **Third adapter: CrewAI** — shipped in v0.4.0 (R49-R55)
-- [ ] **Fourth adapter: Anthropic Agents SDK — Arc B slice 1** — `claude-agent-sdk` recorder + fork primitive + live-smoke + dogfood, bundled as v0.7.0. **Research**: [r68-arc-b-scope][r68-arc-b] (6-candidate survey, 9-axis table). **Design**: [fourth-adapter-landscape][fourth-adapter]. **ADR**: [ADR-026][ADR-026] (R68 Draft). **Rollout**: R69 risks spike → R70 core → R71 live-smoke → R72 v0.7.0a1 → R73 fork → R74 v0.7.0 GA. **Pre-authorised fallback**: OpenAI Agents SDK if MCP fork-lifecycle blocks (see ADR-026 §Fallback).
+- [ ] **Fourth adapter: Anthropic Agents SDK — Arc B slice 1** — `claude-agent-sdk` recorder + fork primitive + live-smoke + dogfood, bundled as v0.7.0. **Research**: [r68-arc-b-scope][r68-arc-b] (6-candidate survey, 9-axis table) + [r69-mcp-fork-lifecycle][r69-mcp] (source-inspection spike resolving 3 open questions). **Design**: [fourth-adapter-landscape][fourth-adapter]. **ADR**: [ADR-026][ADR-026] (R68 Draft → **R69 Accepted**). **Rollout**: R69 risks spike ✅ → R70 core recorder/adapter skeleton → R71 live-smoke → R72 v0.7.0a1 → R73 fork (delegates to SDK-native `fork_session`) → R74 v0.7.0 GA. **Key R69 findings**: SDK ships first-class `fork_session()` (no custom re-seed needed); recorder seam = `ClaudeSDKClient.receive_response()` async iterator; pin `claude-agent-sdk>=0.1.80,<1.0`. Fallback clause remains dormant.
 - [ ] **Arc B slice 2 candidate** — Pydantic AI (low-risk, type-safe) or Letta (memory-first, ambitious). Decision at R74 retro; target v0.8.0.
 - [ ] **Vercel AI SDK adapter (TS)** — blocked by [ADR-001](decisions/ADR-001-language.md) Python pin. Revisit if external TS-native demand arrives.
 - [ ] **Generic OTel receiver** (Tier-2 catch-all for non-supported frameworks) — deferred to Arc B slice 3+.
