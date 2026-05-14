@@ -60,6 +60,11 @@ import pytest
 _LIVE_ENABLED = os.environ.get("CHRONOS_LIVE") == "1"
 _API_KEY = os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")
 
+# Default smoke model — spaced PascalCase form that the baidu-int OneAPI relay
+# routes to Bedrock. Override via CHRONOS_LIVE_MODEL for direct anthropic.com
+# or another relay that exposes kebab-case model ids.
+_LIVE_MODEL = os.environ.get("CHRONOS_LIVE_MODEL", "Claude Sonnet 4.6")
+
 
 def _claude_sdk_importable() -> bool:
     try:
@@ -87,7 +92,7 @@ def _session_protocol_usable(timeout_s: float = 15.0) -> bool:
         try:
             async for msg in query(
                 prompt="ping",
-                options=ClaudeAgentOptions(max_turns=1),
+                options=ClaudeAgentOptions(max_turns=1, model=_LIVE_MODEL),
             ):
                 cls = type(msg).__name__
                 if cls == "AssistantMessage":
@@ -156,7 +161,7 @@ def test_anthropic_agents_record_smoke(sqlite_store) -> None:
     rec = AnthropicAgentsRecorder(store=sqlite_store)
     runtime = query(
         prompt="Reply with the single word: pong",
-        options=ClaudeAgentOptions(max_turns=1),
+        options=ClaudeAgentOptions(max_turns=1, model=_LIVE_MODEL),
     )
     runtime_id_before = id(runtime)
 
@@ -168,7 +173,7 @@ def test_anthropic_agents_record_smoke(sqlite_store) -> None:
 
     # T3 — persisted state.
     assert ref.run_id is not None, "recorder must populate ref.run_id on exit"
-    nodes = list(sqlite_store.list_nodes(ref.run_id))
+    nodes = list(sqlite_store.get_nodes_for_run(ref.run_id))
     assert len(nodes) >= 2, f"expected >=2 nodes, got {len(nodes)}"
 
     block_classes_seen: set[str] = set()
@@ -177,7 +182,7 @@ def test_anthropic_agents_record_smoke(sqlite_store) -> None:
         # Every node has legal kind and non-empty name.
         assert n.kind in _LEGAL_KINDS, f"unknown node kind {n.kind!r}"
         assert n.node_name, f"node {n.id} has empty name"
-        if n.node_name.startswith("assistant"):
+        if n.node_name.lower().startswith("assistant"):
             saw_assistant = True
 
         # T2 — block-type contract (R69 spike #2). Recorder records the
@@ -211,6 +216,7 @@ def test_anthropic_agents_dogfood_script_executable(tmp_path: Path) -> None:
     broken refactor is caught even when the upstream is unavailable.
     """
     import importlib.util
+    import sys
 
     script = Path(__file__).resolve().parents[2] / "scripts" / "dogfood" / "arc_b_slice_1_smoke.py"
     assert script.exists(), f"dogfood script missing: {script}"
@@ -218,7 +224,11 @@ def test_anthropic_agents_dogfood_script_executable(tmp_path: Path) -> None:
     spec = importlib.util.spec_from_file_location("arc_b_slice_1_smoke", script)
     assert spec is not None and spec.loader is not None
     mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
+    sys.modules["arc_b_slice_1_smoke"] = mod  # required for @dataclass to resolve cls.__module__
+    try:
+        spec.loader.exec_module(mod)
+    finally:
+        sys.modules.pop("arc_b_slice_1_smoke", None)
 
     # Must expose the four-tier API.
     assert callable(getattr(mod, "main", None))

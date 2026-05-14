@@ -97,10 +97,10 @@ def info() -> None:
     """Print environment diagnostics."""
     console.print(f"[bold]chronos[/bold] {__version__}")
     console.print(
-        "Status: Phase 4 Arc A -- auto-pivot shipped (R62 core, R63 CLI+HTTP, "
-        "R64 dogfood + release), "
-        "CrewAI adapter (ADR-021 + ADR-022) 13 rounds zero-change, "
-        "v0.6.0"
+        "Status: Phase 4 Arc A complete (v0.6.0 R65-R67), "
+        "Arc B slice 1 alpha (R70-R73, anthropic_agents adapter, record-only), "
+        "adapter-1-3 zero-regression streak R52->R73 = 21 rounds, "
+        "v0.7.0a1"
     )
     console.print(
         "Commands: [green]runs list/show, forks show, diff, replay, fork plan, web[/green] "

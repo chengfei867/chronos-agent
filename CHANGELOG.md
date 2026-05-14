@@ -4,50 +4,50 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
-### Added — Round 70 (Arc B slice 1 — core scaffold, 2026-05-14)
+## [0.7.0a1] — 2026-05-14 (Round 70 + Round 71 + Round 72 + Round 73)
 
-- **`chronos.adapters.anthropic_agents` package (new, ADR-026, R70)** — fourth
-  Chronos adapter, targeting Anthropic's official `claude-agent-sdk`
-  (PyPI `>=0.1.80,<1.0`). Record-only scaffold in this round; live smoke
-  comes in R71 and `fork()` (SDK-native `fork_session()` delegate) in R73.
-  - `_probe.py` — `HAS_CLAUDE_SDK` / `CLAUDE_SDK_IMPORT_ERROR` / `install_hint()`
-    following the CrewAI / AutoGen probe shape.
-  - `recorder.py` (~552 LOC) — `AnthropicAgentsRecorder` implementing
-    `RecorderProtocol`. Seam: async iterator of `Message` objects, so
-    the recorder works against both `ClaudeSDKClient.receive_messages()`
-    and the top-level `query(prompt, options)` entry points. Class-name
-    dispatch (`UserMessage` / `AssistantMessage` / `SystemMessage` /
-    `ResultMessage`) mirroring ADR-021 CrewAI event dispatch.
-  - `__init__.py` — public exports `AnthropicAgentsRecorder` +
-    `anthropic_agents_adapter` (module-level `AdapterProtocol` instance
-    for R32-B dynamic registry).
-  - `fork()` = `raise NotImplementedError("R73: delegate to `claude_agent_sdk.fork_session()`")`
-    stub, ADR-026 §6 pointer.
-- **`tests/unit/test_adapter_anthropic_agents.py` (new, 577 LOC, 34 tests)** —
-  structural conformance / usage projection / content summarisation /
-  node-name dispatch (including `AssistantMessage + ToolUseBlock` →
-  `:<tool>` postfix) / translate dispatch / record happy + failure +
-  `ClaudeSDKClient`-style runtime + non-iterable rejection + SDK drift
-  guard / fork-stub / factory channel validation / probe shape / kind-map
-  override. All tests use in-memory async-generator duck runtimes — **no
-  live API call, no SDK install required to run the suite**.
-- **`pyproject.toml`** — new `[project.optional-dependencies]
-  anthropic_agents = ["claude-agent-sdk>=0.1.80,<1.0"]` extra per ADR-026
-  §7 (next-major ceiling, not next-minor — SDK is alpha with weekly
-  additive-only patches). Plus `[[tool.mypy.overrides]]` for
-  `claude_agent_sdk.*` so base type-checking stays green without the extra.
-- **`src/chronos/adapters/__init__.py`** — registered the new adapter in
-  the public package docstring + `__all__` + module-level imports. The
-  langgraph / autogen / crewai / anthropic_agents four-adapter enumeration
-  is now the ADR-016 P2 baseline for v0.7.x.
+**Theme**: **Phase 4 Arc B slice 1 alpha — Anthropic Agents SDK fourth adapter, record-only, live-smoke green.** Four rounds open Phase 4 Arc B (`claude-agent-sdk` integration): R70 shipped the core scaffold (`anthropic_agents` package + 34 unit tests, all duck-typed), R71 added the live-smoke harness (`scripts/dogfood/arc_b_slice_1_smoke.py` three-tier probe + `tests/live/test_anthropic_agents_smoke.py` 2 `CHRONOS_LIVE`-gated tests + `docs/adapters/anthropic_agents.md`) but ran into what looked like a relay-protocol incompatibility, R72 close-out committed the WIP without code changes (gates green, alpha deferred), and **R73 ran the actual disprover and refuted R69's spike #1 prediction** — the relay was never incompatible, the SDK's default kebab-case model id (`claude-sonnet-4-5`) was rejected by the OneAPI Bedrock catalog and the SDK's own client-side fallback surfaced as a synthetic `not_logged_in` AssistantMessage. Switching the live-test default to `"Claude Sonnet 4.6"` (spaced PascalCase, OneAPI's canonical form) made the full session protocol round-trip cleanly: `SystemMessage(init)` → `AssistantMessage(text='pong')` → `ResultMessage(success)`, recorded as a 3-node run (FN init + LLM body + END). **`v0.7.0a1` is the first user-facing artefact of Arc B**: alpha = record-only (no `fork_session()` integration yet, that lands in slice 2 / `v0.7.0a2` at R74-R75); install opt-in via `pip install 'chronos-agent==0.7.0a1'`; default `pip install chronos-agent` still resolves to `0.6.0`. Adapter-1-3 (langgraph + autogen + crewai) zero-regression streak now **R52→R73 = 21 rounds**, the project-history longest. ADR-027 (replay-seam contingency that R69 spike #1 had recommended as a fallback) **was never written** — the contingency it guarded against does not occur.
+
+### Added (R73 — live-smoke unblock + alpha cut)
+
+- **`tests/live/test_anthropic_agents_smoke.py`** — `_LIVE_MODEL = os.environ.get("CHRONOS_LIVE_MODEL", "Claude Sonnet 4.6")` constant resolved at module import. Three sites updated to pass the resolved model into `ClaudeAgentOptions`: the standalone `query()` probe and both fixture builders. Default `"Claude Sonnet 4.6"` is the OneAPI-canonical spaced-PascalCase form; canonical Anthropic kebab-case (e.g. `claude-sonnet-4-5`) usable via the env override for direct-Anthropic consumers. Bug fixes uncovered while making the suite green: (a) `SqliteStore.list_nodes` does not exist — replaced with the actual API `get_nodes_for_run(run_id)`, (b) assistant-kind detection was case-sensitive against `node_name.startswith("assistant")` while the recorder names nodes `AssistantMessage` (PascalCase) — fix with `.lower().startswith("assistant")`, (c) `importlib.util.spec_from_file_location` + `exec_module` does not register the loaded module in `sys.modules`, breaking dataclass `__module__` resolution — fix with `sys.modules[spec.name] = mod` insertion before `exec_module`. After all four fixes: `CHRONOS_LIVE=1 pytest tests/live/test_anthropic_agents_smoke.py` reports **2 passed** against OneAPI Bedrock backend.
+- **`scripts/dogfood/arc_b_slice_1_smoke.py`** — `make_runtime` now reads `CHRONOS_DOGFOOD_MODEL` env (default `"Claude Sonnet 4.6"`) so the dogfood script uses the same OneAPI-canonical default as the live test. Three-tier probe (T1 import / T2 query stream `'pong'` / T3 recorder roundtrip 3-node FN+LLM+END) is now the `[OK] R72 alpha release gate is open` empirical proof — output line preserved verbatim from R72's gate definition.
+- **`docs/progress/2026-05-14-round-73.md`** — full R73 progress doc (10.7 KB, §0 cover sheet + §1 starting state + §2 work done + §3 evidence + §4 invariants triggered + §5 unmet items / hand-off to R74 + §6 next-round forward plan + §7 commit log + §8 author note). Spike-refutation lesson elevated to project-wide invariant: any release gating on a previous round's untested research conclusion must re-run the smallest possible disprover before tagging.
+- **`docs/CONTEXT.md` §5/§6 + footer** — refreshed with R73 outcome (Arc B status table + invariant additions + R74 forward plan replacing the stale R73 replay-seam plan).
+- **`README.md`** — major rewrite: Phase 4 Arc A marked complete at v0.6.0 (4 new capability rows: compare slice 1-3 / auto-pivot / matrix / `chronos tree`), Arc B slice 1 alpha row added, test count baseline updated 470 → 606, repository layout reflects `adapters/anthropic_agents/` + `scripts/dogfood/` + `docs/adapters/`, "Why N-run compare matters" section added as Phase 4 Arc A headline narrative.
+
+### Added (R72 — A2 close-out, no new code)
+
+- Verified gates green (`pytest -q --no-cov` 606 pass / 5 skip / mypy clean / ruff clean) without code changes; committed and pushed R71's WIP via gh-proxy. CONTEXT §5/§6 + R72 progress doc updated. Adapter-1-3 zero-regression streak R52→R72 = 20 rounds.
+
+### Added (R71 — Arc B slice 1 live-smoke harness)
+
+- **`scripts/dogfood/arc_b_slice_1_smoke.py`** (~13.6 KB) — three-tier live probe (T1 import + module-level adapter resolve / T2 stream `query()` and assert `'pong'` / T3 record + `get_nodes_for_run` roundtrip). Designed to fail loudly with named-step diagnostics rather than silently — explicit `[FAIL]` / `[OK]` markers, exit codes per tier.
+- **`tests/live/test_anthropic_agents_smoke.py`** (~8.9 KB) — 2 `CHRONOS_LIVE`-gated tests covering the same surface as the dogfood (recorder roundtrip + dogfood-script execution). Originally hardcoded to canonical Anthropic kebab-case model id; R73 made the model env-driven.
+- **`docs/adapters/anthropic_agents.md`** (~5.8 KB) — second per-adapter doc (after the implicit doc baseline established for langgraph / autogen / crewai). Sections: Install / Config / Usage / Limitations / Known Issues. Establishes the `docs/adapters/<name>.md` filename + section-order convention for the langgraph + autogen backfill in a later round.
+- **`pyproject.toml`** — `[[tool.mypy.overrides]] module = "crewai.*"` and `"crewai_tools.*"` with `follow_imports = "skip"`, so the new `claude-agent-sdk` extra (which co-installs `crewai` as a peer) does not break base type-checking.
+
+### Added (R70 — Arc B slice 1 core scaffold)
+
+- **`chronos.adapters.anthropic_agents` package (new, ADR-026, R70)** — fourth Chronos adapter, targeting Anthropic's official `claude-agent-sdk` (PyPI `>=0.1.80,<1.0`). Record-only scaffold in this round; live smoke comes in R71 and `fork()` (SDK-native `fork_session()` delegate) in slice 2 / R74-R75 (was tentatively scoped to R73 in the R70 commit message — `v0.7.0a1` ships record-only).
+  - `_probe.py` — `HAS_CLAUDE_SDK` / `CLAUDE_SDK_IMPORT_ERROR` / `install_hint()` following the CrewAI / AutoGen probe shape.
+  - `recorder.py` (~552 LOC) — `AnthropicAgentsRecorder` implementing `RecorderProtocol`. Seam: async iterator of `Message` objects, so the recorder works against both `ClaudeSDKClient.receive_messages()` and the top-level `query(prompt, options)` entry points. Class-name dispatch (`UserMessage` / `AssistantMessage` / `SystemMessage` / `ResultMessage`) mirroring ADR-021 CrewAI event dispatch.
+  - `__init__.py` — public exports `AnthropicAgentsRecorder` + `anthropic_agents_adapter` (module-level `AdapterProtocol` instance for R32-B dynamic registry). Docstring example uses `model="Claude Sonnet 4.6"` (R73 update from kebab-case).
+  - `fork()` = `raise NotImplementedError("slice 2: delegate to claude_agent_sdk.fork_session()")` stub, ADR-026 §6 pointer.
+- **`tests/unit/test_adapter_anthropic_agents.py` (new, 577 LOC, 34 tests)** — structural conformance / usage projection / content summarisation / node-name dispatch (including `AssistantMessage + ToolUseBlock` → `:<tool>` postfix) / translate dispatch / record happy + failure + `ClaudeSDKClient`-style runtime + non-iterable rejection + SDK drift guard / fork-stub / factory channel validation / probe shape / kind-map override. All tests use in-memory async-generator duck runtimes — **no live API call, no SDK install required to run the suite**.
+- **`pyproject.toml`** — new `[project.optional-dependencies] anthropic_agents = ["claude-agent-sdk>=0.1.80,<1.0"]` extra per ADR-026 §7 (next-major ceiling, not next-minor — SDK is alpha with weekly additive-only patches). Plus `[[tool.mypy.overrides]]` for `claude_agent_sdk.*` so base type-checking stays green without the extra.
+- **`src/chronos/adapters/__init__.py`** — registered the new adapter in the public package docstring + `__all__` + module-level imports. The langgraph / autogen / crewai / anthropic_agents four-adapter enumeration is now the ADR-016 P2 baseline for v0.7.x.
 
 ### Fixed — Round 70
 
-- `src/chronos/cli/tree.py:198` — `rich_by_run.get(parent_rid, tree)` now
-  guarded with `if parent_rid is not None else tree`. Pre-existing mypy
-  `arg-type` error on HEAD (R67 regression, caught during R70 baseline
-  gate). Behaviour unchanged — `parent_rid is None` already hit the
-  fallback because `dict.get(None, default)` returned `default`.
+- `src/chronos/cli/tree.py:198` — `rich_by_run.get(parent_rid, tree)` now guarded with `if parent_rid is not None else tree`. Pre-existing mypy `arg-type` error on HEAD (R67 regression, caught during R70 baseline gate). Behaviour unchanged — `parent_rid is None` already hit the fallback because `dict.get(None, default)` returned `default`.
+
+### Notes — what `v0.7.0a1` does NOT ship
+
+- **No `fork_session()` integration** — Arc B slice 2, target R74-R75 / `v0.7.0a2`. `AnthropicAgentsRecorder.fork()` still raises `NotImplementedError`.
+- **No tool-call dispatch / no MCP server passthrough** — Arc B slice 3, target R76+ / `v0.7.0`.
+- **No ADR-027** — R69 spike #1's contingency for relay-protocol incompatibility is not needed (R73 disproved the prediction); writing the ADR would record a non-decision.
+- **No README screenshots refresh for Arc A** — R66-A added compare/matrix sections; the screenshot refresh is queued for a docs polish round (Option B in R74 forward plan).
 
 ## [0.6.0] — 2026-05-12 (Round 65 + Round 66 + Round 67)
 

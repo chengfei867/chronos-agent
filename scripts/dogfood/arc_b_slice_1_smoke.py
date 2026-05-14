@@ -230,7 +230,7 @@ async def run_recorder_roundtrip(runtime_factory) -> dict[str, Any]:
         return ref.run_id  # type: ignore[return-value]
 
     run_id = await loop.run_in_executor(None, _drive)
-    nodes = list(store.list_nodes(run_id))
+    nodes = list(store.get_nodes_for_run(run_id))
     return {
         "db": str(db),
         "run_id": run_id,
@@ -261,11 +261,16 @@ def main() -> int:
 
     from claude_agent_sdk import ClaudeAgentOptions, query
 
+    # Default to a model name that the baidu-int OneAPI relay accepts
+    # (Bedrock-backed Claude Sonnet 4.6 — note the spaced PascalCase form).
+    # Override via CHRONOS_DOGFOOD_MODEL for direct anthropic.com or other relays.
+    default_model = os.environ.get("CHRONOS_DOGFOOD_MODEL", "Claude Sonnet 4.6")
+
     def make_runtime():
         # max_turns=1 caps the cost at a single round-trip.
         return query(
             prompt="Reply with exactly the single word: pong",
-            options=ClaudeAgentOptions(max_turns=1),
+            options=ClaudeAgentOptions(max_turns=1, model=default_model),
         )
 
     # --- Tier 2 ---

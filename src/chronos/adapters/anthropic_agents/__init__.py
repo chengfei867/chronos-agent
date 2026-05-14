@@ -42,7 +42,7 @@ Usage pattern (designed; live confirmation in R71):
     from claude_agent_sdk import ClaudeSDKClient, ClaudeAgentOptions
     from chronos.adapters.anthropic_agents import anthropic_agents_adapter
 
-    client = ClaudeSDKClient(options=ClaudeAgentOptions(model="claude-sonnet-4-5"))
+    client = ClaudeSDKClient(options=ClaudeAgentOptions(model="Claude Sonnet 4.6"))
     recorder = anthropic_agents_adapter.build_recorder(store)
     with recorder.record(client, thread_id="t1") as ref:
         await client.connect()
