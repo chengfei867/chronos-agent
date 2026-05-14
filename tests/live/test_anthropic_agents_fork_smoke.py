@@ -179,8 +179,7 @@ def test_anthropic_agents_fork_smoke(sqlite_store) -> None:
             anchor = n
             break
     assert anchor is not None, (
-        "no parent node carried session_id+uuid in state_after — "
-        "record() integration regressed"
+        "no parent node carried session_id+uuid in state_after — record() integration regressed"
     )
 
     # ---- Fork + child run -------------------------------------------------
@@ -230,12 +229,7 @@ def test_anthropic_agents_fork_dogfood_script_executable(tmp_path: Path) -> None
     import importlib.util
     import sys
 
-    script = (
-        Path(__file__).resolve().parents[2]
-        / "scripts"
-        / "dogfood"
-        / "arc_b_slice_2_fork.py"
-    )
+    script = Path(__file__).resolve().parents[2] / "scripts" / "dogfood" / "arc_b_slice_2_fork.py"
     assert script.exists(), f"dogfood script missing: {script}"
 
     spec = importlib.util.spec_from_file_location("arc_b_slice_2_fork", script)

@@ -4,6 +4,18 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added (R75 — ADR-026 §5 amendment: `state_after` seed-coordinate contract)
+
+- **ADR-026 §5 (R75 amendment)** — codifies the implicit inter-method contract between `AnthropicAgentsRecorder.record()` and `.fork()`. R74 implementation accidentally relied on R70's `record()` stamping `uuid` + `session_id` onto `Node.state_after`; the contract is now explicit and binding from R75 onwards. New section enumerates the five metadata keys, marks `uuid`/`session_id` as the fork-critical pair (loud failure on fork), separates them from observability-only keys (`stop_reason`/`total_cost_usd`/`duration_ms`) which may evolve without amendment.
+- **2 new unit tests** in `tests/unit/test_adapter_anthropic_agents.py` (§6.1 block) — `test_record_state_after_carries_seed_coordinates_for_assistant` + `_for_result`. Exercise the `record()`-side of the contract independently of fork tests, so a future refactor of the metadata-stamping loop fails loud at the `record()` layer rather than waiting for fork tests to surface it.
+- **Source-level guard comment** in `src/chronos/adapters/anthropic_agents/recorder.py` lines 304-310 — points future maintainers to ADR-026 §5 and names the enforcing tests, raising the cost of accidentally narrowing the loop.
+
+### Changed
+
+- Test count: 611 → **613** (+2 unit tests, both pure-additive).
+- Adapter-1-3 zero-regression streak: R52→R75 = **23 rounds** (still longest in project history).
+- ADR-026 status header annotated with R75 amendment marker (in-place per R57 invariant).
+
 ### Added (R74 — Arc B slice 2: fork_session integration)
 
 - **`AnthropicAgentsRecorder.fork()`** — full implementation replacing the R71 `NotImplementedError("R73…")` stub. Delegates to `claude_agent_sdk.fork_session(parent_session_id, up_to_message_id=parent_uuid, title=task_description)`, reads anchor `session_id`+`uuid` from `parent_node.state_after` (zero schema change — R70's `record()` already stamps them), yields a `ForkRef` with `sdk_session_id` (for `ClaudeAgentOptions(resume=…)`) and `submit_runtime(runtime)` (so the caller drives the resumed `ClaudeSDKClient` themselves and lets the recorder drain it). On `__exit__`, drains the submitted runtime through the same `_consume()` pipeline as `record()`, stamps `RunStatus.COMPLETED` / `FAILED` based on user-block outcome, and atomically writes the `Fork` row inside the child-node transaction so parent→child→fork referential integrity holds even on user-block exceptions.

@@ -147,6 +147,36 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
+**截至 Round 75 结束 (2026-05-15 CST 01:00 cron slot — single-slot defensive round) — Phase 4 Arc B slice 2 follow-on. R75 codifies R74's accidentally-relied-on invariant as an explicit ADR-binding contract: ADR-026 §5 amendment names `state_after.{uuid,session_id}` as MUST keys (fork anchors) and `{stop_reason,total_cost_usd,duration_ms}` as MAY keys (observability only). Triple-redundant pin: ADR text + 2 new unit tests at §6.1 + 7-line source-comment block at `recorder.py:301-307`. Tests 611→613, all gates green. Adapter-1-3 zero-regression streak: R52→R75 = **23 rounds** (longest in project history). No tag — `[Unreleased]` continues accumulating for `v0.7.0` GA. Single commit, single push.**
+
+- 最近 progress doc: `docs/progress/2026-05-15-round-75.md` (R75 — ADR-026 §5 amendment + record/fork seed-coordinate contract)
+- 最近上份 progress doc: `docs/progress/2026-05-14-round-74.md` (R74 — Arc B slice 2 fork_session implementation)
+- 最近上上份 progress doc: `docs/progress/2026-05-14-round-73.md` (R73 — Arc B slice 1 live-smoke unblock + R69 spike refutation + v0.7.0a1 cut)
+- Round: **75** (Phase 4 Arc B slice 2 follow-on — defensive / contract-codification round, single slot): 01:00 CST cron slot, 0 blocker, picked Option B from R74's three-option hand-off. Sequence: read CONTEXT.md → read R74 progress doc → `git fetch` (resolved stale "2 commits ahead" remote-tracking ref; `origin/main`=`74b470a`) → baseline pytest 611/7 → identify gap (existing fork tests construct `state_after` by hand, miss writer-side regressions) → patch ADR-026 (status header + new §5 + §5→§6 renumber) → patch unit-test file (§6.1 block, +2 tests exercising live record() pipeline) → patch recorder.py (7-line source comment) → ruff format swept 3 files (2 R74-leftover drifts + this round's tests) → re-run gates → 613/7/0 green → CHANGELOG `[Unreleased]` R75 entry + progress doc + this CONTEXT refresh → commit + push (gh-proxy.com).
+  - **Files**: 3 modified (`docs/decisions/ADR-026-arc-b-scope.md`, `src/chronos/adapters/anthropic_agents/recorder.py` +7-line comment only, `tests/unit/test_adapter_anthropic_agents.py` +2 tests) + 2 doc (CHANGELOG `[Unreleased]` R75 entry, `docs/progress/2026-05-15-round-75.md`).
+  - **Tests**: +2 unit (`test_record_state_after_carries_seed_coordinates_for_assistant` + `_for_result`), pure additive. Both exercise the live `recorder.record()` pipeline (not hand-crafted `state_after` dicts) so a future narrowing of the metadata-stamping loop fails loud at the `record()` layer, not waiting for fork tests to surface it.
+  - **No new ADR** — R57 doctrine (in-place ADR amendment for evolved corollaries). Status header bumped, contract added inline as §5.
+  - **No tag cut** — v0.7.0a2 still current; `[Unreleased]` continues accumulating toward `v0.7.0` GA at slice 3 close-out.
+  - **Untracked left untouched**: `frontend/pnpm-{lock,workspace}.yaml` (out of scope this round; project standardised on npm at Arc A R63; `.gitignore` entry queued as Option D for R76).
+
+- **R75 关键发现 (上墙)**:
+  - **NEW project-level invariant — "writer-side test redundancy for cross-method contracts" (R75 new)**: Any contract spanning two methods of the same class, where one writes state the other reads, must be (a) named in the relevant ADR, (b) enforced by a test exercising the writer-side INDEPENDENTLY of the reader, (c) commented at the writer's source site referencing the ADR. R74's fork tests built `state_after` by hand and wouldn't have caught a regression in `record()`'s metadata loop — that's the gap §6.1 closes. Triple-redundant pin (doc + test + source comment) survives a refactor by a maintainer who's only read one of the three. ← **new project-level invariant, candidate for skill creation**
+  - **Defensive-round pattern 三连 (R75 new, codification candidate)**: R57 (ADR-021 amendment) → R69 (disprover doctrine) → **R75 (ADR-026 §5 amendment)**. Pattern: round N+1 reads round N's progress doc, asks "what implicit contract did this feature accidentally rely on?", and if there's an answer, codifies it before round N+2 introduces a refactor that breaks it. Three confirmations elevates this from "good habit" to "explicit cron-loop ritual". Candidate skill: `defensive-followup-round` — automate the question. ← **new pattern (3rd confirmation)**
+  - **Stale remote-tracking ref trap (R75 new, recipe)**: `git status` reported "2 commits ahead of origin/main" when in reality main was already at HEAD. Cause: stale remote-tracking ref from a prior session that didn't `git fetch` after pushing. Recipe: ALWAYS `git fetch` before reading `git status` ahead/behind counts at round start. Add to cron-slot-handoff-recovery skill if not already there. ← **new recipe**
+  - **MUST vs MAY split for metadata keys (R75 new)**: ADR-026 §5 explicitly separates fork-anchor keys (MUST: `uuid`, `session_id`) from observability keys (MAY: `stop_reason`, `total_cost_usd`, `duration_ms`). MAY keys can evolve without amendment; MUST keys require ADR-level change. Pattern reusable for any future "metadata bag stamped by one method, consumed by another" contract. ← **new pattern**
+
+- **R75 产出**:
+  - `docs/decisions/ADR-026-arc-b-scope.md` — status header bumped + new §5 (R75 amendment, contract table + MUST/MAY rationale + test enforcement refs) + §5→§6 renumber.
+  - `tests/unit/test_adapter_anthropic_agents.py` — +2 unit tests (§6.1 block).
+  - `src/chronos/adapters/anthropic_agents/recorder.py` — 7-line ADR-026 §5 reference comment above metadata-stamping loop (semantic body unchanged).
+  - `CHANGELOG.md` — R75 `[Unreleased]` entry above R74 entry.
+  - `docs/progress/2026-05-15-round-75.md` (**new**, ~10.8 KB).
+  - `docs/CONTEXT.md §5/§6` (本 refresh).
+  - **零 ADR 新增 / 零 roadmap / 零 frontend / 零 CLI / 零 HTTP API / 零 core / 零 store 改动** — R75 纯 contract-codification + test slice.
+  - **无 tag cut** — `[Unreleased]` 继续累积至 `v0.7.0` GA.
+
+---
+
 **截至 Round 74 结束 (2026-05-14 CST, immediate follow-on to R73) — Phase 4 Arc B slice 2 **fork_session integration shipped**. R71 stub `NotImplementedError("R73…")` replaced with full `AnthropicAgentsRecorder.fork()` body delegating to public `claude_agent_sdk.fork_session()`. P0 probe disproved R71 stub assumption (claimed needed internal-API hooks; reality: top-level public callable + `state_after.{session_id,uuid}` already stamped by R70's `record()` — zero schema change). 5 new unit tests (happy + 5 error paths, all duck-typed) + 1 live smoke (skipif-gated, mirrors slice-1 R73 pattern) + 1 dogfood script. Tests 606→611, all green. Adapter-1-3 zero-regression streak: R52→R74 = **22 rounds** (longest in project history). No tag — accumulates in `[Unreleased]` for slice 3 + `v0.7.0` GA co-release at R75. Commit `1090052`.**
 
 - 最近 progress doc: `docs/progress/2026-05-14-round-74.md` (R74 — Arc B slice 2 fork_session implementation)
@@ -569,57 +599,71 @@ R73 是 R69→R72 4-round chain 的第一个真 disprover round, 也是 Phase 4 
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 74 — Arc B slice 2: `fork_session()` integration (md+code; 2-slot pre-budget per R64 impl-round rule)**
+**Round 76 — Option D warm-up + Option A slice 3 P0 entry (md+code; 1-2 slot pre-budget)**
 
-战略视角: R73 (this slot) 完整 unblock 了 Arc B — 跑通 OneAPI ↔ `claude-agent-sdk` live-smoke, 推翻 R69 spike #1 prediction (relay incompat 是 model-name-format 问题, 不是 protocol 问题), cut 了 v0.7.0a1 alpha. **R74 = first impl round on the now-unblocked Arc B**, 目标是把 `client.fork_session()` 集成到 `AnthropicAgentsRecorder` 让 Arc B 从 record-only 升级到 record+fork.
+战略视角: R75 (this slot) 把 R74 偶然依赖的 `record()`→`fork()` invariant 显式 codify 进 ADR-026 §5 + 单元测试 + 源码注释 (defensive round). Arc B slice 2 现在的契约面齐整了, slice 3 (tool-call dispatch + MCP passthrough) 是 v0.7.0 GA 路上还差的最大一块. R76 建议先做 5-min 的 Option D (gitignore for pnpm artefacts) 暖身, 然后开 Option A slice 3 的 P0 entry — 不必一轮做完, 把架子搭起来就算赢.
 
-### Option A (首选, impl): R74 Arc B slice 2 `fork_session()` 集成
+### Option D (30 sec, 暖身, R75 deferred): `.gitignore` for pnpm artefacts
 
-- **P0** Pre-flight: `git ls-remote origin main` (stale-ref trap #9) + `git fetch` + `uv run pytest -q --no-cov` baseline (expect **606 pass / 5 skip / 0 fail**, R73 tip post-tag) + `CHRONOS_LIVE=1 pytest tests/live/test_anthropic_agents_smoke.py` (expect **2 passed**). Read R73 progress + `docs/decisions/ADR-026-arc-b-scope.md §"Slice 2"` + `src/chronos/adapters/anthropic_agents/recorder.py` (~552 LOC).
-- **P0** Verify SDK still exposes `fork_session()` on installed `claude-agent-sdk 0.1.81` — 1-line `dir(client)` probe in spike. If renamed/removed, write 1-page ADR delta amending ADR-026 §"Slice 2" (R57 in-place pattern).
-- **P0** Implement `AnthropicAgentsRecorder.fork()` per ADR-016 §A4: takes a parent `RunRef` + delta state + new `node_id`, calls `client.fork_session(...)` on the underlying SDK client, stamps a `Fork` row in `SqliteStore`, returns child `RunRef`. Invariant: parent run's nodes remain immutable (frozen-trace contract).
-- **P0** Live test `tests/live/test_anthropic_agents_fork_smoke.py` (`CHRONOS_LIVE=1` gated): record a single-turn baseline → fork → child diverges → both runs persisted → `get_forks_for_parent(parent_run_id)` returns the fork row.
-- **P1** Dogfood `scripts/dogfood/arc_b_slice_2_fork.py` showing baseline + fork in one script (mirrors R73's slice-1 probe shape).
-- **P1** CHANGELOG `[Unreleased]` Added block for R74; defer tag cut to slice 2 GA round.
+- 在 `.gitignore` 顶部加入 `frontend/pnpm-lock.yaml` + `frontend/pnpm-workspace.yaml` (项目自 R63 起 standardise on npm; pnpm 文件是本地工具 noise).
+- `git status` should drop those 2 untracked files. Single-line patch + 一句 commit message.
+- **完全可选**, 但 R75 已经在 progress doc §5 里 explicitly queued, R76 顺手做掉省得每轮看见.
+
+### Option A (主菜, impl): R76 Arc B slice 3 P0 entry — `ToolUseBlock` recorder pass
+
+- **P0** Pre-flight: `git fetch` (per R75 "stale remote-tracking ref trap" recipe — 不要省) → `uv run pytest -q --no-cov` baseline (expect **613 pass / 7 skip / 0 fail**) → read R74 progress § "slice 3 forward plan" + R75 progress § "Forward plan" + ADR-026 §4 (release plan slice 3 row) + `recorder.py` § block-summariser (~552 LOC, focus on `_summarise_blocks` & `ToolUseBlock` branch).
+- **P0** 决定一个 slice 3 sub-slice 边界 (slice 3 太大不能一轮完成). 候选: **3a = recorder-side `ToolUseBlock` + `ToolResultBlock` round-trip persistence** (单元测试 + 一个 live test, 不动 fork). 3b = fork 携带 tool-call state. 3c = MCP passthrough. 推荐 R76 = 3a only.
+- **P0** 实施 3a: 现有 recorder 已经把 `ToolUseBlock` summarise 进 `Node.state_after.content`, 但没有专门 schema 字段记录 `tool_name` / `tool_input` / `tool_use_id` 的 cross-Node 链接 (一个 `AssistantMessage(ToolUseBlock)` Node 后面跟一个 `UserMessage(ToolResultBlock)` Node, 通过 `tool_use_id` 关联). 加一个 `tool_links` 字段或 single sidecar table — 走 ADR 路 (ADR-026 §X 子节扩展).
+- **P0** 单元测试 — 至少 3 个: `test_record_tool_use_block_persists_id`, `test_record_tool_result_block_links_to_use`, `test_unmatched_tool_result_does_not_break_record`.
+- **P1** Live smoke (`tests/live/test_anthropic_agents_tool_smoke.py`) — `CHRONOS_LIVE=1` gated, 一个真实 multi-turn tool-call 跑, 验证 record() 能持久化 tool round-trip.
+- **P1** Dogfood `scripts/dogfood/arc_b_slice_3a_tools.py` — 三层 exit-code semantics 跟 slice 1/2 对齐.
+- **P1** CHANGELOG `[Unreleased]` R76 Added block; 依然不 cut tag (累积至 `v0.7.0` GA).
 - **P1** Progress doc + CONTEXT §5/§6 refresh.
-- Gate expect: 607-610 pass / 5-6 skip / 0 fail. mypy clean. ruff clean. Adapter-1-3 zero-regression streak R72→R74 = 5 rounds (R73 didn't touch 1-3 either).
+- Gate expect: 616-620 pass / 7-8 skip / 0 fail. mypy clean. ruff clean. Adapter-1-3 zero-regression streak R52→R76 = **24 rounds**.
 
-### Option B (兜底): docs polish slot
+### Option B (兜底): defensive-followup-round skill creation
 
-If `fork_session()` SDK API is unstable on 0.1.81 or live-test infra is flaky, pivot to: README polish round 2 (R73 README pass was structural catchup; tone + screenshots remain), bundle-size budget for `dist/assets/index-*.js` (Vite warns >500kB, no enforced gate yet), or per-adapter doc backfill for `docs/adapters/langgraph.md` + `autogen.md`. 30-60 min, zero risk.
+R75 §5 把 "defensive round 三连" 标成了 codification candidate (R57 → R69 → R75). 如果 R76 cron slot 时间紧或者出现 SDK API 不稳/环境问题, 退而 spawn 一个新 skill `defensive-followup-round` (in `~/.hermes/skills/software-development/`), 把 R75 这种 "读上一轮 progress, 找 implicit contract, codify 之" 的流程模板化, 包含 trigger conditions + 三步 ritual + 例子 (R57/R69/R75). 30-45 min.
+
+### Option C (carried over from R74, 大头, 不建议 R76 单轮做): Web UI compare slice
+
+R74 hand-off 提到的 cross-cutting work item, 把 Arc A 的 compare slice 1-3 + matrix 拉进 Web UI. Multi-slot, R76 不建议碰 — 应该有专门的 planning round (R77 或 R78) 先写 plan 再开工.
 
 ### 推荐
 
-**Option A.** Arc B slice 1 已经 alpha-shipped, slice 2 是 the natural next slice per ADR-026 release plan. R73 已经把 live-smoke infra 建好了, R74 复用同一套 (`CHRONOS_LIVE=1` + `_LIVE_MODEL`).
+**D (30 sec) → A (R76 主菜)**. R75 把 ADR + 测试都 hardened 了, slice 2 契约面是齐整的, R76 该往 slice 3 推. P0 只覆盖 3a (`ToolUseBlock` 持久化), 不强求一轮完成全部 slice 3. 如果 P0 实施过半发现 SDK ergonomic 比预想麻烦, P1 部分推到 R77, 也算赢.
 
-### R74 非目标 (硬红线)
+### R76 非目标 (硬红线)
 
-- ❌ 不 silent extender extractor contract — ADR-015 amendment 必须 in-place.
-- ❌ 不动 adapter-1-3 (langgraph/autogen/crewai) — zero-regression streak R52→R73 已 21 轮.
-- ❌ 不 bump 到 0.7.0 GA — slice 2 ship 后再考虑 GA cut, 视稳定度可能要再来一个 0.7.0a2 / 0.7.0b1.
-- ❌ 不写 ADR-027 — R69 spike #1 contingency 已被 R73 证明不需要.
-- ❌ 不 silently 改 `_LIVE_MODEL` 默认值 — 当前 `"Claude Sonnet 4.6"` 是 OneAPI 验证过的, 改要带 ADR delta.
+- ❌ 不 cut v0.7.0 GA — slice 3 至少 2-3 轮才能稳, R76 是 entry round 不是 close-out round.
+- ❌ 不动 adapter-1-3 (langgraph/autogen/crewai) — zero-regression streak R52→R75 已 23 轮, 这是项目最长护城河.
+- ❌ 不 silently 改 `recorder.py` 的 metadata-stamping loop (R75 ADR-026 §5 binding contract — MUST keys uuid/session_id 不能丢).
+- ❌ 不写新 ADR 除非 slice 3a schema 改动确实需要 (添 sidecar table 算 schema change → ADR 必须). 添单字段 `tool_links` 到 `state_after` 不算 schema change (state_after is jsonb-equivalent).
+- ❌ 不 commit `frontend/pnpm-{lock,workspace}.yaml` 真文件 — 它们是 noise. Option D 是 gitignore 它们, 不是 commit 它们.
 
 ### 工期估计
 
-R74 Option A = 1.5-2.5 hours (SDK API verify + impl + live test + dogfood + docs). Option B = 30-60 min.
+R76 Option D = 30 sec. Option A P0-only = 1-1.5 hours. Option A P0+P1 全做 = 2-3 hours, 不强求. Option B = 30-45 min.
 
-### R74 Hand-off invariants (R73 agent → R74 agent)
+### R76 Hand-off invariants (R75 agent → R76 agent)
 
 - 工作窗口 0-11 CST (cron) 或 manual chat slot.
-- R74 是 **first Arc B impl round on unblocked infra** (live-smoke 已验证). Unit test count baseline 606.
-- 开场命令: `git ls-remote origin main` + `git fetch` + `uv run pytest -q --no-cov` + `CHRONOS_LIVE=1 pytest tests/live/`.
-- Adapter-1-3 zero-regression streak R52→R73 = 21 轮 (R73 only touched anthropic_agents code path).
-- v0.7.0a1 已 tagged + pushed 在 R73; R74 不 re-tag, 累积变更进 `[Unreleased]`.
-- Live test 默认模型: `"Claude Sonnet 4.6"`, override via `CHRONOS_LIVE_MODEL` env. 这是 R73 实测 OneAPI 上唯一 work 的 spaced-PascalCase 形式 — 不是随便起的名.
-- R74 round-end QQ 战报模板: fork-impl pass/fail + slice 2 advancement + adapter-1-3 streak count + R75 fork direction.
+- R76 是 **slice 3 entry round on R75-hardened slice 2 contract**. Unit test count baseline 613.
+- 开场命令: `git fetch` (R75 stale-ref trap recipe) + `uv run pytest -q --no-cov` + 读 R75 progress doc + 读 ADR-026 (含 §5).
+- Adapter-1-3 zero-regression streak R52→R75 = **23 rounds** (project history longest, intentionally protected).
+- `[Unreleased]` 包含 R74 + R75 entries; R76 在 R75 entry 上方插入新 R76 entry.
+- ADR-026 §5 是 R75 新增的 binding contract: `state_after.{uuid,session_id}` 是 MUST keys (fork anchors). 改 `recorder.py:308` 那个 metadata loop 之前先读 ADR-026 §5 + 跑 §6.1 那两个测试.
+- Live test 默认模型仍 `"Claude Sonnet 4.6"` (R73 实测 OneAPI 唯一 work 的形式), 不 silently 改.
+- R76 round-end QQ 战报模板: slice 3a 进度 (P0/P1 程度) + tests delta + adapter-1-3 streak count + R77 forward direction.
 
 ### Release strategy (rolling)
 
 - v0.6.0 ✅ cut 2026-05-12 (R67) — Phase 4 Arc A 全 closed
-- **v0.7.0a1 ✅ cut 2026-05-14 (R73) — Arc B slice 1 alpha (Anthropic Agents SDK recorder + live-smoke)** ← **new this round**
-- v0.7.0a2 🚧 candidate R74-R75 — Arc B slice 2 alpha (fork_session integration)
-- v0.7.0 🚧 target R76+ GA — Arc B slice 1+2 stabilized + slice 3 (tool-call dispatch + MCP passthrough)
+- v0.7.0a1 ✅ cut 2026-05-14 (R73) — Arc B slice 1 alpha (Anthropic Agents SDK recorder + live-smoke)
+- v0.7.0a2 ✅ cut 2026-05-14 (R74) — Arc B slice 2 alpha (fork_session integration)
+- **R75 (defensive round, no tag) — ADR-026 §5 binding contract + 2 unit tests + source comment** ← **this round**
+- v0.7.0a3 🚧 candidate R76-R78 — Arc B slice 3 alpha (tool-call dispatch + MCP passthrough)
+- v0.7.0 🚧 target R78+ GA — slice 1+2+3 stabilized
 
 
 ## 7. 文档索引 (当你需要深入某个主题)

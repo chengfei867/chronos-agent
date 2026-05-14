@@ -301,7 +301,14 @@ class AnthropicAgentsRecorder:
         content = getattr(msg, "content", None)
         state = _summarise_content(content)
 
-        # Add common metadata fields to state_after
+        # Add common metadata fields to state_after.
+        # ADR-026 §5 (R75): `uuid` and `session_id` are the FORK CONTRACT —
+        # `AnthropicAgentsRecorder.fork()` reads them off `parent_node.state_after`
+        # to call `claude_agent_sdk.fork_session(session_id, up_to_message_id=uuid)`.
+        # DO NOT remove these two keys without amending ADR-026 §5 first;
+        # `test_record_state_after_carries_seed_coordinates_for_*` enforces this.
+        # The remaining three (stop_reason / total_cost_usd / duration_ms) are
+        # observability-only and may evolve without ADR amendment.
         for attr in ("uuid", "session_id", "stop_reason", "total_cost_usd", "duration_ms"):
             val = getattr(msg, attr, None)
             if val is not None:
@@ -584,14 +591,12 @@ class AnthropicAgentsRecorder:
         parent_run = self._store.get_run(parent_run_id)
         if parent_run is None:
             raise AdapterError(
-                f"AnthropicAgentsRecorder.fork: parent_run_id={parent_run_id!r} "
-                "not found in store"
+                f"AnthropicAgentsRecorder.fork: parent_run_id={parent_run_id!r} not found in store"
             )
         parent_node = self._store.get_node(at_node_id)
         if parent_node is None:
             raise AdapterError(
-                f"AnthropicAgentsRecorder.fork: at_node_id={at_node_id!r} "
-                "not found in store"
+                f"AnthropicAgentsRecorder.fork: at_node_id={at_node_id!r} not found in store"
             )
         if parent_node.run_id != parent_run_id:
             raise AdapterError(

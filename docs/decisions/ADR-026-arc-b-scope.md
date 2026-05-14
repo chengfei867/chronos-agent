@@ -1,6 +1,6 @@
 # ADR-026: Arc B Scope — Fourth Adapter is Anthropic Agents SDK (Accepted)
 
-**Status**: Accepted (R69, 2026-05-13 — promoted in-place from R68 Draft per R57 invariant)
+**Status**: Accepted (R69, 2026-05-13 — promoted in-place from R68 Draft per R57 invariant; R75 amendment §5 codifies inter-method `state_after` contract)
 **Date**: 2026-05-13 (Drafted R68; Accepted R69)
 **Deciders**: chengfei867, Hermes Agent
 **Supersedes**: the preliminary Arc B candidate table in [ADR-023][ADR-023] §Arc B (R56 snapshot, superseded by R68 research)
@@ -89,7 +89,72 @@ Criteria for invoking the fallback (must meet ALL):
 
 If any criterion fails, stick with primary (Anthropic Agents SDK) and document the MCP limitation in the v0.7.0 release notes.
 
-### 5. What Arc B slice 2+ looks like
+### 5. Inter-method contract — `state_after` seed coordinates (R75 amendment)
+
+The Anthropic Agents adapter's `record()` and `fork()` are joined by an
+**implicit contract** on the shape of `Node.state_after`. R74 implemented
+`fork()` against a contract that R70's `record()` happened to honour;
+this amendment makes the contract **explicit** so future refactors of
+either method cannot silently break the other.
+
+#### Contract (binding from R75 onwards)
+
+When `AnthropicAgentsRecorder.record()` consumes an `AssistantMessage`
+or `ResultMessage` from the SDK message stream, it **MUST** stamp the
+following keys onto the resulting `Node.state_after` dict whenever the
+upstream message exposes them as non-None attributes:
+
+| Key | Source | Used by |
+|---|---|---|
+| `uuid` | `msg.uuid` | `fork()` as `up_to_message_id` anchor |
+| `session_id` | `msg.session_id` | `fork()` as parent SDK session anchor |
+| `stop_reason` | `msg.stop_reason` | observability only (no fork dependency) |
+| `total_cost_usd` | `msg.total_cost_usd` | observability only |
+| `duration_ms` | `msg.duration_ms` | observability only |
+
+Of these, **`uuid` and `session_id` are the fork-critical pair**. If
+either is missing on the anchor node passed to `fork()`, the adapter
+raises `AdapterError("no SDK session_id …")` / `("no SDK message uuid
+…")`. `record()` MUST NOT silently drop them when the SDK exposes them.
+
+#### Why "MUST" and not "SHOULD"
+
+R74 P0 probe disproved an R71 assumption that `fork_session()` required
+internal-API hooks; the actual integration was trivial because R70's
+`record()` had already (incidentally) captured the right seed
+coordinates. That was a happy accident. Codifying this now turns the
+accident into a contract — the next round that touches `record()` will
+see this section and not regress the field set.
+
+#### Test enforcement
+
+Two unit tests in `tests/unit/test_adapter_anthropic_agents.py` enforce
+this contract independently of the fork tests:
+
+- `test_record_state_after_carries_seed_coordinates_for_assistant` — an
+  `AssistantMessage` with `uuid` + `session_id` populated on the SDK
+  side must produce a `Node` with both keys in `state_after`.
+- `test_record_state_after_carries_seed_coordinates_for_result` — same
+  assertion for `ResultMessage`.
+
+If a future refactor narrows the loop on lines 304-308 of `recorder.py`
+(e.g., removes `session_id` from the metadata-stamping list), these
+tests fail loudly **before** the fork integration tests do — preserving
+the R74 invariant: "no release-gating contract left untested between
+methods of the same module."
+
+#### Out of scope for this contract
+
+- `UserMessage` / `SystemMessage` are explicitly **NOT** required to
+  carry `uuid` + `session_id` (the SDK does not stamp them on those
+  message classes pre-`AssistantMessage`); `fork()` correctly rejects
+  attempting to anchor on such nodes (`test_fork_rejects_anchor_without_session_id`).
+- The remaining three observability-only keys (`stop_reason`,
+  `total_cost_usd`, `duration_ms`) are not part of the fork contract;
+  they MAY be removed without ADR amendment if a future SDK version
+  drops them upstream.
+
+### 6. What Arc B slice 2+ looks like
 
 After v0.7.0 ships:
 

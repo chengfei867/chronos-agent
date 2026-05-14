@@ -413,6 +413,87 @@ def test_record_persists_run_and_nodes(
 
 
 # ---------------------------------------------------------------------------
+# 6.1 record() inter-method contract — state_after seed coordinates (R75)
+#
+# ADR-026 §5 (R75 amendment) binds record() to stamp uuid + session_id onto
+# state_after for AssistantMessage / ResultMessage when the SDK exposes them.
+# fork() depends on these as the SDK fork_session() anchor (parent_session_id +
+# up_to_message_id). These tests fail loud if a future refactor of record()'s
+# metadata-stamping loop drops either key — protecting the R74 fork() invariant
+# without going through the fork tests.
+# ---------------------------------------------------------------------------
+
+
+def test_record_state_after_carries_seed_coordinates_for_assistant(
+    recorder: AnthropicAgentsRecorder,
+    store: SqliteStore,
+) -> None:
+    """ADR-026 §5 (R75): AssistantMessage with uuid+session_id must surface
+    both onto Node.state_after. fork() reads exactly these keys."""
+    parent_uuid = "11111111-1111-1111-1111-111111111111"
+    parent_sid = "sess-aaaaaaaa"
+    messages = [
+        _msg("UserMessage", content="hi"),
+        _msg(
+            "AssistantMessage",
+            content=[_blk("TextBlock", text="hello")],
+            model="claude-sonnet-4-5",
+            uuid=parent_uuid,
+            session_id=parent_sid,
+        ),
+    ]
+    runtime = _aiter(messages)
+    with recorder.record(runtime, thread_id="t-state-asst") as ref:
+        pass
+
+    assert ref.run_id is not None
+    nodes = store.get_nodes_for_run(ref.run_id)
+    asst = next(n for n in nodes if n.node_name == "AssistantMessage")
+    assert asst.state_after.get("uuid") == parent_uuid, (
+        "ADR-026 §5: AssistantMessage state_after must carry uuid (fork anchor)"
+    )
+    assert asst.state_after.get("session_id") == parent_sid, (
+        "ADR-026 §5: AssistantMessage state_after must carry session_id (fork anchor)"
+    )
+
+
+def test_record_state_after_carries_seed_coordinates_for_result(
+    recorder: AnthropicAgentsRecorder,
+    store: SqliteStore,
+) -> None:
+    """ADR-026 §5 (R75): ResultMessage with uuid+session_id must surface
+    both onto Node.state_after. Forking from a ResultMessage anchor is a
+    supported usage pattern (end-of-turn fork)."""
+    result_uuid = "22222222-2222-2222-2222-222222222222"
+    result_sid = "sess-bbbbbbbb"
+    messages = [
+        _msg("UserMessage", content="hi"),
+        _msg("AssistantMessage", content=[_blk("TextBlock", text="hello")]),
+        _msg(
+            "ResultMessage",
+            stop_reason="end_turn",
+            uuid=result_uuid,
+            session_id=result_sid,
+            total_cost_usd=0.0001,
+            duration_ms=42,
+        ),
+    ]
+    runtime = _aiter(messages)
+    with recorder.record(runtime, thread_id="t-state-result") as ref:
+        pass
+
+    assert ref.run_id is not None
+    nodes = store.get_nodes_for_run(ref.run_id)
+    result = next(n for n in nodes if n.node_name == "ResultMessage")
+    assert result.state_after.get("uuid") == result_uuid
+    assert result.state_after.get("session_id") == result_sid
+    # observability-only keys also surface (not part of fork contract but present)
+    assert result.state_after.get("stop_reason") == "end_turn"
+    assert result.state_after.get("total_cost_usd") == 0.0001
+    assert result.state_after.get("duration_ms") == 42
+
+
+# ---------------------------------------------------------------------------
 # 7. record() failure path
 # ---------------------------------------------------------------------------
 
@@ -596,11 +677,14 @@ def test_fork_happy_path_persists_run_nodes_and_fork_row(
 
 
 def test_fork_rejects_unknown_parent_run(recorder: AnthropicAgentsRecorder) -> None:
-    with pytest.raises(AdapterError, match="parent_run_id="), recorder.fork(
-        runtime=None,
-        parent_run_id="00000000-0000-0000-0000-000000000000",
-        at_node_id="00000000-0000-0000-0000-000000000001",
-        child_thread_id="child",
+    with (
+        pytest.raises(AdapterError, match="parent_run_id="),
+        recorder.fork(
+            runtime=None,
+            parent_run_id="00000000-0000-0000-0000-000000000000",
+            at_node_id="00000000-0000-0000-0000-000000000001",
+            child_thread_id="child",
+        ),
     ):
         pass
 
@@ -628,18 +712,19 @@ def test_fork_rejects_node_from_different_run(
     with recorder.record(_FakeClient(messages=[bsst]), thread_id="t-b") as ref_b:
         pass
     assert ref_a.run_id and ref_b.run_id
-    with pytest.raises(AdapterError, match="does not belong"), recorder.fork(
-        runtime=None,
-        parent_run_id=ref_a.run_id,
-        at_node_id=ref_b.node_ids[0],
-        child_thread_id="t-c",
+    with (
+        pytest.raises(AdapterError, match="does not belong"),
+        recorder.fork(
+            runtime=None,
+            parent_run_id=ref_a.run_id,
+            at_node_id=ref_b.node_ids[0],
+            child_thread_id="t-c",
+        ),
     ):
         pass
 
 
-def test_fork_rejects_same_thread_id(
-    recorder: AnthropicAgentsRecorder, store: SqliteStore
-) -> None:
+def test_fork_rejects_same_thread_id(recorder: AnthropicAgentsRecorder, store: SqliteStore) -> None:
     asst = _msg(
         "AssistantMessage",
         uuid="cccc1111-cccc-cccc-cccc-cccccccccccc",
@@ -650,11 +735,14 @@ def test_fork_rejects_same_thread_id(
     with recorder.record(_FakeClient(messages=[asst]), thread_id="same") as ref:
         pass
     assert ref.run_id
-    with pytest.raises(AdapterError, match="must differ from parent"), recorder.fork(
-        runtime=None,
-        parent_run_id=ref.run_id,
-        at_node_id=ref.node_ids[0],
-        child_thread_id="same",  # same as parent
+    with (
+        pytest.raises(AdapterError, match="must differ from parent"),
+        recorder.fork(
+            runtime=None,
+            parent_run_id=ref.run_id,
+            at_node_id=ref.node_ids[0],
+            child_thread_id="same",  # same as parent
+        ),
     ):
         pass
 
@@ -667,11 +755,14 @@ def test_fork_rejects_anchor_without_session_id(
     with recorder.record(_FakeClient(messages=[sysm]), thread_id="t-sys") as ref:
         pass
     assert ref.run_id
-    with pytest.raises(AdapterError, match="no SDK session_id"), recorder.fork(
-        runtime=None,
-        parent_run_id=ref.run_id,
-        at_node_id=ref.node_ids[0],
-        child_thread_id="t-sys-child",
+    with (
+        pytest.raises(AdapterError, match="no SDK session_id"),
+        recorder.fork(
+            runtime=None,
+            parent_run_id=ref.run_id,
+            at_node_id=ref.node_ids[0],
+            child_thread_id="t-sys-child",
+        ),
     ):
         pass
 
@@ -706,12 +797,15 @@ def test_fork_persists_failed_status_on_user_block_exception(
     )
     monkeypatch.setitem(sys.modules, "claude_agent_sdk", fake_sdk)
 
-    with pytest.raises(RuntimeError, match="boom"), recorder.fork(
-        runtime=None,
-        parent_run_id=ref.run_id,
-        at_node_id=ref.node_ids[0],
-        child_thread_id="t-d-child",
-    ) as f_ref:
+    with (
+        pytest.raises(RuntimeError, match="boom"),
+        recorder.fork(
+            runtime=None,
+            parent_run_id=ref.run_id,
+            at_node_id=ref.node_ids[0],
+            child_thread_id="t-d-child",
+        ) as f_ref,
+    ):
         raise RuntimeError("boom")
 
     # Even on failure ref.child_run_id was populated by the finally block
