@@ -334,11 +334,28 @@ class AnthropicAgentsRecorder:
                 blk_input = getattr(blk, "input", None)
                 if isinstance(blk_input, dict):
                     tool_input = dict(blk_input)
+                # ADR-026 §5.1 (R76, slice 3a): surface ToolUseBlock.id as
+                # `state_after["tool_use_id"]` so a downstream consumer can JOIN
+                # the matching ToolResultBlock node (which carries the same
+                # tool_use_id) without parsing the nested ``state_after.blocks``
+                # list. This is the cross-Node linkage anchor for slice-3 tool
+                # round-trip queries; it is NOT a schema change (state_after is
+                # JSON-bag) but IS a public contract pin —
+                # `test_record_tool_use_block_persists_id` enforces it.
+                blk_id = getattr(blk, "id", None)
+                if isinstance(blk_id, str) and blk_id:
+                    state["tool_use_id"] = blk_id
         # ToolResultBlock arrives inside UserMessage.content per R69 §1.5
         if cls == "UserMessage" and isinstance(content, list):
             result_blocks = [b for b in content if type(b).__name__ == "ToolResultBlock"]
             if len(result_blocks) == 1:
                 blk = result_blocks[0]
+                # ADR-026 §5.1 (R76, slice 3a): surface ToolResultBlock.tool_use_id
+                # symmetric with the AssistantMessage(ToolUseBlock) case above.
+                # `test_record_tool_result_block_links_to_use` enforces this.
+                blk_tu_id = getattr(blk, "tool_use_id", None)
+                if isinstance(blk_tu_id, str) and blk_tu_id:
+                    state["tool_use_id"] = blk_tu_id
                 if getattr(blk, "is_error", False):
                     error_message = repr(getattr(blk, "content", ""))[:500]
                 else:

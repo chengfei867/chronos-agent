@@ -12,6 +12,10 @@ build/
 .next/
 *.tsbuildinfo
 
+# Project standardised on npm at Arc A R63 — pnpm artefacts are local-tool noise
+frontend/pnpm-lock.yaml
+frontend/pnpm-workspace.yaml
+
 # Python (reserved — may not apply depending on ADR-001)
 __pycache__/
 *.py[cod]

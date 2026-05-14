@@ -87,6 +87,10 @@ class _StubBlockBase:
     content: Any = None
     thinking: str | None = None
     signature: str | None = None
+    # ADR-026 §5.1 (R76, slice 3a): ToolUseBlock.id is the cross-Node link
+    # anchor; ToolResultBlock carries the matching tool_use_id pointing back
+    # to it. Stub block needs this slot for the slice-3a tests.
+    id: str | None = None
 
 
 @dataclass
@@ -491,6 +495,159 @@ def test_record_state_after_carries_seed_coordinates_for_result(
     assert result.state_after.get("stop_reason") == "end_turn"
     assert result.state_after.get("total_cost_usd") == 0.0001
     assert result.state_after.get("duration_ms") == 42
+
+
+# ---------------------------------------------------------------------------
+# 6.2 record() tool-use round-trip linkage — state_after.tool_use_id (R76)
+#
+# ADR-026 §5.1 (R76 amendment, slice 3a entry) binds record() to surface
+# ToolUseBlock.id (when an AssistantMessage carries exactly one ToolUseBlock)
+# and ToolResultBlock.tool_use_id (when a UserMessage carries exactly one
+# ToolResultBlock) onto Node.state_after as ``tool_use_id``. This is the
+# cross-Node JOIN anchor for slice 3 tool round-trip queries: a downstream
+# consumer asking "which assistant tool-use Node generated this tool-result
+# Node?" pivots on equality of state_after['tool_use_id'] without parsing
+# the nested state_after.blocks list.
+#
+# Not a schema change (state_after is JSON-bag) but IS a public contract pin:
+# any future narrowing of the metadata-stamping logic must keep
+# state_after['tool_use_id'] populated for these two cases. Mismatched /
+# orphan tool_result blocks must not break record() — they simply land with
+# the linkage anchor still set; downstream JOIN finds no matching use Node
+# (asymmetric tolerance, validated by
+# test_unmatched_tool_result_does_not_break_record).
+# ---------------------------------------------------------------------------
+
+
+def test_record_tool_use_block_persists_id(
+    recorder: AnthropicAgentsRecorder,
+    store: SqliteStore,
+) -> None:
+    """ADR-026 §5.1 (R76): AssistantMessage carrying single ToolUseBlock
+    surfaces ToolUseBlock.id onto state_after['tool_use_id']."""
+    tool_use_id = "toolu_01ABCdefGhi"
+    messages = [
+        _msg("UserMessage", content="please run pwd"),
+        _msg(
+            "AssistantMessage",
+            content=[
+                _blk(
+                    "ToolUseBlock",
+                    id=tool_use_id,
+                    name="bash",
+                    input={"cmd": "pwd"},
+                )
+            ],
+            model="claude-sonnet-4-5",
+        ),
+    ]
+    runtime = _aiter(messages)
+    with recorder.record(runtime, thread_id="t-tool-use") as ref:
+        pass
+
+    assert ref.run_id is not None
+    nodes = store.get_nodes_for_run(ref.run_id)
+    asst = next(n for n in nodes if n.node_name == "AssistantMessage:bash")
+    assert asst.state_after.get("tool_use_id") == tool_use_id, (
+        "ADR-026 §5.1: AssistantMessage(ToolUseBlock).state_after must "
+        "carry tool_use_id (cross-Node link anchor for slice-3 queries)"
+    )
+    # And tool_name / tool_input still flow into Node columns (R70 contract).
+    assert asst.tool_name == "bash"
+    assert asst.tool_input == {"cmd": "pwd"}
+
+
+def test_record_tool_result_block_links_to_use(
+    recorder: AnthropicAgentsRecorder,
+    store: SqliteStore,
+) -> None:
+    """ADR-026 §5.1 (R76): UserMessage carrying single ToolResultBlock
+    surfaces ToolResultBlock.tool_use_id onto state_after['tool_use_id'].
+    Asserts the JOIN: result Node's tool_use_id matches the use Node's
+    tool_use_id, byte-for-byte."""
+    tool_use_id = "toolu_01XYZuvw"
+    messages = [
+        _msg("UserMessage", content="please run pwd"),
+        _msg(
+            "AssistantMessage",
+            content=[
+                _blk("ToolUseBlock", id=tool_use_id, name="bash", input={"cmd": "pwd"})
+            ],
+            model="claude-sonnet-4-5",
+        ),
+        _msg(
+            "UserMessage",
+            content=[
+                _blk(
+                    "ToolResultBlock",
+                    tool_use_id=tool_use_id,
+                    content={"stdout": "/home/user\n"},
+                )
+            ],
+        ),
+    ]
+    runtime = _aiter(messages)
+    with recorder.record(runtime, thread_id="t-tool-roundtrip") as ref:
+        pass
+
+    assert ref.run_id is not None
+    nodes = store.get_nodes_for_run(ref.run_id)
+    use_node = next(n for n in nodes if n.node_name == "AssistantMessage:bash")
+    # Result node lands as the second UserMessage (step_index 2). Filter by
+    # presence of tool_output to pick it deterministically.
+    result_node = next(n for n in nodes if n.tool_output is not None)
+    # Both Nodes carry the SAME tool_use_id — this is the JOIN key.
+    assert use_node.state_after.get("tool_use_id") == tool_use_id
+    assert result_node.state_after.get("tool_use_id") == tool_use_id
+    assert use_node.state_after.get("tool_use_id") == result_node.state_after.get(
+        "tool_use_id"
+    ), "ADR-026 §5.1: tool_use_id must be byte-identical across linked Nodes"
+    # Output round-trip preserved.
+    assert result_node.tool_output == {"stdout": "/home/user\n"}
+
+
+def test_unmatched_tool_result_does_not_break_record(
+    recorder: AnthropicAgentsRecorder,
+    store: SqliteStore,
+) -> None:
+    """ADR-026 §5.1 (R76): An orphan ToolResultBlock (no matching
+    AssistantMessage(ToolUseBlock) earlier in the stream, e.g. a stream
+    that began mid-conversation) must NOT break record(); the result Node
+    persists with state_after['tool_use_id'] still set (linking to a
+    not-yet-seen anchor is a valid client situation when starting from a
+    forked / resumed session). Asymmetric tolerance: missing anchor is
+    observability loss, not a record() failure."""
+    orphan_tu_id = "toolu_orphaned"
+    messages = [
+        # No prior AssistantMessage(ToolUseBlock) — tool_use_id refers to a
+        # message we never observed (resumed / forked session entry).
+        _msg(
+            "UserMessage",
+            content=[
+                _blk(
+                    "ToolResultBlock",
+                    tool_use_id=orphan_tu_id,
+                    content={"stdout": "resumed"},
+                )
+            ],
+        ),
+    ]
+    runtime = _aiter(messages)
+    with recorder.record(runtime, thread_id="t-tool-orphan") as ref:
+        pass
+
+    assert ref.run_id is not None  # record() succeeded — no AdapterError
+    nodes = store.get_nodes_for_run(ref.run_id)
+    assert len(nodes) == 1
+    orphan = nodes[0]
+    # Run completed cleanly even though the use anchor is missing.
+    run = store.get_run(ref.run_id)
+    assert run is not None
+    assert run.status == RunStatus.COMPLETED
+    # The linkage anchor is still surfaced — caller can detect orphan by
+    # querying for tool_use_id with no matching ToolUseBlock node.
+    assert orphan.state_after.get("tool_use_id") == orphan_tu_id
+    assert orphan.tool_output == {"stdout": "resumed"}
 
 
 # ---------------------------------------------------------------------------

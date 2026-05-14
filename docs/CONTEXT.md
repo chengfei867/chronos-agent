@@ -147,6 +147,35 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
+**截至 Round 76 结束 (2026-05-15 CST 04:00 cron slot — combo round D + A-P0) — Phase 4 Arc B slice 3a entry. R76 lands the smallest valuable bite of slice 3: surfaces `ToolUseBlock.id` / `ToolResultBlock.tool_use_id` symmetrically onto `Node.state_after['tool_use_id']` as the cross-Node JOIN anchor for slice-3 SQL queries. ADR-026 §5.1 amendment pins this as a binding contract (in-place per R57 doctrine, mirrors R75 §5 shape: contract clauses + named test enforcement + out-of-scope subsection). Three new unit tests at §6.2 of `test_adapter_anthropic_agents.py` exercise the live `record()` pipeline (use side / both-sides JOIN equality / orphan tolerance). Combo round also clears Option D (R75-deferred): `frontend/pnpm-{lock,workspace}.yaml` added to `.gitignore` — keeps `git status` clean. Tests 613→616, all gates green. Adapter-1-3 zero-regression streak: R52→R76 = **24 rounds**. No tag — `[Unreleased]` accumulates toward `v0.7.0` GA.**
+
+- 最近 progress doc: `docs/progress/2026-05-15-round-76.md` (R76 — Option D + slice 3a tool_use_id linkage)
+- 最近上份 progress doc: `docs/progress/2026-05-15-round-75.md` (R75 — ADR-026 §5 amendment + record/fork seed-coordinate contract)
+- 最近上上份 progress doc: `docs/progress/2026-05-14-round-74.md` (R74 — Arc B slice 2 fork_session implementation)
+- Round: **76** (Phase 4 Arc B slice 3a entry — combo round, single slot): 04:00 CST cron slot, 0 blocker. Sequence: read CONTEXT §6 → `git fetch` (clean against `7096936`) → baseline 613/7 → identified 3a sub-cut from R76 plan (single-block ToolUseBlock/ToolResultBlock linkage, no schema change) → patch `.gitignore` (Option D, 4 lines + R63 cite) → patch `recorder.py` (~20 lines added in `_translate`, both branches, guarded with `isinstance(..., str) and value`) → patch `_StubBlockBase` dataclass (+`id` field) → append §6.2 (3 tests) → patch ADR-026 (insert §5.1 between §5 and §6, R57 in-place) → run targeted pytest 3/3 green → run full pytest 616/7 green → progress doc + this CONTEXT refresh → commit + push (gh-proxy.com).
+  - **Files**: 4 modified (`.gitignore`, `src/chronos/adapters/anthropic_agents/recorder.py`, `tests/unit/test_adapter_anthropic_agents.py`, `docs/decisions/ADR-026-arc-b-scope.md`) + 1 new (`docs/progress/2026-05-15-round-76.md`).
+  - **Tests**: +3 unit (`test_record_tool_use_block_persists_id` / `test_record_tool_result_block_links_to_use` / `test_unmatched_tool_result_does_not_break_record`), pure additive. All exercise live `record()` pipeline (R75 writer-side redundancy invariant honored).
+  - **No new ADR** — R57 doctrine again (in-place §5.1 amendment, sibling to R75's §5).
+  - **No tag cut** — `[Unreleased]` continues toward `v0.7.0` GA at slice 3 close-out (R78+).
+  - **No schema change** — `state_after` is JSON bag; SQLite `json_extract(state_after,'$.tool_use_id')` is the canonical query path. No new column / no sidecar / no migration.
+
+- **R76 关键发现 (上墙)**:
+  - **Combo-round pattern (R76 new, watching for confirmation)**: A "trivial deferred" item (Option D, 4 lines) + a "carve-out P0 of bigger work" item (Option A P0, 1 hour) bundled into one cron slot. Halves per-change overhead vs single-concern rounds, but only safe when the two items are logically orthogonal (gitignore vs recorder code). Different from R57/R69/R75's defensive-followup pattern — this is "opportunistic trivia + meaningful slice carve-out". Requires confirmation (R77+ may revert to single-concern if review surfaces coupling).
+  - **Sub-cut carve-out works (R76 new, slice 3a)**: Slice 3 was estimated 2-3 slots. Picked P0 = single-block tool linkage on JSON bag, deferred multi-block to P1 + fork-with-tool-substitution to P2. P0 is fully self-contained: no fork code touched, no new column, no SDK install required for tests. Pattern: when a slice exceeds slot budget, find the read-side anchor (here: the JOIN key) and ship that first; downstream features build on it without re-doing recorder work. Reusable for future big slices.
+  - **JSON bag wins again (R76 confirms R75)**: R75 added uuid/session_id to `state_after`; R76 adds tool_use_id. Both could have been new columns; both ended up as JSON keys. SQLite expression-index speed is competitive, schema migration cost is zero, and ADR-binding contract (§5 + §5.1) is sufficient for downstream reliance. JSON bag is the default carrier for cross-method linkage on this codebase. ← **2nd confirmation, project-wide pattern**
+
+- **R76 产出**:
+  - `.gitignore` — 4 lines for `frontend/pnpm-{lock,workspace}.yaml` with R63 cite (Option D, R75-deferred).
+  - `src/chronos/adapters/anthropic_agents/recorder.py` — symmetric `state_after['tool_use_id']` stamps in `_translate()` for AssistantMessage(ToolUseBlock) + UserMessage(ToolResultBlock), guarded with `isinstance(..., str) and value`.
+  - `tests/unit/test_adapter_anthropic_agents.py` — `_StubBlockBase.id` field added; new §6.2 with 3 unit tests.
+  - `docs/decisions/ADR-026-arc-b-scope.md` — new §5.1 (R76 amendment, slice 3a) between §5 (R75) and §6.
+  - `docs/progress/2026-05-15-round-76.md` (**new**, ~9.0 KB).
+  - `docs/CONTEXT.md §5/§6` (本 refresh).
+  - **零 ADR 新增 / 零 roadmap / 零 frontend / 零 CLI / 零 HTTP API / 零 core / 零 store schema 改动** — R76 纯 recorder linkage stamp + ADR amendment + tests + gitignore.
+  - **无 tag cut** — `[Unreleased]` 继续累积至 `v0.7.0` GA.
+
+---
+
 **截至 Round 75 结束 (2026-05-15 CST 01:00 cron slot — single-slot defensive round) — Phase 4 Arc B slice 2 follow-on. R75 codifies R74's accidentally-relied-on invariant as an explicit ADR-binding contract: ADR-026 §5 amendment names `state_after.{uuid,session_id}` as MUST keys (fork anchors) and `{stop_reason,total_cost_usd,duration_ms}` as MAY keys (observability only). Triple-redundant pin: ADR text + 2 new unit tests at §6.1 + 7-line source-comment block at `recorder.py:301-307`. Tests 611→613, all gates green. Adapter-1-3 zero-regression streak: R52→R75 = **23 rounds** (longest in project history). No tag — `[Unreleased]` continues accumulating for `v0.7.0` GA. Single commit, single push.**
 
 - 最近 progress doc: `docs/progress/2026-05-15-round-75.md` (R75 — ADR-026 §5 amendment + record/fork seed-coordinate contract)
@@ -599,71 +628,65 @@ R73 是 R69→R72 4-round chain 的第一个真 disprover round, 也是 Phase 4 
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 76 — Option D warm-up + Option A slice 3 P0 entry (md+code; 1-2 slot pre-budget)**
+**Round 77 — Slice 3a-P1 (multi-block tool linkage) OR slice 3b entry (fork-with-tool-substitution); 1-slot pre-budget**
 
-战略视角: R75 (this slot) 把 R74 偶然依赖的 `record()`→`fork()` invariant 显式 codify 进 ADR-026 §5 + 单元测试 + 源码注释 (defensive round). Arc B slice 2 现在的契约面齐整了, slice 3 (tool-call dispatch + MCP passthrough) 是 v0.7.0 GA 路上还差的最大一块. R76 建议先做 5-min 的 Option D (gitignore for pnpm artefacts) 暖身, 然后开 Option A slice 3 的 P0 entry — 不必一轮做完, 把架子搭起来就算赢.
+战略视角: R76 已经把 slice 3a 的 P0 (single-block tool_use_id linkage anchor) 落地了 — 写侧 stamp + 读侧 contract + 三个测试 + ADR §5.1. 现在 v0.7.0 GA 路上还差 slice 3a-P1 (multi-block) 和 slice 3b (fork 携带 tool state). R77 建议二选一, 不要都做.
 
-### Option D (30 sec, 暖身, R75 deferred): `.gitignore` for pnpm artefacts
+### Option A (推荐, 半轮): slice 3a-P1 — multi-block tool_use_ids
 
-- 在 `.gitignore` 顶部加入 `frontend/pnpm-lock.yaml` + `frontend/pnpm-workspace.yaml` (项目自 R63 起 standardise on npm; pnpm 文件是本地工具 noise).
-- `git status` should drop those 2 untracked files. Single-line patch + 一句 commit message.
-- **完全可选**, 但 R75 已经在 progress doc §5 里 explicitly queued, R76 顺手做掉省得每轮看见.
+- **背景**: R76 §5.1 明确 single-block-only ("multi-block messages intentionally do NOT receive a top-level tool_use_id"). 但 SDK 在 streaming 模式或 batched tool dispatch 下会发出 >1 ToolUseBlock 的 AssistantMessage; consumers 现在只能 fall back 到 parsing `state_after.blocks[]`.
+- **P0**: `git fetch` (R75 stale-ref recipe 不要省) + baseline 616/7. 读 R76 progress §5 ("Hand-off / next round") + ADR-026 §5.1 ("Out of scope" subsection).
+- **P0 实施**: 在 `_translate()` 里新增 `state['tool_use_ids'] = [b.id for b in tool_blocks if isinstance(b.id, str) and b.id]` 当 `len(tool_blocks) > 1`. 对称地, UserMessage 多个 ToolResultBlock → `state['tool_use_ids']`. **Single-block path 不变** (仍 stamp `state['tool_use_id']`, 字段名单数). 区分原因: 单 vs 多 在查询语义上不同 — 单数是 1:1 JOIN 锚, 复数是 1:N 展开.
+- **P0 测试** (3 个): `test_record_multi_tool_use_block_persists_ids` / `test_record_multi_tool_result_block_persists_ids` / `test_record_mixed_count_keeps_singular_and_plural_separate`.
+- **P0 ADR**: §5.1 "Out of scope" 段移除 multi-block exemption, 新增 "§5.1.1 Multi-block extension (R77 amendment)" 子节, 列契约 + 名义测试 + JOIN 语义. 仍 in-place R57 doctrine.
+- **P1 (可选)**: 不强求 live smoke (multi-block 在真实 SDK 流量里少见, hermetic unit 已够).
+- Gate expect: 619 pass / 7 skip / 0 fail. Adapter-1-3 streak R52→R77 = **25 rounds**.
 
-### Option A (主菜, impl): R76 Arc B slice 3 P0 entry — `ToolUseBlock` recorder pass
+### Option B (大头, 1.5-2 轮): slice 3b — fork rewinds before tool-use Node
 
-- **P0** Pre-flight: `git fetch` (per R75 "stale remote-tracking ref trap" recipe — 不要省) → `uv run pytest -q --no-cov` baseline (expect **613 pass / 7 skip / 0 fail**) → read R74 progress § "slice 3 forward plan" + R75 progress § "Forward plan" + ADR-026 §4 (release plan slice 3 row) + `recorder.py` § block-summariser (~552 LOC, focus on `_summarise_blocks` & `ToolUseBlock` branch).
-- **P0** 决定一个 slice 3 sub-slice 边界 (slice 3 太大不能一轮完成). 候选: **3a = recorder-side `ToolUseBlock` + `ToolResultBlock` round-trip persistence** (单元测试 + 一个 live test, 不动 fork). 3b = fork 携带 tool-call state. 3c = MCP passthrough. 推荐 R76 = 3a only.
-- **P0** 实施 3a: 现有 recorder 已经把 `ToolUseBlock` summarise 进 `Node.state_after.content`, 但没有专门 schema 字段记录 `tool_name` / `tool_input` / `tool_use_id` 的 cross-Node 链接 (一个 `AssistantMessage(ToolUseBlock)` Node 后面跟一个 `UserMessage(ToolResultBlock)` Node, 通过 `tool_use_id` 关联). 加一个 `tool_links` 字段或 single sidecar table — 走 ADR 路 (ADR-026 §X 子节扩展).
-- **P0** 单元测试 — 至少 3 个: `test_record_tool_use_block_persists_id`, `test_record_tool_result_block_links_to_use`, `test_unmatched_tool_result_does_not_break_record`.
-- **P1** Live smoke (`tests/live/test_anthropic_agents_tool_smoke.py`) — `CHRONOS_LIVE=1` gated, 一个真实 multi-turn tool-call 跑, 验证 record() 能持久化 tool round-trip.
-- **P1** Dogfood `scripts/dogfood/arc_b_slice_3a_tools.py` — 三层 exit-code semantics 跟 slice 1/2 对齐.
-- **P1** CHANGELOG `[Unreleased]` R76 Added block; 依然不 cut tag (累积至 `v0.7.0` GA).
-- **P1** Progress doc + CONTEXT §5/§6 refresh.
-- Gate expect: 616-620 pass / 7-8 skip / 0 fail. mypy clean. ruff clean. Adapter-1-3 zero-regression streak R52→R76 = **24 rounds**.
+- 背景: 真正解锁 "agent time-travel debugger" 价值的 feature — fork 之前把 tool input 改掉, 重放后续推理. 需要 `fork()` 新签名 (or override) 接收 `tool_input_overrides`.
+- 估算: 需要 ADR-026 §5.2 amendment + 新 fork 路径 + at least 4 单测 + 1 dogfood. R77 单 cron slot **可能完成不了**, 建议要么 R77 + R78 双轮拆 (R77 设计 + 测试骨架, R78 实施 + ADR), 要么先 P1 (Option A) 暖身一轮再开.
 
-### Option B (兜底): defensive-followup-round skill creation
+### Option C (兜底): 创建 `defensive-followup-round` skill
 
-R75 §5 把 "defensive round 三连" 标成了 codification candidate (R57 → R69 → R75). 如果 R76 cron slot 时间紧或者出现 SDK API 不稳/环境问题, 退而 spawn 一个新 skill `defensive-followup-round` (in `~/.hermes/skills/software-development/`), 把 R75 这种 "读上一轮 progress, 找 implicit contract, codify 之" 的流程模板化, 包含 trigger conditions + 三步 ritual + 例子 (R57/R69/R75). 30-45 min.
-
-### Option C (carried over from R74, 大头, 不建议 R76 单轮做): Web UI compare slice
-
-R74 hand-off 提到的 cross-cutting work item, 把 Arc A 的 compare slice 1-3 + matrix 拉进 Web UI. Multi-slot, R76 不建议碰 — 应该有专门的 planning round (R77 或 R78) 先写 plan 再开工.
+R75 §5 标了 codification candidate, R76 没动 (combo-round 占用预算). 如果 R77 cron slot 时间紧或 SDK API 不稳, 退而花 30-45 min 把 `~/.hermes/skills/software-development/defensive-followup-round/SKILL.md` 写出来 (R57+R69+R75 三例 + 三步 ritual + trigger conditions).
 
 ### 推荐
 
-**D (30 sec) → A (R76 主菜)**. R75 把 ADR + 测试都 hardened 了, slice 2 契约面是齐整的, R76 该往 slice 3 推. P0 只覆盖 3a (`ToolUseBlock` 持久化), 不强求一轮完成全部 slice 3. 如果 P0 实施过半发现 SDK ergonomic 比预想麻烦, P1 部分推到 R77, 也算赢.
+**Option A (slice 3a-P1)**. 半轮预算, 自然延续 R76 P0 的 contract 设计, multi-block consumer 写下来还是同一个 SQL 模式 (`json_each(state_after->'tool_use_ids')`), 心智模型一致. R77 收完 P1 之后 R78 才上 slice 3b (Option B), 那时 state_after JSON bag 的全部 tool linkage 已 hardened, fork 重放只需在读侧加 input override 路径.
 
-### R76 非目标 (硬红线)
+### R77 非目标 (硬红线)
 
-- ❌ 不 cut v0.7.0 GA — slice 3 至少 2-3 轮才能稳, R76 是 entry round 不是 close-out round.
-- ❌ 不动 adapter-1-3 (langgraph/autogen/crewai) — zero-regression streak R52→R75 已 23 轮, 这是项目最长护城河.
-- ❌ 不 silently 改 `recorder.py` 的 metadata-stamping loop (R75 ADR-026 §5 binding contract — MUST keys uuid/session_id 不能丢).
-- ❌ 不写新 ADR 除非 slice 3a schema 改动确实需要 (添 sidecar table 算 schema change → ADR 必须). 添单字段 `tool_links` 到 `state_after` 不算 schema change (state_after is jsonb-equivalent).
-- ❌ 不 commit `frontend/pnpm-{lock,workspace}.yaml` 真文件 — 它们是 noise. Option D 是 gitignore 它们, 不是 commit 它们.
+- ❌ 不 cut v0.7.0 GA — slice 3 整体 (3a + 3b + 3c MCP passthrough) 至少还要 2 轮才稳.
+- ❌ 不动 adapter-1-3 (langgraph/autogen/crewai) — zero-regression streak R52→R76 已 24 轮.
+- ❌ 不破坏 R76 §5.1 single-block 契约: `state_after['tool_use_id']` (单数) 在 single-block 情形下必须仍 stamp; Option A 是**新增** `tool_use_ids` (复数) 字段, 不是替换.
+- ❌ 不 silently 改 `recorder.py:_translate` 的 `state['tool_use_id']` stamp (R76 ADR-026 §5.1 binding contract).
+- ❌ 不写新 ADR — slice 3a-P1 是 §5.1 的延伸, R57 in-place amendment.
 
 ### 工期估计
 
-R76 Option D = 30 sec. Option A P0-only = 1-1.5 hours. Option A P0+P1 全做 = 2-3 hours, 不强求. Option B = 30-45 min.
+R77 Option A = 45-60 min (写、测、ADR amend, 都是 R76 模板的复用). Option B 单轮 = 不建议. Option C = 30-45 min.
 
-### R76 Hand-off invariants (R75 agent → R76 agent)
+### R77 Hand-off invariants (R76 agent → R77 agent)
 
 - 工作窗口 0-11 CST (cron) 或 manual chat slot.
-- R76 是 **slice 3 entry round on R75-hardened slice 2 contract**. Unit test count baseline 613.
-- 开场命令: `git fetch` (R75 stale-ref trap recipe) + `uv run pytest -q --no-cov` + 读 R75 progress doc + 读 ADR-026 (含 §5).
-- Adapter-1-3 zero-regression streak R52→R75 = **23 rounds** (project history longest, intentionally protected).
-- `[Unreleased]` 包含 R74 + R75 entries; R76 在 R75 entry 上方插入新 R76 entry.
-- ADR-026 §5 是 R75 新增的 binding contract: `state_after.{uuid,session_id}` 是 MUST keys (fork anchors). 改 `recorder.py:308` 那个 metadata loop 之前先读 ADR-026 §5 + 跑 §6.1 那两个测试.
-- Live test 默认模型仍 `"Claude Sonnet 4.6"` (R73 实测 OneAPI 唯一 work 的形式), 不 silently 改.
-- R76 round-end QQ 战报模板: slice 3a 进度 (P0/P1 程度) + tests delta + adapter-1-3 streak count + R77 forward direction.
+- R77 是 **slice 3a P1 round on R76-shipped P0 contract**. Unit test count baseline 616.
+- 开场命令: `git fetch` (R75 stale-ref trap recipe) + `uv run pytest -q --no-cov` + 读 R76 progress doc + 读 ADR-026 §5.1 (R76 新增).
+- Adapter-1-3 zero-regression streak R52→R76 = **24 rounds** (continue protecting).
+- `[Unreleased]` 包含 R74 + R75 + R76 entries; R77 在 R76 entry 上方插入新 R77 entry (如该轮触及 CHANGELOG; R76 没改 CHANGELOG, 因为 §5.1 是 ADR amendment 而非 user-visible feature, 可考虑 R77 一并补上).
+- ADR-026 §5 (R75) + §5.1 (R76) 是 binding contracts: 改 `recorder.py:_translate` 之前先读这俩 + 跑 §6.1 §6.2 全部 5 个测试.
+- Live test 默认模型仍 `"Claude Sonnet 4.6"` (R73 实测). Multi-block tool 测试可纯 hermetic, 不必动 live smoke.
+- R77 round-end QQ 战报模板: slice 3a-P1 进度 + tests delta + adapter-1-3 streak count + R78 forward direction (slice 3b vs slice 3a-P2 vs MCP passthrough).
 
 ### Release strategy (rolling)
 
 - v0.6.0 ✅ cut 2026-05-12 (R67) — Phase 4 Arc A 全 closed
 - v0.7.0a1 ✅ cut 2026-05-14 (R73) — Arc B slice 1 alpha (Anthropic Agents SDK recorder + live-smoke)
 - v0.7.0a2 ✅ cut 2026-05-14 (R74) — Arc B slice 2 alpha (fork_session integration)
-- **R75 (defensive round, no tag) — ADR-026 §5 binding contract + 2 unit tests + source comment** ← **this round**
-- v0.7.0a3 🚧 candidate R76-R78 — Arc B slice 3 alpha (tool-call dispatch + MCP passthrough)
-- v0.7.0 🚧 target R78+ GA — slice 1+2+3 stabilized
+- R75 (defensive round, no tag) — ADR-026 §5 binding contract + 2 unit tests + source comment
+- **R76 (slice 3a entry, no tag) — ADR-026 §5.1 binding contract + 3 unit tests + tool_use_id linkage** ← **this round**
+- v0.7.0a3 🚧 candidate R77-R78 — Arc B slice 3 alpha (multi-block + tool-fork + MCP passthrough)
+- v0.7.0 🚧 target R79+ GA — slice 1+2+3 stabilized
 
 
 ## 7. 文档索引 (当你需要深入某个主题)

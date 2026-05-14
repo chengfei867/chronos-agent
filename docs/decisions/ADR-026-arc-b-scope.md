@@ -154,6 +154,66 @@ methods of the same module."
   they MAY be removed without ADR amendment if a future SDK version
   drops them upstream.
 
+### 5.1 Tool round-trip linkage — `state_after.tool_use_id` (R76 amendment, slice 3a)
+
+Slice 3 of the Arc B v0.7.0 cut needs cross-Node SQL queries answering
+"which assistant tool-use Node generated this tool-result Node?". The
+underlying SDK already gives us the linkage: `ToolUseBlock.id` on the
+`AssistantMessage` side, `ToolResultBlock.tool_use_id` on the matching
+`UserMessage` side, byte-identical by SDK contract.
+
+R76 surfaces that linkage onto `Node.state_after['tool_use_id']`
+**symmetrically on both sides**. This is a public contract pin (not a
+schema change — `state_after` is a JSON bag — but a binding promise the
+recorder will not silently drop).
+
+#### Contract (binding from R76 onwards)
+
+For every `Node` recorded by `AnthropicAgentsRecorder`:
+
+- If the `Node` is an `AssistantMessage` whose `content` carries
+  **exactly one** `ToolUseBlock`, then `state_after['tool_use_id']` MUST
+  equal that `ToolUseBlock.id` (a non-empty string), provided the SDK
+  populates `id` (defended with `isinstance(..., str) and id`).
+- If the `Node` is a `UserMessage` whose `content` carries **exactly
+  one** `ToolResultBlock`, then `state_after['tool_use_id']` MUST equal
+  that `ToolResultBlock.tool_use_id` under the same guard.
+- A pair of linked Nodes (one tool-use, one tool-result) MUST yield
+  byte-identical values for `state_after['tool_use_id']` — this is the
+  JOIN key for slice-3 queries.
+- A `UserMessage` carrying an **orphan** `ToolResultBlock` (no preceding
+  `AssistantMessage(ToolUseBlock)` with matching id, e.g. a resumed /
+  forked session entry) MUST NOT cause `record()` to fail; the result
+  Node still surfaces `state_after['tool_use_id']` and downstream
+  consumers detect the orphan via empty JOIN result. Asymmetric
+  tolerance: missing anchor is observability loss, not a record()
+  failure.
+
+#### Test enforcement
+
+Three unit tests in `tests/unit/test_adapter_anthropic_agents.py` §6.2
+pin this contract:
+
+- `test_record_tool_use_block_persists_id` — use side
+- `test_record_tool_result_block_links_to_use` — both sides + JOIN equality
+- `test_unmatched_tool_result_does_not_break_record` — orphan tolerance
+
+Any future change to the `state_after` stamping logic that breaks these
+tests is an ADR-026 §5.1 contract violation and requires either a new
+amendment or an explicit ADR superseding §5.1.
+
+#### Out of scope for §5.1
+
+- Multi-block messages (>1 `ToolUseBlock` or >1 `ToolResultBlock` in a
+  single message) intentionally do NOT receive a top-level
+  `tool_use_id` — the linkage is ambiguous and consumers must parse
+  `state_after.blocks[]`. The SDK currently emits at most one tool
+  block per message in observed traffic; the multi-block case is
+  reserved for a future slice.
+- No new column / no sidecar / no Node graph edge — the JSON-bag
+  approach is sufficient for slice-3 SQL queries
+  (`state_after->>'tool_use_id'`).
+
 ### 6. What Arc B slice 2+ looks like
 
 After v0.7.0 ships:
