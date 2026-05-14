@@ -156,6 +156,17 @@ ignore_missing_imports = true
 module = ["claude_agent_sdk.*"]
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+# crewai is an optional extra (ADR-021/022). Stubs are incomplete when
+# crewai is installed (e.g. `crewai_event_bus.flush(timeout=...)` is
+# missing from the .pyi as of crewai 0.x). Treat as missing-is-ok and
+# don't follow imports for attribute checks. Surfaced R71 when
+# `uv sync --all-extras` finally pulled crewai in alongside the new
+# claude-agent-sdk extra; pre-existing, untouched recorder.
+module = ["crewai.*", "crewai_tools.*"]
+ignore_missing_imports = true
+follow_imports = "skip"
+
 # ---------- Pytest ----------
 [tool.pytest.ini_options]
 minversion = "8.0"

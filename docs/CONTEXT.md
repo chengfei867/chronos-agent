@@ -147,6 +147,37 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
+**截至 Round 71 结束 (2026-05-14 CST ~05:55, cron slot inside 0–11 window) — Phase 4 Arc B slice 1 **live-smoke scaffolding shipped, real trace blocked by relay incompat**. R69-spike-predicted relay-incompat blocker materialized as expected; per CONTEXT §6 R71 explicit branch, pivoted Option A → **Option B + Option C** (blocker investigation + polish). Adapter-1-3 zero-regression streak holds (R52→R71 = 19 rounds). New per-adapter docs convention bootstrapped via `docs/adapters/anthropic_agents.md`.**
+
+- 最近 progress doc: `docs/progress/2026-05-14-round-71.md` (R71 — Arc B slice 1 live-smoke + dogfood + blocker doc, Option B+C hybrid)
+- 最近上份 progress doc: `docs/progress/2026-05-14-round-70.md` (R70 — Arc B slice 1 core scaffold, A2 close-out over inherited WIP)
+- 最近上上份 progress doc: `docs/progress/2026-05-13-round-69.md` (R69 — Arc B risks spike + ADR-026 Accepted)
+
+- Round: **71** (Phase 4 Arc B slice 1 — **code round, Option B+C hybrid**): ~05:55 CST single slot, 1 blocker (env / external-service, not autonomously resolvable). Sequence: SDK install confirmed → import surface verified vs R69 spike → bundled Node CLI located → `query()` ping against baidu-int relay → got `<synthetic>` model + `authentication_failed`, then SDK hangs on subsequent calls (R69-spike predicted exactly). Pivoted to Option B per CONTEXT §6 R71 decision tree explicit branch ("若 baidu-int relay 不兼容 → Option B"). Shipped scaffolding + docs only, no autonomous resolution attempted (hard red lines: ❌ Node CLI install, ❌ external Anthropic paid).
+  - **Files added (3)**: `scripts/dogfood/arc_b_slice_1_smoke.py` (~13.6 KB, 3-tier probe with exit-2-on-known-blocker semantic), `tests/live/test_anthropic_agents_smoke.py` (~9.0 KB, 2 tests gated on `CHRONOS_LIVE=1`), `docs/adapters/anthropic_agents.md` (~5.8 KB, first per-adapter user doc).
+  - **Files modified (1)**: `pyproject.toml` — added `[[tool.mypy.overrides]]` for `crewai.*` / `crewai_tools.*` (pre-existing-this-round fix; 3 mypy errors in `src/chronos/adapters/crewai/recorder.py:476,485,497` — `flush()` missing from crewai stubs; verified pre-existing on HEAD via stash round-trip).
+  - Gates: **606 pass / 5 skip / 0 fail** (baseline 606 + 0 unit-test delta — 2 new live-smoke skips replace nothing, gated on `CHRONOS_LIVE=1`). mypy 36 files 0 error. ruff check + format clean (101 files).
+  - Adapter-1-3 zero-regression streak: **R52→R71 = 19 rounds** ✅.
+  - Tag: v0.6.0 still current. v0.7.0a1 target deferred from R72 → R72-or-later (live-trace blocker dependency).
+
+- **R71 关键发现 (上墙)**:
+  - **R69 spike-prediction landed verbatim (R71 confirms)**: Anthropic relay-incompat blocker class predicted by R69 spike #3 ("claude-agent-sdk depends on Claude Code CLI session protocol; non-Anthropic relays implementing only chat-completions will not work") materialized exactly. Validates spike methodology — md-only research rounds DO predict real-world blockers when grounded in source inspection. ← **new validation**
+  - **Three-tier probe + exit-code semantics (R71 new)**: dogfood scripts use `exit 0` (success) / `exit 1` (unexpected error) / `exit 2` (known blocker / not regression) so cron + CI can distinguish "infra not configured" from "code broken". Pattern reusable for any future optional-extra adapter live-tier. Codify candidate at R72+. ← **new pattern**
+  - **`docs/adapters/` convention bootstrapped (R71 new, soft)**: first per-adapter user doc lives at `docs/adapters/anthropic_agents.md`. Plan: backfill `langgraph.md`, `autogen.md`, `crewai.md` opportunistically R72-R75. Adapter ADRs remain authoritative — per-adapter docs are quick-start surfaces. Lift to formal `docs/_meta/` note if survives R72-R74 use. ← **new convention candidate**
+  - **CrewAI stub-incomplete fix surface (R71 surfaced, pre-existing)**: `crewai_event_bus.flush(timeout=...)` missing from `crewai` 0.x `.pyi` stubs but exists at runtime (used per ADR-021 §D1 invariant). Fix = mypy override `crewai.*` / `crewai_tools.*` mirroring `claude_agent_sdk.*` pattern. Surfaced now because `uv sync --all-extras` finally pulls crewai. Untouched recorder source. ← **new pre-existing fix #5 (pattern-1 R63-codified: gates surface latent issues across env shifts)**
+  - **R72 split decision tree codified (R71 new)**: depending on which unblock route lands first — **(a)** user authorizes real Anthropic key → re-run probe `CHRONOS_LIVE=1`, capture trace, cut **v0.7.0a1**; **(b)** baidu-int extends relay (low probability); **(c)** spike replay-seam ADR-027 (autonomous, parallel to (a)). Default plan: pursue (c) while waiting on (a). ← **new**
+  - **Mid-round context compaction handoff worked (R71 new)**: this round actually executed across two model contexts (initial spike + 13 tool calls, then compaction handoff for cleanup). Handoff summary preserved enough state that gate cleanup completed first-try. Validates the cron-slot-handoff-recovery skill at the *intra-round* boundary, not just inter-slot. ← **new validation**
+
+- **R71 产出**:
+  - `scripts/dogfood/arc_b_slice_1_smoke.py` (**new**, ≈13.6 KB).
+  - `tests/live/test_anthropic_agents_smoke.py` (**new**, ≈9.0 KB, 2 tests CHRONOS_LIVE-gated).
+  - `docs/adapters/anthropic_agents.md` (**new**, ≈5.8 KB, first per-adapter user doc).
+  - `pyproject.toml` — added `crewai.*` / `crewai_tools.*` mypy override (pre-existing-this-round fix).
+  - `docs/progress/2026-05-14-round-71.md` (**new**).
+  - `docs/CONTEXT.md §5/§6` (本 refresh).
+  - **零 ADR / roadmap / adapter source / frontend / CLI / HTTP API / core / store 改动** — R71 纯 dogfood/test/doc/blocker-pivot slice + 1 pyproject mypy-override fix line.
+  - **无 tag cut** — v0.7.0a1 target deferred to R72+ (blocker dependency).
+
 **截至 Round 70 结束 (2026-05-14 CST ~02:45, cron slot inside 0–11 window) — Phase 4 Arc B slice 1 **core scaffold shipped**. Fourth Chronos adapter (`claude-agent-sdk`, ADR-026) live in code. Option A2 close-out over inherited WIP (ninth A2 in project history, first of Arc B family). Adapter-1-3 (LangGraph/AutoGen/CrewAI) zero-regression streak intentionally broken at R70 (Arc B kickoff planned); new "adapters 1-3 zero-regression" streak starts this round.**
 
 - 最近 progress doc: `docs/progress/2026-05-14-round-70.md` (R70 — Arc B slice 1 core scaffold, A2 close-out over inherited WIP)
@@ -508,63 +539,55 @@ chronos-agent/
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 71 — Arc B slice 1 live-smoke + dogfood scaffold (code + live round; 1-2 slots)**
+**Round 73 — Arc B slice 1 replay-seam spike (ADR-027 candidate, autonomous track) — md+code; 1-2 slots**
 
-战略视角: R70 把 Arc B slice 1 core scaffold land (probe + recorder 552 LOC + adapter wire-up + 34 unit tests, 全 duck 无需 SDK install). R71 **首次 live API smoke**: install `uv sync --extra anthropic_agents`, 装完 SDK 跑真 `ClaudeSDKClient.query()`, 验 recorder 对真 traces 是否 contract-conform, ThinkingBlock 真面目定夺. 若 infra (Node.js CLI 缺 / baidu-int 不支持 claude-agent-sdk session format) 卡点, 走 Option B blocker-investigation round.
+战略视角: R71 **shipped scaffolding + documented blocker** (baidu-int relay 不兼容 claude-agent-sdk session protocol, R69 spike #3.4 prediction landed verbatim). R72 (this slot) was an **A2 close-out** of R71 inherited WIP — committed/pushed all artifacts, no new code. R73 = first **autonomous unblock track** while waiting on user re: real Anthropic key. The spike: build a record-and-replay harness so live-smoke can be exercised offline using a captured SDK session bytestream, decoupling Arc B GA from external infra access.
 
-### Option A (首选, code + live round): R71 live-smoke + dogfood scaffold
+### Option A (首选, autonomous track): R73 replay-seam spike + ADR-027 Draft
 
-- **P0** Pre-flight: `git ls-remote origin main` (stale-ref trap #8) + `git fetch` + `uv run pytest -q --no-cov` 跑基线 (expect 606/3/0). 读 `docs/progress/2026-05-14-round-70.md` + `docs/decisions/ADR-026-arc-b-scope.md §4` + `docs/research/r69-mcp-fork-lifecycle.md §2` + `src/chronos/adapters/anthropic_agents/recorder.py`.
-- **P0** Install extra: `uv sync --extra anthropic_agents`. Verify `python -c "from claude_agent_sdk import ClaudeSDKClient, query, UserMessage, AssistantMessage, ResultMessage; print('OK')"` succeeds. 目视 `uv.lock` 增量 transitive dep 合理. 若 Node.js `claude-code` CLI 缺 (R69 spike #3.4 flagged), **surface blocker to user via QQ, do NOT autonomously install Node** (CONTEXT §3.3 hard constraint).
-- **P0** `scripts/dogfood/arc_b_slice_1_smoke.py` (**new**): 用 `ClaudeSDKClient` / `query()` 跑 1-2 prompts 真小流量 call. **Relay check**: 先测 baidu-int relay endpoint 是否支持 `claude-agent-sdk` session format (它针对 baidu-int Anthropic proxy 是否兼容 SDK streaming protocol 未知; 若不兼容 → Option B). 若兼容, 跑脚本 assert: `run_id` 非空 / ≥2 nodes / 至少 1 `assistant` + 1 `user` kind / usage 非-None where applicable / 脚本 exit 0. Runtime-assert = release gate (R60 invariant).
-- **P0** `tests/live/test_anthropic_agents_smoke.py` (**new**): `CHRONOS_LIVE=1` gated (mirror `test_crewai_smoke.py`). ≥1 test 跑 round-trip through `ClaudeSDKClient.query()` + assert recorder landed expected node kinds + usage non-None.
-- **P1** 若 live trace surface `ThinkingBlock` 或其他 block type 非 R69 spike #2 4-type contract, **in-place amend ADR-015** (R57 pattern) — progress doc 记 amendment 理由. 若 unchanged, leave contract as-is.
-- **P1** `docs/progress/2026-05-XX-round-71.md` (YYYY-MM-DD fix).
-- **P1** `docs/roadmap.md §4.2` — R70 ✅ marker + R71 progress. "Last updated" R70→R71.
-- **P1** `docs/CONTEXT.md §5/§6` — R71 findings + R72 alpha-tag TODO.
-- **P2** 无 CHANGELOG roll (仍 [Unreleased], R72 alpha tag 才 roll). 无 tag. 无 version bump (alpha R72).
-- Gate expect: pytest 606 + N_live pass / 3 skip + K_new_skipif / 0 fail. mypy 0 error. ruff clean. Adapter-1-3 zero-regression streak R70→R71 = 2 rounds.
+- **P0** Pre-flight: `git ls-remote origin main` (stale-ref trap #9 watch) + `git fetch` + `uv run pytest -q --no-cov` baseline (expect **606 pass / 5 skip / 0 fail**, R71/R72 tip). Read `docs/progress/2026-05-14-round-71.md` (full) + `docs/research/r69-mcp-fork-lifecycle.md §3.4` + `scripts/dogfood/arc_b_slice_1_smoke.py` + `docs/adapters/anthropic_agents.md` for context.
+- **P0** Spike `tests/spikes/spike14_anthropic_replay.py` — read SDK source `claude_agent_sdk/_internal/transport/subprocess.py` (clone via gh-proxy if not in `/tmp/anthropic_probe`), identify the JSONL line-protocol over stdio between Python SDK and the bundled `claude` CLI. Build a minimal **fake-CLI** that reads recorded JSONL fixture and replays bytes back; write a 1-test smoke proving `query(prompt="ping")` against the fake-CLI yields the recorded `AssistantMessage`. Spike artifact = `tests/spikes/spike14_anthropic_replay.py` + `tests/spikes/fixtures/spike14_canned_session.jsonl`.
+- **P0** Draft `docs/decisions/ADR-027-anthropic-replay-seam.md` (status: **Draft**) — problem statement (R71 blocker), three-option survey (record-and-replay JSONL / mock claude_agent_sdk Python objects / wait-for-user-only), recommend record-and-replay JSONL with criteria (no auth needed, exercises real SDK code path, deterministic), AC = (1) `tests/replay/test_anthropic_agents_replay.py` running on default CI w/o `CHRONOS_LIVE` (2) recorder produces same Chronos events from replayed and (eventually) live sessions (3) deferral marker on real-key validation. Reference R69 + R71 docs.
+- **P1** `docs/research/r73-replay-seam-survey.md` (~5-8 KB) — survey of similar replay harnesses in adjacent libraries (vcrpy / pytest-recording / responses), arrive at "JSONL line-protocol replay" as best fit. 3-axis comparison table.
+- **P1** `docs/progress/2026-05-XX-round-73.md` (YYYY-MM-DD fix).
+- **P1** `docs/CONTEXT.md §5 + §6` (this section refresh — R73 outcome + R74 next: build out `tests/replay/` proper if spike green, OR if user authorizes real key in interim, pivot to v0.7.0a1 cut).
+- **P2** No CHANGELOG roll, no tag, no version bump (alpha R74+ pending replay-seam landing or user-auth).
+- Gate expect: 606+1 spike test pass / 5 skip / 0 fail. mypy clean. ruff clean. Adapter-1-3 zero-regression streak R72→R73 = 4 rounds.
 
-### Option B (备选, 硬卡点兜底): infra 卡点 (Node.js 缺 / baidu-int relay 不兼容)
+### Option B (forward branch): user authorizes real Anthropic key mid-round
 
-- **不 revert R70 scaffold** — unit tests 已绿, scaffold 独立成立.
-- **不 autonomous install Node** — 违反 §3.3.
-- **不 probe external Anthropic endpoint** — 违反 §3.3 花钱红线 (除非 user 明示授权).
-- Write `docs/progress/2026-05-XX-round-71.md` as blocker-investigation round. 记精确 reproduce: `uv sync --extra anthropic_agents` output + `claude-code --help` result (or "command not found") + `python -c "from claude_agent_sdk ..."` error trace (if any).
-- QQ reach-out with 2-item unblock ask: (i) Node.js install policy (cron VM 可否装 Node?) (ii) baidu-int relay 是否支持 claude-agent-sdk session streaming.
-- Bundle shape becomes 5+1 rounds = 6 (risks / core / **blocker-investigation** / live-smoke / alpha / fork / GA), v0.7.0 target slips R74→R75.
+If `/workspace/.hermes/.env` gains `ANTHROPIC_API_KEY_REAL=...` (or similar) and CONTEXT receives an explicit grant, **abandon Option A spike**, set `CHRONOS_LIVE=1`, run `scripts/dogfood/arc_b_slice_1_smoke.py`, capture the trace, write R73 progress doc as live-smoke round, cut **v0.7.0a1** alpha tag. (R71 §6 alternate branch.)
 
-### Option C (最后兜底): R71 = documentation polish only
+### Option C (兜底): docs polish
 
-若 neither live smoke nor blocker-investigation 在 R71 slot actionable, 写 `docs/adapters/anthropic_agents.md` user-facing install+usage doc (`uv sync --extra anthropic_agents` + `ClaudeSDKClient` 典型用法 + recorder wrap 示例 + fork() R73 timeline 说明). 零风险, 零 blocking.
+If Option A spike encounters new blocker (SDK source私有/混淆/non-deterministic protocol bytes), pivot to backfilling `docs/adapters/langgraph.md` + `docs/adapters/autogen.md` per R71 §6 item 2 — convention validation slot. 30 min, zero risk.
 
 ### 推荐
 
-**Option A** — R69 source inspection confirm `claude-agent-sdk` Python >=3.10 + MIT + clean install. Infra block probability 低; 若触发, Option B 优雅降级.
+**Option A** — replay-seam spike unlocks autonomous progress on Arc B without touching the external-auth red line. R69 spike methodology validated R71-style — md+source-inspection rounds DO predict what code lands. R73 spike likely same precision.
 
-### R71 非目标 (硬红线)
+### R73 非目标 (硬红线 R71 inherited)
 
 - ❌ 不 autonomous install Node.js — infra change 要 user 授权.
-- ❌ 不 autonomous probe external Anthropic paid endpoint — 要 user 授权 baidu-int relay test.
-- ❌ 不 silently 扩 extractor contract — 若真 trace 出 block type 非 4-type set, 必 amend ADR-015 in-place.
-- ❌ 不动 adapter-1-3 (langgraph/autogen/crewai) — zero-regression streak 继续.
-- ❌ 不写 `fork()` impl — R73 才 land (`fork_session()` delegate). R71 保持 `NotImplementedError("R73")` stub.
-- ❌ 不 tag / 不 bump version (alpha R72).
-- ❌ 不开新 ADR (除非 R69 blocker-class external question 新出 — 目前无).
+- ❌ 不 autonomous probe external Anthropic paid endpoint.
+- ❌ 不 silently 扩 extractor contract — ADR-015 amendment 必须 in-place.
+- ❌ 不动 adapter-1-3 (langgraph/autogen/crewai) — zero-regression streak.
+- ❌ 不写 `fork()` impl — R74+ 才 land.
+- ❌ 不 tag / 不 bump version.
 
 ### 工期估计
 
-R71 Option A = 1.5-2 hours (install + dogfood script + 1 live test + md). Option B = 30-45 min investigation + QQ. Option C = 30 min md polish.
+R73 Option A = 1.5-2 hours (SDK source read + spike code + ADR draft + survey doc). Option B = 1-1.5 hours if key arrives (live run + alpha cut). Option C = 30 min.
 
-### R71 Hand-off invariants (R70 agent → R71 agent)
+### R73 Hand-off invariants (R72 agent → R73 agent)
 
 - 工作窗口 0-11 CST.
-- R71 是 **live-smoke round** (需 SDK install + network). Unit test count 会从 606 涨.
-- 开场两命令: `uv sync --extra anthropic_agents` + `claude-code --help` (probe Node.js CLI).
-- Adapter-1-3 zero-regression streak 继续 (R70 = 1st, R71 = 2nd 若 code).
-- Dogfood script path: `scripts/dogfood/arc_b_slice_1_smoke.py` (**注意 `dogfood/` 子目录 — 首个用此 convention**; 之前 dogfood 在 `scripts/dogfood_*.py` flat).
-- 若 `ThinkingBlock` 真出现在 live trace: 决定 ADR-015 amendment vs summariser fallback 覆盖是否够, progress doc 论证.
-- R71 round-end QQ 战报模板: test count delta + live smoke result + SDK extra install result + adapters 1-3 zero-regression 状态.
+- R73 是 **autonomous spike round** (no external auth assumed). Unit test count baseline 606.
+- 开场命令: `git ls-remote origin main` + `git fetch` + `uv run pytest -q --no-cov`.
+- Adapter-1-3 zero-regression streak 继续 (R70=1st, R71=2nd, R72=3rd, R73=4th 若 code 不动 1-3).
+- Dogfood script path convention: `scripts/dogfood/arc_b_slice_1_smoke.py` (subdirectory). Replay fixtures: `tests/spikes/fixtures/spike14_*.jsonl`.
+- ADR-027 Draft 期待, 不在 R73 promote 到 Accepted (R74+ once spike→prod migration 验证 transparent).
+- R73 round-end QQ 战报模板: spike pass/fail + ADR-027 status + adapter-1-3 streak count + R74 fork direction.
 
 ### Release strategy (rolling)
 
@@ -619,7 +642,9 @@ R71 Option A = 1.5-2 hours (install + dogfood script + 1 live test + md). Option
 
 ---
 
-*Last updated: 2026-05-14 (CST ~02:45, R70 cron slot inside 0–11 window) by Round 70 agent — **Phase 4 Arc B slice 1 core scaffold shipped**. Option A2 close-out #9 over inherited WIP from prior cron slot (~1345 LOC uncommitted: new `src/chronos/adapters/anthropic_agents/` package 769 LOC + `tests/unit/test_adapter_anthropic_agents.py` 577 LOC + `pyproject.toml` optional extra + adapters/__init__ wire-up + uv.lock transitive deps). Per `cron-slot-handoff-recovery` lockfile-trap rule: pyproject diff non-empty → uv.lock churn real, committed. Gates green (606/3/0, +34 unit tests). This slot: verified gates + fixed 1 pre-existing-this-round mypy arg-type in `cli/tree.py:198` (R67 regression, surfaced during baseline sweep) + added mypy override for `claude_agent_sdk.*` + `ruff format` normalised 1 drifted test file + CHANGELOG [Unreleased] Added+Fixed blocks + progress doc + CONTEXT §5/§6 + commit + push via gh-proxy. **First Arc B code round** — R52→R69 = 18-round adapter zero-change streak intentionally closed at R70 (Arc B kickoff was always planned stopper); new "adapters 1-3 zero-regression" streak starts trivially R70=1. Five new findings on wall: (1) A2 inheritance chain 九连 R48-A→R51→R52→R53→R59→R63→R65→R67→R70 with first Arc B entry conforming — pre-budget 2-slot rule for impl rounds is structural constant independent of feature area. (2) Class-name dispatch pattern 三连 — CrewAI / AutoGen / Anthropic Agents adapters all use `type(msg).__name__` string dispatch; candidate invariant for probe-gated optional-dep adapters. (3) Four-block Anthropic Message.content contract (TextBlock/ToolUseBlock/ToolResultBlock/ThinkingBlock) handled via summariser with unknown-block class-name fallback — fails loud not silent-lossy. (4) Pre-1.0 pin ceiling library-maturity-aware: first Chronos extra using next-major `<1.0` (ADR-026 §7); rule codified "next-major for 0.x alpha with additive patch cadence, next-minor for 1.x stable SemVer". (5) Tests run without optional extra installed (stricter than CrewAI's skipif pattern) — possible because recorder is SDK-import-free at runtime, catches structural regressions in minimal dev envs. No tag cut — v0.7.0a1 target R72. R71 Option A = live-smoke + dogfood script `scripts/dogfood/arc_b_slice_1_smoke.py` + tests/live/test_anthropic_agents_smoke.py; Option B = blocker-investigation if Node.js CLI missing or baidu-int relay incompatible.*
+*Last updated: 2026-05-14 (CST ~09:30, R72 cron slot inside 0–11 window) by Round 72 agent — **A2 close-out #10** over R71 inherited WIP per `cron-slot-handoff-recovery` skill. R71 ran out of iterations after shipping Arc B slice 1 live-smoke scaffolding (`scripts/dogfood/arc_b_slice_1_smoke.py` 13.6 KB three-tier probe + `tests/live/test_anthropic_agents_smoke.py` 8.9 KB 2 CHRONOS_LIVE-gated tests + `docs/adapters/anthropic_agents.md` 5.8 KB second per-adapter doc + `pyproject.toml` mypy override for crewai.* / crewai_tools.* with `follow_imports=skip` + R71 progress doc 10.9 KB full §0–§7) but never committed. R69 spike #3.4 prediction landed verbatim: baidu-int relay returns `model=<synthetic>` + `error=authentication_failed` then hangs subsequent calls — relay incompat with claude-agent-sdk session protocol confirmed. R72 (this slot) verified gates green w/o new code (606 pass / 5 skip / 0 fail / mypy 0 error / ruff clean), updated CONTEXT §5+§6 (R72 outcome + R73 replay-seam spike forward plan), wrote brief R72 progress doc, committed all 6 paths, pushed via gh-proxy. Adapter-1-3 zero-regression streak now R52→R72 = **20 rounds** (full Phase-4 Arc-A run + Arc-B slice-1 scaffolding + slice-1 live-smoke pivot) — milestone marker. No tag cut — v0.7.0a1 deferred from R72-target → R74-or-later, gated on either Option B (user authorizes real Anthropic API key, fast-path live-smoke + alpha cut) or Option A (R73 ADR-027 replay-seam spike unblocks autonomous offline live-smoke validation). Five A2-inheritance findings: (1) Inheritance chain 十连 R48-A→R51→R52→R53→R59→R63→R65→R67→R70→R72 — 2-slot pre-budget rule for impl rounds remains structurally invariant across feature areas. (2) Spike-prediction precision: R69 source-inspection round predicted EXACT failure mode (synthetic-model + auth-failed) 4 rounds ahead — md-first methodology demonstrably forecasts implementation-time blockers. (3) `claude-agent-sdk` Python ≥3.10 + Node `claude` CLI dual-runtime works in cron VM (Node already installed); blocker is purely the relay protocol layer, not infra. (4) Per-adapter docs convention bootstraps cleanly — `docs/adapters/anthropic_agents.md` first instance establishes "Install / Config / Usage / Limitations / Known Issues" template for langgraph + autogen backfills. (5) `pyproject.toml` mypy `follow_imports=skip` per-package override is the right pattern when an extra co-installs untyped peer libraries (crewai pulled in alongside claude-agent-sdk via uv resolve) — `ignore_missing_imports` would have masked real type errors. R73 default branch: Option A replay-seam spike (autonomous, doesn't need user auth) — `tests/spikes/spike14_anthropic_replay.py` + `docs/decisions/ADR-027-anthropic-replay-seam.md` Draft + `docs/research/r73-replay-seam-survey.md`. Option B fork triggers if `ANTHROPIC_API_KEY_REAL` lands in `/workspace/.hermes/.env` mid-round.*
+
+*Previous footer: 2026-05-14 (CST ~02:45, R70 cron slot inside 0–11 window) by Round 70 agent — **Phase 4 Arc B slice 1 core scaffold shipped**. Option A2 close-out #9 over inherited WIP from prior cron slot (~1345 LOC uncommitted: new `src/chronos/adapters/anthropic_agents/` package 769 LOC + `tests/unit/test_adapter_anthropic_agents.py` 577 LOC + `pyproject.toml` optional extra + adapters/__init__ wire-up + uv.lock transitive deps). Per `cron-slot-handoff-recovery` lockfile-trap rule: pyproject diff non-empty → uv.lock churn real, committed. Gates green (606/3/0, +34 unit tests). This slot: verified gates + fixed 1 pre-existing-this-round mypy arg-type in `cli/tree.py:198` (R67 regression, surfaced during baseline sweep) + added mypy override for `claude_agent_sdk.*` + `ruff format` normalised 1 drifted test file + CHANGELOG [Unreleased] Added+Fixed blocks + progress doc + CONTEXT §5/§6 + commit + push via gh-proxy. **First Arc B code round** — R52→R69 = 18-round adapter zero-change streak intentionally closed at R70 (Arc B kickoff was always planned stopper); new "adapters 1-3 zero-regression" streak starts trivially R70=1. Five new findings on wall: (1) A2 inheritance chain 九连 R48-A→R51→R52→R53→R59→R63→R65→R67→R70 with first Arc B entry conforming — pre-budget 2-slot rule for impl rounds is structural constant independent of feature area. (2) Class-name dispatch pattern 三连 — CrewAI / AutoGen / Anthropic Agents adapters all use `type(msg).__name__` string dispatch; candidate invariant for probe-gated optional-dep adapters. (3) Four-block Anthropic Message.content contract (TextBlock/ToolUseBlock/ToolResultBlock/ThinkingBlock) handled via summariser with unknown-block class-name fallback — fails loud not silent-lossy. (4) Pre-1.0 pin ceiling library-maturity-aware: first Chronos extra using next-major `<1.0` (ADR-026 §7); rule codified "next-major for 0.x alpha with additive patch cadence, next-minor for 1.x stable SemVer". (5) Tests run without optional extra installed (stricter than CrewAI's skipif pattern) — possible because recorder is SDK-import-free at runtime, catches structural regressions in minimal dev envs. No tag cut — v0.7.0a1 target R72. R71 Option A = live-smoke + dogfood script `scripts/dogfood/arc_b_slice_1_smoke.py` + tests/live/test_anthropic_agents_smoke.py; Option B = blocker-investigation if Node.js CLI missing or baidu-int relay incompatible.*
 
 *Previous footer: 2026-05-13 (CST ~01:41, R67 cron slot inside 0–11 window) by Round 67 agent — **Arc A item 2 CLI closeout + v0.6.0 tag cut**. Inherited ~1138 LOC WIP from prior cron slot, gates swept + fixed, dogfood exit 0, committed bundle + tagged v0.6.0 + pushed via gh-proxy + GitHub Release. **Arc A fully closed** through v0.6.0. Adapter R52→R67 = 16 rounds zero-change.*
 
