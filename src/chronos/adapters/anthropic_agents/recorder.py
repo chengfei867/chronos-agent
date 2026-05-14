@@ -56,7 +56,7 @@ from chronos.adapters.protocols import (
     ForkRef,
     RunRef,
 )
-from chronos.core.models import Node, NodeKind, Run, RunStatus, Usage
+from chronos.core.models import Fork, Node, NodeKind, Run, RunStatus, Usage
 
 if TYPE_CHECKING:
     from chronos.store import SqliteStore
@@ -519,29 +519,250 @@ class AnthropicAgentsRecorder:
         task_description: str | None = None,
         tags: list[str] | None = None,
     ) -> Iterator[ForkRef]:
-        """R73 stub — delegates to ``claude_agent_sdk.fork_session()``.
+        """Fork a recorded run at a given node, delegating to ``fork_session``.
 
-        Per R69 spike #1: the SDK ships ``fork_session(session_id,
-        up_to_message_id=...)`` as a transcript-JSONL rewrite primitive.
-        R73 will: (a) call ``fork_session`` to materialise the child
-        transcript; (b) attach the recorder to the resulting session;
-        (c) emit a synthetic FORK ``NodeKind`` node and ``Fork`` row;
-        (d) replay forward via ``ClaudeSDKClient`` against the forked
-        session-id.
+        Algorithm (R74, ADR-026 Arc B slice 2):
 
-        R70 deliberately leaves this unimplemented to avoid silently
-        partial fork semantics.
+        1. Validate ``parent_run_id`` / ``at_node_id`` exist + thread isolation.
+        2. Recover the SDK ``session_id`` and ``message uuid`` captured in
+           ``parent_node.state_after`` during :meth:`record` (lines 305-308).
+        3. Call ``claude_agent_sdk.fork_session(session_id,
+           up_to_message_id=uuid)`` to materialise a fresh child transcript.
+           This is a pure JSONL rewrite — fresh UUIDs, ``forkedFrom`` stamp,
+           no MCP-server impact (R69 spike, ADR-026 §3).
+        4. Yield a :class:`ForkRef` carrying the *child SDK session id* on
+           ``ref.metadata`` (via attribute set) so the user can spin up
+           ``ClaudeSDKClient(options=ClaudeAgentOptions(resume=child_sid))``
+           inside the ``with`` block.
+        5. The user is expected to drive the resumed client and pass the
+           resulting ``ClaudeSDKClient`` (or any async iterable of messages)
+           to ``ref.submit_runtime(...)``. We then iterate exactly like
+           :meth:`record` and translate to ``_PendingNode`` rows.
+        6. On exit, persist the child Run + Nodes + a Fork row atomically.
+
+        On failure inside the ``with`` block, the child Run is persisted
+        with ``status=FAILED`` and the original exception re-raised. A
+        Fork row is still written so the relation is queryable.
+
+        Args:
+            runtime: Unused at this layer — the SDK driver is supplied via
+                ``ref.submit_runtime(client_or_iterable)`` inside the block.
+                Accepted for ADR-016 signature parity.
+            parent_run_id: Existing parent ``Run.id`` recorded by
+                :meth:`record`.
+            at_node_id: ``Node.id`` within ``parent_run_id`` whose
+                ``state_after['session_id']`` and ``state_after['uuid']``
+                will seed the SDK fork.
+            overrides: Free-form key/value pairs persisted to ``Fork.edited_fields``
+                for downstream replay-edit workflows. **Not** applied to
+                the SDK transcript — the SDK fork is verbatim up to
+                ``up_to_message_id``; user-side edits ride on the resumed
+                prompt the user issues inside the ``with`` block.
+            child_thread_id: User-supplied logical thread id for the child
+                run. Must differ from the parent run's thread id.
+            reason: Optional free-form fork reason (persisted to ``Fork.reason``).
+            task_description: Optional free-form description for the child Run.
+            tags: Optional list of string tags for the child Run.
+
+        Yields:
+            :class:`ForkRef` with ``parent_run_id`` / ``at_node_id`` /
+            ``child_thread_id`` populated immediately, plus two extra
+            attributes set after ``fork_session`` returns:
+
+            - ``sdk_session_id``: child SDK session UUID (use as
+              ``ClaudeAgentOptions.resume``).
+            - ``submit_runtime(rt)``: callback the user MUST invoke with
+              their resumed ``ClaudeSDKClient`` (or an async-iterable of
+              SDK ``Message``) before the ``with`` block exits.
+
+            On exit, ``ref.child_run_id`` / ``ref.fork_id`` / ``ref.node_ids``
+            are populated.
         """
-        del runtime, parent_run_id, at_node_id, overrides, child_thread_id
-        del reason, task_description, tags
-        raise NotImplementedError(
-            "AnthropicAgentsRecorder.fork(): scheduled for R73. Per ADR-026 §6 "
-            "rollout plan, fork delegates to "
-            "`claude_agent_sdk._internal.session_mutations.fork_session()` "
-            "(R69 spike #1 finding). Slice 1 (R70-R74) lands record-only at "
-            "v0.7.0a1 (R72), full record + fork at v0.7.0 (R74)."
+        del runtime  # signature parity only; child driver via ref.submit_runtime
+
+        # --- Pre-flight: load parent artifacts and validate ---
+        parent_run = self._store.get_run(parent_run_id)
+        if parent_run is None:
+            raise AdapterError(
+                f"AnthropicAgentsRecorder.fork: parent_run_id={parent_run_id!r} "
+                "not found in store"
+            )
+        parent_node = self._store.get_node(at_node_id)
+        if parent_node is None:
+            raise AdapterError(
+                f"AnthropicAgentsRecorder.fork: at_node_id={at_node_id!r} "
+                "not found in store"
+            )
+        if parent_node.run_id != parent_run_id:
+            raise AdapterError(
+                f"AnthropicAgentsRecorder.fork: at_node_id={at_node_id!r} does "
+                f"not belong to parent_run_id={parent_run_id!r}"
+            )
+        if child_thread_id == parent_run.adapter_thread_id:
+            raise AdapterError(
+                f"AnthropicAgentsRecorder.fork: child_thread_id={child_thread_id!r} "
+                f"must differ from parent thread_id={parent_run.adapter_thread_id!r} "
+                "(would overwrite parent SDK transcript file)"
+            )
+
+        # --- Recover SDK seed coordinates from parent_node.state_after ---
+        # record() (line 305-308) stamps {'uuid', 'session_id'} into state_after
+        # whenever the SDK Message exposes them. AssistantMessage / ResultMessage
+        # always do; SystemMessage / UserMessage may not — fork from those is
+        # rejected with a clear error.
+        parent_state = parent_node.state_after or {}
+        parent_session_id = parent_state.get("session_id")
+        parent_uuid = parent_state.get("uuid")
+        if not isinstance(parent_session_id, str) or not parent_session_id:
+            raise AdapterError(
+                f"AnthropicAgentsRecorder.fork: parent node {at_node_id!r} "
+                "has no SDK session_id in state_after — fork only valid from "
+                "AssistantMessage / ResultMessage anchor nodes"
+            )
+        if not isinstance(parent_uuid, str) or not parent_uuid:
+            raise AdapterError(
+                f"AnthropicAgentsRecorder.fork: parent node {at_node_id!r} "
+                "has no SDK message uuid in state_after — fork anchor must be "
+                "a node whose source Message exposed `uuid`"
+            )
+
+        # --- Late import: claude_agent_sdk.fork_session is the SDK primitive ---
+        # Late so unit tests can monkey-patch via sys.modules without paying
+        # the real SDK import cost. Real callers already imported the SDK
+        # to drive record().
+        try:
+            from claude_agent_sdk import fork_session as _fork_session
+        except Exception as imp_exc:  # pragma: no cover — optional-dep precedent
+            raise AdapterError(
+                "AnthropicAgentsRecorder.fork: claude_agent_sdk.fork_session "
+                f"unavailable ({imp_exc!r}). Install the optional `anthropic_agents` "
+                "extra (>= 0.1.80)."
+            ) from imp_exc
+
+        try:
+            fork_result = _fork_session(
+                parent_session_id,
+                up_to_message_id=parent_uuid,
+                title=task_description,
+            )
+        except Exception as fork_exc:
+            raise AdapterError(
+                "AnthropicAgentsRecorder.fork: fork_session() failed for "
+                f"session_id={parent_session_id!r} up_to={parent_uuid!r}: {fork_exc!r}"
+            ) from fork_exc
+        child_sdk_session_id = getattr(fork_result, "session_id", None)
+        if not isinstance(child_sdk_session_id, str) or not child_sdk_session_id:
+            raise AdapterError(
+                "AnthropicAgentsRecorder.fork: fork_session() returned no "
+                f"child session_id (got {fork_result!r})"
+            )
+
+        # --- Build the ForkRef + user-callable hook for runtime submission ---
+        ref = ForkRef(
+            parent_run_id=parent_run_id,
+            at_node_id=at_node_id,
+            child_thread_id=child_thread_id,
         )
-        yield  # pragma: no cover — keeps mypy happy on Iterator return type
+        # Attach SDK child id + submit_runtime hook (duck-typed extras, mirrors
+        # AutoGen recorder's `submit_result` precedent).
+        ref.sdk_session_id = child_sdk_session_id  # type: ignore[attr-defined]
+        captured: dict[str, Any] = {"runtime": None}
+
+        def submit_runtime(rt: Any) -> None:
+            captured["runtime"] = rt
+
+        ref.submit_runtime = submit_runtime  # type: ignore[attr-defined]
+
+        # Reset buffer so the child run gets a clean slate.
+        with self._lock:
+            self._buffer.clear()
+
+        # --- User block runs ClaudeSDKClient(resume=child_sdk_session_id) ---
+        child_run_id = str(uuid.uuid4())
+        started = datetime.now(UTC)
+        exc: BaseException | None = None
+        try:
+            yield ref
+            child_runtime = captured["runtime"]
+            if child_runtime is not None:
+                try:
+                    source = self._resolve_iterator(child_runtime)
+                    asyncio.run(self._consume(source))
+                except AdapterError:
+                    raise
+                except Exception as e:
+                    raise AdapterError(
+                        f"AnthropicAgentsRecorder.fork: failure consuming "
+                        f"child message stream: {e!r}"
+                    ) from e
+        except BaseException as e:
+            exc = e
+            raise
+        finally:
+            ended = datetime.now(UTC)
+            status = RunStatus.FAILED if exc is not None else RunStatus.COMPLETED
+            child_run = Run(
+                id=child_run_id,
+                adapter=self._adapter_name,
+                adapter_thread_id=child_thread_id,
+                status=status,
+                started_at=started,
+                ended_at=ended,
+                task_description=task_description,
+                tags=list(tags) if tags else [],
+            )
+            fork_row = Fork(
+                id=str(uuid.uuid4()),
+                parent_run_id=parent_run_id,
+                parent_node_id=at_node_id,
+                child_run_id=child_run_id,
+                edited_fields=dict(overrides) if overrides else {},
+                reason=reason,
+            )
+            try:
+                # Atomic write: child Run + Nodes + Fork row in one transaction.
+                # We inline _drain_buffer_to_store's body here (rather than
+                # call it) because store.transaction() does not support
+                # nesting (raw BEGIN/COMMIT) and we need put_fork() inside
+                # the same atomic boundary as the child nodes (LangGraph
+                # precedent — _fork_from_history line 365).
+                with self._lock:
+                    pending = list(self._buffer)
+                    self._buffer.clear()
+                with self._store.transaction():
+                    self._store.put_run(child_run)
+                    for idx, p in enumerate(pending):
+                        node_id = str(uuid.uuid4())
+                        usage_obj: Usage | None = None
+                        if p.usage is not None:
+                            try:
+                                usage_obj = Usage(**p.usage)
+                            except Exception:
+                                usage_obj = None
+                        node = Node(
+                            id=node_id,
+                            run_id=child_run.id,
+                            step_index=idx,
+                            node_name=p.node_name,
+                            kind=p.kind,
+                            state_after=p.state_after,
+                            model_name=p.model_name,
+                            usage=usage_obj,
+                            tool_name=p.tool_name,
+                            tool_input=p.tool_input,
+                            tool_output=p.tool_output,
+                            error_message=p.error_message,
+                        )
+                        self._store.put_node(node)
+                        ref.node_ids.append(node_id)
+                    self._store.put_fork(fork_row)
+                ref.child_run_id = child_run_id
+                ref.fork_id = fork_row.id
+            except Exception as drain_exc:  # pragma: no cover — defensive
+                if exc is None:
+                    raise
+                ref.node_ids.clear()
+                _ = drain_exc
 
 
 __all__ = [

@@ -504,17 +504,224 @@ def test_record_drift_bad_usage_shape(
 # ---------------------------------------------------------------------------
 
 
-def test_fork_raises_not_implemented(recorder: AnthropicAgentsRecorder) -> None:
-    with (
-        pytest.raises(NotImplementedError, match="R73"),
-        recorder.fork(
-            runtime=object(),
-            parent_run_id="00000000-0000-0000-0000-000000000000",
-            at_node_id="00000000-0000-0000-0000-000000000001",
-            child_thread_id="child",
-        ),
+def test_fork_happy_path_persists_run_nodes_and_fork_row(
+    recorder: AnthropicAgentsRecorder, store: SqliteStore, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """R74: fork() delegates to claude_agent_sdk.fork_session, persists Run+Nodes+Fork."""
+    # 1. Record a parent run with one AssistantMessage (carries uuid+session_id)
+    parent_uuid = "11111111-1111-1111-1111-111111111111"
+    parent_sdk_sid = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+    asst = _msg(
+        "AssistantMessage",
+        content=[_blk("TextBlock", text="hello from parent")],
+        model="Claude Sonnet 4.6",
+        uuid=parent_uuid,
+        session_id=parent_sdk_sid,
+    )
+    parent_runtime = _FakeClient(messages=[asst])
+    with recorder.record(parent_runtime, thread_id="thread-parent") as p_ref:
+        pass
+    assert p_ref.run_id is not None
+    parent_run_id = p_ref.run_id
+    parent_node_id = p_ref.node_ids[0]
+
+    # 2. Stub claude_agent_sdk.fork_session via sys.modules monkey-patch.
+    # The recorder imports inside fork(), so we install a fake module.
+    import sys
+    import types as _types
+
+    fake_sdk = _types.ModuleType("claude_agent_sdk")
+    captured: dict[str, Any] = {}
+
+    @dataclass
+    class _FakeForkResult:
+        session_id: str
+
+    def _fake_fork_session(
+        session_id: str,
+        *,
+        up_to_message_id: str | None = None,
+        title: str | None = None,
+        directory: str | None = None,
+    ) -> _FakeForkResult:
+        captured["session_id"] = session_id
+        captured["up_to_message_id"] = up_to_message_id
+        captured["title"] = title
+        return _FakeForkResult(session_id="bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
+
+    fake_sdk.fork_session = _fake_fork_session  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "claude_agent_sdk", fake_sdk)
+
+    # 3. Fork & drive child runtime
+    child_msg = _msg(
+        "AssistantMessage",
+        content=[_blk("TextBlock", text="hello from child fork")],
+        model="Claude Sonnet 4.6",
+        uuid="22222222-2222-2222-2222-222222222222",
+        session_id="bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+    )
+    child_runtime = _FakeClient(messages=[child_msg])
+    with recorder.fork(
+        runtime=None,
+        parent_run_id=parent_run_id,
+        at_node_id=parent_node_id,
+        child_thread_id="thread-child",
+        reason="branching to test alt prompt",
+        overrides={"prompt_edit": "what if we asked X instead"},
+    ) as f_ref:
+        # SDK fork happened before yield
+        assert captured["session_id"] == parent_sdk_sid
+        assert captured["up_to_message_id"] == parent_uuid
+        assert f_ref.sdk_session_id == "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"  # type: ignore[attr-defined]
+        # User submits the resumed runtime
+        f_ref.submit_runtime(child_runtime)  # type: ignore[attr-defined]
+
+    # 4. Assert ForkRef populated + DB rows correct
+    assert f_ref.child_run_id is not None
+    assert f_ref.fork_id is not None
+    assert len(f_ref.node_ids) == 1
+
+    child_run = store.get_run(f_ref.child_run_id)
+    assert child_run is not None
+    assert child_run.adapter_thread_id == "thread-child"
+    assert child_run.status == RunStatus.COMPLETED
+
+    fork_row = store.get_fork(f_ref.fork_id)
+    assert fork_row is not None
+    assert fork_row.parent_run_id == parent_run_id
+    assert fork_row.parent_node_id == parent_node_id
+    assert fork_row.child_run_id == f_ref.child_run_id
+    assert fork_row.edited_fields == {"prompt_edit": "what if we asked X instead"}
+    assert fork_row.reason == "branching to test alt prompt"
+
+
+def test_fork_rejects_unknown_parent_run(recorder: AnthropicAgentsRecorder) -> None:
+    with pytest.raises(AdapterError, match="parent_run_id="), recorder.fork(
+        runtime=None,
+        parent_run_id="00000000-0000-0000-0000-000000000000",
+        at_node_id="00000000-0000-0000-0000-000000000001",
+        child_thread_id="child",
     ):
         pass
+
+
+def test_fork_rejects_node_from_different_run(
+    recorder: AnthropicAgentsRecorder, store: SqliteStore
+) -> None:
+    # Record two runs; try to fork run-A using run-B's node_id
+    asst = _msg(
+        "AssistantMessage",
+        uuid="aaaa1111-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        session_id="sess-a",
+        model="m",
+        content=[_blk("TextBlock", text="A")],
+    )
+    with recorder.record(_FakeClient(messages=[asst]), thread_id="t-a") as ref_a:
+        pass
+    bsst = _msg(
+        "AssistantMessage",
+        uuid="bbbb1111-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+        session_id="sess-b",
+        model="m",
+        content=[_blk("TextBlock", text="B")],
+    )
+    with recorder.record(_FakeClient(messages=[bsst]), thread_id="t-b") as ref_b:
+        pass
+    assert ref_a.run_id and ref_b.run_id
+    with pytest.raises(AdapterError, match="does not belong"), recorder.fork(
+        runtime=None,
+        parent_run_id=ref_a.run_id,
+        at_node_id=ref_b.node_ids[0],
+        child_thread_id="t-c",
+    ):
+        pass
+
+
+def test_fork_rejects_same_thread_id(
+    recorder: AnthropicAgentsRecorder, store: SqliteStore
+) -> None:
+    asst = _msg(
+        "AssistantMessage",
+        uuid="cccc1111-cccc-cccc-cccc-cccccccccccc",
+        session_id="sess-c",
+        model="m",
+        content=[_blk("TextBlock", text="C")],
+    )
+    with recorder.record(_FakeClient(messages=[asst]), thread_id="same") as ref:
+        pass
+    assert ref.run_id
+    with pytest.raises(AdapterError, match="must differ from parent"), recorder.fork(
+        runtime=None,
+        parent_run_id=ref.run_id,
+        at_node_id=ref.node_ids[0],
+        child_thread_id="same",  # same as parent
+    ):
+        pass
+
+
+def test_fork_rejects_anchor_without_session_id(
+    recorder: AnthropicAgentsRecorder,
+) -> None:
+    """SystemMessage / UserMessage may lack session_id+uuid → fork must reject."""
+    sysm = _msg("SystemMessage", content="boot")  # no uuid, no session_id
+    with recorder.record(_FakeClient(messages=[sysm]), thread_id="t-sys") as ref:
+        pass
+    assert ref.run_id
+    with pytest.raises(AdapterError, match="no SDK session_id"), recorder.fork(
+        runtime=None,
+        parent_run_id=ref.run_id,
+        at_node_id=ref.node_ids[0],
+        child_thread_id="t-sys-child",
+    ):
+        pass
+
+
+def test_fork_persists_failed_status_on_user_block_exception(
+    recorder: AnthropicAgentsRecorder, store: SqliteStore, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Exception inside the with-block → child Run = FAILED, Fork row still written."""
+    asst = _msg(
+        "AssistantMessage",
+        uuid="dddd1111-dddd-dddd-dddd-dddddddddddd",
+        session_id="sess-d",
+        model="m",
+        content=[_blk("TextBlock", text="D")],
+    )
+    with recorder.record(_FakeClient(messages=[asst]), thread_id="t-d") as ref:
+        pass
+    assert ref.run_id
+
+    # Stub fork_session
+    import sys
+    import types as _types
+
+    fake_sdk = _types.ModuleType("claude_agent_sdk")
+
+    @dataclass
+    class _R:
+        session_id: str
+
+    fake_sdk.fork_session = lambda sid, **kw: _R(  # type: ignore[attr-defined]
+        session_id="eeee1111-eeee-eeee-eeee-eeeeeeeeeeee"
+    )
+    monkeypatch.setitem(sys.modules, "claude_agent_sdk", fake_sdk)
+
+    with pytest.raises(RuntimeError, match="boom"), recorder.fork(
+        runtime=None,
+        parent_run_id=ref.run_id,
+        at_node_id=ref.node_ids[0],
+        child_thread_id="t-d-child",
+    ) as f_ref:
+        raise RuntimeError("boom")
+
+    # Even on failure ref.child_run_id was populated by the finally block
+    assert f_ref.child_run_id is not None
+    child_run = store.get_run(f_ref.child_run_id)
+    assert child_run is not None
+    assert child_run.status == RunStatus.FAILED
+    # Fork row is still queryable
+    fork_row = store.get_fork_for_child(f_ref.child_run_id)
+    assert fork_row is not None
 
 
 # ---------------------------------------------------------------------------
