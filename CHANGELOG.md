@@ -4,6 +4,31 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added (R77 — ADR-026 §5.1.1 amendment: multi-block `state_after.tool_use_ids` contract)
+
+- **ADR-026 §5.1.1 (R77 amendment, slice 3a-P1)** — extends the R76 §5.1 single-block contract to the multi-block case. When an `AssistantMessage` carries >1 `ToolUseBlock` (batched parallel tool dispatch) or a `UserMessage` carries >1 `ToolResultBlock`, the recorder now surfaces an ordered `state_after['tool_use_ids']` (plural) list — block-source order preserved — so slice-3 SQL consumers can JOIN 1:N via `json_each(state_after->>'tool_use_ids')`. **Mutual exclusivity is binding**: singular `tool_use_id` (§5.1) and plural `tool_use_ids` (§5.1.1) MUST NEVER coexist on the same Node (`len==1 → singular only`; `len>1 → plural only`). Same defensive guard as R76 (`isinstance(..., str) and id`); if all ids filter out, the key is omitted (parallels R76's missing-anchor tolerance).
+- **2 new branches in `_translate()`** in `src/chronos/adapters/anthropic_agents/recorder.py` (~lines 359 + 393) — symmetric `len(...) > 1:` arms stamping `state["tool_use_ids"]` from `ToolUseBlock.id` (assistant side) and `ToolResultBlock.tool_use_id` (user side), in source block order.
+- **3 new unit tests** in `tests/unit/test_adapter_anthropic_agents.py` (new §6.2.1 section) — `test_record_multi_tool_use_block_persists_ids` (use side), `test_record_multi_tool_result_block_persists_ids` (both sides + JOIN keyset byte-identity), `test_record_mixed_count_keeps_singular_and_plural_separate` (regression guard against future field collapse).
+- **ADR-026 §5.1.1 SQL recipe** — both single-block and multi-block JOIN patterns documented in the new sub-section, ready for slice-3 query authoring without further hand-holding.
+
+### Changed
+
+- Test count: 616 → **619** (+3 unit tests, all pure-additive).
+- Adapter-1-3 zero-regression streak: R52→R77 = **25 rounds** (still longest in project history).
+- ADR-026 §5.1 "Out of scope" bullet updated — multi-block is no longer reserved-future-slice; resolved by §5.1.1.
+
+### Added (R76 — ADR-026 §5.1 amendment: `state_after.tool_use_id` round-trip linkage contract)
+
+- **ADR-026 §5.1 (R76 amendment, slice 3a)** — codifies the cross-Node JOIN anchor for slice-3 SQL queries answering "which assistant tool-use Node generated this tool-result Node?". `_translate()` now stamps `state_after['tool_use_id']` symmetrically on `AssistantMessage` (single `ToolUseBlock`) and `UserMessage` (single `ToolResultBlock`) Nodes — byte-identical by SDK contract, JOIN-able via `json_extract(state_after, '$.tool_use_id')`. Defensive `isinstance(..., str) and id` guard prevents stamping on missing/empty/non-str ids. Orphan `ToolResultBlock` (resumed/forked session entry without preceding use) MUST NOT cause `record()` to fail — asymmetric tolerance: missing anchor is observability loss, not a record() failure.
+- **3 new unit tests** in `tests/unit/test_adapter_anthropic_agents.py` (§6.2 block) — `test_record_tool_use_block_persists_id` (use side), `test_record_tool_result_block_links_to_use` (both sides + byte-identical JOIN equality), `test_unmatched_tool_result_does_not_break_record` (orphan tolerance).
+- **`.gitignore`** — added `frontend/pnpm-{lock,workspace}.yaml` under the Node section (R75-deferred clean-up; cites Arc A R63 npm-only decision).
+
+### Changed
+
+- Test count: 613 → **616** (+3 unit tests, all pure-additive).
+- Adapter-1-3 zero-regression streak: R52→R76 = **24 rounds** (still longest in project history).
+- ADR-026 §5.1 added in-place per R57 doctrine (mirrors R75 §5 amendment style).
+
 ### Added (R75 — ADR-026 §5 amendment: `state_after` seed-coordinate contract)
 
 - **ADR-026 §5 (R75 amendment)** — codifies the implicit inter-method contract between `AnthropicAgentsRecorder.record()` and `.fork()`. R74 implementation accidentally relied on R70's `record()` stamping `uuid` + `session_id` onto `Node.state_after`; the contract is now explicit and binding from R75 onwards. New section enumerates the five metadata keys, marks `uuid`/`session_id` as the fork-critical pair (loud failure on fork), separates them from observability-only keys (`stop_reason`/`total_cost_usd`/`duration_ms`) which may evolve without amendment.

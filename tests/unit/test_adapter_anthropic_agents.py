@@ -651,6 +651,196 @@ def test_unmatched_tool_result_does_not_break_record(
 
 
 # ---------------------------------------------------------------------------
+# 6.2.1 record() multi-block tool linkage — state_after.tool_use_ids (R77)
+# ---------------------------------------------------------------------------
+#
+# ADR-026 §5.1.1 (R77 amendment, slice 3a-P1) extends the §5.1 single-block
+# contract to the multi-block case. When an AssistantMessage carries >1
+# ToolUseBlock (batched tool dispatch) the recorder surfaces the ordered
+# ids list as `state_after['tool_use_ids']` (plural). The singular
+# `state_after['tool_use_id']` is reserved for the len==1 1:1 JOIN anchor —
+# multi-block consumers expand 1:N via
+# `json_each(state_after->>'tool_use_ids')`. Order matches block order in
+# the source message so consumers can pair use[i] <-> result[i] by index.
+#
+# These three tests pin:
+#   - use side: >1 ToolUseBlock -> tool_use_ids list, no singular tool_use_id
+#   - result side: >1 ToolResultBlock -> tool_use_ids list, no singular
+#   - separation: a stream containing both single-block (singular) and
+#     multi-block (plural) messages keeps the two fields cleanly separate
+# ---------------------------------------------------------------------------
+
+
+def test_record_multi_tool_use_block_persists_ids(
+    recorder: AnthropicAgentsRecorder,
+    store: SqliteStore,
+) -> None:
+    """ADR-026 §5.1.1 (R77): AssistantMessage carrying >1 ToolUseBlock
+    surfaces the ordered ids list as state_after['tool_use_ids'] (plural).
+    Singular state_after['tool_use_id'] is NOT set in the multi-block case
+    (binding contract — R76 §5.1 reserves singular for the 1:1 JOIN anchor).
+    """
+    ids = ["toolu_01AAA", "toolu_02BBB", "toolu_03CCC"]
+    messages = [
+        _msg("UserMessage", content="please run several commands"),
+        _msg(
+            "AssistantMessage",
+            content=[
+                _blk("ToolUseBlock", id=ids[0], name="bash", input={"cmd": "pwd"}),
+                _blk("ToolUseBlock", id=ids[1], name="bash", input={"cmd": "ls"}),
+                _blk("ToolUseBlock", id=ids[2], name="bash", input={"cmd": "whoami"}),
+            ],
+            model="claude-sonnet-4-5",
+        ),
+    ]
+    runtime = _aiter(messages)
+    with recorder.record(runtime, thread_id="t-multi-tool-use") as ref:
+        pass
+
+    assert ref.run_id is not None
+    nodes = store.get_nodes_for_run(ref.run_id)
+    asst = next(n for n in nodes if n.node_name.startswith("AssistantMessage"))
+    # Plural list set, in source order (NOT sorted).
+    assert asst.state_after.get("tool_use_ids") == ids, (
+        "ADR-026 §5.1.1: AssistantMessage(>1 ToolUseBlock).state_after must "
+        "carry tool_use_ids (plural) in source order"
+    )
+    # Singular intentionally NOT set in multi-block case (R76 §5.1 binding).
+    assert "tool_use_id" not in asst.state_after, (
+        "ADR-026 §5.1.1: singular tool_use_id reserved for len==1 (1:1 JOIN); "
+        "multi-block must use tool_use_ids (plural) only"
+    )
+
+
+def test_record_multi_tool_result_block_persists_ids(
+    recorder: AnthropicAgentsRecorder,
+    store: SqliteStore,
+) -> None:
+    """ADR-026 §5.1.1 (R77): UserMessage carrying >1 ToolResultBlock
+    surfaces the ordered tool_use_ids list as state_after['tool_use_ids'].
+    Asserts JOIN consistency: result-side tool_use_ids list is byte-for-byte
+    equal to the use-side list (i-th use <-> i-th result by SDK contract).
+    """
+    ids = ["toolu_01XXX", "toolu_02YYY"]
+    messages = [
+        _msg("UserMessage", content="please run two commands"),
+        _msg(
+            "AssistantMessage",
+            content=[
+                _blk("ToolUseBlock", id=ids[0], name="bash", input={"cmd": "pwd"}),
+                _blk("ToolUseBlock", id=ids[1], name="bash", input={"cmd": "ls"}),
+            ],
+            model="claude-sonnet-4-5",
+        ),
+        _msg(
+            "UserMessage",
+            content=[
+                _blk(
+                    "ToolResultBlock",
+                    tool_use_id=ids[0],
+                    content={"stdout": "/home\n"},
+                ),
+                _blk(
+                    "ToolResultBlock",
+                    tool_use_id=ids[1],
+                    content={"stdout": "a\nb\n"},
+                ),
+            ],
+        ),
+    ]
+    runtime = _aiter(messages)
+    with recorder.record(runtime, thread_id="t-multi-tool-roundtrip") as ref:
+        pass
+
+    assert ref.run_id is not None
+    nodes = store.get_nodes_for_run(ref.run_id)
+    use_node = next(n for n in nodes if n.node_name.startswith("AssistantMessage"))
+    # Result Node = the second UserMessage (the one with multi-result blocks).
+    # First UserMessage has plain str content; pick the one whose
+    # state_after carries tool_use_ids.
+    result_node = next(
+        n
+        for n in nodes
+        if n.node_name == "UserMessage" and "tool_use_ids" in n.state_after
+    )
+    # Both Nodes carry SAME ordered ids list — this is the JOIN keyset.
+    assert use_node.state_after.get("tool_use_ids") == ids
+    assert result_node.state_after.get("tool_use_ids") == ids
+    assert use_node.state_after.get("tool_use_ids") == result_node.state_after.get(
+        "tool_use_ids"
+    ), "ADR-026 §5.1.1: tool_use_ids list must be byte-identical across linked Nodes"
+    # Singular not set on either side (multi-block case).
+    assert "tool_use_id" not in use_node.state_after
+    assert "tool_use_id" not in result_node.state_after
+
+
+def test_record_mixed_count_keeps_singular_and_plural_separate(
+    recorder: AnthropicAgentsRecorder,
+    store: SqliteStore,
+) -> None:
+    """ADR-026 §5.1 + §5.1.1 (R76 + R77): a stream mixing single-block and
+    multi-block tool messages keeps the singular/plural fields cleanly
+    separate per Node — singular Node has only `tool_use_id`, plural Node
+    has only `tool_use_ids`. Both contracts hold simultaneously without
+    cross-talk; this is the regression guard against a future refactor that
+    might collapse the two fields.
+    """
+    single_id = "toolu_solo"
+    multi_ids = ["toolu_pair_a", "toolu_pair_b"]
+    messages = [
+        _msg("UserMessage", content="first run one command"),
+        _msg(
+            "AssistantMessage",
+            content=[_blk("ToolUseBlock", id=single_id, name="bash", input={"cmd": "id"})],
+            model="claude-sonnet-4-5",
+        ),
+        _msg(
+            "UserMessage",
+            content=[
+                _blk(
+                    "ToolResultBlock",
+                    tool_use_id=single_id,
+                    content={"stdout": "uid=1000\n"},
+                )
+            ],
+        ),
+        _msg("UserMessage", content="now two more"),
+        _msg(
+            "AssistantMessage",
+            content=[
+                _blk("ToolUseBlock", id=multi_ids[0], name="bash", input={"cmd": "pwd"}),
+                _blk("ToolUseBlock", id=multi_ids[1], name="bash", input={"cmd": "ls"}),
+            ],
+            model="claude-sonnet-4-5",
+        ),
+    ]
+    runtime = _aiter(messages)
+    with recorder.record(runtime, thread_id="t-mixed-count") as ref:
+        pass
+
+    assert ref.run_id is not None
+    nodes = store.get_nodes_for_run(ref.run_id)
+    asst_nodes = [n for n in nodes if n.node_name.startswith("AssistantMessage")]
+    assert len(asst_nodes) == 2
+
+    # Find singular vs plural deterministically by which key is present.
+    singular_node = next(n for n in asst_nodes if "tool_use_id" in n.state_after)
+    plural_node = next(n for n in asst_nodes if "tool_use_ids" in n.state_after)
+
+    # Singular Node: ONLY tool_use_id, NOT tool_use_ids.
+    assert singular_node.state_after["tool_use_id"] == single_id
+    assert "tool_use_ids" not in singular_node.state_after, (
+        "ADR-026 §5.1: single-block Node must not carry plural tool_use_ids"
+    )
+    # Plural Node: ONLY tool_use_ids, NOT tool_use_id.
+    assert plural_node.state_after["tool_use_ids"] == multi_ids
+    assert "tool_use_id" not in plural_node.state_after, (
+        "ADR-026 §5.1.1: multi-block Node must not carry singular tool_use_id"
+    )
+    # The two fields are mutually exclusive per Node by binding contract.
+
+
+# ---------------------------------------------------------------------------
 # 7. record() failure path
 # ---------------------------------------------------------------------------
 

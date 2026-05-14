@@ -147,6 +147,35 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
+**截至 Round 77 结束 (2026-05-15 CST 07:47 cron slot — single-slot slice 3a-P1 round) — Phase 4 Arc B slice 3a continuation. R77 retires the last "reserved for a future slice" bullet from ADR-026 §5.1 by extending the R76 single-block `state_after['tool_use_id']` contract to multi-block messages. New §5.1.1 amendment (in-place per R57 doctrine, sibling to R75 §5 / R76 §5.1) pins `state_after['tool_use_ids']` (plural, ordered list) as the multi-block JOIN keyset, with binding mutual-exclusivity: `len==1 → singular only`, `len>1 → plural only`, never both on same Node. Two symmetric `elif len(...) > 1:` branches added to `_translate()` (~16 lines), three new unit tests at §6.2.1 (multi-use side / multi-result both-sides JOIN / mixed-count separation regression guard), CHANGELOG R76 entry backfilled (R76 commit had omitted it). Tests 616→619, ruff clean, mypy zero new errors. Adapter-1-3 zero-regression streak: R52→R77 = **25 rounds**. No tag — `[Unreleased]` accumulates toward `v0.7.0` GA.**
+
+- 最近 progress doc: `docs/progress/2026-05-15-round-77.md` (R77 — slice 3a-P1 multi-block tool_use_ids extension)
+- 最近上份 progress doc: `docs/progress/2026-05-15-round-76.md` (R76 — Option D + slice 3a single-block tool_use_id linkage)
+- 最近上上份 progress doc: `docs/progress/2026-05-15-round-75.md` (R75 — ADR-026 §5 amendment + record/fork seed-coordinate contract)
+- Round: **77** (Phase 4 Arc B slice 3a-P1 — single slot, in-window 07:47 CST): 0 blocker. Sequence: time check (07:47 in window) → read CONTEXT §5/§6 → `git fetch origin main` (clean against `82aca6c`) → baseline 616/7 → identified slice 3a-P1 from R76 deferral (multi-block tool_use_ids) → patch `recorder.py` (`elif len(...) > 1:` branches, ~16 lines) → append §6.2.1 (3 tests) using `node_name.startswith` not `msg_cls` (Node has no `msg_cls` field — caught at edit-time before pytest) → patch ADR-026 (insert §5.1.1 between §5.1 and §6, R57 in-place; update §5.1 out-of-scope bullet) → fix 2 ruff B009 (`getattr(b, "id")` truthiness → `b.id`) → run targeted pytest 3/3 green → run full pytest 619/7 green → run ruff/mypy → CHANGELOG: backfill missing R76 + add R77 → progress doc + this CONTEXT refresh → commit + push (gh-proxy.com).
+  - **Files**: 4 modified (`src/chronos/adapters/anthropic_agents/recorder.py`, `tests/unit/test_adapter_anthropic_agents.py`, `docs/decisions/ADR-026-arc-b-scope.md`, `CHANGELOG.md`, `docs/CONTEXT.md`) + 1 new (`docs/progress/2026-05-15-round-77.md`).
+  - **Tests**: +3 unit (`test_record_multi_tool_use_block_persists_ids` / `test_record_multi_tool_result_block_persists_ids` / `test_record_mixed_count_keeps_singular_and_plural_separate`), pure additive. All exercise live `record()` pipeline (R75 writer-side redundancy invariant honored).
+  - **No new ADR** — R57 doctrine again (in-place §5.1.1 amendment, sibling to R76's §5.1 and R75's §5).
+  - **No tag cut** — `[Unreleased]` continues toward `v0.7.0` GA at slice 3 close-out (R78+).
+  - **No schema change** — `state_after` is JSON bag; SQLite `json_each(state_after->>'tool_use_ids')` is the canonical 1:N query path. No new column / no sidecar / no migration.
+
+- **R77 关键发现 (上墙)**:
+  - **R76 commit omitted CHANGELOG**: caught while editing CHANGELOG for R77 entry — the [Unreleased] block jumped R74→R75 with no R76 entry, despite the R76 commit message claiming the slice-3a entry. Backfilled in R77 from the R76 commit message + diff stat (no new claims, strictly editorial). Pattern note: **commit-vs-changelog drift is a real failure mode** even with explicit SOP; future rounds should `grep -n '^### Added' CHANGELOG.md | head -2` as a pre-commit sanity check (1 second). Not promoted to skill yet — single occurrence, may be one-off.
+  - **Mutual-exclusivity binding (R77 new, ADR-026 §5.1.1)**: When extending a 1:1 contract to 1:N, the cleanest API is two mutually exclusive fields (singular for `len==1`, plural for `len>1`), NOT a single field that's sometimes a string and sometimes a list. The latter forces every consumer to type-narrow; the former lets `COALESCE`/branch logic stay simple. SQLite `json_each` handles both shapes uniformly without de-dup. Reusable pattern when ADR-amendment wants to widen a contract from 1:1 → 1:N.
+  - **Field-name verification at edit-time saves a pytest round-trip**: Initially wrote tests using `n.msg_cls` (a non-existent attribute); caught by skim-checking `core/models.py:Node` *before* running pytest. Cost ~30 seconds; would have cost a full pytest round-trip + edit cycle (~3 minutes) otherwise. Pattern: when adding tests that reference Node/Run/Fork attributes, `grep -n 'class Node' src/chronos/core/models.py` first.
+
+- **R77 产出**:
+  - `src/chronos/adapters/anthropic_agents/recorder.py` — 2 symmetric `elif len(...) > 1:` branches in `_translate()` stamping `state['tool_use_ids']` (plural list, source order, B009-clean attribute access).
+  - `tests/unit/test_adapter_anthropic_agents.py` — new §6.2.1 with 3 unit tests (multi-use / multi-result roundtrip / mixed-count separation guard).
+  - `docs/decisions/ADR-026-arc-b-scope.md` — new §5.1.1 (R77 amendment) inserted between §5.1 and §6; §5.1 out-of-scope bullet updated to point at §5.1.1; SQL recipe block included.
+  - `CHANGELOG.md` — R77 entry added at top of [Unreleased]; missing R76 entry backfilled below it.
+  - `docs/progress/2026-05-15-round-77.md` (**new**, ~11.5 KB).
+  - `docs/CONTEXT.md §5/§6` (本 refresh).
+  - **零 ADR 新增 / 零 roadmap / 零 frontend / 零 CLI / 零 HTTP API / 零 core / 零 store schema 改动** — R77 纯 recorder plural-list stamp + ADR amendment + tests + CHANGELOG repair.
+  - **无 tag cut** — `[Unreleased]` 继续累积至 `v0.7.0` GA.
+
+---
+
 **截至 Round 76 结束 (2026-05-15 CST 04:00 cron slot — combo round D + A-P0) — Phase 4 Arc B slice 3a entry. R76 lands the smallest valuable bite of slice 3: surfaces `ToolUseBlock.id` / `ToolResultBlock.tool_use_id` symmetrically onto `Node.state_after['tool_use_id']` as the cross-Node JOIN anchor for slice-3 SQL queries. ADR-026 §5.1 amendment pins this as a binding contract (in-place per R57 doctrine, mirrors R75 §5 shape: contract clauses + named test enforcement + out-of-scope subsection). Three new unit tests at §6.2 of `test_adapter_anthropic_agents.py` exercise the live `record()` pipeline (use side / both-sides JOIN equality / orphan tolerance). Combo round also clears Option D (R75-deferred): `frontend/pnpm-{lock,workspace}.yaml` added to `.gitignore` — keeps `git status` clean. Tests 613→616, all gates green. Adapter-1-3 zero-regression streak: R52→R76 = **24 rounds**. No tag — `[Unreleased]` accumulates toward `v0.7.0` GA.**
 
 - 最近 progress doc: `docs/progress/2026-05-15-round-76.md` (R76 — Option D + slice 3a tool_use_id linkage)
@@ -628,55 +657,61 @@ R73 是 R69→R72 4-round chain 的第一个真 disprover round, 也是 Phase 4 
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 77 — Slice 3a-P1 (multi-block tool linkage) OR slice 3b entry (fork-with-tool-substitution); 1-slot pre-budget**
+**Round 78 — Slice 3a-P2 (orphan-detection helper) OR slice 3b entry (fork-with-tool-substitution); 1-slot pre-budget**
 
-战略视角: R76 已经把 slice 3a 的 P0 (single-block tool_use_id linkage anchor) 落地了 — 写侧 stamp + 读侧 contract + 三个测试 + ADR §5.1. 现在 v0.7.0 GA 路上还差 slice 3a-P1 (multi-block) 和 slice 3b (fork 携带 tool state). R77 建议二选一, 不要都做.
+战略视角: R77 关闭了 slice 3a 写侧 tool-linkage 的最后一块 (multi-block tool_use_ids 复数契约). slice 3a 现在的进度: P0 (single-block, R76) + P1 (multi-block, R77) — 写侧已硬化, 读侧 SQL 模式两条 (`->>'tool_use_id'` 单数 / `json_each(state_after->>'tool_use_ids')` 复数) 都在 ADR-026 §5.1 / §5.1.1 标定. R78 二选一: 收尾 slice 3a 的 P2 (orphan helper, 半轮), 或开 slice 3b (fork-with-tool-substitution, 大头).
 
-### Option A (推荐, 半轮): slice 3a-P1 — multi-block tool_use_ids
+### Option A (推荐, 半轮): slice 3a-P2 — orphan-detection helper
 
-- **背景**: R76 §5.1 明确 single-block-only ("multi-block messages intentionally do NOT receive a top-level tool_use_id"). 但 SDK 在 streaming 模式或 batched tool dispatch 下会发出 >1 ToolUseBlock 的 AssistantMessage; consumers 现在只能 fall back 到 parsing `state_after.blocks[]`.
-- **P0**: `git fetch` (R75 stale-ref recipe 不要省) + baseline 616/7. 读 R76 progress §5 ("Hand-off / next round") + ADR-026 §5.1 ("Out of scope" subsection).
-- **P0 实施**: 在 `_translate()` 里新增 `state['tool_use_ids'] = [b.id for b in tool_blocks if isinstance(b.id, str) and b.id]` 当 `len(tool_blocks) > 1`. 对称地, UserMessage 多个 ToolResultBlock → `state['tool_use_ids']`. **Single-block path 不变** (仍 stamp `state['tool_use_id']`, 字段名单数). 区分原因: 单 vs 多 在查询语义上不同 — 单数是 1:1 JOIN 锚, 复数是 1:N 展开.
-- **P0 测试** (3 个): `test_record_multi_tool_use_block_persists_ids` / `test_record_multi_tool_result_block_persists_ids` / `test_record_mixed_count_keeps_singular_and_plural_separate`.
-- **P0 ADR**: §5.1 "Out of scope" 段移除 multi-block exemption, 新增 "§5.1.1 Multi-block extension (R77 amendment)" 子节, 列契约 + 名义测试 + JOIN 语义. 仍 in-place R57 doctrine.
-- **P1 (可选)**: 不强求 live smoke (multi-block 在真实 SDK 流量里少见, hermetic unit 已够).
-- Gate expect: 619 pass / 7 skip / 0 fail. Adapter-1-3 streak R52→R77 = **25 rounds**.
+- **背景**: R76 §5.1 第 4 条契约 (orphan tolerance) 明确 — 孤立 ToolResultBlock (没有先前匹配 ToolUseBlock 的) 不让 `record()` 失败, downstream 通过 left-JOIN 空集检测. 但 slice-3 consumers 想要一个 fast helper 而不是手写 SQL.
+- **P0**: `git fetch` (R75 stale-ref recipe) + baseline 619/7. 读 R77 progress §5 + ADR-026 §5.1 第 4 条 + §5.1.1 SQL 段.
+- **P0 实施**: 在 `src/chronos/queries/` 下新增 `tool_linkage.py` (新文件, 不改 store/core), 含 `unmatched_tool_results(store, run_id) → list[Node]` 和 `unmatched_tool_uses(store, run_id) → list[Node]`. 实现纯 SQL `LEFT JOIN ... WHERE ... IS NULL`, 同时支持 single-block (`->>'tool_use_id'`) 和 multi-block (`json_each ->>'tool_use_ids'`) 两种 keyset. 如果 `chronos.queries` 模块还不存在, 按 R57 模式新建 `__init__.py` (空 re-export) 而非塞进 store.
+- **P0 测试** (3-4 个): `test_unmatched_tool_results_finds_orphan_only` / `test_unmatched_tool_results_empty_when_all_matched` / `test_unmatched_tool_uses_symmetric` / `test_helpers_handle_multi_block_keyset`.
+- **P0 ADR**: 不强求新 ADR; 在 §5.1 末尾追加 "Consumer helpers (R78)" 一行索引指 `chronos.queries.tool_linkage`. 或者干脆不写 ADR — helper 是 internal API 而非 contract.
+- **P1 (可选)**: dogfood script 跑一次, 输出孤立 Node 数量 (alpha smoke 现在 0 个, 用于后续 fork-with-substitution 测试).
+- Gate expect: 622-623 pass / 7 skip / 0 fail. Adapter-1-3 streak R52→R78 = **26 rounds**.
 
 ### Option B (大头, 1.5-2 轮): slice 3b — fork rewinds before tool-use Node
 
 - 背景: 真正解锁 "agent time-travel debugger" 价值的 feature — fork 之前把 tool input 改掉, 重放后续推理. 需要 `fork()` 新签名 (or override) 接收 `tool_input_overrides`.
-- 估算: 需要 ADR-026 §5.2 amendment + 新 fork 路径 + at least 4 单测 + 1 dogfood. R77 单 cron slot **可能完成不了**, 建议要么 R77 + R78 双轮拆 (R77 设计 + 测试骨架, R78 实施 + ADR), 要么先 P1 (Option A) 暖身一轮再开.
+- 估算: ADR-026 §5.2 amendment + 新 fork 路径 + ≥4 单测 + 1 dogfood. R78 单 cron slot **完成不了 P0+P1**, 建议 R78 = 设计 + 测试骨架 (写出 ADR §5.2 + 失败 fork tests as TDD), R79 = 实施.
 
 ### Option C (兜底): 创建 `defensive-followup-round` skill
 
-R75 §5 标了 codification candidate, R76 没动 (combo-round 占用预算). 如果 R77 cron slot 时间紧或 SDK API 不稳, 退而花 30-45 min 把 `~/.hermes/skills/software-development/defensive-followup-round/SKILL.md` 写出来 (R57+R69+R75 三例 + 三步 ritual + trigger conditions).
+R75 §5 标的 codification candidate, R76/R77 都没动. R78 cron slot 时间紧或别的事卡住时, 退而花 30-45 min 写 `~/.hermes/skills/software-development/defensive-followup-round/SKILL.md` (R57+R69+R75 三例 + 三步 ritual + trigger conditions).
 
 ### 推荐
 
-**Option A (slice 3a-P1)**. 半轮预算, 自然延续 R76 P0 的 contract 设计, multi-block consumer 写下来还是同一个 SQL 模式 (`json_each(state_after->'tool_use_ids')`), 心智模型一致. R77 收完 P1 之后 R78 才上 slice 3b (Option B), 那时 state_after JSON bag 的全部 tool linkage 已 hardened, fork 重放只需在读侧加 input override 路径.
+**Option A (slice 3a-P2 orphan helper)**. 半轮预算, 收尾 slice 3a 主题让 v0.7.0 GA 路上 tool-linkage 模块完整闭环 (写侧 R76+R77 + 读侧 R78). slice 3b (Option B) 留给 R79+R80, 那时 tool linkage 完整且 helper 就绪, fork 重放只需在 fork() 路径加 tool_input override + 调用 helper 校验未替换 Node. 心智模型清爽.
 
-### R77 非目标 (硬红线)
+### R78 非目标 (硬红线)
 
-- ❌ 不 cut v0.7.0 GA — slice 3 整体 (3a + 3b + 3c MCP passthrough) 至少还要 2 轮才稳.
-- ❌ 不动 adapter-1-3 (langgraph/autogen/crewai) — zero-regression streak R52→R76 已 24 轮.
-- ❌ 不破坏 R76 §5.1 single-block 契约: `state_after['tool_use_id']` (单数) 在 single-block 情形下必须仍 stamp; Option A 是**新增** `tool_use_ids` (复数) 字段, 不是替换.
-- ❌ 不 silently 改 `recorder.py:_translate` 的 `state['tool_use_id']` stamp (R76 ADR-026 §5.1 binding contract).
-- ❌ 不写新 ADR — slice 3a-P1 是 §5.1 的延伸, R57 in-place amendment.
+- ❌ 不 cut v0.7.0 GA — slice 3 整体 (3a P0+P1+P2 + 3b + 3c MCP passthrough) 至少还要 2-3 轮才稳.
+- ❌ 不动 adapter-1-3 (langgraph/autogen/crewai) — zero-regression streak R52→R77 已 25 轮.
+- ❌ 不破坏 R76 §5.1 single-block 契约 / R77 §5.1.1 multi-block 契约: 两个 `state_after` 字段 (`tool_use_id` / `tool_use_ids`) 互斥规则 binding, helper 必须支持 COALESCE 两条路径.
+- ❌ 不 silently 改 `recorder.py:_translate` 的任一 stamp 路径 (binding contract).
+- ❌ 不写新 ADR (除非 Option B 选了)— slice 3a-P2 helper 是 internal consumer, 不需要 ADR.
+- ❌ **CHANGELOG 必须当轮更新**: R76 漏过一次, R77 backfill 了; R78 commit 前 `grep -n '^### Added' CHANGELOG.md | head -2` 自检.
 
 ### 工期估计
 
-R77 Option A = 45-60 min (写、测、ADR amend, 都是 R76 模板的复用). Option B 单轮 = 不建议. Option C = 30-45 min.
+R78 Option A = 45-60 min (新模块 + helper + 4 测 + ADR 索引行). Option B 单轮 = 不建议 (拆 R78+R79). Option C = 30-45 min.
 
-### R77 Hand-off invariants (R76 agent → R77 agent)
+### R78 Hand-off invariants (R77 agent → R78 agent)
 
 - 工作窗口 0-11 CST (cron) 或 manual chat slot.
-- R77 是 **slice 3a P1 round on R76-shipped P0 contract**. Unit test count baseline 616.
-- 开场命令: `git fetch` (R75 stale-ref trap recipe) + `uv run pytest -q --no-cov` + 读 R76 progress doc + 读 ADR-026 §5.1 (R76 新增).
-- Adapter-1-3 zero-regression streak R52→R76 = **24 rounds** (continue protecting).
-- `[Unreleased]` 包含 R74 + R75 + R76 entries; R77 在 R76 entry 上方插入新 R77 entry (如该轮触及 CHANGELOG; R76 没改 CHANGELOG, 因为 §5.1 是 ADR amendment 而非 user-visible feature, 可考虑 R77 一并补上).
-- ADR-026 §5 (R75) + §5.1 (R76) 是 binding contracts: 改 `recorder.py:_translate` 之前先读这俩 + 跑 §6.1 §6.2 全部 5 个测试.
-- Live test 默认模型仍 `"Claude Sonnet 4.6"` (R73 实测). Multi-block tool 测试可纯 hermetic, 不必动 live smoke.
-- R77 round-end QQ 战报模板: slice 3a-P1 进度 + tests delta + adapter-1-3 streak count + R78 forward direction (slice 3b vs slice 3a-P2 vs MCP passthrough).
+- R78 是 **slice 3a P2 round on R76+R77-shipped P0+P1 contract**. Unit test count baseline 619.
+- 开场命令: `git fetch` (R75 stale-ref trap recipe) + `uv run pytest -q --no-cov` + 读 R77 progress doc + 读 ADR-026 §5.1 + §5.1.1.
+- Adapter-1-3 zero-regression streak R52→R77 = **25 rounds** (continue protecting).
+- `[Unreleased]` 包含 R74 + R75 + R76 + R77 entries (R77 backfill 了 R76 漏的); R78 在 R77 entry 上方插入新 R78 entry (commit 前 grep 自检).
+- ADR-026 §5 (R75) + §5.1 (R76) + §5.1.1 (R77) 是 binding contracts: 改 `recorder.py:_translate` 之前先读这仨 + 跑 §6.1 §6.2 §6.2.1 全部 8 个测试 (单+多+orphan).
+- Live test 默认模型仍 `"Claude Sonnet 4.6"` (R73 实测). Helper 测试纯 hermetic.
+- Node 字段名记忆点: `node_name`, `kind`, `state_after`, **没有 `msg_cls`** (R77 踩过的 edit-time pitfall, `node_name.startswith("AssistantMessage")` 是正确写法).
+- B009 ruff: `getattr(b, "x")` 真值检查替成 `b.x` (R77 踩过).
+
+### Round 77 (上一轮) 现状
+
+✅ R77 已结. slice 3a-P0+P1 写侧契约完整封盘, 619 测试绿, ADR-026 §5.1.1 落地, CHANGELOG R76 漏写 backfilled. 详见 `docs/progress/2026-05-15-round-77.md`.
 
 ### Release strategy (rolling)
 

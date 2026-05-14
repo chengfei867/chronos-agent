@@ -345,6 +345,25 @@ class AnthropicAgentsRecorder:
                 blk_id = getattr(blk, "id", None)
                 if isinstance(blk_id, str) and blk_id:
                     state["tool_use_id"] = blk_id
+            elif len(tool_blocks) > 1:
+                # ADR-026 §5.1.1 (R77, slice 3a-P1): multi-block extension —
+                # when an AssistantMessage carries >1 ToolUseBlock (batched
+                # tool dispatch), surface the ordered ids list as
+                # `state_after["tool_use_ids"]` (plural). The singular
+                # `state_after["tool_use_id"]` is intentionally NOT set in
+                # this case (R76 §5.1 binding contract: singular = 1:1 JOIN
+                # anchor; plural = 1:N expansion via
+                # `json_each(state_after->>'tool_use_ids')`). Order matches
+                # block order in the source message so consumers can pair
+                # against the matching ToolResultBlock list by index.
+                # `test_record_multi_tool_use_block_persists_ids` enforces.
+                ids = [
+                    getattr(b, "id", None)
+                    for b in tool_blocks
+                    if isinstance(getattr(b, "id", None), str) and b.id
+                ]
+                if ids:
+                    state["tool_use_ids"] = ids
         # ToolResultBlock arrives inside UserMessage.content per R69 §1.5
         if cls == "UserMessage" and isinstance(content, list):
             result_blocks = [b for b in content if type(b).__name__ == "ToolResultBlock"]
@@ -364,6 +383,23 @@ class AnthropicAgentsRecorder:
                         tool_output = dict(raw_out)
                     elif raw_out is not None:
                         tool_output = {"text": repr(raw_out)[:500]}
+            elif len(result_blocks) > 1:
+                # ADR-026 §5.1.1 (R77, slice 3a-P1): multi-block extension,
+                # symmetric to the AssistantMessage(>1 ToolUseBlock) case.
+                # Order matches block order in the source message; the i-th
+                # tool_use_ids entry of the result message JOINs to the i-th
+                # tool_use_ids entry of the prior assistant message under
+                # SDK contract. Singular `tool_use_id` not set; the singular
+                # 1:1 anchor is reserved for the len==1 branch (R76 §5.1).
+                # `test_record_multi_tool_result_block_persists_ids` enforces.
+                ids = [
+                    getattr(b, "tool_use_id", None)
+                    for b in result_blocks
+                    if isinstance(getattr(b, "tool_use_id", None), str)
+                    and b.tool_use_id
+                ]
+                if ids:
+                    state["tool_use_ids"] = ids
 
         return _PendingNode(
             msg_cls=cls,

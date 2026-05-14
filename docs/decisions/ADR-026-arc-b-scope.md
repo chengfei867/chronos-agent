@@ -205,14 +205,90 @@ amendment or an explicit ADR superseding §5.1.
 #### Out of scope for §5.1
 
 - Multi-block messages (>1 `ToolUseBlock` or >1 `ToolResultBlock` in a
-  single message) intentionally do NOT receive a top-level
-  `tool_use_id` — the linkage is ambiguous and consumers must parse
-  `state_after.blocks[]`. The SDK currently emits at most one tool
-  block per message in observed traffic; the multi-block case is
-  reserved for a future slice.
+  single message) do NOT receive a top-level singular `tool_use_id` —
+  resolved by §5.1.1 below (R77, slice 3a-P1) which surfaces an ordered
+  `tool_use_ids` (plural) list instead. Singular and plural fields are
+  mutually exclusive per Node.
 - No new column / no sidecar / no Node graph edge — the JSON-bag
   approach is sufficient for slice-3 SQL queries
   (`state_after->>'tool_use_id'`).
+
+### 5.1.1 Multi-block tool linkage — `state_after.tool_use_ids` (R77 amendment, slice 3a-P1)
+
+§5.1 covers the 1:1 single-block case. R77 extends the contract to
+multi-block messages — an `AssistantMessage` carrying >1 `ToolUseBlock`
+(batched parallel tool dispatch) or a `UserMessage` carrying >1
+`ToolResultBlock` (paired results). The SDK preserves block order, so
+the linkage is unambiguous: `use[i] ↔ result[i]` by index across the
+two messages.
+
+#### Contract (binding from R77 onwards)
+
+For every `Node` recorded by `AnthropicAgentsRecorder`:
+
+- If the `Node` is an `AssistantMessage` whose `content` carries
+  **more than one** `ToolUseBlock`, then `state_after['tool_use_ids']`
+  MUST be a list of `ToolUseBlock.id` values **in source block order**
+  (NOT sorted, NOT deduplicated), filtered by the same defensive guard
+  (`isinstance(..., str) and id`) used in §5.1. If all ids are filtered
+  out, the key is omitted (parallels §5.1's missing-anchor tolerance).
+- If the `Node` is a `UserMessage` whose `content` carries **more than
+  one** `ToolResultBlock`, then `state_after['tool_use_ids']` MUST be a
+  list of `ToolResultBlock.tool_use_id` values in source block order
+  under the same guard.
+- A pair of linked Nodes (one multi-tool-use, one multi-tool-result)
+  MUST yield byte-identical `state_after['tool_use_ids']` lists — this
+  is the JOIN keyset for slice-3 queries expanding 1:N via
+  `json_each(state_after->>'tool_use_ids')`.
+- **Mutual exclusivity (binding):** singular `state_after['tool_use_id']`
+  (§5.1) and plural `state_after['tool_use_ids']` (§5.1.1) MUST NEVER
+  coexist on the same Node. `len == 1 → singular only`;
+  `len > 1 → plural only`. This guarantees consumers can branch
+  unambiguously and SQL `COALESCE` patterns work without de-dup.
+
+#### Test enforcement
+
+Three unit tests in `tests/unit/test_adapter_anthropic_agents.py`
+§6.2.1 pin this contract:
+
+- `test_record_multi_tool_use_block_persists_ids` — use side, plural
+  set, singular absent
+- `test_record_multi_tool_result_block_persists_ids` — both sides plural
+  + byte-identical JOIN keyset
+- `test_record_mixed_count_keeps_singular_and_plural_separate` — stream
+  mixing single-block and multi-block messages keeps the two contracts
+  cleanly separate per Node (regression guard against future collapse)
+
+#### Consumer pattern (slice 3 SQL)
+
+Linked-Node JOIN expands cleanly with `json_each` regardless of
+block-count cardinality:
+
+```sql
+-- Pair single-block use with single-block result
+SELECT u.id AS use_node, r.id AS result_node
+FROM nodes u JOIN nodes r
+  ON u.state_after->>'tool_use_id' = r.state_after->>'tool_use_id'
+WHERE u.state_after->>'tool_use_id' IS NOT NULL;
+
+-- Pair multi-block use[i] with multi-block result[i]
+SELECT u.id AS use_node, r.id AS result_node, ju.value AS tu_id
+FROM nodes u, json_each(u.state_after->>'tool_use_ids') ju
+JOIN nodes r, json_each(r.state_after->>'tool_use_ids') jr
+  ON ju.value = jr.value AND ju.key = jr.key  -- index-aligned pair
+WHERE u.node_name LIKE 'AssistantMessage%' AND r.node_name = 'UserMessage';
+```
+
+#### Out of scope for §5.1.1
+
+- Asymmetric block counts (e.g. 3 ToolUseBlocks but 2 ToolResultBlocks
+  in the next UserMessage) — the per-Node contract still holds (each
+  side carries its own ordered list); cross-message asymmetry is
+  surfaced as a JOIN gap, same as the §5.1 orphan case. No special
+  handling at recorder level.
+- Cross-turn batching (one Assistant batched-use spanning multiple
+  subsequent UserMessage results) — not observed in current SDK
+  traffic; reserved for a future slice if it materialises.
 
 ### 6. What Arc B slice 2+ looks like
 
