@@ -147,7 +147,20 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
-**截至 Round 71 结束 (2026-05-14 CST ~05:55, cron slot inside 0–11 window) — Phase 4 Arc B slice 1 **live-smoke scaffolding shipped, real trace blocked by relay incompat**. R69-spike-predicted relay-incompat blocker materialized as expected; per CONTEXT §6 R71 explicit branch, pivoted Option A → **Option B + Option C** (blocker investigation + polish). Adapter-1-3 zero-regression streak holds (R52→R71 = 19 rounds). New per-adapter docs convention bootstrapped via `docs/adapters/anthropic_agents.md`.**
+**截至 Round 74 结束 (2026-05-14 CST, immediate follow-on to R73) — Phase 4 Arc B slice 2 **fork_session integration shipped**. R71 stub `NotImplementedError("R73…")` replaced with full `AnthropicAgentsRecorder.fork()` body delegating to public `claude_agent_sdk.fork_session()`. P0 probe disproved R71 stub assumption (claimed needed internal-API hooks; reality: top-level public callable + `state_after.{session_id,uuid}` already stamped by R70's `record()` — zero schema change). 5 new unit tests (happy + 5 error paths, all duck-typed) + 1 live smoke (skipif-gated, mirrors slice-1 R73 pattern) + 1 dogfood script. Tests 606→611, all green. Adapter-1-3 zero-regression streak: R52→R74 = **22 rounds** (longest in project history). No tag — accumulates in `[Unreleased]` for slice 3 + `v0.7.0` GA co-release at R75. Commit `1090052`.**
+
+- 最近 progress doc: `docs/progress/2026-05-14-round-74.md` (R74 — Arc B slice 2 fork_session implementation)
+- 最近上份 progress doc: `docs/progress/2026-05-14-round-73.md` (R73 — Arc B slice 1 live-smoke unblock + R69 spike refutation + v0.7.0a1 cut)
+- Round: **74** (Phase 4 Arc B slice 2 — code round, single slot): immediate follow-on to R73 v0.7.0a1. Sequence: P0 pre-flight (HEAD=8937510, baseline 606/5/0) → P0 probe (`fork_session` public confirmed; R71 stub assumption disproved) → ADR-026 §6 + recorder.py + LangGraph fork() reference read → impl 165 LOC → 5 unit tests + monkey-patch fake SDK → live smoke harness + dogfood script → full gates green → CHANGELOG `[Unreleased]` + progress doc → commit + push (gh-proxy.com).
+  - **Implementation**: `recorder.fork()` reads `parent_node.state_after.{session_id,uuid}` (R70 already stamped them — happy surprise during probe), calls `claude_agent_sdk.fork_session(parent_session_id, up_to_message_id=parent_uuid, title=task_description)`, yields `ForkRef` with `sdk_session_id` (for `ClaudeAgentOptions(resume=…)`) + `submit_runtime(runtime)` extension method. On `__exit__` drains submitted runtime through same `_consume()` pipeline as `record()`; atomic transaction wraps child Nodes + Fork row.
+  - **Tests**: +5 unit (happy / parent-not-found / cross-run-anchor / same-thread-id / no-session-id / failed-on-exception) + 2 live (skipping on cron VM's OneAPI relay — same gate as slice-1).
+  - **No tag cut** — `[Unreleased]` accumulates for slice 3 → `v0.7.0` GA at R75.
+  - **R75 forward plan**: A) slice 3 (tool-call dispatch + MCP passthrough → `v0.7.0` GA, 2-slot estimate) [default] / B) ADR-026 amendment documenting `state_after.{uuid,session_id}` capture contract / C) Web UI compare-2-runs surface.
+  - **Invariant signals**: R69-spike disprover invariant (R73-set) **2nd confirmation** — R74 P0 probe re-validated `fork_session` exposure before implementing, caught R71's wrong "needs internal hooks" stub message before letting it gate a release. Pattern strengthens to project-wide.
+
+---
+
+**截至 Round 73 结束 (2026-05-14 CST ~05:55, cron slot inside 0–11 window) — Phase 4 Arc B slice 1 **live-smoke scaffolding shipped, real trace blocked by relay incompat**. R69-spike-predicted relay-incompat blocker materialized as expected; per CONTEXT §6 R71 explicit branch, pivoted Option A → **Option B + Option C** (blocker investigation + polish). Adapter-1-3 zero-regression streak holds (R52→R71 = 19 rounds). New per-adapter docs convention bootstrapped via `docs/adapters/anthropic_agents.md`.**
 
 - 最近 progress doc: `docs/progress/2026-05-14-round-71.md` (R71 — Arc B slice 1 live-smoke + dogfood + blocker doc, Option B+C hybrid)
 - 最近上份 progress doc: `docs/progress/2026-05-14-round-70.md` (R70 — Arc B slice 1 core scaffold, A2 close-out over inherited WIP)
