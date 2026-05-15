@@ -570,9 +570,7 @@ def test_record_tool_result_block_links_to_use(
         _msg("UserMessage", content="please run pwd"),
         _msg(
             "AssistantMessage",
-            content=[
-                _blk("ToolUseBlock", id=tool_use_id, name="bash", input={"cmd": "pwd"})
-            ],
+            content=[_blk("ToolUseBlock", id=tool_use_id, name="bash", input={"cmd": "pwd"})],
             model="claude-sonnet-4-5",
         ),
         _msg(
@@ -599,9 +597,9 @@ def test_record_tool_result_block_links_to_use(
     # Both Nodes carry the SAME tool_use_id — this is the JOIN key.
     assert use_node.state_after.get("tool_use_id") == tool_use_id
     assert result_node.state_after.get("tool_use_id") == tool_use_id
-    assert use_node.state_after.get("tool_use_id") == result_node.state_after.get(
-        "tool_use_id"
-    ), "ADR-026 §5.1: tool_use_id must be byte-identical across linked Nodes"
+    assert use_node.state_after.get("tool_use_id") == result_node.state_after.get("tool_use_id"), (
+        "ADR-026 §5.1: tool_use_id must be byte-identical across linked Nodes"
+    )
     # Output round-trip preserved.
     assert result_node.tool_output == {"stdout": "/home/user\n"}
 
@@ -759,9 +757,7 @@ def test_record_multi_tool_result_block_persists_ids(
     # First UserMessage has plain str content; pick the one whose
     # state_after carries tool_use_ids.
     result_node = next(
-        n
-        for n in nodes
-        if n.node_name == "UserMessage" and "tool_use_ids" in n.state_after
+        n for n in nodes if n.node_name == "UserMessage" and "tool_use_ids" in n.state_after
     )
     # Both Nodes carry SAME ordered ids list — this is the JOIN keyset.
     assert use_node.state_after.get("tool_use_ids") == ids

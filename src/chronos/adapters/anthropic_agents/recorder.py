@@ -395,8 +395,7 @@ class AnthropicAgentsRecorder:
                 ids = [
                     getattr(b, "tool_use_id", None)
                     for b in result_blocks
-                    if isinstance(getattr(b, "tool_use_id", None), str)
-                    and b.tool_use_id
+                    if isinstance(getattr(b, "tool_use_id", None), str) and b.tool_use_id
                 ]
                 if ids:
                     state["tool_use_ids"] = ids

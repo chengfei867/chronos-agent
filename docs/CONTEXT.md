@@ -147,6 +147,35 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
+**截至 Round 78 结束 (2026-05-15 CST 11:00 cron slot — single-slot slice 3a-P2 close-out, 0–11 窗口最后一小时) — Phase 4 Arc B slice 3a fully closed. R78 ships the read-side companion to R76+R77's writer-side stamps: a new internal package `chronos.queries` with two pure-Python orphan detectors — `unmatched_tool_results(store, run_id)` and `unmatched_tool_uses(store, run_id)` — that surface the LEFT JOIN ... IS NULL semantics from ADR-026 §5.1.1's SQL recipes without consumers having to hand-roll SQL. Pure-additive: zero changes to `recorder.py` / ADR-026 / store / core / CLI / HTTP / frontend / schema. Tests 619→623, all gates green (mypy clean, ruff clean). Adapter-1-3 zero-regression streak: R52→R78 = **26 rounds** (project-history high). Slice 3a is now structurally complete (writer + reader contracts, all 4 cuts: §5 R75 / §5.1 R76 / §5.1.1 R77 / consumer-side R78). No tag — `[Unreleased]` continues toward `v0.7.0` GA.**
+
+- 最近 progress doc: `docs/progress/2026-05-15-round-78.md` (R78 — slice 3a-P2 close-out, `chronos.queries.tool_linkage` helpers)
+- 最近上份 progress doc: `docs/progress/2026-05-15-round-77.md` (R77 — slice 3a-P1 multi-block tool_use_ids extension)
+- 最近上上份 progress doc: `docs/progress/2026-05-15-round-76.md` (R76 — Option D + slice 3a single-block tool_use_id linkage)
+- Round: **78** (Phase 4 Arc B slice 3a-P2 — single slot, in-window 11:00 CST cron, last hour of 0–11 window): 0 blocker. Sequence: time check (10 → in window) → read CONTEXT §5/§6 + R77 progress + ADR-026 §5.1/§5.1.1 → `git fetch origin main && git pull --ff-only` (clean against `8ffd1f6`) → baseline 619/7 → confirmed Option A (slice 3a-P2 helper, half-round budget) per CONTEXT §6 recommendation → create `src/chronos/queries/__init__.py` + `tool_linkage.py` (~175 LOC helper module + ADR docstring) → write `tests/unit/test_queries_tool_linkage.py` (~270 LOC, 4 tests using live `record()` pipeline + stub messages mirroring `test_adapter_anthropic_agents.py`) → targeted pytest 4/4 green → full pytest 623/7 green → ruff fix-import-sort + mypy clean → CHANGELOG R78 entry at top of `[Unreleased]` (pre-commit grep self-check per R77 lesson) → progress doc + this CONTEXT refresh → commit + push (gh-proxy.com).
+  - **Files**: 2 new (`src/chronos/queries/__init__.py`, `src/chronos/queries/tool_linkage.py`) + 1 new test (`tests/unit/test_queries_tool_linkage.py`) + 2 modified (`CHANGELOG.md`, `docs/CONTEXT.md`) + 1 new progress doc (`docs/progress/2026-05-15-round-78.md`).
+  - **Tests**: +4 unit (`test_unmatched_tool_results_finds_orphan_only` / `test_unmatched_tool_results_empty_when_all_matched` / `test_unmatched_tool_uses_symmetric` / `test_helpers_handle_multi_block_keyset`), pure-additive. All exercise live `record()` pipeline (R75 writer-side redundancy invariant — now confirmed across R75/R76/R77/R78 = **4-round project-wide pattern**).
+  - **No new ADR** — internal helper, not a contract. ADR-026 §5.1.1 SQL recipe remains canonical raw form; helper is in-Python convenience.
+  - **No tag cut** — `[Unreleased]` continues toward `v0.7.0` GA.
+  - **No schema change / no recorder change / no adapter change** — strictly additive consumer-side surface in a new package.
+
+- **R78 关键发现 (上墙)**:
+  - **Helper-vs-SQL split is the right shape for ADR-binding contracts (R78 new)**: ADR-026 §5.1.1 pins SQL recipes as canonical query form. R78 ships a Python helper *on top of* that, not *in place of* it. Two-layer architecture: **frozen contract = SQL keys/shape (in ADR); mutable convenience = Python helper that translates contract into idiomatic Python (in `chronos.queries`)**. Helper is internal — may evolve freely between minor versions; SQL recipe is the contractual surface. Reusable when a future ADR amendment adds a new JSON-bag key (slice 3b/3c will follow this pattern).
+  - **`record()` pipeline as test fixture is now project-wide (R75→R76→R77→R78 4-round confirmation)**: R75 instated "writer-side redundancy invariant: tests exercise live `record()`, not hand-crafted Nodes". Four consecutive rounds honored it. Cost per file: ~80 LOC stub messages + `_aiter` helper. Benefit: any silent narrowing of `recorder.py:_translate()`'s metadata-stamp loop trips multiple downstream test files at once. **Threshold for extracting to `tests/unit/conftest.py` or `tests/unit/fixtures/anthropic_agents.py` (R58 convention) = 3 duplications**; we're at 2 (test_adapter_anthropic_agents.py + test_queries_tool_linkage.py). R79+ should extract on third occurrence.
+  - **Slice 3a's three-cut shape (P0/P1/P2 over R76/R77/R78) validates "read-side anchor first" sub-cut pattern (R78 confirms R76 F2)**: R76 F2 hypothesized this; R78 closes it cleanly. Three single-slot rounds, each pure-additive, zero rework, three structural close-outs. **Confirmed pattern**: when sub-cutting a multi-slot slice, ship (a) write-side anchor (P0) → (b) write-side extension (P1) → (c) read-side helper (P2). Slice 3b should follow: P0 fork-API extension → P1 dogfood proof → P2 helper for "find substitution candidates".
+
+- **R78 产出**:
+  - `src/chronos/queries/__init__.py` (**new**, ~25 lines) — package docstring + re-exports of `unmatched_tool_results`, `unmatched_tool_uses`.
+  - `src/chronos/queries/tool_linkage.py` (**new**, ~175 lines) — full ADR-026 docstring (§5.1 + §5.1.1 reference) + 2 public helpers + 3 internal predicates (`_ids_from_state_after`, `_is_use_side`, `_is_result_side`).
+  - `tests/unit/test_queries_tool_linkage.py` (**new**, ~270 lines) — 4 unit tests, stub message/block dataclasses (independent copy of test_adapter_anthropic_agents.py pattern; extract on next occurrence).
+  - `CHANGELOG.md` — R78 entry at top of `[Unreleased]` (above R77).
+  - `docs/progress/2026-05-15-round-78.md` (**new**, ~14 KB).
+  - `docs/CONTEXT.md §5/§6` (本 refresh).
+  - **零 ADR 新增 / 零 roadmap / 零 frontend / 零 CLI / 零 HTTP API / 零 core / 零 store schema / 零 recorder / 零 adapter 改动** — R78 纯新内部包 + 4 单测.
+  - **无 tag cut** — `[Unreleased]` 继续累积至 `v0.7.0` GA.
+
+---
+
 **截至 Round 77 结束 (2026-05-15 CST 07:47 cron slot — single-slot slice 3a-P1 round) — Phase 4 Arc B slice 3a continuation. R77 retires the last "reserved for a future slice" bullet from ADR-026 §5.1 by extending the R76 single-block `state_after['tool_use_id']` contract to multi-block messages. New §5.1.1 amendment (in-place per R57 doctrine, sibling to R75 §5 / R76 §5.1) pins `state_after['tool_use_ids']` (plural, ordered list) as the multi-block JOIN keyset, with binding mutual-exclusivity: `len==1 → singular only`, `len>1 → plural only`, never both on same Node. Two symmetric `elif len(...) > 1:` branches added to `_translate()` (~16 lines), three new unit tests at §6.2.1 (multi-use side / multi-result both-sides JOIN / mixed-count separation regression guard), CHANGELOG R76 entry backfilled (R76 commit had omitted it). Tests 616→619, ruff clean, mypy zero new errors. Adapter-1-3 zero-regression streak: R52→R77 = **25 rounds**. No tag — `[Unreleased]` accumulates toward `v0.7.0` GA.**
 
 - 最近 progress doc: `docs/progress/2026-05-15-round-77.md` (R77 — slice 3a-P1 multi-block tool_use_ids extension)
@@ -657,61 +686,65 @@ R73 是 R69→R72 4-round chain 的第一个真 disprover round, 也是 Phase 4 
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 78 — Slice 3a-P2 (orphan-detection helper) OR slice 3b entry (fork-with-tool-substitution); 1-slot pre-budget**
+**Round 79 — Slice 3b TDD scaffolding (fork-with-tool-substitution); 1-slot pre-budget**
 
-战略视角: R77 关闭了 slice 3a 写侧 tool-linkage 的最后一块 (multi-block tool_use_ids 复数契约). slice 3a 现在的进度: P0 (single-block, R76) + P1 (multi-block, R77) — 写侧已硬化, 读侧 SQL 模式两条 (`->>'tool_use_id'` 单数 / `json_each(state_after->>'tool_use_ids')` 复数) 都在 ADR-026 §5.1 / §5.1.1 标定. R78 二选一: 收尾 slice 3a 的 P2 (orphan helper, 半轮), 或开 slice 3b (fork-with-tool-substitution, 大头).
+战略视角: R78 关闭了 slice 3a 的最后一块 (P2, 消费侧 orphan helper). Slice 3a 现在写侧 + 读侧契约都完整闭环 — `state_after['tool_use_id']` (R76) / `state_after['tool_use_ids']` (R77) / `chronos.queries.tool_linkage` (R78). slice 3b 是真正解锁 "agent time-travel debugger" 价值的 feature: fork 之前把 tool input 改掉, 重放后续推理. 估算 1.5-2 slot, 所以 R79 = 设计 + TDD 骨架, R80 = 实施 + dogfood.
 
-### Option A (推荐, 半轮): slice 3a-P2 — orphan-detection helper
+### Option A (推荐, 单 slot): slice 3b TDD 骨架 (ADR-026 §5.2 amendment + failing tests)
 
-- **背景**: R76 §5.1 第 4 条契约 (orphan tolerance) 明确 — 孤立 ToolResultBlock (没有先前匹配 ToolUseBlock 的) 不让 `record()` 失败, downstream 通过 left-JOIN 空集检测. 但 slice-3 consumers 想要一个 fast helper 而不是手写 SQL.
-- **P0**: `git fetch` (R75 stale-ref recipe) + baseline 619/7. 读 R77 progress §5 + ADR-026 §5.1 第 4 条 + §5.1.1 SQL 段.
-- **P0 实施**: 在 `src/chronos/queries/` 下新增 `tool_linkage.py` (新文件, 不改 store/core), 含 `unmatched_tool_results(store, run_id) → list[Node]` 和 `unmatched_tool_uses(store, run_id) → list[Node]`. 实现纯 SQL `LEFT JOIN ... WHERE ... IS NULL`, 同时支持 single-block (`->>'tool_use_id'`) 和 multi-block (`json_each ->>'tool_use_ids'`) 两种 keyset. 如果 `chronos.queries` 模块还不存在, 按 R57 模式新建 `__init__.py` (空 re-export) 而非塞进 store.
-- **P0 测试** (3-4 个): `test_unmatched_tool_results_finds_orphan_only` / `test_unmatched_tool_results_empty_when_all_matched` / `test_unmatched_tool_uses_symmetric` / `test_helpers_handle_multi_block_keyset`.
-- **P0 ADR**: 不强求新 ADR; 在 §5.1 末尾追加 "Consumer helpers (R78)" 一行索引指 `chronos.queries.tool_linkage`. 或者干脆不写 ADR — helper 是 internal API 而非 contract.
-- **P1 (可选)**: dogfood script 跑一次, 输出孤立 Node 数量 (alpha smoke 现在 0 个, 用于后续 fork-with-substitution 测试).
-- Gate expect: 622-623 pass / 7 skip / 0 fail. Adapter-1-3 streak R52→R78 = **26 rounds**.
+- **背景**: slice 3a 把 tool-use ↔ tool-result 的 JOIN 锚 (`tool_use_id`) 落地. slice 3b 让 fork 接受 `tool_input_overrides: dict[str, dict[str, Any]] | None` 参数 (映射 tool_use_id → 新 input), 然后在 replay 时把对应 ToolUseBlock 的 input 替换掉. R78 ship 的 `unmatched_tool_uses` helper 就是 slice 3b 的 "找未替换的 pending 工具调用" 机制. **顺序很关键**: 写 ADR + 失败测试先, 实现等 R80, 这样 R79 输出是清爽的 spec + 失败测试 = R80 的 forcing function.
+- **P0**: `git fetch` (R75 stale-ref recipe) + baseline 623/7. 读 R78 progress + ADR-026 §5/§5.1/§5.1.1 + recorder.py 当前 fork() path (`src/chronos/adapters/anthropic_agents/recorder.py` 找 `def fork`).
+- **P0 ADR**: 在 ADR-026 §5.1.1 之后新增 §5.2 (R79 amendment, slice 3b) Draft. 内容: (a) `fork()` 签名扩展 `tool_input_overrides: dict[str, dict[str, Any]] | None = None`, (b) 语义: 替换在 replay 时应用 (原 `state_after['tool_use_id']` 保留), 替换后的 input 出现在 new branch 第一个 AssistantMessage Node 的 `state_after['tool_input']` 字段, (c) 错误处理: 替换不存在的 `tool_use_id` 立即 raise (不 silent-drop), (d) 与 §5.1/§5.1.1 互动: 替换 `tool_use_ids` 列表里某一项也允许 (per-id 粒度), (e) SQL recipe 一行 (`json_extract(state_after, '$.tool_input')` 在 child run 上).
+- **P0 测试 (3-4 失败测试)**: `tests/unit/test_anthropic_agents_fork_tool_override.py` 新文件. (1) `test_fork_without_overrides_is_identity` (sanity, expected pass), (2) `test_fork_with_override_changes_downstream_input` (the meat — fail until R80 ships), (3) `test_fork_with_override_of_unmatched_id_raises` (validation), (4) `test_fork_with_override_of_orphan_id_raises` (uses `unmatched_tool_uses` from R78 to enumerate orphan; replace must reject). **决策**: 用 `pytest.mark.xfail(strict=True, reason="slice 3b — R80")` 或 `pytest.mark.skip(reason="...")`. Recommend `xfail(strict=True)` — 主动守 R80 实施 (xfail-but-pass = R80 done & 提示删掉标记).
+- **P1 (可选 / 时间松)**: 在 `recorder.py` fork path 加无操作 pass-through (接受 kwargs, 不实现, 不报错), 让前两个测试 fail with NotImplementedError 而非 AttributeError. 让 R80 实施只需要在一个明确的位置补逻辑.
+- Gate expect: 623 pass / 7 + N skip (新 xfail) / 0 fail. Adapter-1-3 streak R52→R79 = **27 rounds**.
 
-### Option B (大头, 1.5-2 轮): slice 3b — fork rewinds before tool-use Node
+### Option B (兜底 / 时间紧): defensive-followup-round skill (R75-deferred, R78 又 deferred)
 
-- 背景: 真正解锁 "agent time-travel debugger" 价值的 feature — fork 之前把 tool input 改掉, 重放后续推理. 需要 `fork()` 新签名 (or override) 接收 `tool_input_overrides`.
-- 估算: ADR-026 §5.2 amendment + 新 fork 路径 + ≥4 单测 + 1 dogfood. R78 单 cron slot **完成不了 P0+P1**, 建议 R78 = 设计 + 测试骨架 (写出 ADR §5.2 + 失败 fork tests as TDD), R79 = 实施.
+- 30-45 min. 把 R57 + R69 + R75 三例 + 三步 ritual 写进 `~/.hermes/skills/software-development/defensive-followup-round/SKILL.md`. R75 列为 candidate, R76/R77/R78 都没动 — 第四次 deferral 后, 如果 R79 cron slot 时间紧, 这是优先选择.
 
-### Option C (兜底): 创建 `defensive-followup-round` skill
+### Option C (md-only 探索): slice 3c MCP passthrough scoping
 
-R75 §5 标的 codification candidate, R76/R77 都没动. R78 cron slot 时间紧或别的事卡住时, 退而花 30-45 min 写 `~/.hermes/skills/software-development/defensive-followup-round/SKILL.md` (R57+R69+R75 三例 + 三步 ritual + trigger conditions).
+- 45-60 min. 读 claude_agent_sdk MCP docs, 草稿 ADR-026 §5.3 (MCP 服务器 passthrough on fork) Draft. 纯 md, 零代码. 适合 R79 cron slot 中等繁忙时.
+
+### Option D (release v0.7.0a3 alpha): NOT recommended
+
+slice 3a 完整闭环, 看似可以发. 但 slice 3b/3c 还没 land, alpha consumers 看到的 tool-flow 故事还不完整. **建议推迟到 R80+ slice 3b 落地后**. R78 不要 alpha cut.
 
 ### 推荐
 
-**Option A (slice 3a-P2 orphan helper)**. 半轮预算, 收尾 slice 3a 主题让 v0.7.0 GA 路上 tool-linkage 模块完整闭环 (写侧 R76+R77 + 读侧 R78). slice 3b (Option B) 留给 R79+R80, 那时 tool linkage 完整且 helper 就绪, fork 重放只需在 fork() 路径加 tool_input override + 调用 helper 校验未替换 Node. 心智模型清爽.
+**Option A (slice 3b TDD 骨架)**. 单 slot 预算, 把 R80 实施需要的 spec + 失败测试都备齐. R79+R80 两轮串联落 slice 3b, 然后 R81 看是否要 v0.7.0a3 alpha cut 或继续推 slice 3c.
 
-### R78 非目标 (硬红线)
+### R79 非目标 (硬红线)
 
-- ❌ 不 cut v0.7.0 GA — slice 3 整体 (3a P0+P1+P2 + 3b + 3c MCP passthrough) 至少还要 2-3 轮才稳.
-- ❌ 不动 adapter-1-3 (langgraph/autogen/crewai) — zero-regression streak R52→R77 已 25 轮.
-- ❌ 不破坏 R76 §5.1 single-block 契约 / R77 §5.1.1 multi-block 契约: 两个 `state_after` 字段 (`tool_use_id` / `tool_use_ids`) 互斥规则 binding, helper 必须支持 COALESCE 两条路径.
-- ❌ 不 silently 改 `recorder.py:_translate` 的任一 stamp 路径 (binding contract).
-- ❌ 不写新 ADR (除非 Option B 选了)— slice 3a-P2 helper 是 internal consumer, 不需要 ADR.
-- ❌ **CHANGELOG 必须当轮更新**: R76 漏过一次, R77 backfill 了; R78 commit 前 `grep -n '^### Added' CHANGELOG.md | head -2` 自检.
+- ❌ 不实施 slice 3b (R80 才落). R79 只写 spec + 失败测试.
+- ❌ 不破坏 R76 §5.1 / R77 §5.1.1 binding contract: 互斥规则不能改, recorder.py:_translate stamp 路径不能改.
+- ❌ 不动 `chronos.queries.tool_linkage` 的 internal-API 状态 (R79 可能用它, 但不 promote 到 public — 等 ADR 标定).
+- ❌ 不 cut v0.7.0a3 — slice 3 整体 (3a 已闭 + 3b + 3c MCP) 至少还要 2-3 轮才稳.
+- ❌ 不动 adapter-1-3 (langgraph/autogen/crewai) — zero-regression streak R52→R78 = **26 轮** (项目史高).
+- ❌ **CHANGELOG 必须当轮更新** (R76 漏过 R77 backfill 修, R77/R78 自检通过): R79 commit 前 `grep -n '^### Added' CHANGELOG.md | head -2` 自检.
 
 ### 工期估计
 
-R78 Option A = 45-60 min (新模块 + helper + 4 测 + ADR 索引行). Option B 单轮 = 不建议 (拆 R78+R79). Option C = 30-45 min.
+R79 Option A = 60-75 min (ADR amendment + 4 failing tests + 可选 fork pass-through). Option B = 30-45 min. Option C = 45-60 min.
 
-### R78 Hand-off invariants (R77 agent → R78 agent)
+### R79 Hand-off invariants (R78 agent → R79 agent)
 
 - 工作窗口 0-11 CST (cron) 或 manual chat slot.
-- R78 是 **slice 3a P2 round on R76+R77-shipped P0+P1 contract**. Unit test count baseline 619.
-- 开场命令: `git fetch` (R75 stale-ref trap recipe) + `uv run pytest -q --no-cov` + 读 R77 progress doc + 读 ADR-026 §5.1 + §5.1.1.
-- Adapter-1-3 zero-regression streak R52→R77 = **25 rounds** (continue protecting).
-- `[Unreleased]` 包含 R74 + R75 + R76 + R77 entries (R77 backfill 了 R76 漏的); R78 在 R77 entry 上方插入新 R78 entry (commit 前 grep 自检).
-- ADR-026 §5 (R75) + §5.1 (R76) + §5.1.1 (R77) 是 binding contracts: 改 `recorder.py:_translate` 之前先读这仨 + 跑 §6.1 §6.2 §6.2.1 全部 8 个测试 (单+多+orphan).
-- Live test 默认模型仍 `"Claude Sonnet 4.6"` (R73 实测). Helper 测试纯 hermetic.
-- Node 字段名记忆点: `node_name`, `kind`, `state_after`, **没有 `msg_cls`** (R77 踩过的 edit-time pitfall, `node_name.startswith("AssistantMessage")` 是正确写法).
+- R79 是 **slice 3b TDD entry round on R76+R77+R78-shipped slice 3a fully-closed contract**. Unit test count baseline **623**.
+- 开场命令: `git fetch origin main && git pull --ff-only` (R75 stale-ref trap recipe) + `uv run pytest -q --no-cov` + 读 R78 progress doc + 读 ADR-026 §5/§5.1/§5.1.1 + 读 recorder.py 的 fork path.
+- Adapter-1-3 zero-regression streak R52→R78 = **26 rounds** (continue protecting).
+- `[Unreleased]` 包含 R74 + R75 + R76 + R77 + R78 entries. R79 在 R78 entry 上方插入新 R79 entry (commit 前 grep 自检).
+- ADR-026 §5 (R75) + §5.1 (R76) + §5.1.1 (R77) 是 binding contracts. R79 §5.2 amendment 必须 sibling 它们 (in-place per R57), 不能 supersede 不能改.
+- `chronos.queries.tool_linkage` 是 internal API — R79 可以 import 用 (例如 `unmatched_tool_uses` 在测试里枚举 orphan), 但不 promote 到 HTTP/CLI surface (留给后续 ADR).
+- Live test 默认模型仍 `"Claude Sonnet 4.6"` (R73). R79 测试纯 hermetic.
+- Node 字段名: `node_name`, `kind`, `state_after`, **没有 `msg_cls`** (R77 踩过); `step_index` 是 `get_nodes_for_run` 的排序键.
 - B009 ruff: `getattr(b, "x")` 真值检查替成 `b.x` (R77 踩过).
+- **`record()` pipeline as test fixture pattern**: R75/R76/R77/R78 四连 — R79 测试也走 live `record()` (即使是 fork() 测试, 用 record-then-fork 流). 当 stub message/block 文件来到第 3 处, 提取到 `tests/unit/fixtures/anthropic_agents.py` (R58 convention).
 
-### Round 77 (上一轮) 现状
+### Round 78 (上一轮) 现状
 
-✅ R77 已结. slice 3a-P0+P1 写侧契约完整封盘, 619 测试绿, ADR-026 §5.1.1 落地, CHANGELOG R76 漏写 backfilled. 详见 `docs/progress/2026-05-15-round-77.md`.
+✅ R78 已结. slice 3a 完整闭环 (writer + reader 两侧, 4 个 cuts: §5/§5.1/§5.1.1/consumer-helpers). 623 测试绿, 新 `chronos.queries.tool_linkage` 内部包落地, adapter-1-3 streak 26 轮. 详见 `docs/progress/2026-05-15-round-78.md`.
 
 ### Release strategy (rolling)
 
@@ -719,9 +752,11 @@ R78 Option A = 45-60 min (新模块 + helper + 4 测 + ADR 索引行). Option B 
 - v0.7.0a1 ✅ cut 2026-05-14 (R73) — Arc B slice 1 alpha (Anthropic Agents SDK recorder + live-smoke)
 - v0.7.0a2 ✅ cut 2026-05-14 (R74) — Arc B slice 2 alpha (fork_session integration)
 - R75 (defensive round, no tag) — ADR-026 §5 binding contract + 2 unit tests + source comment
-- **R76 (slice 3a entry, no tag) — ADR-026 §5.1 binding contract + 3 unit tests + tool_use_id linkage** ← **this round**
-- v0.7.0a3 🚧 candidate R77-R78 — Arc B slice 3 alpha (multi-block + tool-fork + MCP passthrough)
-- v0.7.0 🚧 target R79+ GA — slice 1+2+3 stabilized
+- R76 (slice 3a-P0, no tag) — ADR-026 §5.1 binding contract + 3 unit tests + tool_use_id linkage
+- R77 (slice 3a-P1, no tag) — ADR-026 §5.1.1 binding contract + 3 unit tests + tool_use_ids multi-block extension
+- **R78 (slice 3a-P2 close-out, no tag) — `chronos.queries.tool_linkage` + 4 unit tests + slice 3a fully closed** ← **this round**
+- v0.7.0a3 🚧 candidate R80 — Arc B slice 3b alpha (fork-with-tool-substitution implementation)
+- v0.7.0 🚧 target R81+ GA — slice 1+2+3 (3a+3b+3c) stabilized
 
 
 ## 7. 文档索引 (当你需要深入某个主题)
@@ -764,7 +799,9 @@ R78 Option A = 45-60 min (新模块 + helper + 4 测 + ADR 索引行). Option B 
 
 ---
 
-*Last updated: 2026-05-14 (CST ~12:50, R73 manual chat slot — "一气呵成" pattern outside cron window) by Round 73 agent — **Arc B unblocked + v0.7.0a1 alpha cut**. R73 was a chat-driven single-slot manual round (not cron), prompted by user "一气呵成". 13-step todo executed in sequence: read R71 progress + Arc B scaffold → fix `anthropic_agents` default model name (kebab-case `claude-sonnet-4-5` → spaced PascalCase `"Claude Sonnet 4.6"` matching OneAPI Bedrock catalog) → run live-smoke (CHRONOS_LIVE=1) → all 3 tiers green (T1 import / T2 `'pong'` / T3 recorder 3-node FN+LLM+END) → full pytest+mypy+ruff (606/5/0, mypy clean, ruff clean) → frontend npm build clean → R73 progress doc → CONTEXT §5/§6 refresh → README.md major rewrite → CHANGELOG v0.7.0a1 block → 8-step release-pattern execution → push via gh-proxy → QQ war report. **Critical finding: R69 spike #1 prediction REFUTED.** R69→R71→R72 chain had concluded the OneAPI relay is incompatible with `claude-agent-sdk` session protocol (R69 spike #3.4 prediction landed verbatim in R71). R73 ran the actual probe with one tweak — passing `model="Claude Sonnet 4.6"` (the OneAPI model id form, not the SDK doc-default kebab-case) — and the full session protocol round-trips cleanly: SystemMessage(init) → AssistantMessage(text='pong') → ResultMessage(success). What R71 read as "synthetic auth-failure from incompatible relay" was actually the SDK's client-side fallback when its default kebab-case model id is rejected by the relay catalog. **ADR-027 (replay-seam contingency) is therefore NOT written** — the contingency it was guarding against does not occur. Process invariant added to wall: any release gating on a previous round's untested research conclusion must re-run the smallest possible disprover before tagging. Patched into `chronos-release-pattern` skill in this round. Adapter-1-3 zero-regression streak R52→R73 = **21 rounds** (R73 only touched anthropic_agents code path). v0.7.0a1 tagged + GitHub Release published. R74 default branch: Arc B slice 2 `fork_session()` integration (record+fork upgrade), 2-slot pre-budget per R64 impl-round rule.*
+*Last updated: 2026-05-15 (CST ~11:00, R78 cron slot inside 0–11 window, final hour) by Round 78 agent — **Arc B slice 3a fully closed via P2 close-out**. Single-slot cron round shipping the read-side companion to R76+R77's writer-side stamps: new internal `chronos.queries` package with `unmatched_tool_results(store, run_id)` and `unmatched_tool_uses(store, run_id)` — pure-Python orphan detectors implementing ADR-026 §5.1.1's LEFT JOIN ... IS NULL semantics over `store.get_nodes_for_run(run_id)`, no raw SQL, no SqliteStore API surface change. ADR-026's SQL recipe remains canonical raw form for dashboard/CLI consumers; helper is in-Python convenience for adapter-level/dogfood-script consumers. Two-layer architecture **frozen contract = SQL recipe in ADR / mutable convenience = Python helper** is now the project pattern for ADR-binding contract amendments (R78 F1, reusable for slice 3b/3c). `record()` pipeline as test fixture is now project-wide pattern (R75/R76/R77/R78 four-round confirmation, R78 F2); extract stub-message helpers to `tests/unit/fixtures/anthropic_agents.py` on third occurrence. Slice 3a's three-cut shape (P0 R76 §5.1 single-block / P1 R77 §5.1.1 multi-block / P2 R78 consumer helpers) validates "read-side anchor first" sub-cut pattern; slice 3b will follow same shape (R78 F3). Tests 619→**623** (+4 unit, all live `record()` pipeline, no SDK install required), targeted 4/4 + full 623/7/0 in 17.44s, mypy clean, ruff clean (1 import-sort auto-fixed mid-round). **Zero changes** to recorder.py / ADR-026 / store / core / CLI / HTTP / frontend / schema — strictly additive consumer-side surface in a new package. Adapter-1-3 zero-regression streak R52→R78 = **26 rounds** (project-history high). No new ADR (helper is internal API, not contract). No tag cut — `[Unreleased]` continues toward v0.7.0 GA. CHANGELOG R78 entry added at top of `[Unreleased]` (above R77); pre-commit `grep '^### Added' CHANGELOG.md` self-check passed (R77 lesson sticking). R79 default plan: slice 3b TDD scaffolding — ADR-026 §5.2 amendment (Draft) + 4 failing tests in new `tests/unit/test_anthropic_agents_fork_tool_override.py` describing fork-with-tool-substitution semantics, using `pytest.mark.xfail(strict=True, reason="slice 3b — R80")` to actively guard R80 implementation. R80 then ships implementation + dogfood proof, R81+ candidate v0.7.0a3 alpha cut.*
+
+*Previous footer: 2026-05-14 (CST ~12:50, R73 manual chat slot — "一气呵成" pattern outside cron window) by Round 73 agent — **Arc B unblocked + v0.7.0a1 alpha cut**. R73 was a chat-driven single-slot manual round (not cron), prompted by user "一气呵成". 13-step todo executed in sequence: read R71 progress + Arc B scaffold → fix `anthropic_agents` default model name (kebab-case `claude-sonnet-4-5` → spaced PascalCase `"Claude Sonnet 4.6"` matching OneAPI Bedrock catalog) → run live-smoke (CHRONOS_LIVE=1) → all 3 tiers green (T1 import / T2 `'pong'` / T3 recorder 3-node FN+LLM+END) → full pytest+mypy+ruff (606/5/0, mypy clean, ruff clean) → frontend npm build clean → R73 progress doc → CONTEXT §5/§6 refresh → README.md major rewrite → CHANGELOG v0.7.0a1 block → 8-step release-pattern execution → push via gh-proxy → QQ war report. **Critical finding: R69 spike #1 prediction REFUTED.** R69→R71→R72 chain had concluded the OneAPI relay is incompatible with `claude-agent-sdk` session protocol (R69 spike #3.4 prediction landed verbatim in R71). R73 ran the actual probe with one tweak — passing `model="Claude Sonnet 4.6"` (the OneAPI model id form, not the SDK doc-default kebab-case) — and the full session protocol round-trips cleanly: SystemMessage(init) → AssistantMessage(text='pong') → ResultMessage(success). What R71 read as "synthetic auth-failure from incompatible relay" was actually the SDK's client-side fallback when its default kebab-case model id is rejected by the relay catalog. **ADR-027 (replay-seam contingency) is therefore NOT written** — the contingency it was guarding against does not occur. Process invariant added to wall: any release gating on a previous round's untested research conclusion must re-run the smallest possible disprover before tagging. Patched into `chronos-release-pattern` skill in this round. Adapter-1-3 zero-regression streak R52→R73 = **21 rounds** (R73 only touched anthropic_agents code path). v0.7.0a1 tagged + GitHub Release published. R74 default branch: Arc B slice 2 `fork_session()` integration (record+fork upgrade), 2-slot pre-budget per R64 impl-round rule.*
 
 *Previous footer: 2026-05-14 (CST ~09:30, R72 cron slot inside 0–11 window) by Round 72 agent — **A2 close-out #10** over R71 inherited WIP per `cron-slot-handoff-recovery` skill. R71 ran out of iterations after shipping Arc B slice 1 live-smoke scaffolding (`scripts/dogfood/arc_b_slice_1_smoke.py` 13.6 KB three-tier probe + `tests/live/test_anthropic_agents_smoke.py` 8.9 KB 2 CHRONOS_LIVE-gated tests + `docs/adapters/anthropic_agents.md` 5.8 KB second per-adapter doc + `pyproject.toml` mypy override for crewai.* / crewai_tools.* with `follow_imports=skip` + R71 progress doc 10.9 KB full §0–§7) but never committed. R69 spike #3.4 prediction landed verbatim: baidu-int relay returns `model=<synthetic>` + `error=authentication_failed` then hangs subsequent calls — relay incompat with claude-agent-sdk session protocol confirmed. R72 (this slot) verified gates green w/o new code (606 pass / 5 skip / 0 fail / mypy 0 error / ruff clean), updated CONTEXT §5+§6 (R72 outcome + R73 replay-seam spike forward plan), wrote brief R72 progress doc, committed all 6 paths, pushed via gh-proxy. Adapter-1-3 zero-regression streak now R52→R72 = **20 rounds** (full Phase-4 Arc-A run + Arc-B slice-1 scaffolding + slice-1 live-smoke pivot) — milestone marker. No tag cut — v0.7.0a1 deferred from R72-target → R74-or-later, gated on either Option B (user authorizes real Anthropic API key, fast-path live-smoke + alpha cut) or Option A (R73 ADR-027 replay-seam spike unblocks autonomous offline live-smoke validation). Five A2-inheritance findings: (1) Inheritance chain 十连 R48-A→R51→R52→R53→R59→R63→R65→R67→R70→R72 — 2-slot pre-budget rule for impl rounds remains structurally invariant across feature areas. (2) Spike-prediction precision: R69 source-inspection round predicted EXACT failure mode (synthetic-model + auth-failed) 4 rounds ahead — md-first methodology demonstrably forecasts implementation-time blockers. (3) `claude-agent-sdk` Python ≥3.10 + Node `claude` CLI dual-runtime works in cron VM (Node already installed); blocker is purely the relay protocol layer, not infra. (4) Per-adapter docs convention bootstraps cleanly — `docs/adapters/anthropic_agents.md` first instance establishes "Install / Config / Usage / Limitations / Known Issues" template for langgraph + autogen backfills. (5) `pyproject.toml` mypy `follow_imports=skip` per-package override is the right pattern when an extra co-installs untyped peer libraries (crewai pulled in alongside claude-agent-sdk via uv resolve) — `ignore_missing_imports` would have masked real type errors. R73 default branch: Option A replay-seam spike (autonomous, doesn't need user auth) — `tests/spikes/spike14_anthropic_replay.py` + `docs/decisions/ADR-027-anthropic-replay-seam.md` Draft + `docs/research/r73-replay-seam-survey.md`. Option B fork triggers if `ANTHROPIC_API_KEY_REAL` lands in `/workspace/.hermes/.env` mid-round.*
 

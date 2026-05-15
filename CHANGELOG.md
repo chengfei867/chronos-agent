@@ -4,6 +4,20 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added (R78 — slice 3a-P2 close-out: `chronos.queries.tool_linkage` orphan-detection helpers)
+
+- **New package `chronos.queries`** (`src/chronos/queries/__init__.py` + `tool_linkage.py`) — internal consumer-side helpers, first member of a package reserved for read-side query conveniences across slices. Module is internal API (not exposed via HTTP/CLI/adapter contracts) and may evolve freely between minor versions.
+- **`unmatched_tool_results(store, run_id) -> list[Node]`** — returns `UserMessage` Nodes whose declared `state_after['tool_use_id']` (R76 §5.1) or any element of `state_after['tool_use_ids']` (R77 §5.1.1) is absent from the union of tool-use ids declared by `AssistantMessage*` Nodes in the same run. Surfaces the orphan tolerance clause of ADR-026 §5.1 at query time.
+- **`unmatched_tool_uses(store, run_id) -> list[Node]`** — symmetric mirror; returns `AssistantMessage*` Nodes whose declared tool-use ids have no matching tool-result in the same run. Slice-3b time-travel mechanic preview: enumerates "still-pending tool uses at fork point".
+- **In-Python equivalent of ADR-026 §5.1.1 SQL recipe** — pure-Python `LEFT JOIN ... IS NULL` semantics over `store.get_nodes_for_run(run_id)`, no raw SQL, no SqliteStore API surface change. ADR-026's SQL recipe remains the canonical raw form for dashboard / CLI consumers.
+- **4 new unit tests** in `tests/unit/test_queries_tool_linkage.py` — `test_unmatched_tool_results_finds_orphan_only`, `test_unmatched_tool_results_empty_when_all_matched`, `test_unmatched_tool_uses_symmetric`, `test_helpers_handle_multi_block_keyset`. All exercise the live `record()` pipeline (R75 writer-side redundancy invariant honored).
+
+### Changed
+
+- Test count: 619 → **623** (+4 unit tests, all pure-additive).
+- Adapter-1-3 zero-regression streak: R52→R78 = **26 rounds** (project-history high).
+- **Slice 3a fully closed** — P0 (single-block stamp, R76 §5.1) + P1 (multi-block stamp, R77 §5.1.1) + P2 (consumer-side orphan helpers, R78). Tool-linkage write+read paths both contractual + tested.
+
 ### Added (R77 — ADR-026 §5.1.1 amendment: multi-block `state_after.tool_use_ids` contract)
 
 - **ADR-026 §5.1.1 (R77 amendment, slice 3a-P1)** — extends the R76 §5.1 single-block contract to the multi-block case. When an `AssistantMessage` carries >1 `ToolUseBlock` (batched parallel tool dispatch) or a `UserMessage` carries >1 `ToolResultBlock`, the recorder now surfaces an ordered `state_after['tool_use_ids']` (plural) list — block-source order preserved — so slice-3 SQL consumers can JOIN 1:N via `json_each(state_after->>'tool_use_ids')`. **Mutual exclusivity is binding**: singular `tool_use_id` (§5.1) and plural `tool_use_ids` (§5.1.1) MUST NEVER coexist on the same Node (`len==1 → singular only`; `len>1 → plural only`). Same defensive guard as R76 (`isinstance(..., str) and id`); if all ids filter out, the key is omitted (parallels R76's missing-anchor tolerance).
