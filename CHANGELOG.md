@@ -4,6 +4,54 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added (R81 — slice 3c TDD scaffolding: ADR-026 §5.3 fork-with-tool-result-substitution contract)
+
+- **ADR-026 §5.3 amendment (Draft)**: New section in
+  `docs/decisions/ADR-026-arc-b-scope.md` after §5.2 describing the
+  fork-with-tool-**result**-substitution contract for slice 3c — the
+  symmetric mirror of §5.2 on the *output* half of the tool round-trip.
+  Specifies the new `fork(..., tool_result_overrides: dict[str, Any] |
+  None)` surface, child-side `state_after['tool_result_content']`
+  stamp shape (singular + plural §5.1.1-style index-aligned forms),
+  three fail-fast validation rules (key-type, **result-side** keyset
+  membership, no double-substitution with `tool_input_overrides`), and
+  consumer SQL recipes for enumerating result-substituted calls in a
+  child run. Sibling-extends §5.2 in-place per R57 / R79 (no
+  supersession; §5.2 status flipped Draft→Implemented in same edit).
+  Implementation lands in R82; this round only ships the spec.
+- **`tests/unit/test_anthropic_agents_fork_tool_result_override.py` (NEW)**:
+  Four-test scaffold covering §5.3's surface — one expected-pass
+  identity guard (None / `{}` fall through) and three
+  `pytest.mark.xfail(strict=True, reason="slice 3c — R82: ...")` tests
+  describing the result-side substitution stamp, unknown-id rejection
+  against the result-side keyset, and input/result collision rejection.
+  Strict-xfail makes R82 implementation a forcing function: when the
+  implementation lands, every test flips to passing → strict-xfail
+  trips → R82 agent removes the markers as part of the same commit.
+  Same forcing-function discipline as R76→R77 §5.1.1, R79→R80 §5.2.
+- **`AnthropicAgentsRecorder.fork()` no-op pass-through kwarg**: The
+  `tool_result_overrides` keyword argument is now accepted on the
+  recorder's `fork()` signature alongside R80's `tool_input_overrides`.
+  Empty (`None` / `{}`) is identity — semantically equivalent to R74
+  / R80 fork() with no §5.3 surface. Non-empty raises
+  `NotImplementedError("R82: §5.3 slice 3c not yet implemented ...")`,
+  giving the R81 xfail tests a precise error shape rather than
+  `TypeError: unexpected keyword argument`. R82 will swap the raise
+  for the validation + child-side stamp pipeline in this same
+  function body.
+- **ADR-026 §5.2 status header flipped** Draft → "Implemented (R80).
+  Sibling §5.3 (R81 amendment, slice 3c) extends this contract to
+  result-side substitution." — keeps the document self-consistent and
+  cross-references the new §5.3 from the §5.2 entry point.
+
+### Changed
+
+- Test count: 627 → **628** (+1 R81 sanity test passing; +3 strict-xfail
+  tests deferred to R82). 7 skipped (live), 0 failed.
+- Adapter-1-3 zero-regression streak: R52→R81 = **29 rounds** (still
+  longest in project history; one off project-wide R52→R80=28-round
+  high; new high pending R82 ship).
+
 ### Added (R80 — slice 3b implementation: ADR-026 §5.2 fork-with-tool-substitution lands)
 
 - **`AnthropicAgentsRecorder.fork(..., tool_input_overrides=...)` implementation** — replaces R79's `NotImplementedError` placeholder with the full §5.2 pipeline: (1) **fail-fast key validation** before any SDK call (non-`str` key → `TypeError`; unknown id → `AdapterError`; orphan tool-use id → `AdapterError`, message contains "orphan"); (2) **child-side `state_after` stamping** — when a child `AssistantMessage*` Node carries a `ToolUseBlock` whose id matches an override key, the recorder writes `state_after['tool_input'] = <new_input>` alongside the preserved `state_after['tool_use_id']` JOIN anchor (§5.1). Empty (`None` / `{}`) remains identity — byte-for-byte equivalent to R74's no-override path.

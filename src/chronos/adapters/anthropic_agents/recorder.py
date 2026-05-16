@@ -605,6 +605,7 @@ class AnthropicAgentsRecorder:
         at_node_id: str,
         overrides: dict[str, Any] | None = None,
         tool_input_overrides: dict[str, dict[str, Any]] | None = None,
+        tool_result_overrides: dict[str, Any] | None = None,
         child_thread_id: str,
         reason: str | None = None,
         task_description: str | None = None,
@@ -662,6 +663,21 @@ class AnthropicAgentsRecorder:
                 raises ``NotImplementedError`` when non-empty so the
                 R79 TDD-scaffold xfail tests fail with a precise error
                 shape rather than ``TypeError``.
+            tool_result_overrides: ADR-026 §5.3 (R81 amendment, slice 3c)
+                surface for fork-with-tool-result-substitution — the
+                symmetric mirror of ``tool_input_overrides`` on the
+                output half of the tool round-trip. Mapping
+                ``tool_use_id → new_result_content``; replaces the
+                ``ToolResultBlock.content`` payload on the child branch
+                while preserving the JOIN anchor stamps verbatim. The
+                value is treated as opaque JSON-serialisable Python
+                (typically ``str`` or list of content blocks). ``None``
+                (default) and ``{}`` are identity — byte-equivalent to
+                R74 / R80 fork() with no §5.3 surface. **Implementation
+                lands in R82**; R81 ships the kwarg as a no-op
+                pass-through that raises ``NotImplementedError`` when
+                non-empty so the R81 TDD-scaffold xfail tests fail with
+                a precise error shape rather than ``TypeError``.
             child_thread_id: User-supplied logical thread id for the child
                 run. Must differ from the parent run's thread id.
             reason: Optional free-form fork reason (persisted to ``Fork.reason``).
@@ -694,6 +710,20 @@ class AnthropicAgentsRecorder:
         normalised_overrides: dict[str, dict[str, Any]] = (
             dict(tool_input_overrides) if tool_input_overrides else {}
         )
+
+        # --- R81 (ADR-026 §5.3 slice 3c TDD-scaffold pass-through) ----------
+        # `tool_result_overrides` is accepted on the signature so R81's
+        # strict-xfail tests fail with a precise error shape, not
+        # ``TypeError: unexpected keyword argument``. Empty (`None`/`{}`)
+        # is identity — falls through to the R74/R80 path verbatim. Non-
+        # empty raises ``NotImplementedError`` until R82 swaps this for
+        # the validation + child-side stamp pipeline. Validation surface,
+        # stamp shape, and SQL recipes are specified in ADR-026 §5.3.
+        if tool_result_overrides:
+            raise NotImplementedError(
+                "R82: §5.3 slice 3c not yet implemented "
+                "(tool_result_overrides is a draft contract — see ADR-026 §5.3)"
+            )
 
         # --- Pre-flight: load parent artifacts and validate ---
         parent_run = self._store.get_run(parent_run_id)

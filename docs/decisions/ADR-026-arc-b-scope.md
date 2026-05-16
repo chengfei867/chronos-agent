@@ -292,7 +292,7 @@ WHERE u.node_name LIKE 'AssistantMessage%' AND r.node_name = 'UserMessage';
 
 ### 5.2 Fork-with-tool-substitution contract (R79 amendment, slice 3b)
 
-**Status: Draft — implementation lands in R80.**
+**Status: Implemented (R80).** Sibling §5.3 (R81 amendment, slice 3c) extends this contract to result-side substitution.
 
 Slice 3a (R76 §5.1 + R77 §5.1.1) gave us *anchors* for the tool-use ↔
 tool-result round-trip. Slice 3b is what those anchors are *for*:
@@ -457,6 +457,169 @@ ORDER BY n.step_index, je.key;
 - `chronos.queries.tool_linkage` promotion to a public API. Slice 3b
   uses it internally for validation; the package stays internal until
   a dedicated ADR formalises consumer-facing query helpers.
+
+### 5.3 Fork-with-tool-result-substitution contract (R81 amendment, slice 3c)
+
+**Status: Draft — implementation lands in R82.**
+
+Slice 3b (R80 §5.2) gave the user time-travel power on the **input** half
+of the tool round-trip: rewrite what the agent *asks* the tool. Slice 3c
+is the symmetric mirror on the **output** half: rewrite what the agent
+*gets back* from the tool, without re-invoking the real tool. This is
+the second load-bearing user story for the time-travel debugger — "the
+real tool is non-deterministic / expensive / no longer reachable; replay
+the agent's reasoning under a hypothetical tool result."
+
+§5.2 and §5.3 are sibling-extensions, not supersessions: a single
+`fork()` call MAY carry both `tool_input_overrides` and
+`tool_result_overrides` simultaneously (orthogonal keyspaces — use-side
+vs result-side). The two override mappings touch disjoint Node sides and
+disjoint `state_after` keys.
+
+#### Contract
+
+`AnthropicAgentsRecorder.fork()` gains one further optional keyword:
+
+```python
+def fork(
+    self,
+    runtime: Any,
+    *,
+    parent_run_id: str,
+    at_node_id: str,
+    child_thread_id: str,
+    task_description: str,
+    tool_input_overrides: dict[str, dict[str, Any]] | None = None,  # §5.2
+    tool_result_overrides: dict[str, Any] | None = None,            # §5.3 NEW
+) -> Iterator[ForkRef]: ...
+```
+
+- **Key**: `tool_use_id` (the same JOIN anchor §5.1 / §5.1.1 stamp on
+  both sides). The mapping selects *which* tool round-trip to rewrite
+  the result for; the value supplies the substitute payload.
+- **Value**: an arbitrary JSON-serialisable Python object — typically
+  a `str` (Anthropic's most common `ToolResultBlock.content` shape) or
+  a list of content blocks (`[{"type": "text", "text": "..."}]`). The
+  recorder does not interpret the value beyond persistence; downstream
+  the SDK / agent code surfaces it verbatim.
+- **Identity semantics**: `None` and `{}` are both pure no-ops —
+  byte-identical to a §5.2-only / R74-only fork. Empty mapping does
+  *not* trigger any new code path; it short-circuits at the same `is
+  None`-style guard the R80 §5.2 implementation uses for its own
+  overrides (see `recorder.py:867`, `self._fork_overrides = ... or
+  None`).
+
+#### Validation (mirrors §5.2; runs *before* the SDK call)
+
+When `tool_result_overrides` is non-empty, the recorder validates each
+key fail-fast. Errors are raised synchronously as `AdapterError`
+(consistent with §5.2 #1-#3) and the SDK fork is never invoked.
+
+1. **Key-type**: key must be `str`. Non-`str` → `AdapterError` quoting
+   `type(key).__name__`.
+2. **Result-side keyset membership**: key must appear in the union of
+   tool-use ids declared by *result-side* Nodes in `parent_run_id` —
+   i.e. `_is_result_side(n)` Nodes (UserMessage carrying ToolResultBlock
+   per §5.1 singular form, or any element of §5.1.1 plural
+   `state_after['tool_use_ids']`). An id present *only* on use-side
+   (orphan use, no matching result yet) is rejected here as "not in
+   result-side keyset" — slice-3a→3c coupling pre-condition (round-trip
+   must close in parent run).
+3. **No double-substitution**: a key MUST NOT also appear in
+   `tool_input_overrides` — overriding both the input and the result
+   for the same `tool_use_id` is contradictory (rewriting the input
+   implies the agent re-asks the tool with new input, but rewriting the
+   result implies the tool was never re-invoked). `AdapterError` quoting
+   the conflicting id.
+
+Note the asymmetry vs §5.2: §5.2 validates against the *use-side*
+keyset (where `ToolUseBlock.id` was declared) and rejects orphan use-ids
+that haven't received a matching result; §5.3 validates against the
+*result-side* keyset (where `ToolResultBlock.tool_use_id` was declared).
+A round-trip that closed in the parent passes both; a half-open
+round-trip is rejected on whichever side the user tried to rewrite.
+
+#### Child-side stamp
+
+When a child run's translated Node carries a `ToolResultBlock` whose
+`tool_use_id` matches an override key, the recorder writes the
+substitute content into `state_after`:
+
+```python
+state_after = {
+    "tool_use_id": "<unchanged JOIN anchor>",  # §5.1 — preserved verbatim
+    "tool_result_content": <override value>,   # §5.3 NEW
+    # ... any other §5 keys (tool_use_ids plural form per §5.1.1) ...
+}
+```
+
+For multi-block result Nodes (§5.1.1 plural form), the stamp follows
+§5.2's index-aligned shape: `state_after['tool_result_contents']` is
+an ordered list whose `i`-th entry is either the original
+`ToolResultBlock.content` (no override matched id `i`) or the override
+value (override matched). Mutually exclusive with the singular form,
+same `len==1 → singular only / len>1 → plural only` rule as §5.1.1.
+
+JOIN anchors `tool_use_id` (singular) and `tool_use_ids` (plural) are
+preserved byte-for-byte — slice-3 SQL recipes still work; only the
+*payload* fields are overridden.
+
+#### Out of scope (slice 3c)
+
+- HTTP / CLI surface — `tool_result_overrides` lands on the recorder
+  Python API only in R82. CLI wiring is a later slice.
+- Multi-step result substitutions across nested forks (overriding a
+  tool result whose effect propagates through *another* fork). Each
+  fork in a chain carries its own independent `tool_result_overrides`;
+  no transitive bookkeeping.
+- MCP passthrough scoping — `tool_result_overrides` applies uniformly
+  regardless of whether the originating tool was a built-in or an MCP
+  server tool. MCP-aware filtering is reserved for a future slice if
+  it surfaces a real need.
+- Streaming / partial substitution — the override value replaces the
+  *entire* `ToolResultBlock.content` payload at translation time; we do
+  not rewrite individual content blocks within a multi-block result.
+
+#### SQL recipe (consumer-side enumeration)
+
+To list every result-substituted call in a child run:
+
+```sql
+SELECT id, kind,
+       json_extract(state_after, '$.tool_use_id') AS tu_id,
+       json_extract(state_after, '$.tool_result_content') AS new_content
+FROM nodes
+WHERE run_id = ?
+  AND json_extract(state_after, '$.tool_result_content') IS NOT NULL;
+```
+
+Multi-block (§5.1.1 plural) consumers swap to `json_each` over
+`tool_result_contents`. Both forms are documented alongside §5.1.1's
+existing recipe.
+
+#### Test enforcement
+
+R81 ships a four-test scaffold (`tests/unit/test_anthropic_agents_fork_tool_result_override.py`):
+
+1. `test_fork_without_result_overrides_is_identity` — `None` and `{}`
+   produce a child run byte-identical to R74 / R80 fork(). **EXPECTED
+   PASS** on R81 (no-op pass-through).
+2. `test_fork_with_result_override_changes_downstream_result` —
+   overriding a single `tool_use_id` rewrites
+   `state_after['tool_result_content']` on the child Node while
+   preserving `state_after['tool_use_id']`. **xfail strict (R82)**.
+3. `test_fork_with_result_override_of_unknown_id_raises` — overriding
+   an id absent from the parent's *result-side* keyset raises
+   `AdapterError` *before* the SDK call (validation #2). **xfail strict
+   (R82)**.
+4. `test_fork_with_result_override_collides_with_input_override_raises`
+   — same id in both `tool_input_overrides` and `tool_result_overrides`
+   raises `AdapterError` (validation #3). **xfail strict (R82)**.
+
+Strict-xfail makes R82 a forcing function: when the implementation
+lands, all three xfail tests flip to passing → strict-xfail trips →
+R82 commit removes the markers in the same diff. Same forcing-function
+discipline as R76→R77 §5.1.1, R79→R80 §5.2.
 
 ### 6. What Arc B slice 2+ looks like
 
