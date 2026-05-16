@@ -4,6 +4,54 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added (R80 — slice 3b implementation: ADR-026 §5.2 fork-with-tool-substitution lands)
+
+- **`AnthropicAgentsRecorder.fork(..., tool_input_overrides=...)` implementation** — replaces R79's `NotImplementedError` placeholder with the full §5.2 pipeline: (1) **fail-fast key validation** before any SDK call (non-`str` key → `TypeError`; unknown id → `AdapterError`; orphan tool-use id → `AdapterError`, message contains "orphan"); (2) **child-side `state_after` stamping** — when a child `AssistantMessage*` Node carries a `ToolUseBlock` whose id matches an override key, the recorder writes `state_after['tool_input'] = <new_input>` alongside the preserved `state_after['tool_use_id']` JOIN anchor (§5.1). Empty (`None` / `{}`) remains identity — byte-for-byte equivalent to R74's no-override path.
+- **`scripts/dogfood_fork_tool_override.py` (NEW)** — end-to-end demo of all 4 §5.2 paths against a fake `claude_agent_sdk`: identity fork (no stamp), substituting fork (input rewrite), unknown-id rejection (pre-SDK), orphan-id rejection (pre-SDK). Runnable via `python scripts/dogfood_fork_tool_override.py`; prints `✅ R80 slice 3b dogfood — all 4 paths green.` on success. Mirrors R74's `dogfood_fork.py` precedent — exercises the contract from a user's seat.
+- **R79 strict-xfail markers removed** in `tests/unit/test_anthropic_agents_fork_tool_override.py` — the three `@pytest.mark.xfail(strict=True, reason="slice 3b — R80")` gates now pass cleanly. Strict-xfail forcing function did its job: implementation lands in same commit as marker removal, no silent skips.
+
+### Changed
+
+- Test count: 624 → **627** (+3 ex-xfail tests now passing). 7 skipped (live), **0 xfail**, 0 failed.
+- Adapter-1-3 zero-regression streak: R52→R80 = **28 rounds** (new project high).
+- **ADR-026 §5 fully implemented** — §5.1 (R76, single-block JOIN anchor), §5.1.1 (R77, multi-block keyset), §5.1.1 readers (R78, orphan helpers), §5.2 (R80, fork-with-substitution). Arc B slice 3 scope fully shipped.
+
+### Added (R79 — slice 3b TDD scaffolding: ADR-026 §5.2 fork-with-tool-substitution contract)
+
+- **ADR-026 §5.2 amendment (Draft)**: New section in
+  `docs/decisions/ADR-026-arc-b-scope.md` after §5.1.1 describing the
+  fork-with-tool-substitution contract for slice 3b. Specifies the new
+  `fork(..., tool_input_overrides: dict[str, dict[str, Any]] | None)`
+  surface, child-side `state_after['tool_input']` stamp shape (singular
+  + plural index-aligned forms), three fail-fast validation rules
+  (key-type, unknown-id, orphan-use-id), and consumer SQL recipes for
+  enumerating substituted calls in a child run. Sibling-extends §5.1
+  / §5.1.1 in-place per R57 (no supersession). Implementation lands in
+  R80; this round only ships the spec.
+- **`tests/unit/test_anthropic_agents_fork_tool_override.py` (NEW)**:
+  Four-test scaffold covering §5.2's surface — one expected-pass
+  identity guard (None / `{}` fall through) and three
+  `pytest.mark.xfail(strict=True, reason="slice 3b — R80")` tests
+  describing the substitution stamp, unknown-id rejection, and
+  orphan-id rejection. Strict-xfail makes R80 implementation a forcing
+  function: when the implementation lands, every test flips to
+  passing → strict-xfail trips → R80 agent removes the markers as part
+  of the same commit.
+- **`AnthropicAgentsRecorder.fork()` no-op pass-through kwarg**: The
+  `tool_input_overrides` keyword argument is now accepted on the
+  recorder's `fork()` signature. Empty (`None` / `{}`) is identity —
+  semantically equivalent to R74 fork(). Non-empty raises
+  `NotImplementedError("R80: §5.2 slice 3b not yet implemented")`,
+  giving the R79 xfail tests a precise error shape rather than
+  `TypeError: unexpected keyword argument`. R80 will swap the raise
+  for the validation + child-side stamp pipeline in this same
+  function body.
+
+### Changed
+
+- Test count baseline: 623 → **624** (+1 sanity test passing on R79;
+  +3 strict-xfail tests deferred to R80). 7 skipped (live), 0 failed.
+
 ### Added (R78 — slice 3a-P2 close-out: `chronos.queries.tool_linkage` orphan-detection helpers)
 
 - **New package `chronos.queries`** (`src/chronos/queries/__init__.py` + `tool_linkage.py`) — internal consumer-side helpers, first member of a package reserved for read-side query conveniences across slices. Module is internal API (not exposed via HTTP/CLI/adapter contracts) and may evolve freely between minor versions.

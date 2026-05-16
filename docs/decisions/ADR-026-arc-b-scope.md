@@ -290,6 +290,174 @@ WHERE u.node_name LIKE 'AssistantMessage%' AND r.node_name = 'UserMessage';
   subsequent UserMessage results) — not observed in current SDK
   traffic; reserved for a future slice if it materialises.
 
+### 5.2 Fork-with-tool-substitution contract (R79 amendment, slice 3b)
+
+**Status: Draft — implementation lands in R80.**
+
+Slice 3a (R76 §5.1 + R77 §5.1.1) gave us *anchors* for the tool-use ↔
+tool-result round-trip. Slice 3b is what those anchors are *for*:
+fork a recorded run at a specific node and **rewrite the tool input**
+that the child branch will see, before the agent reasons again.
+
+This is the load-bearing user story for "agent time-travel debugger" —
+the user spotted a bad tool call mid-run, wants to rewind, change the
+input, and watch how downstream reasoning diverges. Without §5.2 the
+fork primitive can only re-issue an *unedited* transcript (R74).
+
+#### Contract
+
+`AnthropicAgentsRecorder.fork()` gains one optional keyword argument:
+
+```python
+def fork(
+    self,
+    runtime: Any,
+    *,
+    parent_run_id: str,
+    at_node_id: str,
+    overrides: dict[str, Any] | None = None,
+    tool_input_overrides: dict[str, dict[str, Any]] | None = None,  # NEW
+    child_thread_id: str,
+    reason: str | None = None,
+    task_description: str | None = None,
+    tags: list[str] | None = None,
+) -> Iterator[ForkRef]:
+```
+
+`tool_input_overrides` is a mapping `tool_use_id → new_input_dict`:
+
+- **Key**: a `tool_use_id` string. MUST already exist in the parent run's
+  use-side keyset (i.e. some `AssistantMessage*` Node in `parent_run_id`
+  declares it via `state_after['tool_use_id']` (R76 §5.1) or as an
+  element of `state_after['tool_use_ids']` (R77 §5.1.1)).
+- **Value**: a JSON-serialisable dict to substitute as the
+  `ToolUseBlock.input` payload in the child branch when that block is
+  re-emitted.
+
+Both singular (1:1) and plural (1:N) §5.1 / §5.1.1 anchors are valid
+keys — slice 3b is per-id granular, NOT per-Node. Replacing a single
+element of a multi-block `tool_use_ids` list while leaving siblings
+verbatim is supported and is the primary debugging workflow.
+
+`tool_input_overrides=None` (default) and `tool_input_overrides={}`
+(empty mapping) are both **identity** forks — semantically equivalent
+to R74 fork() with no §5.2 surface. This keeps R74 callers source-stable.
+
+#### Stamp on child Nodes
+
+When the child branch's first AssistantMessage Node carrying an
+overridden `ToolUseBlock` is recorded:
+
+- `state_after['tool_use_id']` (or matching list element of
+  `state_after['tool_use_ids']`) — **unchanged** from parent. The
+  binding contract for the JOIN anchor is preserved across the fork.
+- `state_after['tool_input']` — **new**, set to the substituted input
+  dict. Absent on Nodes that did NOT have their input rewritten (so
+  consumers can `WHERE state_after->>'tool_input' IS NOT NULL` to
+  enumerate substituted calls in a child run).
+
+For multi-block messages where only some `tool_use_ids` were
+overridden, `state_after['tool_input']` is a list aligned by index
+with `tool_use_ids`, with `null` entries for verbatim blocks.
+
+#### Validation (fail-fast, no silent drop)
+
+`fork()` MUST raise `AdapterError` *before* delegating to
+`claude_agent_sdk.fork_session()` if any key in `tool_input_overrides`:
+
+1. Is not a string, or
+2. Does not appear in the union of tool-use ids declared by any
+   `AssistantMessage*` Node in `parent_run_id`'s use-side keyset
+   (`_ids_from_state_after` over `_is_use_side` Nodes — same shape as
+   `chronos.queries.tool_linkage._ids_from_state_after`), or
+3. Refers to a `tool_use_id` that is *orphan on the use side* (i.e.
+   appears in `chronos.queries.tool_linkage.unmatched_tool_uses(store,
+   parent_run_id)` — the use side has no matching result yet so
+   replaying past it is a category error). Slice 3b pre-condition:
+   the use→result round-trip must have *closed* in the parent run.
+
+Validation 3 is the load-bearing slice-3a→slice-3b coupling: R78's
+`unmatched_tool_uses` helper exists *for this check*. Consumers who
+want to fork mid-tool-call must wait for the result Node first or use
+a different primitive.
+
+The substituted `value` payload is validated for JSON-serialisability
+only (no schema match against the original tool's input shape — that
+is the agent's / tool server's responsibility).
+
+#### Test enforcement
+
+R79 lands four `pytest.mark.xfail(strict=True, reason="slice 3b — R80")`
+tests in `tests/unit/test_anthropic_agents_fork_tool_override.py`:
+
+1. `test_fork_without_overrides_is_identity` — `tool_input_overrides=
+   None` and `={}` produce a child run byte-identical to R74 fork().
+2. `test_fork_with_override_changes_downstream_input` — given a
+   recorded parent with one `ToolUseBlock` keyed by `tool_use_id="t1"`,
+   `fork(..., tool_input_overrides={"t1": {"x": 99}})` produces a
+   child run whose first AssistantMessage Node has
+   `state_after['tool_input'] == {"x": 99}` and unchanged
+   `state_after['tool_use_id'] == "t1"`.
+3. `test_fork_with_override_of_unknown_id_raises` — overriding a
+   `tool_use_id` absent from the parent's use-side keyset raises
+   `AdapterError` *before* the SDK call.
+4. `test_fork_with_override_of_orphan_use_id_raises` — overriding a
+   `tool_use_id` returned by `unmatched_tool_uses(store, parent_run_id)`
+   raises `AdapterError` (slice-3a→3b coupling pre-condition).
+
+Strict-xfail makes R80 implementation a forcing function: when the
+implementation lands, every test flips to passing → strict-xfail
+fires → R80 round agent removes the markers as part of the same
+commit.
+
+R79 may optionally land a no-op pass-through in `recorder.py` — accept
+the kwarg, raise `NotImplementedError("R80: §5.2 slice 3b not yet
+implemented")` when non-empty — so the tests fail with
+`NotImplementedError` rather than `TypeError: unexpected keyword
+argument`, narrowing R80's diff to a single function body.
+
+#### Consumer SQL pattern
+
+Once R80 ships, a consumer (dashboard / CLI / dogfood script) can
+enumerate substituted tool calls in a child run with:
+
+```sql
+SELECT n.id, n.step_index, json_extract(n.state_after, '$.tool_use_id') AS tu_id,
+       json_extract(n.state_after, '$.tool_input')  AS new_input
+FROM nodes n
+WHERE n.run_id = :child_run_id
+  AND json_extract(n.state_after, '$.tool_input') IS NOT NULL
+ORDER BY n.step_index;
+```
+
+Plural form for multi-block child Nodes:
+
+```sql
+SELECT n.id, n.step_index, je.value AS tu_id, ji.value AS new_input
+FROM nodes n,
+     json_each(n.state_after, '$.tool_use_ids') je,
+     json_each(n.state_after, '$.tool_input')   ji
+WHERE n.run_id = :child_run_id
+  AND je.key = ji.key             -- index-aligned per §5.1.1
+  AND ji.value IS NOT NULL
+ORDER BY n.step_index, je.key;
+```
+
+#### Out of scope for §5.2
+
+- Substituting `ToolResultBlock.content` (i.e. faking a tool's
+  *output* without invoking the real tool). Reserved for slice 3c +
+  ADR-026 §5.3 (MCP passthrough scoping). §5.2 only edits *inputs*;
+  the agent and tool server still execute normally.
+- Multi-step substitutions across more than one Node in the same fork
+  call — supported (the mapping is keyset-wide), but consumers should
+  prefer one fork-per-edit for cleaner debugging trees.
+- HTTP / CLI surface — `tool_input_overrides` lands on the recorder
+  Python API only in R80. CLI wiring is a separate slice (3d?).
+- `chronos.queries.tool_linkage` promotion to a public API. Slice 3b
+  uses it internally for validation; the package stays internal until
+  a dedicated ADR formalises consumer-facing query helpers.
+
 ### 6. What Arc B slice 2+ looks like
 
 After v0.7.0 ships:

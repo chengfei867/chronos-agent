@@ -281,6 +281,12 @@ class AnthropicAgentsRecorder:
             self._kind_map.update(kind_map)
         self._lock = threading.Lock()
         self._buffer: list[_PendingNode] = []
+        # ADR-026 §5.2 (R80, slice 3b): set inside `fork(...)` for the
+        # duration of the child stream consumption so `_translate` can
+        # stamp `state_after['tool_input']` on AssistantMessage Nodes
+        # whose ToolUseBlock id appears as a key. None means no active
+        # fork-with-substitution; `record()` always runs with this None.
+        self._fork_overrides: dict[str, dict[str, Any]] | None = None
 
     # ------------------------------------------------------------------
     # Translator (Message → _PendingNode)
@@ -345,6 +351,16 @@ class AnthropicAgentsRecorder:
                 blk_id = getattr(blk, "id", None)
                 if isinstance(blk_id, str) and blk_id:
                     state["tool_use_id"] = blk_id
+                    # ADR-026 §5.2 (R80, slice 3b): if a fork-with-tool-
+                    # substitution is in flight and this tool_use_id is
+                    # one of the override keys, stamp the substituted
+                    # input on the child Node's state_after. The original
+                    # `tool_input` (column) and `state_after['tool_use_id']`
+                    # (anchor) are left verbatim — only the new key
+                    # `state_after['tool_input']` surfaces the rewrite.
+                    overrides = self._fork_overrides
+                    if overrides is not None and blk_id in overrides:
+                        state["tool_input"] = overrides[blk_id]
             elif len(tool_blocks) > 1:
                 # ADR-026 §5.1.1 (R77, slice 3a-P1): multi-block extension —
                 # when an AssistantMessage carries >1 ToolUseBlock (batched
@@ -364,6 +380,21 @@ class AnthropicAgentsRecorder:
                 ]
                 if ids:
                     state["tool_use_ids"] = ids
+                    # ADR-026 §5.2 (R80, slice 3b): multi-block
+                    # substitution. `state_after['tool_input']` is a
+                    # list aligned by index with `tool_use_ids`, with
+                    # `None` entries for verbatim blocks. Only stamped
+                    # when ≥1 override key matches; absent on Nodes
+                    # whose tool_use_ids do not intersect the override
+                    # mapping (so SQL `WHERE tool_input IS NOT NULL`
+                    # still enumerates substituted Nodes only).
+                    overrides = self._fork_overrides
+                    if overrides is not None:
+                        aligned: list[dict[str, Any] | None] = [
+                            overrides.get(str(tid)) for tid in ids
+                        ]
+                        if any(v is not None for v in aligned):
+                            state["tool_input"] = aligned
         # ToolResultBlock arrives inside UserMessage.content per R69 §1.5
         if cls == "UserMessage" and isinstance(content, list):
             result_blocks = [b for b in content if type(b).__name__ == "ToolResultBlock"]
@@ -573,6 +604,7 @@ class AnthropicAgentsRecorder:
         parent_run_id: str,
         at_node_id: str,
         overrides: dict[str, Any] | None = None,
+        tool_input_overrides: dict[str, dict[str, Any]] | None = None,
         child_thread_id: str,
         reason: str | None = None,
         task_description: str | None = None,
@@ -617,6 +649,19 @@ class AnthropicAgentsRecorder:
                 the SDK transcript — the SDK fork is verbatim up to
                 ``up_to_message_id``; user-side edits ride on the resumed
                 prompt the user issues inside the ``with`` block.
+            tool_input_overrides: ADR-026 §5.2 (R79 amendment, slice 3b)
+                surface for fork-with-tool-substitution. Mapping
+                ``tool_use_id → new_input_dict``; replaces the
+                ``ToolUseBlock.input`` payload on the child branch
+                while preserving the ``state_after['tool_use_id']``
+                JOIN anchor (R76 §5.1) / ``state_after['tool_use_ids']``
+                element (R77 §5.1.1) verbatim. ``None`` (default) and
+                ``{}`` are identity — semantically equivalent to R74
+                fork() with no §5.2 surface. **Implementation lands in
+                R80**; R79 ships the kwarg as a no-op pass-through that
+                raises ``NotImplementedError`` when non-empty so the
+                R79 TDD-scaffold xfail tests fail with a precise error
+                shape rather than ``TypeError``.
             child_thread_id: User-supplied logical thread id for the child
                 run. Must differ from the parent run's thread id.
             reason: Optional free-form fork reason (persisted to ``Fork.reason``).
@@ -638,6 +683,17 @@ class AnthropicAgentsRecorder:
             are populated.
         """
         del runtime  # signature parity only; child driver via ref.submit_runtime
+
+        # --- R80 (ADR-026 §5.2 slice 3b implementation) ---------------------
+        # Validate `tool_input_overrides` *before* delegating to fork_session.
+        # The kwarg is normalised to a (possibly empty) dict so downstream
+        # logic can treat None and {} uniformly. An empty mapping is identity
+        # — falls through with `_fork_overrides=None` so `_translate` does
+        # not stamp any `state_after['tool_input']` keys (R74 byte-identity
+        # contract preserved, enforced by `test_fork_without_overrides_is_identity`).
+        normalised_overrides: dict[str, dict[str, Any]] = (
+            dict(tool_input_overrides) if tool_input_overrides else {}
+        )
 
         # --- Pre-flight: load parent artifacts and validate ---
         parent_run = self._store.get_run(parent_run_id)
@@ -661,6 +717,70 @@ class AnthropicAgentsRecorder:
                 f"must differ from parent thread_id={parent_run.adapter_thread_id!r} "
                 "(would overwrite parent SDK transcript file)"
             )
+
+        # --- ADR-026 §5.2 (R80, slice 3b) validation pipeline ---------------
+        # When `tool_input_overrides` is non-empty, validate every key
+        # against the parent run's use-side keyset BEFORE delegating to
+        # `claude_agent_sdk.fork_session()`. Three checks per ADR §5.2
+        # #### Validation:
+        #   1. Key must be a `str`.
+        #   2. Key must appear in the union of tool-use ids declared by
+        #      any AssistantMessage* Node in `parent_run_id` (singular
+        #      `state_after['tool_use_id']` per R76 §5.1, or any element
+        #      of plural `state_after['tool_use_ids']` per R77 §5.1.1).
+        #   3. Key must NOT appear in `unmatched_tool_uses(store,
+        #      parent_run_id)` — fork past an orphan use-side is a
+        #      slice-3a→3b coupling pre-condition violation.
+        # Validations raise `AdapterError` synchronously so the SDK fork
+        # never receives an illegal override. Empty / None override
+        # mapping skips the entire pipeline (identity fork).
+        if normalised_overrides:
+            # Late import to keep `tool_linkage` private — internal API
+            # mutability is preserved (R79 F3 / ADR §5.2 cites by name).
+            from chronos.queries.tool_linkage import (
+                _ids_from_state_after,
+                _is_use_side,
+                unmatched_tool_uses,
+            )
+
+            parent_nodes = self._store.get_nodes_for_run(parent_run_id)
+            use_keyset: set[str] = set()
+            for n in parent_nodes:
+                if _is_use_side(n):
+                    use_keyset.update(_ids_from_state_after(n))
+
+            orphan_nodes = unmatched_tool_uses(self._store, parent_run_id)
+            orphan_keyset: set[str] = set()
+            for n in orphan_nodes:
+                orphan_keyset.update(_ids_from_state_after(n))
+
+            for tu_id, new_input in normalised_overrides.items():
+                if not isinstance(tu_id, str):
+                    raise AdapterError(
+                        "AnthropicAgentsRecorder.fork: tool_input_overrides key "
+                        f"must be a str, got {type(tu_id).__name__}={tu_id!r}"
+                    )
+                if not isinstance(new_input, dict):
+                    raise AdapterError(
+                        "AnthropicAgentsRecorder.fork: tool_input_overrides value "
+                        f"for key {tu_id!r} must be a dict, got "
+                        f"{type(new_input).__name__}"
+                    )
+                if tu_id not in use_keyset:
+                    raise AdapterError(
+                        "AnthropicAgentsRecorder.fork: tool_input_overrides key "
+                        f"{tu_id!r} is not declared by any AssistantMessage Node "
+                        f"in parent_run_id={parent_run_id!r} (use-side keyset "
+                        f"size={len(use_keyset)}). ADR-026 §5.2 validation #2."
+                    )
+                if tu_id in orphan_keyset:
+                    raise AdapterError(
+                        "AnthropicAgentsRecorder.fork: tool_input_overrides key "
+                        f"{tu_id!r} is an orphan use-side tool_use_id (no "
+                        "matching ToolResultBlock yet) — slice-3a→3b coupling "
+                        "pre-condition: round-trip must close in parent run. "
+                        "ADR-026 §5.2 validation #3."
+                    )
 
         # --- Recover SDK seed coordinates from parent_node.state_after ---
         # record() (line 305-308) stamps {'uuid', 'session_id'} into state_after
@@ -738,6 +858,13 @@ class AnthropicAgentsRecorder:
         child_run_id = str(uuid.uuid4())
         started = datetime.now(UTC)
         exc: BaseException | None = None
+        # ADR-026 §5.2 (R80): expose normalised overrides to `_translate`
+        # for the duration of the child stream consumption. Set to None
+        # (not the empty dict) when the mapping is empty so the stamping
+        # branch is a single `is None` short-circuit and identity forks
+        # incur zero per-Node cost. Cleared in `finally` to ensure a
+        # subsequent `record()` on the same recorder runs unaffected.
+        self._fork_overrides = normalised_overrides if normalised_overrides else None
         try:
             yield ref
             child_runtime = captured["runtime"]
@@ -756,6 +883,7 @@ class AnthropicAgentsRecorder:
             exc = e
             raise
         finally:
+            self._fork_overrides = None  # R80 §5.2: clear always, even on error
             ended = datetime.now(UTC)
             status = RunStatus.FAILED if exc is not None else RunStatus.COMPLETED
             child_run = Run(
