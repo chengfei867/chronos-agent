@@ -287,6 +287,14 @@ class AnthropicAgentsRecorder:
         # whose ToolUseBlock id appears as a key. None means no active
         # fork-with-substitution; `record()` always runs with this None.
         self._fork_overrides: dict[str, dict[str, Any]] | None = None
+        # ADR-026 §5.3 (R82, slice 3c): result-side counterpart to
+        # `_fork_overrides`. When a fork-with-tool-result-substitution is
+        # in flight, `_translate` stamps `state_after['tool_result_content']`
+        # (singular) or `state_after['tool_result_contents']` (plural,
+        # index-aligned with `tool_use_ids`) on UserMessage(ToolResultBlock)
+        # Nodes whose tool_use_id appears as a key. None means no active
+        # result-side substitution; `record()` always runs with this None.
+        self._fork_result_overrides: dict[str, Any] | None = None
 
     # ------------------------------------------------------------------
     # Translator (Message → _PendingNode)
@@ -406,6 +414,17 @@ class AnthropicAgentsRecorder:
                 blk_tu_id = getattr(blk, "tool_use_id", None)
                 if isinstance(blk_tu_id, str) and blk_tu_id:
                     state["tool_use_id"] = blk_tu_id
+                    # ADR-026 §5.3 (R82, slice 3c): if a fork-with-tool-
+                    # result-substitution is in flight and this tool_use_id
+                    # is one of the override keys, stamp the substituted
+                    # content on the child Node's state_after. The original
+                    # `tool_output` (column) and `state_after['tool_use_id']`
+                    # (anchor) are left verbatim — only the new key
+                    # `state_after['tool_result_content']` surfaces the
+                    # rewrite. Symmetric to §5.2's `tool_input` stamp.
+                    result_overrides = getattr(self, "_fork_result_overrides", None)
+                    if result_overrides is not None and blk_tu_id in result_overrides:
+                        state["tool_result_content"] = result_overrides[blk_tu_id]
                 if getattr(blk, "is_error", False):
                     error_message = repr(getattr(blk, "content", ""))[:500]
                 else:
@@ -430,6 +449,20 @@ class AnthropicAgentsRecorder:
                 ]
                 if ids:
                     state["tool_use_ids"] = ids
+                    # ADR-026 §5.3 (R82, slice 3c): multi-block result
+                    # substitution. `state_after['tool_result_contents']`
+                    # is a list aligned by index with `tool_use_ids`,
+                    # with `None` entries for verbatim blocks. Only
+                    # stamped when ≥1 override key matches; absent on
+                    # Nodes whose tool_use_ids do not intersect the
+                    # override mapping (so SQL `WHERE tool_result_contents
+                    # IS NOT NULL` still enumerates substituted Nodes
+                    # only). Mirrors §5.2's plural alignment shape.
+                    result_overrides = getattr(self, "_fork_result_overrides", None)
+                    if result_overrides is not None:
+                        aligned_results: list[Any] = [result_overrides.get(str(tid)) for tid in ids]
+                        if any(v is not None for v in aligned_results):
+                            state["tool_result_contents"] = aligned_results
 
         return _PendingNode(
             msg_cls=cls,
@@ -711,19 +744,18 @@ class AnthropicAgentsRecorder:
             dict(tool_input_overrides) if tool_input_overrides else {}
         )
 
-        # --- R81 (ADR-026 §5.3 slice 3c TDD-scaffold pass-through) ----------
-        # `tool_result_overrides` is accepted on the signature so R81's
-        # strict-xfail tests fail with a precise error shape, not
-        # ``TypeError: unexpected keyword argument``. Empty (`None`/`{}`)
-        # is identity — falls through to the R74/R80 path verbatim. Non-
-        # empty raises ``NotImplementedError`` until R82 swaps this for
-        # the validation + child-side stamp pipeline. Validation surface,
-        # stamp shape, and SQL recipes are specified in ADR-026 §5.3.
-        if tool_result_overrides:
-            raise NotImplementedError(
-                "R82: §5.3 slice 3c not yet implemented "
-                "(tool_result_overrides is a draft contract — see ADR-026 §5.3)"
-            )
+        # --- R82 (ADR-026 §5.3 slice 3c implementation) ---------------------
+        # Normalise `tool_result_overrides` symmetric to §5.2's input-side
+        # mapping. Empty (`None`/`{}`) is identity — falls through with
+        # `_fork_result_overrides=None` so `_translate` does not stamp any
+        # `state_after['tool_result_content']`/`tool_result_contents` keys
+        # (R74 byte-identity contract preserved, enforced by
+        # `test_fork_without_result_overrides_is_identity`). Validation
+        # pipeline runs further down alongside §5.2's, after parent run /
+        # node existence checks land their canonical errors first.
+        normalised_result_overrides: dict[str, Any] = (
+            dict(tool_result_overrides) if tool_result_overrides else {}
+        )
 
         # --- Pre-flight: load parent artifacts and validate ---
         parent_run = self._store.get_run(parent_run_id)
@@ -812,6 +844,66 @@ class AnthropicAgentsRecorder:
                         "ADR-026 §5.2 validation #3."
                     )
 
+        # --- ADR-026 §5.3 (R82, slice 3c) validation pipeline ---------------
+        # When `tool_result_overrides` is non-empty, validate every key
+        # against the parent run's RESULT-side keyset BEFORE delegating
+        # to `claude_agent_sdk.fork_session()`. Symmetric to §5.2 but
+        # mirrored to the result side, plus a §5.3-specific cross-check:
+        #   1. Key must be a `str`.
+        #   2. Key must appear in the union of tool_use_ids declared by
+        #      any UserMessage(ToolResultBlock) Node in `parent_run_id`
+        #      (singular `state_after['tool_use_id']` per R76 §5.1, or
+        #      any element of plural `state_after['tool_use_ids']` per
+        #      R77 §5.1.1) — i.e., a closed round-trip exists. The
+        #      "result-side" wording is contractual: the strict-xfail
+        #      test asserts `match="result-side"` against the raised
+        #      `AdapterError`.
+        #   3. Key must NOT also appear in `tool_input_overrides` —
+        #      a single key cannot drive both substitutions in one
+        #      fork (input + result on the same tool_use_id is
+        #      semantically a double-rewrite; ADR-026 §5.3 forbids).
+        #      The error message includes the colliding tool_use_id
+        #      so the strict-xfail test's `match=_TU_ID` succeeds.
+        # Validations raise `AdapterError` synchronously so the SDK fork
+        # never receives an illegal override (test 3 asserts
+        # `session_id not in fake_sdk` on rejection).
+        if normalised_result_overrides:
+            from chronos.queries.tool_linkage import (
+                _ids_from_state_after,
+                _is_result_side,
+            )
+
+            parent_nodes_for_results = self._store.get_nodes_for_run(parent_run_id)
+            result_keyset: set[str] = set()
+            for n in parent_nodes_for_results:
+                if _is_result_side(n):
+                    result_keyset.update(_ids_from_state_after(n))
+
+            for tu_id in normalised_result_overrides:
+                if not isinstance(tu_id, str):
+                    raise AdapterError(
+                        "AnthropicAgentsRecorder.fork: tool_result_overrides key "
+                        f"must be a str, got {type(tu_id).__name__}={tu_id!r}. "
+                        "ADR-026 §5.3 validation #1."
+                    )
+                if tu_id not in result_keyset:
+                    raise AdapterError(
+                        "AnthropicAgentsRecorder.fork: tool_result_overrides key "
+                        f"{tu_id!r} is not a closed result-side tool_use_id in "
+                        f"parent_run_id={parent_run_id!r} (result-side keyset "
+                        f"size={len(result_keyset)}). A matching "
+                        "UserMessage(ToolResultBlock) must already be recorded "
+                        "in the parent run. ADR-026 §5.3 validation #2."
+                    )
+                if tu_id in normalised_overrides:
+                    raise AdapterError(
+                        "AnthropicAgentsRecorder.fork: tool_use_id "
+                        f"{tu_id!r} appears in BOTH tool_input_overrides and "
+                        "tool_result_overrides — a single fork may not drive "
+                        "both substitutions for the same tool round-trip "
+                        "(double-rewrite is undefined). ADR-026 §5.3 validation #3."
+                    )
+
         # --- Recover SDK seed coordinates from parent_node.state_after ---
         # record() (line 305-308) stamps {'uuid', 'session_id'} into state_after
         # whenever the SDK Message exposes them. AssistantMessage / ResultMessage
@@ -895,6 +987,12 @@ class AnthropicAgentsRecorder:
         # incur zero per-Node cost. Cleared in `finally` to ensure a
         # subsequent `record()` on the same recorder runs unaffected.
         self._fork_overrides = normalised_overrides if normalised_overrides else None
+        # ADR-026 §5.3 (R82): symmetric result-side exposure to `_translate`.
+        # None when empty so the stamping branch is a single `is None`
+        # short-circuit and identity forks incur zero per-Node cost.
+        self._fork_result_overrides = (
+            normalised_result_overrides if normalised_result_overrides else None
+        )
         try:
             yield ref
             child_runtime = captured["runtime"]
@@ -914,6 +1012,7 @@ class AnthropicAgentsRecorder:
             raise
         finally:
             self._fork_overrides = None  # R80 §5.2: clear always, even on error
+            self._fork_result_overrides = None  # R82 §5.3: clear always, even on error
             ended = datetime.now(UTC)
             status = RunStatus.FAILED if exc is not None else RunStatus.COMPLETED
             child_run = Run(

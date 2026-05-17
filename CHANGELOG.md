@@ -4,6 +4,58 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added (R82 — slice 3c implementation: ADR-026 §5.3 fork-with-tool-result-substitution lands)
+
+- **`AnthropicAgentsRecorder.fork(..., tool_result_overrides=...)`
+  implementation** — replaces R81's `NotImplementedError` pass-through
+  with the full §5.3 pipeline, symmetric to §5.2: (1) **fail-fast key
+  validation** before any SDK call — non-`str` key → `AdapterError`
+  (#1); unknown id (i.e. `tu_id` not in the parent run's *result-side*
+  keyset, computed via `_is_result_side` / `_ids_from_state_after`) →
+  `AdapterError` whose message contains `"result-side"` (#2);
+  collision with a `tool_input_overrides` key (same `tu_id` driving
+  both substitutions) → `AdapterError` quoting the colliding id (#3);
+  (2) **child-side `state_after` stamping** in `_translate()` — when
+  a child `UserMessage(ToolResultBlock)` Node's `tool_use_id` (singular
+  per §5.1) matches an override key, the recorder writes
+  `state_after['tool_result_content'] = <new_value>`; for §5.1.1
+  multi-block result Nodes, an index-aligned `tool_result_contents`
+  list is stamped (entries are override values for matching ids,
+  `None` for verbatim positions; absent entirely if no key matches).
+  JOIN anchors `tool_use_id` / `tool_use_ids` preserved byte-for-byte.
+  Empty (`None` / `{}`) remains identity, byte-equivalent to R74 /
+  R80 / R81 no-override path (R74 byte-identity guard preserved).
+- **`scripts/dogfood_fork_tool_result_override.py` (NEW)** — end-to-end
+  demo of all 4 §5.3 paths against a fake `claude_agent_sdk`: identity
+  fork (no stamp), substituting fork (result rewrite, asserts exactly
+  one Node carries `state_after['tool_result_content']`), unknown-id
+  rejection (pre-SDK, error contains `"result-side"`), input/result
+  collision rejection (pre-SDK, error quotes the colliding id, no
+  SDK fork call). Runnable via
+  `uv run python scripts/dogfood_fork_tool_result_override.py`; prints
+  `✅ R82 slice 3c dogfood — all 4 paths green.` on success. Mirrors
+  R80's `dogfood_fork_tool_override.py` precedent (R64
+  dogfood-as-release-gate invariant).
+- **R81 strict-xfail markers removed** in
+  `tests/unit/test_anthropic_agents_fork_tool_result_override.py` —
+  the three `@pytest.mark.xfail(strict=True, reason="slice 3c — R82
+  ...")` gates now pass cleanly. Strict-xfail forcing function did
+  its job: implementation lands in same commit as marker removal,
+  no silent skips. Same pattern as R76→R77 §5.1.1 and R79→R80 §5.2.
+
+### Changed
+
+- **ADR-026 §5.3 status header flipped** `Draft — implementation lands
+  in R82` → `Implemented (R82)`. ADR-026 §5 (slices 3a + 3b + 3c) is
+  now fully implemented end-to-end across both halves of the tool
+  round-trip; Arc B slice 3 ships complete behaviour.
+- Test count: 628 (627 pass + 3 xfail-strict − 2 = 628 reported) →
+  **631** (+3 ex-xfail tests now passing; +1 sanity identity test
+  retained from R81). 7 skipped (live), **0 xfail**, 0 failed.
+- Adapter-1-3 zero-regression streak: R52→R82 = **30 rounds** (new
+  project history high; bumped from R80's 28-round and R81's 29-round
+  marks).
+
 ### Added (R81 — slice 3c TDD scaffolding: ADR-026 §5.3 fork-with-tool-result-substitution contract)
 
 - **ADR-026 §5.3 amendment (Draft)**: New section in

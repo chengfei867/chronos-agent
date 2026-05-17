@@ -345,10 +345,6 @@ def test_fork_without_result_overrides_is_identity(
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="slice 3c — R82: §5.3 result-side stamp not yet implemented",
-)
 def test_fork_with_result_override_changes_downstream_result(
     recorder: AnthropicAgentsRecorder,
     store: SqliteStore,
@@ -401,11 +397,6 @@ def test_fork_with_result_override_changes_downstream_result(
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="slice 3c — R82: §5.3 unknown-id validation not yet implemented "
-    "(R81 pass-through raises NotImplementedError, not AdapterError)",
-)
 def test_fork_with_result_override_of_unknown_id_raises(
     recorder: AnthropicAgentsRecorder,
     fake_sdk: dict[str, Any],
@@ -441,11 +432,6 @@ def test_fork_with_result_override_of_unknown_id_raises(
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="slice 3c — R82: §5.3 input-result collision validation not yet "
-    "implemented (R81 pass-through raises NotImplementedError, not AdapterError)",
-)
 def test_fork_with_result_override_collides_with_input_override_raises(
     recorder: AnthropicAgentsRecorder,
     fake_sdk: dict[str, Any],

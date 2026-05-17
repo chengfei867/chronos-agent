@@ -460,7 +460,7 @@ ORDER BY n.step_index, je.key;
 
 ### 5.3 Fork-with-tool-result-substitution contract (R81 amendment, slice 3c)
 
-**Status: Draft — implementation lands in R82.**
+**Status: Implemented (R82).**
 
 Slice 3b (R80 §5.2) gave the user time-travel power on the **input** half
 of the tool round-trip: rewrite what the agent *asks* the tool. Slice 3c

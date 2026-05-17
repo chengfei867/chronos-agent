@@ -147,7 +147,24 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
-**截至 Round 81 结束 (2026-05-17 CST ~03:05 cron slot — single-slot slice 3c TDD scaffolding round, well inside 0–11 窗口) — Phase 4 Arc B slice 3c TDD scaffold landed. R81 ships three deliverables 完全沿用 R79→R80 跑通过的 ritual: (1) ADR-026 §5.3 amendment (Draft, sibling-extends §5.1 / §5.1.1 / §5.2 in-place per R57; ~163 lines) specifying the fork-with-tool-result-substitution contract — `fork(..., tool_result_overrides: dict[str, Any] | None)` keyed by `tool_use_id` mapping to an opaque substitute payload, child-side `state_after['tool_result_content']` stamp shape (singular + plural §5.1.1-aligned `tool_result_contents`), three fail-fast validation rules (key-type / **result-side** keyset membership / no double-substitution with `tool_input_overrides`); (2) 4 tests in new `tests/unit/test_anthropic_agents_fork_tool_result_override.py` — 1 EXPECTED-PASS identity guard + 3 `pytest.mark.xfail(strict=True, reason="slice 3c — R82: ...")` tests (result-side stamp, unknown-id rejection against result-side keyset, input/result collision rejection); (3) no-op pass-through on `AnthropicAgentsRecorder.fork()` accepting the new kwarg, raising `NotImplementedError("R82: §5.3 slice 3c not yet implemented ...")` on non-empty mappings. ADR-026 §5.2 status flipped Draft→Implemented in same edit + cross-link to §5.3. **Direction-drift logged**: CONTEXT §6 R81 plan suggested test 4 = "orphan-id succeeds" (allow injecting results for use-ids without parent results); I shipped stricter contract (validates against result-side keyset, rejects orphan-only ids) — argued in R81 progress doc D2; "inject result that didn't exist" deferred to potential future slice 3d as separate `tool_result_injections` kwarg if real demand surfaces. All gates green: **628 pass / 7 skip (live) / 3 xfail / 0 fail** (627→628 +1 sanity test passing now), mypy clean, ruff clean. Strict-xfail acts as R82 forcing function: when impl flips them to pass, strict mode trips → R82 commit MUST remove markers in same diff. Adapter-1-3 zero-regression streak: R52→R81 = **29 rounds** (one off project-wide R80 high; 30+ pending R82 ship). No tag cut; `[Unreleased]` continues toward `v0.7.0` GA. R83+ candidate v0.7.0a3 alpha cut after R82 closeout (slice 3a + 3b + 3c shipped end-to-end).**
+**截至 Round 82 结束 (2026-05-17 CST ~09:30 cron slot — slot-2 of 2-slot impl round; A2 close-out #11 per `cron-slot-handoff-recovery`; well inside 0–11 窗口) — Phase 4 Arc B slice 3c (ADR-026 §5.3) fully shipped end-to-end. ADR-026 §5 现在完整闭环：§5.1 (R76 单 block) + §5.1.1 (R77 多 block) + §5 helpers (R78 `chronos.queries.tool_linkage`) + §5.2 (R80 fork-with-tool-input-substitution) + §5.3 (R82 fork-with-tool-result-substitution). 两半 tool round-trip (input + result) 现都支持 fork-time replacement, 镜像对称. R82 = 标准 A2 close-out: prior cron slot 留下大量 WIP (recorder.py +127/−15 LOC §5.3 validation+stamp pipeline + 3 strict-xfail markers removed + ADR-026 §5.3 status flip Draft→Implemented), this slot 完成 lint cleanup (B007 unused loop var + 1-file ruff format drift) + dogfood script (`scripts/dogfood_fork_tool_result_override.py` NEW ~290 LOC, 4 paths green) + CHANGELOG R82 entry + progress doc + CONTEXT refresh + commit + push. 全 gate green: **631 pass / 7 skip (live) / 0 xfail / 0 fail** (628→631 +3 from xfail flip; 4 new tests in `test_anthropic_agents_fork_tool_result_override.py` 全部 pass), mypy clean (38 src files), ruff check + format clean (105 files). Strict-xfail forcing function 第三次按设计触发 (R76→R77 §5.1.1, R79→R80 §5.2, R81→R82 §5.3) — 模式稳定. Adapter-1-3 zero-regression streak: R52→R82 = **30 rounds** (新 project-history high, R80 28 → R81 29 → R82 30). 无 tag cut; `[Unreleased]` 继续累积至 `v0.7.0` GA. R83 候选: ADR-026 promotion Draft→Accepted + v0.7.0a3 alpha cut (slice 3a + 3b + 3c 全部 ship 后 AC-1..AC-5 gates 满足).**
+
+- 最近 progress doc: `docs/progress/2026-05-17-round-82.md` (R82 — slice 3c 实施 close-out + dogfood + xfail markers 移除 + ADR §5.3 Draft→Implemented)
+- 最近上份 progress doc: `docs/progress/2026-05-17-round-81.md` (R81 — slice 3c TDD scaffold, ADR-026 §5.3 + 4 tests + fork pass-through)
+- 最近上上份 progress doc: `docs/progress/2026-05-16-round-80.md` (R80 — slice 3b 实施 + dogfood + xfail markers 移除)
+- Round: **82** (Phase 4 Arc B slice 3c 实施 close-out — 2-slot impl round, A2 inheritance 模式 per `cron-slot-handoff-recovery`, slot-2 09:30 CST cron, in window): 0 blocker. Sequence: time check (09 → in window) → `git fetch origin main && git status` 发现 prior cron slot 留下 3 modified files uncommitted (`docs/decisions/ADR-026-arc-b-scope.md` §5.3 status flip, `src/chronos/adapters/anthropic_agents/recorder.py` +127/−15 §5.3 pipeline, `tests/unit/test_anthropic_agents_fork_tool_result_override.py` −14 三 xfail markers 移除) → 跑 pytest 4/4 + 631/7 baseline 确认实施已生效 → mypy clean → ruff check 报 1 个 B007 (`new_content` unused in for-loop) + ruff format 报 1 file drift → 修复 (`for tu_id in normalised_result_overrides:` 不再 .items()) + reformat → 重跑全 gate green → 写 `scripts/dogfood_fork_tool_result_override.py` (mirror R80 dogfood, 4 paths: identity / substitute / unknown-id+"result-side" / input-result collision) → uv run 跑通 4 paths → CHANGELOG R82 entry 插在 R81 之上 → 写 progress doc → CONTEXT.md §5 + §6 refresh → commit + push (gh-proxy.com).
+  - **Files**: 1 new dogfood (`scripts/dogfood_fork_tool_result_override.py`, ~290 LOC) + 1 new progress doc (`docs/progress/2026-05-17-round-82.md`) + 4 modified (`docs/decisions/ADR-026-arc-b-scope.md` Draft→Implemented inherited, `src/chronos/adapters/anthropic_agents/recorder.py` +127/−15 inherited + 1 lint + reformat slot-2, `tests/unit/test_anthropic_agents_fork_tool_result_override.py` −14 xfail markers inherited, `CHANGELOG.md` +57 R82 entry, `docs/CONTEXT.md` 本 refresh).
+  - **Tests**: +3 from xfail flip (result-side stamp / unknown-id rejection with "result-side" / input-result collision rejection 全部 pass). 628→**631** unit pass count; xfail count 3→**0** (forcing function 按设计触发 → markers 同 commit 移除).
+  - **ADR-026 §5 完整 implemented end-to-end** — §5.1 (R76) / §5.1.1 (R77) / §5 helpers (R78) / §5.2 (R80) / §5.3 (R82) 全部 ship 闭环. R83 起进入 ADR promotion 评估 (Draft→Accepted) + slice 4 / v0.7.0a3 路径.
+  - **Strict-xfail forcing function 三度验证成功** — R79 (§5.2 scaffold) → R80 (§5.2 impl, markers 移除) / R81 (§5.3 scaffold) → R82 (§5.3 impl, markers 移除). 三连 ritual 已经稳定, 推荐沿用至 §5.3 之后 (HTTP/CLI surface or slice 4).
+  - **A2 handoff inheritance 实操第 11 次** — R48-A → R51 → R52 → R53 → R59 → R63 → R65 → R67 → R70 → R72 → **R82**. 4 次 Arc B impl round 全部需要 2-slot 跑完 (R70 / R74 / R80 / R82) — 2-slot pre-budget rule for impl rounds 现已是 4-round project-wide pattern, 结构性硬规律.
+  - **No tag cut** — `[Unreleased]` 继续滚向 `v0.7.0` GA. v0.7.0a3 alpha cut 推到 R83+ ADR-026 promotion 之后.
+  - **No schema change / no adapter-1-3 change** — 只动 `anthropic_agents/recorder.py` + tests + 新 dogfood + ADR + docs. Adapter-1-3 zero-regression streak R52→R82 = **30 rounds** (新 project-history high).
+  - **Stub fixture extraction debt 现在 5 倍 over threshold** — `_StubBlock` / `_StubMessage` / `_aiter` 在 5 个 file 重复 (test_adapter_anthropic_agents.py / test_queries_tool_linkage.py / test_anthropic_agents_fork_tool_override.py / dogfood_fork_tool_override.py / test_anthropic_agents_fork_tool_result_override.py + dogfood_fork_tool_result_override.py = 6 if you count the dogfoods). R58 / R78 convention threshold = 3, 现已 well past. R83 / R84 必须 dispatch (`tests/unit/fixtures/anthropic_agents.py` + `scripts/_dogfood_fixtures.py`).
+
+  Earlier round-state lines for R81/R80/R79/R78/R77/R76 retained below.
+
+**截至 Round 81 结束 (2026-05-17 CST ~03:05 cron slot — single-slot slice 3c TDD scaffolding round, well inside 0–11 窗口) — Phase 4 Arc B slice 3c TDD scaffold landed. R81 ships three deliverables 完全沿用 R79→R80 跑通过的 ritual: (1) ADR-026 §5.3 amendment (Draft, sibling-extends §5.1 / §5.1.1 / §5.2 in-place per R57; ~163 lines) specifying the fork-with-tool-result-substitution contract — `fork(..., tool_result_overrides: dict[str, Any] | None)` keyed by `tool_use_id` mapping to an opaque substitute payload, child-side `state_after['tool_result_content']` stamp shape (singular + plural §5.1.1-aligned `tool_result_contents`), three fail-fast validation rules (key-type / **result-side** keyset membership / no double-substitution with `tool_input_overrides`); (2) 4 tests in new `tests/unit/test_anthropic_agents_fork_tool_result_override.py` — 1 EXPECTED-PASS identity guard + 3 `pytest.mark.xfail(strict=True, reason=\"slice 3c — R82: ...\")` tests (result-side stamp, unknown-id rejection against result-side keyset, input/result collision rejection); (3) no-op pass-through on `AnthropicAgentsRecorder.fork()` accepting the new kwarg, raising `NotImplementedError(\"R82: §5.3 slice 3c not yet implemented ...\")` on non-empty mappings.
 
 - 最近 progress doc: `docs/progress/2026-05-17-round-81.md` (R81 — slice 3c TDD scaffold, ADR-026 §5.3 + 4 tests + fork pass-through)
 - 最近上份 progress doc: `docs/progress/2026-05-16-round-80.md` (R80 — slice 3b 实施 + dogfood + xfail markers 移除)
@@ -729,49 +746,80 @@ R73 是 R69→R72 4-round chain 的第一个真 disprover round, 也是 Phase 4 
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 82 — Slice 3c implementation (ADR-026 §5.3 fork-with-tool-result-substitution); 1-slot pre-budget**
+**Round 83 — ADR-026 promotion Draft → Accepted + (optional) v0.7.0a3 alpha cut + (optional) stub fixture extraction; 1-slot pre-budget**
 
-战略视角: R81 关闭了 slice 3c TDD scaffold (ADR §5.3 Draft + 4 tests with 3 strict-xfail + recorder pass-through). R82 必须把 3 个 strict-xfail 翻 pass + 同 commit 删 markers. 这是 R76→R77 §5.1.1 / R79→R80 §5.2 跑通过两次的 ritual, 第三次复用. 实施模板 R80 已经写好 — recorder.py 里 use-side validation pipeline (line 721-783) + child-side stamp (line 867 `self._fork_overrides`); R82 做的是 result-side 的镜像翻译.
+战略视角: R82 关闭 slice 3c 实施 (ADR §5.3 Implemented). ADR-026 §5 五兄弟 (§5 / §5.1 / §5.1.1 / §5.2 / §5.3) 全部 Implemented end-to-end, 两半 tool round-trip (input + result) 都支持 fork-time replacement. 现在到了 ADR-026 整体 promotion + alpha-tag + 内部 cleanup 的时机. R83 三条路径并存 (priority 排序见下).
 
-### Option A (推荐, 1 slot): slice 3c 实施 (ADR-026 §5.3 翻 Implemented)
+### Option A (推荐, 1 slot): ADR-026 Draft → Accepted promotion + v0.7.0a3 alpha cut
 
-- **背景**: R81 已经 ship: ADR §5.3 Draft contract + 4-test scaffold + recorder fork() 签名加 `tool_result_overrides` kwarg + non-empty raise NotImplementedError. R82 的工作量 = 把 NotImplementedError 换成真正的 validation + stamping pipeline, 镜像 R80 §5.2 的实施.
-- **P0**: `git fetch origin main` → 确认 HEAD = R81 commit → baseline 628/7/3-xfail/0-fail. 读 R81 progress doc + ADR-026 §5.3 + recorder.py:711-867 (R81 raise block + R80 §5.2 validation pipeline 模板).
-- **P0 实施 — validation pipeline** (镜像 recorder.py:721-783):
-  - 删 R81 raise block (line 714-728), 替换为完整 validation + normalisation.
-  - normalised_result_overrides = dict(tool_result_overrides) if tool_result_overrides else {}
-  - if normalised_result_overrides: 进 validation block. Late import: `from chronos.queries.tool_linkage import _ids_from_state_after, _is_result_side` (注意 underscore prefix 标 internal). `_is_result_side` 需要新增 — 镜像 `_is_use_side`, 判 `UserMessage` kind 且 `state_after` 含 `tool_use_id` / `tool_use_ids`.
-  - Build `result_keyset: set[str]` = union of tool_use_ids on result-side Nodes.
-  - **Validation #1**: key 必须 str → `AdapterError` quoting `type(key).__name__`.
-  - **Validation #2**: key 必须 in `result_keyset` → `AdapterError` 含字面量 `"result-side"` (test 3 用 `match="result-side"`).
-  - **Validation #3**: key MUST NOT also in `normalised_overrides` (use-side) → `AdapterError` quoting the conflicting `tu_id` (test 4 用 `match=_TU_ID`).
-- **P0 实施 — child-side stamp** (镜像 line 867 `self._fork_overrides`):
-  - 在 fork() body 加 `self._fork_result_overrides = normalised_result_overrides if normalised_result_overrides else None` (~line 867 paired with `self._fork_overrides` setup); finally block 同样清掉.
-  - `_translate()` 里给 result-side Nodes 加 stamp: 单 block (§5.1) → 若 `tool_use_id in self._fork_result_overrides`, write `state_after['tool_result_content'] = override_value`. 多 block (§5.1.1) → build index-aligned `state_after['tool_result_contents']` list, `i`-th 项 = override 值 (matched) 或原 `ToolResultBlock.content` (no match).
-- **P0 删 markers**: 同 commit 移除 `tests/unit/test_anthropic_agents_fork_tool_result_override.py` 里 3 个 `pytest.mark.xfail(strict=True, ...)` decorator (lines ~342, ~398, ~443 by R81 layout). Strict-xfail trip 否则.
-- **P0 ADR**: ADR-026 §5.3 status header `Draft — implementation lands in R82.` → `Implemented (R82).`.
-- **P1 dogfood (强烈推荐)**: 写 `scripts/dogfood_fork_tool_result_override.py` 镜像 R80 `scripts/dogfood_fork_tool_override.py` — 跑 §5.3 全部 4 path (identity / substitution / unknown-id raise / collision raise) 对 fake `claude_agent_sdk`. 兑现 R64 dogfood-as-release-gate invariant.
-- **P1 CHANGELOG**: R82 entry 在 R81 上方 (`[Unreleased]`), `Added` section 列 §5.3 实施 + dogfood + xfail markers 移除.
-- Gate expect: 628 pass + 3 ex-xfail → **631** pass / 7 skip / **0 xfail** / 0 fail. mypy/ruff 全绿. Adapter-1-3 streak R52→R82 = **30 rounds** (新 project-history high).
+- **背景**: ADR-026 §6 line 472-482 列了 5 条 Acceptance Criteria (AC-1..AC-5). 现在 §5 全 ship, AC 状态需要逐条 audit:
+  - **AC-1**: §5.1 single-block JOIN 契约 ✓ (R76 ship + 4 unit tests + dogfood)
+  - **AC-2**: §5.1.1 multi-block keyset 契约 ✓ (R77 ship + 3 unit tests at §6.2.1)
+  - **AC-3**: §5.2 fork-with-tool-input-substitution ✓ (R80 ship + 4 unit tests + dogfood `dogfood_fork_tool_override.py`)
+  - **AC-4**: §5.3 fork-with-tool-result-substitution ✓ (R82 ship + 4 unit tests + dogfood `dogfood_fork_tool_result_override.py`)
+  - **AC-5**: live-network smoke against real `claude_agent_sdk` — **TBD**: 是否需要把 §5.2 / §5.3 加进 `tests/live/test_anthropic_agents_fork_smoke.py`? 还是 alpha cut 暂不强制 live, 推到 v0.7.0 GA 之前补?
+- **P0 实施**:
+  1. 读 ADR-026 §6 AC-1..AC-5 + roadmap.md Phase 4 Arc B milestone, 评估 AC-5 是否需要 R83 同 round 补 (or 软 deferred 到 R84+ live-smoke round).
+  2. 翻 ADR-026 status header `Status: Draft (proposed R75)` → `Status: Accepted (R83)` + 加一行 promotion 注解 (引用 R76/R77/R78/R80/R82 各 ship round + AC tickoff list).
+  3. 写 ADR-026 §7 (新增 closing analysis): "Phase 4 Arc B slice 3 全 ship 后回头看, 三条 sub-cut (read-side anchor / write-side input-substitution / write-side result-substitution) 是否实现了 ADR-026 §1 stated outcome?" — 简短 retro, ~100 行.
+  4. CHANGELOG R83 entry: `### Changed` ADR-026 Draft → Accepted; `### Added` Phase 4 Arc B slice 3 closure notes.
+- **P1 alpha cut (optional, 看 AC-5 决策)**:
+  - 如果 AC-5 软 deferred: 直接 `git tag v0.7.0a3` + push tag, CHANGELOG 加 `## [0.7.0a3] - 2026-05-XX` section 卡 R74-R82 entries.
+  - 如果 AC-5 硬要求: 推到 R84 (R83 加 live-smoke + R84 cut tag).
+- Gate expect: 0 行 src 修改 (除了 tag 触发的 version bump if any). pytest 631/7/0 unchanged. Adapter-1-3 streak R52→R83 = **31 rounds**.
 
-### Option B (兜底 / 时间紧 0.5 slot): consolidation 半 round (stub fixture extraction)
+### Option B (兜底 / Option A 的尾巴, 0.5 slot): stub fixture extraction (5 倍 over threshold)
 
-- 不开 §5.3 实施. 抽 `_StubBlock` / `_StubMessage` / `_aiter` 到 `tests/unit/fixtures/anthropic_agents.py` (4 duplications, 1 over R58/R78 threshold). 4 个文件 import 替换. 纯重构, 0 行为变化.
-- 适合 R82 cron slot 时间很紧或者发现 ADR §5.3 还需要打磨.
-- 不推荐作为默认 — strict-xfail forcing function 在 R82 需要 trip 删 markers, 不实施 §5.3 就拖 streak (但其实 xfail 不算"failed", 只是 deferred — 拖一两 round 不致命).
+- 抽 `_StubBlock` / `_StubMessage` / `_aiter` 到 `tests/unit/fixtures/anthropic_agents.py` + `scripts/_dogfood_fixtures.py` (or 单一 `chronos.testing.fakes` 模块, 既能给 unit test 又能给 dogfood 用). 6 个文件 import 替换:
+  - `tests/unit/test_adapter_anthropic_agents.py`
+  - `tests/unit/test_queries_tool_linkage.py`
+  - `tests/unit/test_anthropic_agents_fork_tool_override.py`
+  - `tests/unit/test_anthropic_agents_fork_tool_result_override.py`
+  - `scripts/dogfood_fork_tool_override.py`
+  - `scripts/dogfood_fork_tool_result_override.py`
+- 纯重构, 0 行为变化. 适合作为 Option A 的 round 尾巴 (Option A 大概率 0.5-0.7 slot 收, 还有富余).
+- R58 / R78 convention threshold = 3, 现已 5+. R83 / R84 必须 dispatch — 拖到 R84 也行, 但 R83 是最佳时机 (slice 3 全 ship 后清洁状态最干净).
 
-### Option C (md-only 探索 0.5 slot): 给 strict-xfail-forcing-function skill 加 R81→R82 案例 (or 等 R82 实施完再加)
+### Option C (md-only consolidation, 0.5 slot): ADR-026 §5 reorganise into Reading / Writing sub-trees
 
-- 这条 ritual (R76→R77, R79→R80, R81→R82) 现在第三次复用. 写到 skill 里作为 case 3, 让未来 slice 想用同样模板的 cron slot 直接抄.
-- 适合 R82 cron 时间充裕, 或作为 Option A 的尾巴. 也可以等 R82 实施完成确认 ritual 第三次跑通后再写.
+- 现在 §5 (intro) / §5.1 / §5.1.1 / §5.2 / §5.3 五兄弟扁平排列. R66 retro-doc style 重组成:
+  - `### 5. Tool linkage contract (ADR-026)` — intro
+    - `#### 5.A Reading side (use-side anchor)` — §5.1 + §5.1.1 + §5 helpers (R78)
+    - `#### 5.B Writing side (fork-time substitution)` — §5.2 + §5.3
+- 不改任何契约, 只是换章节编号 + 加 reading guide. 需要同步 update `chronos/queries/tool_linkage.py` docstring (现引用 §5.1 / §5.1.1 — 仍然有效但可改成 §5.A.1 / §5.A.2).
+- 适合 R83 cron slot 时间紧 / 不想动代码.
 
-### 推荐: Option A
+### 推荐: Option A + Option B (合并 1 slot)
 
 理由:
-1. R76→R77 + R79→R80 已经验证了 strict-xfail forcing function ritual, R81→R82 是第三次复用 — 第三次最稳, 风险最小.
-2. R80 已经把 §5.2 实施模板趟出来 (use-side validation pipeline + `self._fork_overrides` 实例属性 + child-side stamp). R82 实施 §5.3 基本是镜像翻译: `_is_use_side` → `_is_result_side`, `tool_use_keyset` → `result_keyset`, `state_after['tool_input']` → `state_after['tool_result_content']`. 工作量比 R80 还小 (因为模板已 ready).
-3. 完成 R82 之后 ADR-026 §5 input/output 双向都完整 ship, slice 3 全 close, 离 v0.7.0 GA 只差 (a) AC-3 live-smoke / dogfood 跑通 (R64 release gate), (b) 一个 0.7.0a3 alpha cut. consolidation 时机也更合适 (slice 3 全 ship 后做内部清洁).
-4. 不实施 §5.3 拖 R82 → R83 strict-xfail counter 持续偏高, 偏离 "strict-xfail = next round forcing function" 原意. 短期可拖, 但建议 R82 直接跑.
+1. ADR-026 §5 全 ship 是结构性 milestone — Draft → Accepted 是 ADR 合规要求 (Draft 状态不该长时间挂着 Implemented 子条款). R83 推到 R84+ 会让 ADR 状态错位.
+2. Option B 是积压 5 倍 over threshold 的技术债, R83 是最佳清账时机 (slice 3 全 ship, 状态最干净, 无 in-flight ADR / 实施可能影响 fixture 设计). 错过 R83 拖到 R84+ 时 slice 4 可能开始, fixture 形态可能要再改.
+3. Option C 可以推到 R84+ (md-only, 不阻塞任何东西).
+4. v0.7.0a3 alpha cut 取决于 AC-5 决策 — R83 评估后可立即 cut (软 deferred) 或推到 R84 (硬 live-smoke).
+
+### R83 非 goals (红线)
+
+- ❌ 不动 §5.1 / §5.1.1 / §5.2 / §5.3 契约 (全 Implemented binding).
+- ❌ 不破 adapter-1-3 zero-regression streak (R52→R82 = 30 rounds, project-history high).
+- ❌ 不开 slice 4 / 不动 HTTP/CLI surface (out-of-scope per §5.2/§5.3 ADR; 留给 slice 4).
+- ❌ 不 cut v0.7.0 GA tag (alpha 可以, GA 要等 live-smoke + 文档 + UI gates).
+
+### R83 hand-off invariants
+
+- Window: 0–11 CST (cron) or manual chat slot.
+- Baseline: 631 pass / 7 skip / 0 xfail / 0 fail; mypy 0 (38 src files); ruff clean (105 files).
+- Open command: `git fetch origin main && git pull --ff-only` + `uv run pytest -q --no-cov` (expected 631/7/0/0) + 读 ADR-026 §6 AC-1..AC-5 line 472-482 + 读 R82 progress doc.
+- Adapter-1-3 streak now **30 rounds**; R83 必须不破.
+- Inherited dogfood: `scripts/dogfood_fork_tool_override.py` (R80) + `scripts/dogfood_fork_tool_result_override.py` (R82). 都 exit 0; 各自是其 slice 的 release gate per R64 invariant.
+- `[Unreleased]` 现在含 R74-R82 entries. R83 在最上方插. CHANGELOG-when-shipping 标准.
+
+---
+
+**Round 82 — Slice 3c implementation (ADR-026 §5.3 fork-with-tool-result-substitution); 1-slot pre-budget**  *(已完成, 见上方 §5)*
+
+战略视角 (历史归档): R81 关闭了 slice 3c TDD scaffold (ADR §5.3 Draft + 4 tests with 3 strict-xfail + recorder pass-through). R82 必须把 3 个 strict-xfail 翻 pass + 同 commit 删 markers. 这是 R76→R77 §5.1.1 / R79→R80 §5.2 跑通过两次的 ritual, 第三次复用. 实施模板 R80 已经写好 — recorder.py 里 use-side validation pipeline (line 721-783) + child-side stamp (line 867 `self._fork_overrides`); R82 做的是 result-side 的镜像翻译.
+
+（详细 R82 plan 已 ship 完成, 完整内容见 R82 progress doc `docs/progress/2026-05-17-round-82.md`. CONTEXT §6 之前的 Option A/B/C 大纲全部按 Option A 跑完, 包括 dogfood 收口. Strict-xfail forcing function 第三次按设计触发, ritual 稳定.）
 
 ---
 
