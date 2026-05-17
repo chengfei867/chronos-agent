@@ -98,9 +98,9 @@ def info() -> None:
     console.print(f"[bold]chronos[/bold] {__version__}")
     console.print(
         "Status: Phase 4 Arc A complete (v0.6.0 R65-R67), "
-        "Arc B slice 1 alpha (R70-R73, anthropic_agents adapter, record-only), "
-        "adapter-1-3 zero-regression streak R52->R73 = 21 rounds, "
-        "v0.7.0a1"
+        "Arc B slice 1+2+3 alpha (R70-R83, anthropic_agents adapter, record + fork + override), "
+        "adapter-1-3 zero-regression streak R52->R83 = 31 rounds, "
+        "v0.7.0a2"
     )
     console.print(
         "Commands: [green]runs list/show, forks show, diff, replay, fork plan, web[/green] "

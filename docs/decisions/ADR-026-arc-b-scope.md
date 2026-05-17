@@ -636,17 +636,31 @@ None of these bind this ADR. ADR-026 only commits Arc B slice 1.
 
 Per [ADR-016][ADR-016] R1-R4 gates (applied here for the fourth adapter):
 
-- [ ] **AC-1** — Adapter implements `RecorderProtocol` and `AdapterProtocol`; conformance tests green.
-- [ ] **AC-2** — Live-smoke records one multi-turn conversation with ≥1 MCP tool; verify node kinds + usage extraction.
-- [ ] **AC-3** — Fork primitive re-invokes agent from `at_node_id` with `overrides`; live-smoke green.
-- [ ] **AC-4** — Dogfood script exits 0 with runtime assertions on recorded structure (per R64 dogfood-as-release-gate invariant).
-- [ ] **AC-5** — Existing adapter matrix (LangGraph/AutoGen/CrewAI) does not regress: all tests green, zero code change to `langgraph.py`/`autogen/`/`crewai/`.
+- [x] **AC-1** — Adapter implements `RecorderProtocol` and `AdapterProtocol`; conformance tests green. *Closed R71 (initial impl) + R74 (real-fork wiring) + R76/R77 + R80 + R82 (override variants). Conformance suite at `tests/unit/test_adapter_anthropic_agents.py` + R76/R77/R80/R82 sibling files; 631/7/0/0 baseline at R83.*
+- [~] **AC-2** — Live-smoke records one multi-turn conversation with ≥1 MCP tool; verify node kinds + usage extraction. *Partially closed: R73 ran a real OneAPI relay live-smoke (single-turn, no MCP tool — 9-block prompt loop). MCP-tool live-smoke deferred to v0.7.0 GA gate; needs an MCP server fixture + Node.js subprocess on the runner. Tracked as R83 release-note caveat; not blocking the alpha.*
+- [~] **AC-3** — Fork primitive re-invokes agent from `at_node_id` with `overrides`; live-smoke green. *Partially closed: fork-without-overrides has live-smoke (R74 real `fork_session` call); fork-with-overrides validated via fake-SDK dogfood + unit tests only (R80 tool override, R82 tool-result override). Real-relay override-fork live-smoke deferred to v0.7.0 GA — same gating as AC-2.*
+- [x] **AC-4** — Dogfood script exits 0 with runtime assertions on recorded structure (per R64 dogfood-as-release-gate invariant). *Closed: `arc_b_slice_1_smoke.py` (R71), `arc_b_slice_2_fork.py` (R74), `dogfood_fork_tool_override.py` (R80), `dogfood_fork_tool_result_override.py` (R82). All four exit 0 under fake-SDK and runtime-assert recorded node structure.*
+- [x] **AC-5** — Existing adapter matrix (LangGraph/AutoGen/CrewAI) does not regress: all tests green, zero code change to `langgraph.py`/`autogen/`/`crewai/`. *Closed: 31-round zero-regression streak R52→R82 confirmed at R83 (631 passed / 7 skipped / 0 xfail / 0 failed); `git log --oneline src/chronos/adapters/langgraph.py src/chronos/adapters/autogen/ src/chronos/adapters/crewai/` shows no commits since R51.*
 
-ADR-026 promotes Draft → Accepted in R74 **after** AC-1..AC-5 all tick.
+**Alpha-gate verdict (R83)**: AC-1, AC-4, AC-5 fully closed for v0.7.0a2. AC-2, AC-3 partially closed — sufficient for an alpha release (alpha = "feature-complete behind real backend, smoke + dogfood exists, full live-integration TBD"). Full tick on AC-2/AC-3 is the gating criterion for v0.7.0 GA, not for v0.7.0a2.
 
 ### In-place promotion marker
 
-Per the R57 "in-place ADR promotion" invariant, this ADR's Draft→Accepted flip happens by editing the status field of this same file (no new file, no branching). **Scope flip happened in R69** — i.e. the Arc B scope selection (Anthropic Agents SDK as slice 1) is now settled. AC-1..AC-5 are **release-time gates** tracked separately; the R74 release commit will note "ADR-026 acceptance gates AC-1..AC-5 closed" rather than flipping status again.
+Per the R57 "in-place ADR promotion" invariant, this ADR's Draft→Accepted flip happens by editing the status field of this same file (no new file, no branching). **Scope flip happened in R69** — i.e. the Arc B scope selection (Anthropic Agents SDK as slice 1) is now settled. AC-1..AC-5 are **release-time gates** tracked separately; **R83 alpha cut (v0.7.0a2)** ticks AC-1, AC-4, AC-5 fully and AC-2, AC-3 partially per the verdict above. The remaining partial-tick conversion to full is a v0.7.0 GA gate, not an ADR status flip.
+
+### Slice-3 closing retro (R83)
+
+Slice 3 of Arc B (override-fork variants) shipped across R75→R82 in three sub-slices:
+
+- **3a — fork-with-empty-overrides (R75 + R76→R77)**: established the override-pipeline contract; R76 introduced strict-xfail forcing function and R77 closed it with the actual override-replay path. *Lesson*: strict-xfail-as-todo (per `strict-xfail-forcing-function` skill) prevents stub adapters from drifting silently — the failing test is the contract.
+- **3b — tool-call override (R79→R80)**: replace a `ToolUseBlock` at fork point with a different `tool_name` / `input` payload. R79 strict-xfail, R80 implementation + dogfood (`dogfood_fork_tool_override.py`). *Lesson*: the fake-SDK stub patterns (`_StubBlock`, `_StubMessage`, `_aiter`) are now duplicated in 3 unit-test files (`test_adapter_anthropic_agents.py`, `test_anthropic_agents_fork_tool_override.py`, `test_anthropic_agents_fork_tool_result_override.py`) — extracting a `tests/fixtures/anthropic_agents_stubs.py` module is **deferred to R84** (Option B in R83 plan); not a blocker for v0.7.0a2.
+- **3c — tool-result override (R81→R82)**: replace a `ToolResultBlock` at fork point with a different result payload (success vs. error injection). R81 strict-xfail, R82 implementation + dogfood (`dogfood_fork_tool_result_override.py`). *Lesson*: tool-input override (R80) and tool-result override (R82) live in **parallel** state on the recorder (`_fork_overrides` for tool inputs, `_fork_result_overrides` for tool results) rather than a single unified helper — slice-3 design opted for explicit dual fields over a discriminated-union helper to keep the `_translate(msg)` switch explicit per block kind. R83 audit confirms this stayed parallel and didn't accidentally couple the two override paths.
+
+**Slice-3 invariants** (added to CONTEXT.md long-term):
+
+1. *Override pipeline is closed under tool-input and tool-result block kinds*: the adapter's `fork(at_node_id, tool_input_overrides=..., tool_result_overrides=...)` accepts two parallel keyword-only mappings keyed by `tool_use_id`; both replay through `claude_agent_sdk.fork_session(...)` with the rewritten transcript JSONL. The legacy `overrides=...` kwarg is preserved as free-form `Fork.edited_fields` metadata only — does not drive replay.
+2. *Strict-xfail forcing function validated 3x in slice 3* (R76→R77, R79→R80, R81→R82): write the failing test first with `pytest.mark.xfail(strict=True)`; the next round implements until xfail flips to pass, then removes the marker. This is now a stable pattern alongside TDD-red/green.
+3. *Fake-SDK stubs are sufficient for unit + dogfood; real-SDK live-smoke is a GA-only gate*: alpha releases ship with fake-SDK coverage, GA requires real-relay + MCP-tool + override-fork live-smoke. AC-2 / AC-3 partial-tick captures this split.
 
 ---
 

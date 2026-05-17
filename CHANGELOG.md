@@ -4,6 +4,51 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
+_Nothing yet — R84 will decide. Candidate: extract `tests/fixtures/anthropic_agents_stubs.py` (Option B from R83 plan; consolidate `_StubBlock` / `_StubMessage` / `_aiter` patterns duplicated across 3 unit-test files)._
+
+## [0.7.0a2] — 2026-05-18 (Round 74 + Round 75 + Round 76 + Round 77 + Round 78 + Round 79 + Round 80 + Round 81 + Round 82 + Round 83)
+
+### Added (R83 — ADR-026 §6 acceptance-gate audit + slice-3 closing retro)
+
+- **ADR-026 §6 acceptance criteria audited & ticked** — all five `[ ]` checkboxes resolved with closing notes. AC-1 (RecorderProtocol/AdapterProtocol conformance), AC-4 (dogfood-as-release-gate), and AC-5 (zero-regression streak) fully closed `[x]`. AC-2 (multi-turn live-smoke with ≥1 MCP tool) and AC-3 (override-fork live-smoke) marked partial `[~]` with explicit deferral to v0.7.0 GA — alpha gate verdict reasoning preserved in-place. R57 in-place ADR promotion invariant honored (no new file, no Status flip — scope flip already happened R69; R83 only ticks the §6 release-time checkboxes).
+- **ADR-026 slice-3 closing retro** (new sub-section after the in-place promotion marker) — captures the R75→R82 narrative across sub-slices 3a (R76→R77 multi-block keyset), 3b (R79→R80 tool-input override), 3c (R81→R82 tool-result override), records three slice-3 invariants (override-pipeline closed under tool-input + tool-result, strict-xfail forcing function validated 3x, fake-SDK sufficient for alpha and live-smoke gates GA-only), and explicitly defers fixture-extraction (Option B) to R84.
+
+### Changed (R83)
+
+- **Version bump**: `0.7.0a1` → `0.7.0a2` in `pyproject.toml` + `src/chronos/__init__.py` + `src/chronos/cli/__init__.py`. Bundles R74 (real-fork wiring) + R75 (writer-side redundancy invariant) + R76→R77 (slice 3a multi-block keyset) + R78 (orphan-detection helpers) + R79→R80 (slice 3b tool-input override) + R81→R82 (slice 3c tool-result override) + R83 (closing retro) into one PEP 440 alpha tag.
+- Test baseline preserved: **631 passed / 7 skipped (live) / 0 xfail / 0 failed** in 17.24s (no code change in R83 — md-only audit + retro round).
+- Adapter-1-3 zero-regression streak: R52→R83 = **31 rounds** (new project-history high; R83 is documentation-only so the streak counter advances by virtue of the green run).
+
+### Highlights of v0.7.0a2 (the Arc B slice-1+2+3 alpha)
+
+- **Anthropic Agents SDK adapter** ships **complete behaviour** behind a fake-SDK harness: record (slice 1, R71), fork without overrides (slice 2, R74 real `claude_agent_sdk.fork_session(...)` wiring), fork with tool-input override (slice 3b, R80), fork with tool-result override (slice 3c, R82). All four paths exercised by exit-0 dogfood scripts (R64 dogfood-as-release-gate invariant).
+- **§5 §5.1 §5.1.1 §5.2 §5.3 of ADR-026 all flipped Draft→Implemented** — the entire slice-3 contract surface (single-block + multi-block JOIN anchors + tool-input override + tool-result override) ships verified.
+- **`chronos.queries.tool_linkage`** (R78) — internal package for slice-3 read-side helpers; `unmatched_tool_results(...)` and `unmatched_tool_uses(...)` surface ADR-026 orphan-tolerance at query time.
+- **Strict-xfail forcing function** (R76→R77, R79→R80, R81→R82) validated three rounds in a row as a stable TDD-adjacent pattern alongside red/green: write `pytest.mark.xfail(strict=True)` with the gap as `reason=`, next round implements until xfail flips to pass, removes the marker as part of the same commit.
+
+### Install (alpha)
+
+```bash
+uv pip install --pre chronos-agent==0.7.0a2  # (private repo — install from git tag)
+# or:
+uv pip install "chronos-agent[anthropic_agents] @ git+https://github.com/chengfei867/chronos-agent.git@v0.7.0a2"
+```
+
+### Known caveats (gating GA)
+
+- **AC-2 partial**: live-smoke with ≥1 MCP tool not yet run against a real Anthropic Agents relay. v0.7.0 GA gate.
+- **AC-3 partial**: override-fork live-smoke is fake-SDK only; real-relay version is a v0.7.0 GA gate.
+- **`tests/fixtures/anthropic_agents_stubs.py` not extracted yet**: stub patterns (`_StubBlock`, `_StubMessage`, `_aiter`) duplicated across 3 unit-test files. R84 candidate (no functional impact, code-quality only).
+
+### Quality bar (v0.7.0a2 cut)
+
+- ruff check + ruff format --check: clean
+- mypy src/: clean
+- pytest -q --no-cov: 631 / 7 / 0 / 0 in 17.24s
+- chronos --version → `chronos 0.7.0a2`
+
+---
+
 ### Added (R82 — slice 3c implementation: ADR-026 §5.3 fork-with-tool-result-substitution lands)
 
 - **`AnthropicAgentsRecorder.fork(..., tool_result_overrides=...)`
