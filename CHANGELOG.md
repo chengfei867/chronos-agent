@@ -4,7 +4,21 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
-_Nothing yet — R84 will decide. Candidate: extract `tests/fixtures/anthropic_agents_stubs.py` (Option B from R83 plan; consolidate `_StubBlock` / `_StubMessage` / `_aiter` patterns duplicated across 3 unit-test files)._
+### Changed (R84 — stub fixture extraction)
+
+- **Refactor: extract `tests/unit/fixtures/anthropic_agents_stubs.py`** consolidating the duck-typed `StubBlock` / `StubMessage` / `aiter_messages` pattern that R75-R82 had replicated across 5 sites (3 unit-test files + 2 dogfood scripts). 4 sites refactored to import from the shared module; `tests/unit/test_adapter_anthropic_agents.py` is *intentionally* not migrated — it uses a richer `_StubBlockBase` shape (extra `is_error` / `thinking` / `signature` slots) plus a runtime-subclass `_blk()` factory. R85+ may reconcile if a forcing function appears.
+- Dogfood scripts grow a 4-line `sys.path.insert(0, repo_root)` bootstrap to make `tests.unit.fixtures.*` resolvable when run as `python scripts/dogfood_*.py` from the repo root (`chronos.*` already resolves via the installed package).
+- Net diff: **+167 / -289 LOC** (5 files), zero behavioural delta. Adapter / store / core / CLI / HTTP / frontend / schema / queries — all untouched.
+- Adapter-1-3 zero-regression streak: R52→R84 = **32 rounds** (new project-history high).
+
+### Quality bar (R84)
+
+- ruff check src + tests + scripts: clean (auto-fix removed unused imports introduced by the rename)
+- ruff format --check src + tests: clean (98 files)
+- mypy src/: clean (38 source files)
+- pytest -q --no-cov: **631 passed / 7 skipped / 0 xfail / 0 failed** in 17.40s — zero delta vs R83 baseline (pure refactor, expected)
+- Dogfood `scripts/dogfood_fork_tool_override.py`: exit 0 ("R80 slice 3b dogfood — all 4 paths green")
+- Dogfood `scripts/dogfood_fork_tool_result_override.py`: exit 0 ("R82 slice 3c dogfood — all 4 paths green")
 
 ## [0.7.0a2] — 2026-05-18 (Round 74 + Round 75 + Round 76 + Round 77 + Round 78 + Round 79 + Round 80 + Round 81 + Round 82 + Round 83)
 

@@ -37,7 +37,7 @@ This means any silent narrowing of ``recorder.py:_translate``'s
 metadata-stamp loop trips here too.
 
 NOTE on stub helpers: this is the THIRD test file replicating the
-duck-typed ``_StubBlock`` / ``_StubMessage`` / ``_aiter`` pattern (after
+duck-typed ``StubBlock`` / ``StubMessage`` / ``aiter_messages`` pattern (after
 ``test_adapter_anthropic_agents.py`` and ``test_queries_tool_linkage.py``).
 Per the R58 / R78 convention, the threshold for extracting these to
 ``tests/unit/fixtures/anthropic_agents.py`` is **three duplications**.
@@ -61,62 +61,14 @@ from chronos.adapters.protocols import AdapterError
 from chronos.core.models import RunStatus
 from chronos.queries import unmatched_tool_uses
 from chronos.store.sqlite import SqliteStore
-
-# ---------------------------------------------------------------------------
-# Stub message / block builders — duck-typed (no claude_agent_sdk import).
-# Class name drives the recorder's kind dispatch (mirrors CrewAI ADR-021).
-# ---------------------------------------------------------------------------
-
-
-@dataclass
-class _StubBlock:
-    text: str | None = None
-    name: str | None = None
-    input: dict[str, Any] | None = None
-    id: str | None = None
-    tool_use_id: str | None = None
-    content: Any = None
-
-
-class TextBlock(_StubBlock):
-    pass
-
-
-class ToolUseBlock(_StubBlock):
-    pass
-
-
-class ToolResultBlock(_StubBlock):
-    pass
-
-
-@dataclass
-class _StubMessage:
-    content: Any = None
-    usage: Any = None
-    model: str | None = None
-    stop_reason: str | None = None
-    total_cost_usd: float | None = None
-    duration_ms: int | None = None
-    uuid: str | None = None
-    session_id: str | None = None
-    extra: dict[str, Any] = field(default_factory=dict)
-
-
-class UserMessage(_StubMessage):
-    pass
-
-
-class AssistantMessage(_StubMessage):
-    pass
-
-
-def _aiter(messages: list[_StubMessage]) -> AsyncIterator[_StubMessage]:
-    async def _gen() -> AsyncIterator[_StubMessage]:
-        for m in messages:
-            yield m
-
-    return _gen()
+from tests.unit.fixtures.anthropic_agents_stubs import (
+    AssistantMessage,
+    TextBlock,
+    ToolResultBlock,
+    ToolUseBlock,
+    UserMessage,
+    aiter_messages,
+)
 
 
 @dataclass
@@ -126,7 +78,7 @@ class _FakeClient:
     messages: list[Any] = field(default_factory=list)
 
     def receive_messages(self) -> AsyncIterator[Any]:
-        return _aiter(self.messages)
+        return aiter_messages(self.messages)
 
 
 # ---------------------------------------------------------------------------

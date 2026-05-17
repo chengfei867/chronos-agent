@@ -25,8 +25,6 @@ Test plan (4 tests):
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
-from dataclasses import dataclass, field
 from typing import Any
 
 import pytest
@@ -34,67 +32,13 @@ import pytest
 from chronos.adapters.anthropic_agents import AnthropicAgentsRecorder
 from chronos.queries import unmatched_tool_results, unmatched_tool_uses
 from chronos.store.sqlite import SqliteStore
-
-# ---------------------------------------------------------------------------
-# Stub message / block builders — mirror the AnthropicAgentsRecorder unit-test
-# duck-typing pattern (no claude_agent_sdk import required at runtime).
-# ---------------------------------------------------------------------------
-
-
-@dataclass
-class _StubBlock:
-    """Stand-in for SDK content blocks. Class name == block kind for the
-    recorder's class-name dispatch. ``id`` is the ToolUseBlock anchor;
-    ``tool_use_id`` is the ToolResultBlock back-reference."""
-
-    text: str | None = None
-    name: str | None = None
-    input: dict[str, Any] | None = None
-    id: str | None = None
-    tool_use_id: str | None = None
-    content: Any = None
-
-
-class TextBlock(_StubBlock):
-    pass
-
-
-class ToolUseBlock(_StubBlock):
-    pass
-
-
-class ToolResultBlock(_StubBlock):
-    pass
-
-
-@dataclass
-class _StubMessage:
-    content: Any = None
-    usage: Any = None
-    model: str | None = None
-    stop_reason: str | None = None
-    total_cost_usd: float | None = None
-    duration_ms: int | None = None
-    uuid: str | None = None
-    session_id: str | None = None
-    extra: dict[str, Any] = field(default_factory=dict)
-
-
-class UserMessage(_StubMessage):
-    pass
-
-
-class AssistantMessage(_StubMessage):
-    pass
-
-
-def _aiter(messages: list[_StubMessage]) -> AsyncIterator[_StubMessage]:
-    async def _gen() -> AsyncIterator[_StubMessage]:
-        for m in messages:
-            yield m
-
-    return _gen()
-
+from tests.unit.fixtures.anthropic_agents_stubs import (
+    AssistantMessage,
+    ToolResultBlock,
+    ToolUseBlock,
+    UserMessage,
+    aiter_messages,
+)
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -146,7 +90,7 @@ def test_unmatched_tool_results_finds_orphan_only(
             ],
         ),
     ]
-    with recorder.record(_aiter(messages), thread_id="t-orphan-only") as ref:
+    with recorder.record(aiter_messages(messages), thread_id="t-orphan-only") as ref:
         pass
 
     orphans = unmatched_tool_results(store, ref.run_id)
@@ -191,7 +135,7 @@ def test_unmatched_tool_results_empty_when_all_matched(
             ],
         ),
     ]
-    with recorder.record(_aiter(messages), thread_id="t-all-matched") as ref:
+    with recorder.record(aiter_messages(messages), thread_id="t-all-matched") as ref:
         pass
 
     assert unmatched_tool_results(store, ref.run_id) == []
@@ -234,7 +178,7 @@ def test_unmatched_tool_uses_symmetric(
             model="claude-sonnet-4-5",
         ),
     ]
-    with recorder.record(_aiter(messages), thread_id="t-pending-use") as ref:
+    with recorder.record(aiter_messages(messages), thread_id="t-pending-use") as ref:
         pass
 
     pending = unmatched_tool_uses(store, ref.run_id)
@@ -283,7 +227,7 @@ def test_helpers_handle_multi_block_keyset(
             ],
         ),
     ]
-    with recorder.record(_aiter(messages), thread_id="t-multi-orphan") as ref:
+    with recorder.record(aiter_messages(messages), thread_id="t-multi-orphan") as ref:
         pass
 
     orphans = unmatched_tool_results(store, ref.run_id)

@@ -147,6 +147,14 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
+**截至 Round 84 结束 (2026-05-18 CST ~03:43 cron slot — single-slot pure-refactor round, well inside 0–11 窗口) — Phase 4 Arc B slice 3 alpha 已 ship 在 v0.7.0a2 (R83); R84 是 cleanup 单元: 抽 `tests/unit/fixtures/anthropic_agents_stubs.py` 共享模块, 把 R75-R82 期间复制到 5 个 site (3 unit-test + 2 dogfood scripts) 的 `_StubBlock` / `_StubMessage` / `_aiter` 模式收敛. 6th site (`test_adapter_anthropic_agents.py`) 用了 richer `_StubBlockBase` shape (`is_error`/`thinking`/`signature` 额外字段) + runtime `_blk(cls_name, **kw)` 工厂模式, 故意 deferred (R85+ 候选) — 共享模块同时导出 `make_block` / `make_message` 工厂函数为将来 migrate 留接口, 但不预先添加未消费字段 (R64 future-proof = falsification-target invariant). Module 路径选 `tests/unit/fixtures/` 而非 CONTEXT §6 R84 hint 的 `tests/fixtures/` — 跟 R58 `three_run_pivot.py` 同 root, 只一个 fixture root. Dogfoods 加 4 行 `sys.path.insert(0, repo_root)` bootstrap 让它们能 import `tests.unit.fixtures.*` (alternative 是把 fixture 放进 `src/chronos/_testing/` shipping public package — architecturally 重, ADR-deserving, 故 reject). Refactor mechanic: regex rename `_StubBlock`→`StubBlock` etc, 删本地 stub def block, 加 over-broad import, 让 `ruff check --fix` 砍 13 个 F401 unused-imports per-file (over-broad import + ruff trim 比 hand-tailored per-file imports 摩擦更低 = R84 F3 invariant). 全 gate green: **631 pass / 7 skip (live) / 0 xfail / 0 fail** in 17.40s (zero behavioural delta vs R83 baseline, 符合 pure refactor 预期), mypy clean (38 src files), ruff check + format clean (98 tests files + src + scripts). Two dogfoods (`scripts/dogfood_fork_tool_override.py`, `scripts/dogfood_fork_tool_result_override.py`) 各自跑 exit 0 ("R80 / R82 — all 4 paths green") 验证 sys.path bootstrap 工作. Net diff: +167 / −289 LOC across 5 files + new fixture module 210 LOC. Adapter-1-3 zero-regression streak: R52→R84 = **32 rounds** (新 project-history high). 无 tag (md/test refactor not user-facing); CHANGELOG `[Unreleased]` 加 R84 Changed block; 无 ADR (refactor 不需要); 0 changes to `src/`. R85 候选 1 (推荐): GA-gate prep — ADR-026 §6 AC-2 / AC-3 partial-tick `[~]` → 全 tick `[x]`, 跑 real Anthropic Agents relay live-smoke (gated on Node 20 + MCP server + relay env). 候选 2 (env blocked 时 fallback): migrate 第 6 个 site (`test_adapter_anthropic_agents.py`) 到 shared fixture, 决定 `is_error`/`thinking`/`signature` 字段命运 (添加共享 vs 保留 file-local). 候选 3 (双重 blocked): R83 closing retro 的 fact-check round.**
+
+- Round: **84** (Phase 4 Arc B slice 3 后 cleanup — 抽共享 stub fixture, single-slot, well-in-window 03:43 CST cron): 0 blocker. Sequence: time check (03 → in window) → context-compaction 后重读 CONTEXT.md (compaction summary 把上一次 read 内容丢了, R79 F1 lesson 复用) → `git fetch origin main && git status` 确认 clean (R83 v0.7.0a2 已 push) → grep audit 6 个 site, 发现 5 个 static-subclass shape (homogeneous) + 1 个 runtime-factory shape (divergent, deferred) → 写 `tests/unit/fixtures/anthropic_agents_stubs.py` (210 LOC, 导出 `StubBlock`/`StubMessage`/`aiter_messages` 静态 + `make_block`/`make_message` 工厂 + 6 个 named subclass) → 4-step refactor recipe per file: regex rename → cut stub def → add import → ruff --fix 清 F401 → 4 unit-test sites refactored, 2 dogfood scripts 加 sys.path bootstrap → 全 gate green: pytest 631/7/0/0 in 17.40s (zero delta), mypy clean, ruff clean, format clean → 跑 2 dogfoods exit 0 → 写 CHANGELOG R84 Changed block + progress doc + 这次 CONTEXT refresh → commit + push (gh-proxy.com).
+  - **No new ADR / no schema change / no `src/` change** — 纯 test/scripts/fixtures cleanup; adapter-1-3 + store + core + CLI + HTTP + frontend + queries 全未动. Adapter-1-3 streak R52→R84 = **32 rounds** (new project-history high).
+  - **Tests**: 0 delta (631/7/0/0 baseline preserved exactly, 符合 pure refactor 预期). 4 个 unit-test 文件代码量减半但 test count 不变.
+  - **Files touched (R84)**: `tests/unit/fixtures/anthropic_agents_stubs.py` (NEW, 210 LOC), 4 site refactors (`tests/unit/test_anthropic_agents_fork_tool_override.py`, `tests/unit/test_anthropic_agents_fork_tool_result_override.py`, `tests/unit/test_queries_tool_linkage.py`, `scripts/dogfood_fork_tool_override.py`, `scripts/dogfood_fork_tool_result_override.py`), `CHANGELOG.md` `[Unreleased]` R84 block, `docs/CONTEXT.md` §5/§6 refresh (本 patch), `docs/progress/2026-05-18-round-84.md` (NEW).
+  - **Findings 5 条** (写在 progress doc §5): F1 = static-subclass vs runtime-factory 是真 shape 区分 (audit before refactor / 部分 extract 是 valid outcome); F2 = dogfood sys.path bootstrap 是 acceptable boilerplate vs ship-test-helpers-in-package; F3 = over-broad import + ruff --fix 比 hand-tailored per-file imports 摩擦低 (anti-bikeshed pin); F4 = R83 plan 的 R84 single-slot estimate 准确 (~25min wall-clock); F5 = R83 CHANGELOG 的 "duplicated across 3 files" 是 under-count (实际 6 sites) — caveat counts 应来自 grep 不来自记忆 (lesson pin, 不回填 CHANGELOG R83 entry).
+
 **截至 Round 83 结束 (2026-05-18 CST ~00:30-01:00 cron slot — single-slot release-cut + retro round, well inside 0–11 窗口) — Phase 4 Arc B slice 1+2+3 alpha **shipped as v0.7.0a2** end-to-end. R83 = doc-only audit + retro + release cut: ADR-026 §6 五条 acceptance gates 逐条 audit (AC-1 / AC-4 / AC-5 全 closed `[x]`; AC-2 multi-turn ≥1 MCP tool live-smoke + AC-3 override-fork live-smoke 两个标 partial `[~]` deferred 到 v0.7.0 GA gate); ADR-026 added "Slice-3 closing retro (R83)" sub-section 记录 R75→R82 整条三 sub-slice 叙事 + 三条 invariants (override-pipeline closed under tool-input + tool-result; strict-xfail forcing function 验证 3 次 R76→R77 / R79→R80 / R81→R82; fake-SDK 足够 alpha, real-relay live-smoke 是 GA-only gate); 版本号 0.7.0a1 → 0.7.0a2 在 3 处 (`pyproject.toml`, `src/chronos/__init__.py`, `src/chronos/cli/__init__.py` status line + R83 streak narrative); CHANGELOG `[Unreleased]` 滚到 `[0.7.0a2] — 2026-05-18 (Round 74 + Round 75 + ... + Round 83)` bundle, 新空 `[Unreleased]` placeholder 引用 R84 fixture-extraction 候选; uv.lock 1-line version-only delta. 全 gate green: **631 pass / 7 skip (live) / 0 xfail / 0 fail** in 17.30s, mypy clean (38 src files), ruff check + format clean. R57 in-place ADR promotion invariant honored — ADR Status header 不动 (Accepted (R69) 已就位), 只 tick §6 release-time checkboxes. Adapter-1-3 zero-regression streak: R52→R83 = **31 rounds** (新 project-history high; R83 doc-only round 通过 green run 推进 streak 计数). v0.7.0a2 git tag + push + GitHub Release pending in same round.**
 
 **重要 inheritance fix (R83)**: pre-R83 CONTEXT.md §6 release-strategy 列表 line ~910 错误标注 "v0.7.0a2 ✅ cut 2026-05-14 (R74)". 实际 git tag 列表只有 v0.7.0a1, R74 progress doc 明确 "no tag — accumulates in [Unreleased]". R83 修正了这个 stale assumption — v0.7.0a2 真正 cut 在 R83 (2026-05-18), 是 R74-R82 + R83 的 bundle. 后续 round 不要再 inherit "R74 cut a2" 的错误信号.
@@ -766,51 +774,60 @@ R73 是 R69→R72 4-round chain 的第一个真 disprover round, 也是 Phase 4 
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 84 — stub fixture extraction (Option B, deferred from R83); single-slot pre-budget**
+**Round 85 — GA-gate prep (推荐) / 第 6 个 site fixture migrate (env-blocked fallback) / R83 retro fact-check (双重 blocked fallback); 1-slot pre-budget**
 
-战略视角: R83 关闭了 Arc B slice 1+2+3 alpha (v0.7.0a2 cut, ADR-026 §6 audit, slice-3 closing retro). 余下 R83 explicitly deferred 的 Option B stub fixture extraction 现在是最干净的下一轮工作: slice 3 全 ship, 状态 stabilised, 无 in-flight ADR — 抽 fixture 不会被未实施的 spec 绊脚. R58/R78 convention threshold = 3, 现已 6 倍 (3 unit-test files + 2 dogfood scripts + 1 recorder shadow copy). R84 必须 dispatch.
+战略视角: R84 关闭了 R83 deferred 的 fixture-extraction 单元 — pure refactor, zero behavioural delta, 5 个 site 收敛, 第 6 个 (`test_adapter_anthropic_agents.py`) 故意 deferred 因 shape 不同. 现在 alpha (v0.7.0a2) 已 ship, slice 3 stable, 余下两条 GA-gate AC partial-tick (`[~]`) 是 v0.7.0 GA 的 critical path. R85 应优先攻这条 path; 但 GA-gate 需要外部 infra (Node 20 + MCP server + real Anthropic Agents relay), env-blocked 概率不低. 故双 fallback 排好.
 
-### Option A (推荐, 1 slot): extract `tests/fixtures/anthropic_agents_stubs.py`
+### Option A (推荐, 1 slot): GA-gate AC-2 partial → full tick (real-relay live-smoke + 1 MCP tool)
 
-- **Background**: `_StubBlock` / `_StubMessage` / `_aiter` 在 6 个 file 重复 (3 unit tests + 2 dogfoods + 1 in recorder if you count `_FakeAnthropicAgent`). R83 progress doc + ADR-026 retro + CHANGELOG R83 placeholder 都标记此为 R84 first-choice.
+- **Background**: ADR-026 §6 AC-2 现 `[~]` partial — alpha cut 接受 fake-SDK live-smoke, 但 GA gate 要求 real relay. 第一步是跑通 single-MCP-tool live-smoke.
 - **P0 dispatch**:
-  1. 创建 `tests/fixtures/__init__.py` + `tests/fixtures/anthropic_agents_stubs.py` 模块, 导出 `StubBlock`, `StubMessage`, `aiter_messages`, 可能再加 `make_stub_anthropic_sdk()` factory (返回一个 fake `claude_agent_sdk` module 用于 monkeypatch).
-  2. 改 6 个 import 站点: `tests/unit/test_adapter_anthropic_agents.py`, `tests/unit/test_anthropic_agents_fork_tool_override.py`, `tests/unit/test_anthropic_agents_fork_tool_result_override.py`, `tests/unit/test_queries_tool_linkage.py`, `scripts/dogfood_fork_tool_override.py`, `scripts/dogfood_fork_tool_result_override.py`.
-  3. 跑 pytest 确认 631/7/0/0 baseline 不动. Pure refactor.
-- **P1 dogfood 验证**: 跑 4 个 dogfood (`arc_b_slice_1_smoke.py`, `arc_b_slice_2_fork.py`, `dogfood_fork_tool_override.py`, `dogfood_fork_tool_result_override.py`) 全部 exit 0.
-- **P1 CHANGELOG**: R84 entry, `### Changed` "Refactor: extract anthropic_agents stub fixtures into shared module".
-- Gate expect: 631/7/0/0 unchanged. Adapter-1-3 streak R52→R84 = **32 rounds**. No tag cut (md/test refactor, not user-facing).
+  1. cron env 装 Node 20 + npm + 一个 MCP server (e.g. `@modelcontextprotocol/server-filesystem` via `npx`).
+  2. 配 `ANTHROPIC_API_KEY` (env var, NOT commit).
+  3. 写 `scripts/dogfood/arc_b_slice_3_mcp.py` 或扩展 `arc_b_slice_1_smoke.py`: bind 1 MCP tool, ask 一个会触发该工具的 question, 验证 record() 抓到 ToolUseBlock + ToolResultBlock 并 stamp tool_use_id 正确.
+  4. 跑 exit 0 → ADR-026 §6 AC-2 `[~]` → `[x]`, 写 progress doc 记录 trace 摘录.
+- **P1 CHANGELOG**: R85 entry, `### Added` "Live-smoke harness for Anthropic Agents + MCP tool integration; AC-2 closed full-tick".
+- **P1 dogfood**: 4 个原 dogfood 全部 exit 0 不动.
+- Gate expect: 631/7/0/0 unchanged (live-smoke is `skipif`-gated). Adapter-1-3 streak R52→R85 = **33 rounds**.
+- **Hard blocker**: Node 20 装不上 / npx 跑不通 / API key 没配 → fallback Option B.
 
-### Option B (备选, 0.5 slot): R83 follow-up 修正 / GA gating prep
+### Option B (env-blocked fallback, 1 slot): migrate 第 6 个 fixture site
 
-- 跑 1 次 real-relay live-smoke 单 MCP tool 验证 AC-2 (前提: cron env 有 Node 20 + 一个 MCP server, e.g. `@modelcontextprotocol/server-filesystem` via npx). 若成功, ADR-026 §6 AC-2 partial-tick `[~]` → full `[x]`. 这是 GA gate 的第一步.
-- 时间紧 / Node 装不上 → 退回 Option A.
+- **Background**: R84 故意 defer `tests/unit/test_adapter_anthropic_agents.py` — 它用 richer `_StubBlockBase` shape (`is_error`/`thinking`/`signature` 字段) + runtime `_blk(cls_name, **kw)` 工厂. R84 已在共享模块导出 `make_block` / `make_message` 工厂为 R85 migrate 留接口.
+- **P0 dispatch**:
+  1. 决策 `is_error`/`thinking`/`signature` 字段命运: (a) 添加到共享 `StubBlock` (检查其它 5 个 site 是否会受影响 — R64 invariant: 不预先添加未消费字段); 或 (b) 保留 file-local 子类 `_StubBlockExtra(StubBlock)` 加 3 字段, 共享只导出基础 surface.
+  2. Migrate `test_adapter_anthropic_agents.py`: regex rename + 删本地 stub def + 加 import + ruff --fix.
+  3. 跑 pytest baseline 不动.
+- **P1 CHANGELOG**: R85 entry, `### Changed` "Migrate test_adapter_anthropic_agents.py to shared anthropic_agents_stubs fixture (closing R84 deferral)".
+- Gate expect: 631/7/0/0 unchanged. Streak R52→R85 = 33 rounds.
 
-### Option C (defensive: ADR-026 §6 cross-check / closing-retro corrections)
+### Option C (双重 blocked fallback, 0.5 slot): R83 closing-retro fact-check
 
-- R83 retro 写在 single-slot 里, 可能有 fact-check 漏洞. R84 可以做一次 cross-read: 比对 retro 描述的 "tool-input override (R80) 和 tool-result override (R82) 在 recorder 里 parallel 而非 unified" — 验证 `_fork_overrides` + `_fork_result_overrides` 真的是 parallel state, 没有 accidental coupling. ~30 min, 纯 audit.
+- **Background**: R83 retro 在 single-slot 写, 可能 fact-check 漏洞. R84 F5 已发现 R83 CHANGELOG 的 "duplicated across 3 unit-test files" 是 under-count (实际 6 sites). 类似漏洞可能还有.
+- **P0 dispatch**: cross-read R83 progress doc + ADR-026 §6 retro + CHANGELOG R83 block, 用 grep 验证每条数字 / 每条 file path / 每条 invariant 描述. 找到漏洞补 progress doc 而非 CHANGELOG (CHANGELOG R83 entry 已 tag, immutable).
 
-### 推荐: Option A (fixture extraction)
+### 推荐: Option A (GA-gate AC-2)
 
 理由:
-1. 6 倍 over threshold, R83 已 explicit deferred — 必须清账.
-2. Slice 3 全 ship, 状态最干净, 无 in-flight 实施会改 fixture 形状.
-3. 跑 baseline 应是 zero-delta — 低风险高回报.
-4. Option B (live-smoke GA prep) 需要外部 infra (Node 20 + MCP server), 不在 1 slot 范围.
+1. v0.7.0 GA 是当前最大目标 (R83 retro + ADR-026 §6 verdict 都指向这条 path).
+2. R84 已清完最后一个 cleanup 单元, 无 in-flight refactor 阻塞.
+3. AC-2 比 AC-3 (override-fork live-smoke) 简单 — single MCP tool 比 fork-with-override 容易跑通.
+4. 即使 GA gate 总体多 slot, 第一步 single-tool live-smoke 是 1-slot 单元.
 
-### R84 hand-off invariants
+### R85 hand-off invariants
 
 - Window: 0–11 CST (cron) or manual chat slot.
-- Baseline: 631 pass / 7 skip / 0 xfail / 0 fail; mypy 0 (38 src files); ruff clean.
-- Open command: `git fetch origin main && git pull --ff-only` + `uv run pytest -q --no-cov` (expected 631/7/0/0) + `git tag --list "v0.7.0a*"` (expected: v0.7.0a1 + v0.7.0a2) + 读 R83 progress doc + ADR-026 §6 retro.
-- Adapter-1-3 streak now **31 rounds** (new high after R83 doc-only ship); R84 必须不破.
-- `[Unreleased]` 现 empty (R84 placeholder pointing at fixture extraction). R84 在此插入新 entry.
-- Inherited dogfoods (DO NOT delete): `arc_b_slice_1_smoke.py`, `arc_b_slice_2_fork.py`, `dogfood_fork_tool_override.py`, `dogfood_fork_tool_result_override.py`. R84 refactor 必须不破其 `python <script>` exit-0 行为.
-- ADR-026 Status header = "Accepted (R69, 2026-05-13)" — 不动. §6 acceptance gates 已 audit (R83), R84 不需要再 audit (除非 Option B 跑 live-smoke 才会 update AC-2).
+- Baseline (post-R84): **631 pass / 7 skip / 0 xfail / 0 fail**, mypy 0 (38 src files), ruff clean (98 files).
+- Open command: `git fetch origin main && git pull --ff-only` + `uv run pytest -q --no-cov` (expected 631/7/0/0) + `git tag --list "v0.7.0a*"` (expected: v0.7.0a1 + v0.7.0a2) + 读 R84 progress doc + ADR-026 §6 verdict + (Option A 才跑) `node --version && which npx`.
+- Adapter-1-3 streak now **32 rounds** (new high after R84); R85 必须不破.
+- New shared module: `tests/unit/fixtures/anthropic_agents_stubs.py` (R84). 5 个 site 已 migrate; `test_adapter_anthropic_agents.py` 是 R85 Option B 的 target.
+- Dogfood `sys.path.insert(0, repo_root)` bootstrap pattern landed (R84). 任何新 dogfood 需要 import `tests.unit.fixtures.*` 都应 copy 这 4 行.
+- `[Unreleased]` 现含 R84 Changed block. R85 在其下追加 (R85 Option A → `### Added`; Option B → `### Changed`; Option C → `### Documentation`).
+- Inherited dogfoods (DO NOT delete): `arc_b_slice_1_smoke.py`, `arc_b_slice_2_fork.py`, `dogfood_fork_tool_override.py`, `dogfood_fork_tool_result_override.py`. R84 已验证后两者 exit 0 with new fixture.
 
-### Round 83 (上一轮) 现状
+### Round 84 (上一轮) 现状
 
-✅ R83 已结. v0.7.0a2 alpha cut: ADR-026 §6 audit (3 full + 2 partial gates), slice-3 closing retro (3 sub-slices + 3 invariants), version bump + CHANGELOG roll + uv.lock + git tag + push + GitHub Release. 631 pass / 7 skip / 0 xfail / 0 fail. Adapter-1-3 streak 31 rounds. 详见 `docs/progress/2026-05-18-round-83.md`.
+✅ R84 已结. Pure refactor: 抽 `tests/unit/fixtures/anthropic_agents_stubs.py` (210 LOC, 5 site migrated, 1 site 故意 deferred). Zero behavioural delta — 631/7/0/0 baseline 保留. Net diff +167/−289 LOC. 5 findings pinned (audit-before-refactor / sys.path bootstrap / over-broad-import + ruff --fix / single-slot estimate accuracy / caveat counts from grep). Adapter-1-3 streak 32 rounds. 详见 `docs/progress/2026-05-18-round-84.md`.
 
 ### Release strategy (rolling)
 
@@ -825,8 +842,9 @@ R73 是 R69→R72 4-round chain 的第一个真 disprover round, 也是 Phase 4 
 - R80 (slice 3b implementation, no tag) — ADR-026 §5.2 ship + dogfood + xfail markers removed
 - R81 (slice 3c TDD scaffold, no tag) — ADR-026 §5.3 + 4 tests (3 strict-xfail) + fork pass-through
 - R82 (slice 3c implementation, no tag) — ADR-026 §5.3 ship + dogfood + xfail markers removed
-- **v0.7.0a2 ✅ cut 2026-05-18 (R83)** — Arc B slice 1+2+3 alpha (full record + fork + override-fork pipeline; bundles R74 + R75-R82 + R83 closing retro)  ← **this round**
-- v0.7.0 🚧 target ~R88+ GA — AC-2 (live-smoke ≥1 MCP tool) + AC-3 (override-fork live-smoke against real relay) full-tick gates remaining
+- v0.7.0a2 ✅ cut 2026-05-18 (R83) — Arc B slice 1+2+3 alpha (full record + fork + override-fork pipeline; bundles R74 + R75-R82 + R83 closing retro)
+- **R84 (cleanup, no tag) — `tests/unit/fixtures/anthropic_agents_stubs.py` extraction (5 of 6 sites migrated; pure refactor)** ← **this round**
+- v0.7.0 🚧 target ~R88+ GA — AC-2 (live-smoke ≥1 MCP tool) + AC-3 (override-fork live-smoke against real relay) full-tick gates remaining; R85 推荐 attack AC-2.
 
 
 ## 7. 文档索引 (当你需要深入某个主题)
