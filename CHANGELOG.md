@@ -4,6 +4,24 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added (R85 — AC-2 GA-gate close: real-relay MCP tool live-smoke)
+
+- **`scripts/dogfood/arc_b_slice_3_mcp.py`** — new dogfood-as-release-gate driving the OneAPI relay (`Claude Sonnet 4.6`) end-to-end with an in-process SDK MCP server (`claude_agent_sdk.create_sdk_mcp_server`, no Node.js subprocess) carrying one Python-defined tool (`add(a, b) -> int`). Drives a real multi-turn conversation through `AnthropicAgentsRecorder`, then runtime-asserts five invariants: (1) `run.status == COMPLETED`; (2) AssistantMessage(ToolUseBlock) recorded with `state_after['tool_use_id']`; (3) UserMessage(ToolResultBlock) recorded with `state_after['tool_use_id']`; (3b) the two IDs match (R76 ADR-026 §5.1 tool-linkage contract); (4) the final TextBlock contains the expected sum (with thousands-separator tolerance). Exits 0 only when all five pass. Outer 120s timeout guard.
+- **`tests/live/test_anthropic_agents_mcp_smoke.py`** — pytest wrapper around the dogfood, gated on `CHRONOS_LIVE=1` AND `ANTHROPIC_API_KEY`, marker `@pytest.mark.live`. Asserts the dogfood exits 0 AND prints the `AC-2 release-gate INVARIANTS GREEN` marker (belt-and-suspenders against criterion drift).
+
+### Changed (R85 — ADR-026 §6 AC-2 promoted partial → full)
+
+- **AC-2 promoted `[~]` → `[x]`** in ADR-026 §6 with closing note. Original deferral hypothesis ("needs an MCP server fixture + Node.js subprocess on the runner") was invalidated mid-round when R85 discovered that `claude_agent_sdk.create_sdk_mcp_server` ships an in-process Python MCP server — Node.js entirely sidestepped. New "GA-gate update (R85)" line added under the alpha-gate verdict, narrowing the remaining GA-blocking work to AC-3 (real-relay override-fork live-smoke).
+- **Recorder contract finding (deferred)**: ToolUseBlock and ToolResultBlock currently surface as `kind=NodeKind.LLM` because the recorder stamps node kind from the *message* type (Assistant/User → LLM), not the embedded block type. The `NodeKind.TOOL` entry in the block-dispatch table at `recorder.py:77` is unused for these blocks. Documented inline in the dogfood inspector docstring + ADR-026 §6 AC-2 note; reconciliation/explicit-doc deferred to a future round (no behavioral fix required for AC-2 since `tool_use_id` IS in `state_after`).
+
+### Quality bar (R85)
+
+- pytest -q --no-cov: **631 passed / 8 skipped / 0 xfail / 0 failed** in 17.73s — zero delta vs R84's 631 passed; the +1 skipped is exactly the new R85 live-smoke (gated on `CHRONOS_LIVE=1`).
+- pytest tests/unit -q: 615 passed in 17.80s, 94% line coverage.
+- `scripts/dogfood/arc_b_slice_3_mcp.py` against live OneAPI relay: exit 0, `AC-2 release-gate INVARIANTS GREEN`. Run took ~7s, cost ~$0.14.
+- `tests/live/test_anthropic_agents_mcp_smoke.py` with `CHRONOS_LIVE=1`: 1 passed in 5.95s.
+- Adapter-1-3 zero-regression streak: R52→R85 = **33 rounds**.
+
 ### Changed (R84 — stub fixture extraction)
 
 - **Refactor: extract `tests/unit/fixtures/anthropic_agents_stubs.py`** consolidating the duck-typed `StubBlock` / `StubMessage` / `aiter_messages` pattern that R75-R82 had replicated across 5 sites (3 unit-test files + 2 dogfood scripts). 4 sites refactored to import from the shared module; `tests/unit/test_adapter_anthropic_agents.py` is *intentionally* not migrated — it uses a richer `_StubBlockBase` shape (extra `is_error` / `thinking` / `signature` slots) plus a runtime-subclass `_blk()` factory. R85+ may reconcile if a forcing function appears.
