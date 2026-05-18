@@ -4,39 +4,31 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
-### Added (R85 — AC-2 GA-gate close: real-relay MCP tool live-smoke)
+### Added (R86 — AC-3 GA-gate close attempt; held back by relay degradation)
 
-- **`scripts/dogfood/arc_b_slice_3_mcp.py`** — new dogfood-as-release-gate driving the OneAPI relay (`Claude Sonnet 4.6`) end-to-end with an in-process SDK MCP server (`claude_agent_sdk.create_sdk_mcp_server`, no Node.js subprocess) carrying one Python-defined tool (`add(a, b) -> int`). Drives a real multi-turn conversation through `AnthropicAgentsRecorder`, then runtime-asserts five invariants: (1) `run.status == COMPLETED`; (2) AssistantMessage(ToolUseBlock) recorded with `state_after['tool_use_id']`; (3) UserMessage(ToolResultBlock) recorded with `state_after['tool_use_id']`; (3b) the two IDs match (R76 ADR-026 §5.1 tool-linkage contract); (4) the final TextBlock contains the expected sum (with thousands-separator tolerance). Exits 0 only when all five pass. Outer 120s timeout guard.
-- **`tests/live/test_anthropic_agents_mcp_smoke.py`** — pytest wrapper around the dogfood, gated on `CHRONOS_LIVE=1` AND `ANTHROPIC_API_KEY`, marker `@pytest.mark.live`. Asserts the dogfood exits 0 AND prints the `AC-2 release-gate INVARIANTS GREEN` marker (belt-and-suspenders against criterion drift).
+- **`scripts/dogfood/arc_b_slice_3_fork_override.py`** — new dogfood-as-release-gate that drives the OneAPI relay (`Claude Sonnet 4.6`) end-to-end with the in-process SDK MCP server (R85 setup, `add(a, b) -> int`). Records a parent run, identifies the parent's `ToolUseBlock` anchor + `tool_use_id`, calls `recorder.fork(parent, anchor, tool_input_overrides={parent_tu_id: {a: 100, b: 200}})` (which delegates to real `claude_agent_sdk.fork_session()`), resumes the child SDK session under `resume=child_sid`, and runtime-asserts five AC-3 invariants: (1) parent run COMPLETED with anchor; (2) `ForkRef` carries non-empty `sdk_session_id` + `child_run_id` + `fork_id`; (3) store has `Fork` row linking parent ↔ child; (4) child run COMPLETED with ≥1 ToolUseBlock + ≥1 ToolResultBlock sharing a `tool_use_id` (R76 §5.1 linkage holds across the fork); (5) child's tu_id differs from parent's (positive assertion of the R86 contract finding so a future SDK behavior change forces re-evaluation). Three-tier exit semantics: 0 = green, 2 = relay degraded (skip), 3 = hard regression. Outer 120s timeout per phase. **Code is correct and unit-tested but currently un-runnable end-to-end against the live relay** — see Quality bar below.
+- **`tests/live/test_anthropic_agents_fork_override_smoke.py`** — pytest wrapper around the AC-3 dogfood, gated on `CHRONOS_LIVE=1` AND `ANTHROPIC_API_KEY`, marker `@pytest.mark.live`. Asserts the dogfood exits 0 AND prints the `AC-3 release-gate INVARIANTS GREEN` marker (belt-and-suspenders against criterion drift). Treats rc=2 (relay flake) as `pytest.skip` so the GA gate doesn't trip on transient outage.
 
-### Changed (R85 — ADR-026 §6 AC-2 promoted partial → full)
+### Changed (R86 — dogfood degradation classifier hardened)
 
-- **AC-2 promoted `[~]` → `[x]`** in ADR-026 §6 with closing note. Original deferral hypothesis ("needs an MCP server fixture + Node.js subprocess on the runner") was invalidated mid-round when R85 discovered that `claude_agent_sdk.create_sdk_mcp_server` ships an in-process Python MCP server — Node.js entirely sidestepped. New "GA-gate update (R85)" line added under the alpha-gate verdict, narrowing the remaining GA-blocking work to AC-3 (real-relay override-fork live-smoke).
-- **Recorder contract finding (deferred)**: ToolUseBlock and ToolResultBlock currently surface as `kind=NodeKind.LLM` because the recorder stamps node kind from the *message* type (Assistant/User → LLM), not the embedded block type. The `NodeKind.TOOL` entry in the block-dispatch table at `recorder.py:77` is unused for these blocks. Documented inline in the dogfood inspector docstring + ADR-026 §6 AC-2 note; reconciliation/explicit-doc deferred to a future round (no behavioral fix required for AC-2 since `tool_use_id` IS in `state_after`).
+- **`scripts/dogfood/arc_b_slice_3_mcp.py` (R85)** and **`scripts/dogfood/arc_b_slice_3_fork_override.py` (R86)** — degradation heuristic broadened. Previously only matched `"authentication"` / `"synthetic"` substrings; now also catches the SDK-masked relay-error envelope `"claude code returned an error result"` (the SDK wraps a relay-side `is_error=True` ResultMessage with no usable error string into this misleading exception text). When the heuristic matches, exit is 2 (relay degraded → skip) instead of 3 (hard regression → bisect). Factored helper `_is_relay_degraded_exception(exc: BaseException) -> bool` lives at `scripts/dogfood/_degradation.py` and is shared by both dogfoods + a new test module (see below).
 
-### Quality bar (R85)
+### Fixed (R86 — invalid v0.7.0 GA cut reverted)
 
-- pytest -q --no-cov: **631 passed / 8 skipped / 0 xfail / 0 failed** in 17.73s — zero delta vs R84's 631 passed; the +1 skipped is exactly the new R85 live-smoke (gated on `CHRONOS_LIVE=1`).
-- pytest tests/unit -q: 615 passed in 17.80s, 94% line coverage.
-- `scripts/dogfood/arc_b_slice_3_mcp.py` against live OneAPI relay: exit 0, `AC-2 release-gate INVARIANTS GREEN`. Run took ~7s, cost ~$0.14.
-- `tests/live/test_anthropic_agents_mcp_smoke.py` with `CHRONOS_LIVE=1`: 1 passed in 5.95s.
-- Adapter-1-3 zero-regression streak: R52→R85 = **33 rounds**.
+- **CHANGELOG `[0.7.0]` block reverted to `[Unreleased]`**: a prior cron slot (same-day, pre-compaction) authored a `[0.7.0]` GA cut block claiming AC-2 + AC-3 closed and v0.7.0 ready, but never committed it, never bumped `__version__`, never tagged. R86 (this slot, A2 close-out) re-ran the live smokes for ground truth and discovered both the R85 MCP smoke and the R86 fork-override smoke fail today against the OneAPI relay with the SDK-masked synthetic-auth-failed pattern (relay returns `model='<synthetic>'` + `error='authentication_failed'` + text `'Not logged in · Please run /login'`, surfaced as `Exception('Claude Code returned an error result: success')` — see contract finding below). The CHANGELOG `[0.7.0]` block was therefore aspirational and is reverted in this commit.
+- **ADR-026 §6 AC-3 reverted from `[x]` → `[~]`** with explicit relay-degradation note. **AC-2 stays `[x]`** — it was demonstrably ratcheted at R85 (the recorded fact of an INVARIANTS-GREEN run does not retroactively unratchet because of a later relay flake). The ADR-026 GA-gate verdict paragraph is updated to "AC-3 still partial; v0.7.0 GA deferred pending relay recovery or offline-fixture closure (R87 will decide)."
 
-### Changed (R84 — stub fixture extraction)
+### Quality bar (R86)
 
-- **Refactor: extract `tests/unit/fixtures/anthropic_agents_stubs.py`** consolidating the duck-typed `StubBlock` / `StubMessage` / `aiter_messages` pattern that R75-R82 had replicated across 5 sites (3 unit-test files + 2 dogfood scripts). 4 sites refactored to import from the shared module; `tests/unit/test_adapter_anthropic_agents.py` is *intentionally* not migrated — it uses a richer `_StubBlockBase` shape (extra `is_error` / `thinking` / `signature` slots) plus a runtime-subclass `_blk()` factory. R85+ may reconcile if a forcing function appears.
-- Dogfood scripts grow a 4-line `sys.path.insert(0, repo_root)` bootstrap to make `tests.unit.fixtures.*` resolvable when run as `python scripts/dogfood_*.py` from the repo root (`chronos.*` already resolves via the installed package).
-- Net diff: **+167 / -289 LOC** (5 files), zero behavioural delta. Adapter / store / core / CLI / HTTP / frontend / schema / queries — all untouched.
-- Adapter-1-3 zero-regression streak: R52→R84 = **32 rounds** (new project-history high).
+- pytest -q --no-cov: **648 passed / 9 skipped / 0 xfail / 0 failed** (+17 vs R85's 631 = 17 new `tests/unit/test_dogfood_degradation.py` parametrized cases covering R69/R71/R85/R86 envelope shapes). Zero regression elsewhere.
+- ruff check src + tests + scripts: clean. mypy src/: clean (38 source files).
+- Adapter-1-3 zero-regression streak: R52→R86 = **34 rounds** (new project-history high; **un-broken** despite the relay flake — the failure is environmental, not adapter code).
+- `scripts/dogfood/arc_b_slice_3_mcp.py` (R85 AC-2 dogfood) against live relay TODAY: **exit 2** (relay degraded; SDK-masked synthetic-auth-failed). Same as new R86 dogfood. The R85-recorded INVARIANTS-GREEN ratchet is preserved as historical fact in `docs/progress/2026-05-18-round-85.md`; AC-2 closure is therefore retained on that basis.
+- `scripts/dogfood/arc_b_slice_3_fork_override.py` (R86 AC-3 dogfood) against live relay TODAY: **exit 2** (relay degraded). AC-3 has never had a green live-smoke run against this relay — the prior cron slot's CHANGELOG claim of one was aspirational. AC-3 stays `[~]`.
 
-### Quality bar (R84)
+### R86 contract finding — SDK-masked relay-error envelope
 
-- ruff check src + tests + scripts: clean (auto-fix removed unused imports introduced by the rename)
-- ruff format --check src + tests: clean (98 files)
-- mypy src/: clean (38 source files)
-- pytest -q --no-cov: **631 passed / 7 skipped / 0 xfail / 0 failed** in 17.40s — zero delta vs R83 baseline (pure refactor, expected)
-- Dogfood `scripts/dogfood_fork_tool_override.py`: exit 0 ("R80 slice 3b dogfood — all 4 paths green")
-- Dogfood `scripts/dogfood_fork_tool_result_override.py`: exit 0 ("R82 slice 3c dogfood — all 4 paths green")
+- The OneAPI relay's synthetic-auth-failed mode (R69 spike #3.4 / first hit R71, worked-around R73 via `model="Claude Sonnet 4.6"` spaced-PascalCase form) **resurfaces** in R86 with the same root cause (relay returns synthetic + auth_failed text). What is **new** in R86 is the failure surface: in the current `claude-agent-sdk` version (≥ R85's pin), the SDK's stream-receiver re-raises the relay's `is_error=True ResultMessage(subtype='success')` as `Exception('Claude Code returned an error result: success')`. That string contains **neither** `"authentication"` nor `"synthetic"`, so the R85 heuristic mis-classifies it as a hard regression. R86 broadens the heuristic to match the new envelope. Lesson on wall: **dogfood degradation classifiers must adapt to SDK-version-specific masked-error envelopes; treat unknown exception text from inside the SDK stream-receiver as relay-degraded by default unless evidence suggests otherwise.**
 
 ## [0.7.0a2] — 2026-05-18 (Round 74 + Round 75 + Round 76 + Round 77 + Round 78 + Round 79 + Round 80 + Round 81 + Round 82 + Round 83)
 

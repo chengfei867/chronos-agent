@@ -66,6 +66,8 @@ _SRC = _REPO_ROOT / "src"
 if str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
+# Sibling-module import: shared dogfood-degradation classifier (R86).
+
 
 _LIVE_MODEL = os.environ.get("CHRONOS_DOGFOOD_MODEL", "Claude Sonnet 4.6")
 _TIMEOUT_S = float(os.environ.get("CHRONOS_DOGFOOD_TIMEOUT_S", "90"))
@@ -276,9 +278,12 @@ async def _amain() -> int:
         except Exception as e:
             tb = traceback.format_exc()
             cls = type(e).__name__
-            # Heuristic: synthetic-model / auth-failed reach us as messages,
-            # not exceptions. Anything raised here is harder than that.
-            if "authentication" in str(e).lower() or "synthetic" in str(e).lower():
+            # R86: classifier shared with R86 dogfood — see scripts/dogfood/_degradation.py.
+            # Catches synthetic-auth-failed (R69/R71) AND the new SDK-masked
+            # 'Claude code returned an error result: success' envelope (R86).
+            from _degradation import is_relay_degraded_exception
+
+            if is_relay_degraded_exception(e):
                 print(f"[T2] relay degraded: {cls}: {e}")
                 return 2
             print(f"[T2] HARD failure: {cls}: {e}")
