@@ -4,19 +4,79 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
-### Added (R86 — AC-3 GA-gate close attempt; held back by relay degradation)
+_Nothing yet — R88 will decide._
 
-- **`scripts/dogfood/arc_b_slice_3_fork_override.py`** — new dogfood-as-release-gate that drives the OneAPI relay (`Claude Sonnet 4.6`) end-to-end with the in-process SDK MCP server (R85 setup, `add(a, b) -> int`). Records a parent run, identifies the parent's `ToolUseBlock` anchor + `tool_use_id`, calls `recorder.fork(parent, anchor, tool_input_overrides={parent_tu_id: {a: 100, b: 200}})` (which delegates to real `claude_agent_sdk.fork_session()`), resumes the child SDK session under `resume=child_sid`, and runtime-asserts five AC-3 invariants: (1) parent run COMPLETED with anchor; (2) `ForkRef` carries non-empty `sdk_session_id` + `child_run_id` + `fork_id`; (3) store has `Fork` row linking parent ↔ child; (4) child run COMPLETED with ≥1 ToolUseBlock + ≥1 ToolResultBlock sharing a `tool_use_id` (R76 §5.1 linkage holds across the fork); (5) child's tu_id differs from parent's (positive assertion of the R86 contract finding so a future SDK behavior change forces re-evaluation). Three-tier exit semantics: 0 = green, 2 = relay degraded (skip), 3 = hard regression. Outer 120s timeout per phase. **Code is correct and unit-tested but currently un-runnable end-to-end against the live relay** — see Quality bar below.
-- **`tests/live/test_anthropic_agents_fork_override_smoke.py`** — pytest wrapper around the AC-3 dogfood, gated on `CHRONOS_LIVE=1` AND `ANTHROPIC_API_KEY`, marker `@pytest.mark.live`. Asserts the dogfood exits 0 AND prints the `AC-3 release-gate INVARIANTS GREEN` marker (belt-and-suspenders against criterion drift). Treats rc=2 (relay flake) as `pytest.skip` so the GA gate doesn't trip on transient outage.
+## [0.7.0] — 2026-05-19 (Round 71 + R72 + R73 alpha bundle + R74 + R75 + R76 + R77 + R78 + R79 + R80 + R81 + R82 + R83 alpha2 + R84 + R85 + R86 + R87 GA)
+
+### Highlights
+
+- **Phase 4 Arc B slice 1 GA**: Anthropic Agents SDK (`claude-agent-sdk`) is the third first-class adapter alongside LangGraph (Phase 2) and AutoGen + CrewAI (Phase 3). Record + fork + replay + override pipeline complete end-to-end against the real OneAPI relay (`Claude Sonnet 4.6`) with in-process MCP tool support and tool-input/tool-result override forks.
+- **All five ADR-026 §6 acceptance criteria closed `[x]`**: AC-1 (RecorderProtocol/AdapterProtocol conformance, R71+R74+R76/77+R80/82) · AC-2 (live-smoke ≥1 MCP tool, R85) · AC-3 (real-relay override-fork live-smoke, **R87** ← this release) · AC-4 (4 dogfoods exit 0) · AC-5 (zero-regression streak R52→R87 = 35 rounds across LangGraph/AutoGen/CrewAI).
+- **AC-3 evidence (R87)**: parent run `e60c8692-…` recorded `parent_tu_id=toolu_bdrk_01NRJ958p1qAFNtSfNEuLXBU` for operands 4127+8956=13083; `recorder.fork(parent, anchor, tool_input_overrides={parent_tu_id: {a:100, b:200}})` returned `child_run_id=206b9e0a-…` with fresh `child_tu_id=toolu_bdrk_01JFteNbHxtsitAd8yXosj3E` (≠ parent's, INV-5 positive); child's final TextBlock contained the override-sum `300` (override surfaced via `resume=child_sid` continuation per R86 contract finding, now promoted to finding); `tests/live/test_anthropic_agents_fork_override_smoke.py` 1 passed in 54.08s.
+
+### Install
+
+```bash
+pip install chronos-agent==0.7.0
+# or for development
+uv add chronos-agent==0.7.0
+```
+
+The CLI binary `chronos` and the HTTP API are unchanged from v0.7.0a2 — this GA cut promotes the alpha contract to stable. PEP 440: this is a stable release; `pip install chronos-agent` (no version pin) now resolves to 0.7.0.
+
+### What's bundled (R71 → R87)
+
+- R71 (slice 1 initial impl): `AnthropicAgentsRecorder` + first live-smoke against real relay
+- R72 (defensive): R71 retro + ADR-026 §3 source-inspection lessons
+- R73 (alpha v0.7.0a1): first alpha cut, OneAPI relay compat confirmed via disprover-first probe
+- R74 (slice 2): real `claude_agent_sdk.fork_session` wiring; `tests/live/test_anthropic_agents_fork_smoke.py`
+- R75 (defensive): ADR-026 §5 binding contract `state_after` seed coordinates
+- R76 (slice 3a-P0): `state_after['tool_use_id']` single-block linkage (ADR-026 §5.1)
+- R77 (slice 3a-P1): `state_after['tool_use_ids']` multi-block linkage (ADR-026 §5.1.1)
+- R78 (helpers): `chronos.queries.tool_linkage` graph-query helpers
+- R79 (slice 3b TDD scaffold): strict-xfail tool-input-substitution tests
+- R80 (slice 3b impl): fork-with-tool-input-substitution contract (ADR-026 §5.2) + `dogfood_fork_tool_override.py`
+- R81 (slice 3c TDD scaffold): strict-xfail tool-result-substitution tests
+- R82 (slice 3c impl): fork-with-tool-result-substitution contract (ADR-026 §5.3) + `dogfood_fork_tool_result_override.py`
+- R83 (alpha v0.7.0a2): ADR-026 §6 acceptance-gate audit + slice-3 closing retro
+- R84 (cleanup): extract `tests/unit/fixtures/anthropic_agents_stubs.py` shared stub fixture
+- R85 (GA-gate AC-2): real-relay MCP tool live-smoke via `create_sdk_mcp_server` + `arc_b_slice_3_mcp.py`
+- R86 (GA-gate AC-3 attempt): production dogfood `arc_b_slice_3_fork_override.py` + extracted `_degradation.py` classifier + 17-case unit test; aspirational-release-doc trap discovered + codified into `cron-slot-handoff-recovery` skill
+- **R87 (GA-gate AC-3 close + v0.7.0 GA cut, this release)**: real-relay override-fork live-smoke green; AC-3 promoted `[~]` → `[x]`; ADR-026 GA-gate verdict line; v0.7.0 stable
+
+### Quality bar (R87)
+
+- pytest -q --no-cov: **648 passed / 9 skipped (live-gated) / 0 xfail / 0 failed** in 17-18s. Zero unit-test delta vs R86 baseline (R87 is release-engineering — no new src code, no new unit tests).
+- ruff check src + tests + scripts: clean. ruff format --check src + tests: clean. mypy src/: clean (38 source files).
+- Adapter-1-3 zero-regression streak: R52→R87 = **35 rounds** (new project-history high; un-broken across the entire Arc B implementation series).
+- Real-relay live-smoke matrix (`CHRONOS_LIVE=1`): `arc_b_slice_3_mcp.py` (R85, AC-2) **exit 0 + INVARIANTS GREEN** today; `arc_b_slice_3_fork_override.py` (R86, AC-3) **exit 0 + INVARIANTS GREEN** today; `tests/live/test_anthropic_agents_fork_override_smoke.py` **1 passed in 54.08s**.
+
+### R87 contract finding (promoted from R86 pre-finding)
+
+`tool_input_overrides` validates the parent `tool_use_id` is a matched use-side key, then delegates verbatim to `claude_agent_sdk.fork_session(session_id, up_to_message_id=uuid)`. The SDK fork is a pure JSONL rewrite of the parent transcript up to fork point — it does NOT splice the override into the child transcript. The override surfaces user-side via the continuation prompt under `resume=child_sid`. The child's `ToolUseBlock` therefore carries a *fresh* SDK-minted `tu_id`, NOT the parent's; consequently `state_after['tool_input']` is NOT stamped on the child's `AssistantMessage` node (the recorder stamps only on id-match). This is symmetric to R64's "Identity fork ≠ byte-identical trace" finding for LangGraph and is asserted positively as INV-5 in `scripts/dogfood/arc_b_slice_3_fork_override.py`. The R80 fake-SDK unit tests assert the stamp because the fixture echoes the parent tu_id verbatim — that is a fixture artifact of the offline test path, NOT a real-relay contract. **R86 predicted this from source inspection; R87 observed it under the real relay** — disprover-first invariant honored.
+
+### Caveats
+
+- Live-smoke runs only with `CHRONOS_LIVE=1` + `ANTHROPIC_API_KEY` set; 9 live tests are skipped by default and 1 (R87 fork-override) is excluded from the default suite to avoid relay cost on every CI run.
+- Recorder's block-dispatch table at `recorder.py:77` has `NodeKind.TOOL` for ToolUseBlock, but in practice ToolUseBlock surfaces inside an AssistantMessage and the kind is stamped from message-type (R85 contract finding). This is documented in ADR-026 §6 AC-2 closing note and tracked for a post-GA round to either (a) document "envelope-determines-kind" in AdapterProtocol contract docs or (b) split per-block nodes. Does not affect AC-2/AC-3 — `state_after['tool_use_id'(s)]` shape works correctly.
+- AC-3 closure remains relay-coupled in this release. Long-term Option β (offline-fixture-based AC-3 closure path via captured JSONL replay through fake SDK) is preserved as a post-GA candidate so future relay flakes can't block re-validation; tracked for R88+.
+
+### Migration
+
+No breaking changes from v0.7.0a2 — alpha → stable promotion only. Public surface (`chronos.AnthropicAgentsAdapter`, recorder/fork primitives) is unchanged. `pip install chronos-agent` (no version pin) now resolves to 0.7.0.
+
+### Added (R86 — AC-3 GA-gate scaffolding; held back by relay degradation that round, observed-green in R87)
+
+- **`scripts/dogfood/arc_b_slice_3_fork_override.py`** — new dogfood-as-release-gate that drives the OneAPI relay (`Claude Sonnet 4.6`) end-to-end with the in-process SDK MCP server (R85 setup, `add(a, b) -> int`). Records a parent run, identifies the parent's `ToolUseBlock` anchor + `tool_use_id`, calls `recorder.fork(parent, anchor, tool_input_overrides={parent_tu_id: {a: 100, b: 200}})` (which delegates to real `claude_agent_sdk.fork_session()`), resumes the child SDK session under `resume=child_sid`, and runtime-asserts five AC-3 invariants: (1) parent run COMPLETED with anchor; (2) `ForkRef` carries non-empty `sdk_session_id` + `child_run_id` + `fork_id`; (3) store has `Fork` row linking parent ↔ child; (4) child run COMPLETED with ≥1 ToolUseBlock + ≥1 ToolResultBlock sharing a `tool_use_id` (R76 §5.1 linkage holds across the fork); (5) child's tu_id differs from parent's (positive assertion of the R86 contract finding so a future SDK behavior change forces re-evaluation). Three-tier exit semantics: 0 = green, 2 = relay degraded (skip), 3 = hard regression. Outer 120s timeout per phase. **R87 ran this against the live relay and observed exit 0 + INVARIANTS GREEN — AC-3 closed.**
+- **`tests/live/test_anthropic_agents_fork_override_smoke.py`** — pytest wrapper around the AC-3 dogfood, gated on `CHRONOS_LIVE=1` AND `ANTHROPIC_API_KEY`, marker `@pytest.mark.live`. Asserts the dogfood exits 0 AND prints the `AC-3 release-gate INVARIANTS GREEN` marker (belt-and-suspenders against criterion drift). Treats rc=2 (relay flake) as `pytest.skip` so the GA gate doesn't trip on transient outage. **R87: `1 passed in 54.08s` with `CHRONOS_LIVE=1`.**
 
 ### Changed (R86 — dogfood degradation classifier hardened)
 
 - **`scripts/dogfood/arc_b_slice_3_mcp.py` (R85)** and **`scripts/dogfood/arc_b_slice_3_fork_override.py` (R86)** — degradation heuristic broadened. Previously only matched `"authentication"` / `"synthetic"` substrings; now also catches the SDK-masked relay-error envelope `"claude code returned an error result"` (the SDK wraps a relay-side `is_error=True` ResultMessage with no usable error string into this misleading exception text). When the heuristic matches, exit is 2 (relay degraded → skip) instead of 3 (hard regression → bisect). Factored helper `_is_relay_degraded_exception(exc: BaseException) -> bool` lives at `scripts/dogfood/_degradation.py` and is shared by both dogfoods + a new test module (see below).
 
-### Fixed (R86 — invalid v0.7.0 GA cut reverted)
+### Note (R86 → R87 — aspirational release block reverted then properly cut)
 
-- **CHANGELOG `[0.7.0]` block reverted to `[Unreleased]`**: a prior cron slot (same-day, pre-compaction) authored a `[0.7.0]` GA cut block claiming AC-2 + AC-3 closed and v0.7.0 ready, but never committed it, never bumped `__version__`, never tagged. R86 (this slot, A2 close-out) re-ran the live smokes for ground truth and discovered both the R85 MCP smoke and the R86 fork-override smoke fail today against the OneAPI relay with the SDK-masked synthetic-auth-failed pattern (relay returns `model='<synthetic>'` + `error='authentication_failed'` + text `'Not logged in · Please run /login'`, surfaced as `Exception('Claude Code returned an error result: success')` — see contract finding below). The CHANGELOG `[0.7.0]` block was therefore aspirational and is reverted in this commit.
-- **ADR-026 §6 AC-3 reverted from `[x]` → `[~]`** with explicit relay-degradation note. **AC-2 stays `[x]`** — it was demonstrably ratcheted at R85 (the recorded fact of an INVARIANTS-GREEN run does not retroactively unratchet because of a later relay flake). The ADR-026 GA-gate verdict paragraph is updated to "AC-3 still partial; v0.7.0 GA deferred pending relay recovery or offline-fixture closure (R87 will decide)."
+- During R86 a prior cron slot (same-day, pre-compaction) authored a `[0.7.0]` GA cut block claiming AC-2 + AC-3 closed and v0.7.0 ready, but never committed it, never bumped `__version__`, never tagged. R86 (slot-2) re-ran the live smokes for ground truth and discovered both the R85 MCP smoke and the R86 fork-override smoke failed against the OneAPI relay with the SDK-masked synthetic-auth-failed pattern (relay returned `model='<synthetic>'` + `error='authentication_failed'` + text `'Not logged in · Please run /login'`, surfaced as `Exception('Claude Code returned an error result: success')`). R86 honestly reverted the aspirational block to `[Unreleased]` and held AC-3 at `[~]`. **R87 (this round)** re-ran both smokes against today's relay state, observed both green, and now properly cuts v0.7.0 GA with AC-3 `[x]` backed by the observed evidence cited in `[0.7.0]` Highlights above. The new failure-mode class "aspirational-release-doc trap" was codified into `cron-slot-handoff-recovery` skill at R86 and was honored by R87.
 
 ### Quality bar (R86)
 
