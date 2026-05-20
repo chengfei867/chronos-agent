@@ -79,26 +79,60 @@ without modification — `_resolve_iterator()` duck-types both shapes.
 
 ## Message → Node mapping
 
-| SDK class           | Chronos `kind` | `name`                           |
-| ------------------- | -------------- | -------------------------------- |
-| `UserMessage`       | `fn`           | `user`                           |
-| `AssistantMessage`  | `llm`          | `assistant` or `assistant:<tool>` |
-| `SystemMessage`     | `fn`           | `system`                         |
-| `ResultMessage`     | `end`          | `result`                         |
+`Node.kind` is dispatched on the **message envelope class**, not on the
+inner content blocks. See
+[`docs/contracts/adapter-protocol.md`](../contracts/adapter-protocol.md#envelope-determines-kind-r85-contract-finding-codified-at-r89)
+for the cross-adapter rule and rationale (R85 contract finding,
+codified at R89).
 
-Tool surfacing:
+| SDK class           | Chronos `kind` | `Node.name`                              |
+| ------------------- | -------------- | ---------------------------------------- |
+| `UserMessage`       | `llm`          | `UserMessage`                            |
+| `AssistantMessage`  | `llm`          | `AssistantMessage` or `AssistantMessage:<tool>` |
+| `SystemMessage`     | `fn`           | `SystemMessage`                          |
+| `ResultMessage`     | `end`          | `ResultMessage`                          |
 
-- `AssistantMessage` with a single `ToolUseBlock` → `tool_name` /
-  `tool_input` populated, name suffixed with `:<tool_name>`.
-- `UserMessage` with `ToolResultBlock` → `tool_output` populated;
+The dispatch table lives in
+[`recorder.py`](../../src/chronos/adapters/anthropic_agents/recorder.py)
+as `_DEFAULT_KIND_MAP` (≈line 69) and the lookup happens in
+`_kind_for(msg)` via `type(msg).__name__`.
+
+Tool surfacing happens **inside** these envelopes — it does not change
+`Node.kind`:
+
+- `AssistantMessage` with a single `ToolUseBlock` → still `kind=llm`,
+  but `tool_name` / `tool_input` are populated on the `Node`, and
+  `Node.name` is suffixed with `:<tool_name>` for cross-run alignment
+  legibility (e.g. `AssistantMessage:add`).
+- `AssistantMessage` with multiple `ToolUseBlock`s (R77 multi-block
+  case, ADR-026 §5.1.1) → still `kind=llm`; per-block tool ids are
+  surfaced as `state_after.tool_use_ids` (list).
+- `UserMessage` with one or more `ToolResultBlock`s → still `kind=llm`;
+  `tool_output` populated (single-block case) and matching tool ids
+  are surfaced as `state_after.tool_use_ids` (multi-block case);
   `is_error=True` propagates as `error_message`.
+
+Per-block content (`TextBlock`, `ToolUseBlock`, `ToolResultBlock`,
+`ThinkingBlock`) is preserved inside `state_after.blocks[i].block` —
+filter on that key when you need block-level granularity. Do not
+filter on `node.kind == TOOL` looking for tool-use *blocks*; you'll
+find none, because `kind` is dispatched per-envelope.
+
+The recorder's `_DEFAULT_KIND_MAP` carries two block-class entries
+(`ToolUseBlock → TOOL`, `ToolResultBlock → TOOL`) that are **dead code
+under the current SDK contract** — block instances never reach
+`_kind_for()` because the SDK iterator yields top-level `Message`
+instances. The entries are kept for forward compatibility and as a
+defensive default; see the
+[adapter-protocol contract doc](../contracts/adapter-protocol.md#what-about-the-recorder-block-dispatch-table)
+for the full rationale.
 
 The four block types `{TextBlock, ToolUseBlock, ToolResultBlock,
 ThinkingBlock}` enumerated in [R69 spike #2][r69-mcp] are handled
-explicitly; unknown block classes fall through with a `class-name` tag
-so they fail loudly rather than silently lossy. (R71 has not yet
-surfaced any fifth type in real traces — this is verified live in
-R72+.)
+explicitly inside the message-envelope summariser; unknown block
+classes fall through with a `class-name` tag so they fail loudly
+rather than silently lossy. (R71→R87 has not yet surfaced any fifth
+type in real traces.)
 
 ## Forking
 

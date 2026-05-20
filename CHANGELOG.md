@@ -4,7 +4,23 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
-_Nothing yet — R88 will decide._
+### Documentation
+
+- **R89**: Reconciled the recorder kind-dispatch contract — published
+  new `docs/contracts/adapter-protocol.md` documenting the cross-adapter
+  rule that `Node.kind` is dispatched on the **message envelope class**,
+  not on inner content blocks. The R85 contract finding (originally
+  noted inline in ADR-026 §6 AC-2 closing note) is now promoted to a
+  permanent contract doc and tagged "stable as of v0.7.0". Fixed two
+  drift points in `docs/adapters/anthropic_agents.md`'s Message → Node
+  mapping table (`UserMessage` was documented as `kind=fn` and
+  `name=user`, but the recorder produces `kind=llm` and
+  `name=UserMessage`). Documented the dead `ToolUseBlock` /
+  `ToolResultBlock` entries in `_DEFAULT_KIND_MAP` as forward-compatible
+  defensive fallbacks rather than active dispatch keys. Zero source-code
+  change; ADR-026 §6 AC-2 closing note's "tracked for a future round to
+  either reconcile or document explicitly in the contract" is closed
+  via the "document explicitly" branch.
 
 ## [0.7.0] — 2026-05-19 (Round 71 + R72 + R73 alpha bundle + R74 + R75 + R76 + R77 + R78 + R79 + R80 + R81 + R82 + R83 alpha2 + R84 + R85 + R86 + R87 GA)
 
