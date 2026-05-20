@@ -4,6 +4,11 @@
 // Timing: 900ms per step (feels like you're watching the agent think, not a
 // slideshow). Caller owns the play/pause/reset buttons and the currentIndex
 // effect — we just drive the number.
+//
+// R92 (Phase 5 Arc C slice 1): added stepBack/stepForward/jumpTo so linear
+// Replay UI can reuse this hook for keyboard nav (←/→/Space/q) and
+// click-to-jump on PlaybackTimeline. Backward compatible — TreeView keeps
+// using {playing, index, play, pause, reset} unchanged.
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const STEP_MS = 900;
@@ -37,6 +42,40 @@ export function usePlayback(totalSteps: number) {
     stop();
   }, [stop]);
 
+  // R92: explicit step controls for keyboard nav. Pause first so the auto-play
+  // timer doesn't fight a manual step.
+  const stepForward = useCallback(() => {
+    if (totalSteps === 0) return;
+    setPlaying(false);
+    stop();
+    setIndex((i) => {
+      const next = i < 0 ? 0 : i + 1;
+      return next >= totalSteps ? totalSteps - 1 : next;
+    });
+  }, [totalSteps, stop]);
+
+  const stepBack = useCallback(() => {
+    if (totalSteps === 0) return;
+    setPlaying(false);
+    stop();
+    setIndex((i) => {
+      if (i <= 0) return 0;
+      return i - 1;
+    });
+  }, [totalSteps, stop]);
+
+  // R92: click-to-jump on the timeline. Clamps and pauses.
+  const jumpTo = useCallback(
+    (target: number) => {
+      if (totalSteps === 0) return;
+      setPlaying(false);
+      stop();
+      const clamped = Math.max(0, Math.min(totalSteps - 1, Math.floor(target)));
+      setIndex(clamped);
+    },
+    [totalSteps, stop],
+  );
+
   useEffect(() => {
     if (!playing) return;
     if (index >= totalSteps - 1) {
@@ -51,5 +90,15 @@ export function usePlayback(totalSteps: number) {
 
   useEffect(() => stop, [stop]);
 
-  return { playing, index, totalSteps, play, pause, reset };
+  return {
+    playing,
+    index,
+    totalSteps,
+    play,
+    pause,
+    reset,
+    stepForward,
+    stepBack,
+    jumpTo,
+  };
 }

@@ -1,7 +1,7 @@
-# ADR-027: Phase 5 Arc Selection — Replay UI / Time-Travel Debugger Frontend (Draft)
+# ADR-027: Phase 5 Arc Selection — Replay UI / Time-Travel Debugger Frontend
 
-**Status**: Draft (R90, 2026-05-21 — to be promoted to Accepted in R91 after slice 1 spike per R57 in-place promotion rule)
-**Date**: 2026-05-21 (Drafted R90)
+**Status**: Accepted (R92, 2026-05-22 — promoted from Draft per R57 in-place rule after slice 1 spike 16 ran 11/11 GREEN)
+**Date**: 2026-05-21 (Drafted R90); promoted to Accepted 2026-05-22 (R92)
 **Deciders**: chengfei867, Hermes Agent
 **Supersedes**: The Phase 5 stub in [docs/roadmap.md][roadmap] §"Phase 5+" ("Vague on purpose")
 **Depends on**: [ADR-016][ADR-016] (adapter interface — read-only impact), [ADR-023][ADR-023] (Phase 4 charter, leverage-driven principle), [ADR-001][ADR-001] (Python 3.11+ pin)
@@ -153,16 +153,16 @@ New for R91-R98:
 
 ---
 
-## Outcome of slice 1 spike (to be filled in R91)
+## Outcome of slice 1 spike (recorded at R92)
 
-_R91 will append this section with the spike outcome:_
+R92 ran the spike + landed slice 1 in a single A2 close-out:
 
-- _Spike script: `tests/spikes/spike15_replay_perf.py`_
-- _Outcome: ✅ pass / ❌ fail (Arc D fallback activated)_
-- _Bundle delta measured: TBD_
-- _Browser_vision verdict: TBD_
+- **Spike script**: `tests/spikes/spike16_replay_ui_data.py` (renamed from the originally-projected `spike15_replay_perf.py` — focus shifted from raw render-perf to data-contract validation since `usePlayback` reuse and timeline-projection size budget were the higher-risk assumptions).
+- **Outcome**: ✅ **PASS — 11/11 invariants GREEN.** A1 (`usePlayback` reuse without API change) confirmed; A2 (timeline-only payload ≤16KB for 200-node trace — observed 11.5KB vs full 145KB run JSON) confirmed; A3 (keyboard `←/→` step ± 1 with clamp at 0 and N-1, `Space` play/pause, `q` quit) confirmed.
+- **Bundle delta measured**: frontend `dist/index*.js` = 1449.52 kB raw / 471.52 kB gzip after slice 1 (Replay.tsx 347 LOC + PlaybackTimeline.tsx 117 LOC + usePlayback +51 LOC). Within ADR-027 §AC-5 budget envelope.
+- **Browser_vision verdict**: deferred to slice 2 close-out per cron-budget triage (slice 1 close-out budget consumed by ADR promotion + CHANGELOG + progress doc + CONTEXT refresh + commit + push). Manual visual checkpoint at R93+ when StatePanel lands beside the existing Replay surface.
 
-After spike outcome is recorded, this ADR's status promotes from Draft to Accepted in-place per R57 invariant.
+Status promoted from **Draft** to **Accepted** in-place per R57 invariant in the same commit as the spike-green proof + slice 1 implementation (R92, 2026-05-22).
 
 ---
 

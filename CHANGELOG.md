@@ -4,6 +4,38 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added
+
+- **R92 (Phase 5 Arc C slice 1)**: Linear Replay UI ships as the first Phase 5
+  Arc C deliverable per ADR-027 §2 slice 1. New page at hash route
+  `#/runs/<id>/replay` renders a single run as a horizontal step timeline
+  (`PlaybackTimeline.tsx`) plus an "active step" card showing
+  `model_name`/`tool_name`/`error_message`/`state_after`. Reuses the existing
+  `usePlayback` hook (R37) — extended in this round with `stepBack`,
+  `stepForward`, and `jumpTo` callbacks (backward-compatible: TreeView keeps
+  using `{playing, index, play, pause, reset}` unchanged). Keyboard contract:
+  ← / → step (clamped at 0 and N-1), Space play/pause, q quit. Click on any
+  timeline tick jumps to that step. Zero backend/adapter/schema change — the
+  page reads `GET /runs/{id}` (the same endpoint TreeView uses); spike 16
+  validated the data contract is sufficient (200-node payload 145KB,
+  timeline-only projection 11.5KB, dense `step_index` 0..N-1).
+
+### Changed
+
+- **R92 (ADR-027 promotion)**: ADR-027 promoted **Draft → Accepted** in-place
+  per the R57 in-place promotion rule, after spike 16
+  (`tests/spikes/spike16_replay_ui_data.py`) ran 11/11 invariants GREEN
+  validating ADR-027 §2 slice 1's three R57-spike-pattern assumptions
+  (A1 `usePlayback` reuse without API change, A2 ≤16KB timeline projection
+  fits one network frame for 200 nodes, A3 keyboard nav contract
+  index ± 1 with clamp). Phase 5 Arc C is now the committed Phase 5 first
+  arc.
+- **R92 (frontend route table)**: `App.tsx` `Route` union extended with
+  `replay` variant; `parseHash` matches `^/runs/([^/]+)/replay$` BEFORE the
+  `^/runs/([^/]+)$` tree route (order matters — replay is more specific).
+  `AppHeader.tsx` `RouteName` type widened to include `"replay"` so the
+  header doesn't crash on the new route.
+
 ### Documentation
 
 - **R89**: Reconciled the recorder kind-dispatch contract — published
@@ -36,6 +68,26 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
   charter. Zero source-code change; ADR-027 promotes from Draft to
   Accepted at R91 after slice 1 spike per the R57 in-place promotion
   rule.
+- **R91**: A2 close-out of R90's Phase 5 Arc selection planning bundle.
+  R90 wrote ADR-027 Draft + 4-arc × 9-axis research survey + roadmap
+  charter cleanly but ran out of budget before commit/push (A2-of-A2
+  cascade). R91 inherited the WIP, verified gates green (no source
+  change), and shipped the bundle as a single recovery commit
+  (`5237f5b`). Adapter zero-regression streak extended to 39 rounds
+  (R52→R91, project-history high). Surfaced the **A2-of-A2 cascade
+  trap** as a new failure mode in
+  `software-development/cron-slot-handoff-recovery` skill —
+  one-deliverable-per-slot rule codified: when a slot starts by
+  inheriting close-out work, land it + push + end the slot, do not
+  start fresh research/planning even if budget feels abundant.
+- **R92 (i18n)**: Added 11 new keys under `replay.*` in both
+  `frontend/src/i18n/en.ts` and `frontend/src/i18n/zh.ts` covering all
+  user-visible Replay UI strings (`title`, `back`, `stepBack`,
+  `stepForward`, `stepOf` with `{{current}}/{{total}}` interpolation,
+  `kbdHint`, `empty`, `errorTitle`, `model`, `tool`, `stateAfter`).
+  Audit pre-commit confirmed all `t("replay.*")` references in
+  `Replay.tsx` + `PlaybackTimeline.tsx` resolve in both locales (R46-A
+  trap pre-empted).
 
 ## [0.7.0] — 2026-05-19 (Round 71 + R72 + R73 alpha bundle + R74 + R75 + R76 + R77 + R78 + R79 + R80 + R81 + R82 + R83 alpha2 + R84 + R85 + R86 + R87 GA)
 
