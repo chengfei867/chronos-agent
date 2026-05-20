@@ -21,6 +21,21 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
   change; ADR-026 §6 AC-2 closing note's "tracked for a future round to
   either reconcile or document explicitly in the contract" is closed
   via the "document explicitly" branch.
+- **R90**: Phase 5 arc selection charter committed. New
+  `docs/research/r90-phase-5-arc-survey.md` evaluates four candidate
+  arcs (Arc C replay UI, Arc D golden-trace fixtures, Arc E 5th
+  adapter, Arc F per-block split) along nine axes, and new
+  `docs/decisions/ADR-027-phase-5-arc-selection.md` (Draft) commits to
+  **Arc C — Replay UI / Time-Travel Debugger Frontend** as the Phase 5
+  first arc target with **Arc D** pre-authorised as hot-backup. Six
+  rounds R91-R98 across 4-5 slices, bundled as v0.8.0. Backend / adapter
+  / schema impact: zero — Arc C reads the existing `GET /runs/{id}/tree`
+  + `GET /runs/{id}/nodes` API surface, extending the adapter
+  zero-regression streak (R52→R89 = 37 rounds) through Phase 5 first
+  arc. `docs/roadmap.md` §"Phase 5+" stub replaced with the committed
+  charter. Zero source-code change; ADR-027 promotes from Draft to
+  Accepted at R91 after slice 1 spike per the R57 in-place promotion
+  rule.
 
 ## [0.7.0] — 2026-05-19 (Round 71 + R72 + R73 alpha bundle + R74 + R75 + R76 + R77 + R78 + R79 + R80 + R81 + R82 + R83 alpha2 + R84 + R85 + R86 + R87 GA)
 

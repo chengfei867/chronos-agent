@@ -229,11 +229,35 @@ the plan-artifact `fork plan emit → edit → fork plan exec` loop is the shipp
 
 ---
 
-## Phase 5+ — v1.0 and Beyond (Vague on purpose)
+## Phase 5 — Replay UI + post-Arc-C work (R90 charter, ADR-027)
 
-- Cloud-hosted option (opt-in SaaS)
-- Team features (shared trace libraries, comments, RBAC)
-- Pricing / commercial model experiments
+**Status**: Charter committed at R90 ([ADR-027][ADR-027-link] Draft, [r90-phase-5-arc-survey.md][r90-link]). Promotes to Accepted at R91 after slice 1 spike per R57 in-place rule.
+
+### First arc — Arc C: Replay UI / Time-Travel Debugger Frontend (recommended, R91-R98 ~6 rounds)
+
+The hero feature: interactive step-through replay of any recorded run, with state-evolution side panel, fork-tree replay mode, URL-shareable deep-links, optional lockstep two-run diff view. Read-only backend, zero adapter changes, target v0.8.0.
+
+- [ ] Slice 1 (R91, spike-first) — `Replay.tsx` core: linear playback timeline + keyboard nav + perf spike.
+- [ ] Slice 2 (R92) — State-evolution side panel + per-adapter `formatState` registry.
+- [ ] Slice 3 (R93-R94) — Fork-tree replay mode with diverge-point highlight.
+- [ ] Slice 4 (R95) — URL-shareable state (hash-router deep-link + clipboard copy).
+- [ ] Slice 5 stretch (R96-R97) — Diff-aware lockstep two-run replay.
+- [ ] Slice 6 (R98) — Polish + dogfood + v0.8.0 cut.
+
+**Arc C ACs**: AC-1 keyboard parity with CLI replay; AC-2 state panel covers all 4 first-class adapters; AC-3 fork-tree replay; AC-4 URL deep-links; AC-5 bundle delta ≤ +150 KB raw; AC-6 stretch lockstep.
+
+**Hot-backup arc (Arc D — Cross-framework golden-trace test fixtures)**: pre-authorised swap if R91 slice 1 spike fails OR if a relay-flake outage blocks a v0.7.x patch release. Per ADR-027 §6.
+
+### Deferred to Phase 6+
+
+- **Arc E — 5th adapter** (Pydantic AI most likely, R68/R69 deferred set). Re-evaluate when Arc C ships OR external user surfaces with framework demand.
+- **Arc F — Recorder per-block split** (R85 Option (b)). Defer indefinitely without explicit user mandate; reverses R89 Option (a).
+- **Cloud-hosted option (opt-in SaaS)** — premature without external users + Arc C demo surface.
+- **Team features (shared trace libraries, comments, RBAC)** — premature; needs Arc C deep-link as foundation.
+- **Pricing / commercial model experiments** — premature.
+
+[ADR-027-link]: decisions/ADR-027-phase-5-arc-selection.md
+[r90-link]: research/r90-phase-5-arc-survey.md
 
 ---
 

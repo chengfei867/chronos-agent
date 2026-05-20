@@ -147,6 +147,8 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
+**截至 Round 91 结束 (2026-05-22 CST cron slot ~00:55 → ~01:10, single-slot A2 close-out for R90 Phase 5 Arc selection planning, in 0–11 窗口) — Phase 5 charter committed (Arc C primary + Arc D hot-backup), ADR-027 Draft, docs/research/r90-phase-5-arc-survey.md shipped, roadmap §"Phase 5+" stub replaced with charter, adapter zero-regression streak R52→R91 = 39 rounds.** R91 = textbook A2 close-out: inherited 3 md artifacts from R90 cron slot (which had itself done an A2 close-out for R89 at commit `745d895`, then ran out of budget on its own Phase 5 planning work). R91 commits R90's WIP (research doc 344 lines + ADR-027 Draft 177 lines + roadmap charter replacement 29 lines) + adds the missing CHANGELOG `[Unreleased]/Documentation` R90 bullet + R91 progress doc + CONTEXT §5/§6/§7 + footer + commit + push. **A2 close-out chain length now 11** (R48-A → R51 → R52 → R53 → R59 → R63 → R65 → R67 → R70 → R72 → R90 → **R91**) — structural-constant hypothesis grade-A++. **R90 was a NEW failure shape — A2-of-A2 cascade** (slot did a successful close-out FIRST, then started fresh research work and timed out on its own close-out); ~7-10 calls of close-out preamble + ~40+ calls of fresh research = budget exhaustion before the second close-out reached `git commit`. **Codification candidate (R91 F-3, deferred to skill edit at R92+)**: when slot starts inheriting close-out work, do NOT plan a second new round in the same slot — land the inherited close-out, post QQ report, end the round.
+
 **截至 Round 89 结束 (2026-05-21 CST cron slot ~06:04 → ~06:30, single-slot docs-only contract reconciliation round, well inside 0–11 窗口) — Recorder kind-dispatch contract reconciled docs-only via Option C(a); R85 contract finding promoted from inline ADR closing-note to permanent contract doc.** R89 = guaranteed-green docs-only round, deliberately picked from R88 §6's three default-track candidates (C(a) docs reconciliation / D 6th fixture site migration / β offline-fixture AC-3). Chose C(a) because (1) cheapest slot-budget — md-only, no test churn, no `uv` lockfile risk; (2) drains the *oldest* outstanding contract debt — R85 finding (2026-05-18) carried unresolved through R86/R87/R88; (3) zero coupling to relay health → guaranteed green; (4) re-establishes "boring round" cadence after R86/R87/R88 release-engineering churn (per R88 §6 explicit intent). Mid-round: detected a **second drift point in `docs/adapters/anthropic_agents.md` line 84** (`UserMessage → kind=fn / name=user`, but recorder produces `kind=llm / name=UserMessage` — wrong since R71, undetected through 18 rounds + 5 alpha cuts + 1 GA). Fixed in same sweep. Ships 5 artifacts: new `docs/contracts/adapter-protocol.md` 187-line authoritative cross-adapter contract doc (3 protocols + 2 dataclasses + 1 exception + 5 lifecycle invariants + envelope-determines-kind subsection with concrete mapping table + 3-reason rationale + dead-map-entries explanation + adapter MUST/MUST-NOT sections + stability declaration), `docs/adapters/anthropic_agents.md` Message → Node table fix (both kind and name drifts) + cross-reference to contracts doc + multi-block linkage callout, CHANGELOG `[Unreleased] / Documentation` R89 bullet, ADR-026 §6 AC-2 closing note updated (the "tracked for a future round" phrasing replaced with "reconciled docs-only at R89 via..." pointing at the new contract doc), and progress doc `docs/progress/2026-05-21-round-89.md` ~290 lines §0–§7. Decision: chose option (a) "document envelope-determines-kind as intentional" over option (b) "split blocks into separate nodes via ADR-027" — rationale (D-1) is post-GA breaking-change cost asymmetry: (a) is 1-round md-only, (b) would be 6+ rounds of ADR + recorder refactor + tu_id re-stamp + 30+ test rewrites + alpha→GA cycle. Decision: keep dead `ToolUseBlock`/`ToolResultBlock` entries in `_DEFAULT_KIND_MAP` rather than prune (D-2) — they're harmless, forward-compat, and defensively useful; pruning adds a noisy git-blame entry. Decision: skip `uv run pytest` this round (D-3) — docs-only, no src/test touched, R88 baseline carries forward. Pre-flight: `git fetch origin main` resolved a stale-ref `[ahead 2]` apparent-state (R48-B trap re-confirmed for the Nth time — `cron-slot-handoff-recovery` skill Step 1 worked as designed). 5/5 prereqs green, in-window, working tree clean, CONTEXT §5/§6 markers present.
 
 - **Round: 89** (docs-only contract reconciliation, single-slot, no impl/test code change). 0 hard blocker. R89 added zero new src/test code. R88 baseline carries forward: pytest 648/9/0/0 in 17.65s, mypy clean (38 src files), ruff check + format clean, `chronos --version` prints `0.7.0`. Drift sweep `grep` self-checks all clear (CHANGELOG `### Documentation` count = 1, ADR-026 contracts-doc cross-ref count = 1, drift `kind=fn.*UserMessage` count = 0).
@@ -898,117 +900,77 @@ R73 是 R69→R72 4-round chain 的第一个真 disprover round, 也是 Phase 4 
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 90 — boring-cadence is restored; R90 picks freely from 4 ranked options; default = Option α Phase 5 Arc selection planning (md-only); 1–2 slot pre-budget**
+**Round 92 — Phase 5 Arc C slice 1 spike (per ADR-027 §2 slice 1); spike-first; 1–2 slot pre-budget; ADR-027 promotes Draft → Accepted in-place after spike runs green (R57 rule)**
 
-R89 cleanly closed the oldest piece of contract debt (R85 finding, ADR-026 §6 AC-2 closing note "tracked for a future round" → resolved via `docs/contracts/adapter-protocol.md`). R86/R87/R88/R89 sequence now reads "release-engineering attempt + revert → GA cut → recovery → docs polish" — boring-round cadence is restored. R90 picks freely from 4 options, **default = Option α Phase 5 Arc selection planning**.
+R91 closed out R90's inherited Phase 5 Arc selection planning WIP — ADR-027 Draft + research survey + roadmap charter all shipped at this commit. Adapter zero-regression streak R52→R91 = 39 rounds (project-history high). Phase 5 Arc C (Replay UI / Time-Travel Debugger Frontend) is the committed first arc with **Arc D (Cross-framework golden-trace test fixtures) pre-authorised as hot-backup** if R92 slice 1 spike fails (per ADR-027 §6 fallback clause).
 
-### R90 hard-prereqs to verify pre-flight (R88 codified, R89 re-confirmed)
+### R92 hard-prereqs to verify pre-flight (carried from R88+R89+R90, R91 re-confirmed)
 
 Before any new work, run the 60-second remote-state sanity check:
 
-1. `git fetch origin main` then `git status` clean + in-sync with origin/main. *(R48-B trap: ALWAYS fetch first; R89 hit this trap, skill Step 1 worked as designed.)*
-2. `git tag --list "v0.7*"` includes **`v0.7.0`** (R88's recovery output, still on remote).
-3. `git ls-remote --tags <gh-proxy>/chengfei867/chronos-agent.git | grep v0.7.0` includes `v0.7.0` (NOT just `v0.7.0a1`/`a2`).
+1. `git fetch origin main` then `git status` clean + in-sync with origin/main. *(R48-B trap re-confirmed at R89/R90: ALWAYS fetch first.)*
+2. `git tag --list "v0.7*"` includes **`v0.7.0`**.
+3. `git ls-remote --tags <gh-proxy>/chengfei867/chronos-agent.git | grep v0.7.0` includes `v0.7.0`.
 4. `releases/latest` API returns `tag_name=v0.7.0`.
 5. `chronos --version` = `0.7.0`.
 
-If any of those five fail, **another recovery round** is needed before any new work, per `cron-slot-handoff-recovery` skill. Do NOT start option work until all five pass.
+### R92 default plan — Phase 5 Arc C slice 1 (frontend spike, R91 commits charter; R92 starts implementation)
 
-### Option α — Phase 5 Arc selection planning (md-only, **R90 default, 1–2 slot, autonomous, zero gate-drift risk**)
-
-**Trigger**: chosen if R90 wants to set the next 3–6 rounds of impl direction. **Recommended.**
-
-**Why default**: Phase 4 fully closed at v0.7.0 GA (R87+R88 release-engineered, R89 docs-polished). Project is at a natural planning beat. Output (research doc + draft ADR) feeds the next 3–6 rounds. 0-cost, 0-relay, no environmental dependencies. Continues the "boring round" cadence R89 re-established.
-
-**Goal**: re-read `docs/roadmap.md` for Arc selection. Phase 5 candidates from R88/R89 hand-off:
-- Arc C: replay UI / time-travel debugger interactive frontend (Web React, leverages R37/R46-A modal pattern).
-- Arc D: cross-framework golden-trace test fixtures (deterministic regression layer for all 4 adapters).
-- Arc E: 5th adapter (OpenAI Agents SDK / Vercel AI SDK / LlamaIndex agents / AG2 / CrewAI Flows v2).
-- Arc F: recorder-seam refactor (heavy variant of R85 Option (b) — split blocks per ADR-027; only relevant if explicit user mandate).
+**Goal**: spike `Replay.tsx` skeleton + `PlaybackTimeline.tsx` per ADR-027 §2 slice 1 deliverable.
 
 **Plan**:
-1. Read `docs/roadmap.md` Phase 5 section + most recent `docs/research/r66-fork-tree-viz-audit.md` for prior-art shape.
-2. Author `docs/research/r90-phase-5-arc-survey.md` — 4 candidate Arcs with: scope sketch, dependencies, est. round count, slot budget, risk class, GA-gate AC outline, "what unlocks" downstream.
-3. Author `docs/decisions/ADR-027-phase-5-arc-selection.md` Draft — pick one Arc with rationale, defer others, define slice 1 scope.
-4. Update `docs/roadmap.md` to mark Phase 4 closed + Phase 5 chosen Arc as active.
-5. Standard close-out: progress doc + CONTEXT §5/§6 + commit + push.
+1. Read `docs/decisions/ADR-027-phase-5-arc-selection.md` §2 slice 1 + `docs/research/r90-phase-5-arc-survey.md` §3 Arc C scope detail.
+2. Spike `tests/spikes/spike16_replay_ui.py` (or React Testing Library smoke if browser-side) — validate (a) `usePlayback` hook from R37 is reusable for linear replay without API change, (b) timeline render perf ≤16ms for 200-node trace, (c) keyboard nav contract (←/→ step, Space play/pause).
+3. `frontend/src/pages/Replay.tsx` skeleton (+ wire into `App.tsx` route table).
+4. `frontend/src/components/PlaybackTimeline.tsx` core component.
+5. Strict-xfail forcing function for AC-1 keyboard-nav contract (R76→R77 / R79→R80 / R81→R82 pattern).
+6. Standard close-out: progress doc + CHANGELOG + CONTEXT §5/§6 + commit + push.
+7. **Promote ADR-027 Draft → Accepted in-place** (R57 rule) after spike runs green.
 
-**Pre-budget**: 1–2 slots. md-only zero gate-drift.
+**Pre-budget**: 1–2 slots (spike-first per ADR-027 §3). Slot-1: spike + bare skeleton; slot-2 (if needed): full slice 1 deliverable + close-out.
 
-**Risk**: minimal — planning round, no code.
+**Risk**: low — frontend-only, zero backend/adapter/schema impact, zero relay coupling. Adapter zero-regression streak (39 rounds) protected.
 
-### Option β — Offline-fixture AC-3 closure path (post-polish, ADR-027 candidate, **1–2 slot, autonomous, relay-independent**)
+### Hot-backup: Arc D — Cross-framework golden-trace test fixtures (pre-authorised, ADR-027 §6)
 
-*(Note: ADR number conflicts with Option α's ADR-027 — if both ship in same window, the offline-fixture path becomes ADR-028.)*
+**Trigger**: chosen ONLY if R92 slice 1 spike fails (e.g. `usePlayback` not reusable for linear replay, or perf budget blown). Per ADR-027 §6 fallback clause, swap Arc C → Arc D without a new ADR.
 
-**Status**: less urgent than at R87/R88 hand-off. AC-3 ratchet stable across R87 (live observed) + R88 (re-verified) + R89 (docs reconciled). GA is shipped + visible on GitHub. Future relay flakes don't block any release.
+### Optional δ — ADR-016 ↔ contracts doc reorg (deferred from R90)
 
-**Trigger**: chosen if R90 prefers to close one piece of impl debt before planning Phase 5.
+Still available as a low-budget filler round. Decide canonical authority — keep ADR-016 for "why this protocol exists" + redirect operational details to `docs/contracts/adapter-protocol.md`; OR fully reorg ADR-016 → archived. md-only, 0.5 slot. R91 deferred this; R92 should focus on Arc C spike rather than this filler.
 
-**Goal**: capture R85 + R87 dogfood live-protocol JSONL transcripts during a green-relay window, build a fake `claude-agent-sdk` shim that replays the captured envelopes, and assert recorder + fork primitive correctness against the fake. Result: AC-3 gate becomes deterministic + runs in CI without `CHRONOS_LIVE=1` or `ANTHROPIC_API_KEY`. Recurring relay flakes no longer block any future GA gate.
+### Hard constraints / process invariants R92 must honor
 
-**Pre-budget**: 2 slots if recapture needed (likely — protocol logs from R85/R87 weren't preserved); 1 slot if logs found. Spike-first if uncertain (`tests/spikes/spike15_protocol_log_replay.py`).
+- **Pre-flight remote-state check** (R88 codified, R89/R90/R91 re-confirmed): always `git fetch` first; verify all 5 hard-prereqs above.
+- **Disprover-first / spike-first** (ADR-027 §3 + R69 lesson): if R92 picks Arc C slice 1, run the spike BEFORE writing the full Replay.tsx component. The spike validates the three R57-spike-pattern assumptions (`usePlayback` reusability + perf + keyboard contract); only after green do we commit to the full slice 1 implementation surface.
+- **R57 in-place promotion rule**: ADR-027 promotes Draft → Accepted in the SAME diff that lands the slice 1 spike-green proof. Do NOT promote before observation.
+- **Strict-xfail forcing function**: write AC-1 keyboard-nav as `xfail(strict=True)` against the not-yet-existing component, then implement until strict-xfail trips → impl commit MUST remove markers in same diff.
+- **Tool-call iteration budget** (R69/R71/R78/R80/R90 patterns): R92 is a code round with frontend tooling churn (vite + tsc + ESLint). Reserve last 8 calls for ship; commit the spike script + bare skeleton at first green-gate intermediate, BEFORE attempting full Replay.tsx + PlaybackTimeline.tsx prose.
+- **2-slot pre-budget for impl rounds** (R48-A → R91 = 14-round inheritance chain): if R92 picks Arc C slice 1, budget 2 slots with explicit slot-1 (spike + skeleton) / slot-2 (close-out + full slice 1) plan.
+- **Lockfile-trap**: if `package-lock.json` regenerates from `npm install`, check `git diff package.json` first per R65/R68/R70 recipe.
+- **Adapter zero-change**: do NOT touch `src/chronos/adapters/*` in R92. Streak protected (currently 39 rounds, project-history high).
+- **A2-of-A2 cascade lesson** (R91 F-3, NEW): when slot starts inheriting close-out work, do NOT plan a second new round in the same slot. Land the close-out, post QQ, end. R90 violated this and burned the round; R91 honored this and shipped.
 
-**Risk**: low — purely additive; touches `tests/fakes/` and new ADR; no src/ change. Strict-xfail forcing function applies.
+### What's done (no need to redo at R92)
 
-### Option γ — 6th fixture site migration (mechanical, **0.5–1 slot**)
+- ✅ All 5 ADR-026 §6 ACs `[x]` — AC-1/2/3/4/5 closed, R88 release-engineered + R89 contract-doc-reconciled.
+- ✅ v0.7.0 GA tag cut, GitHub Release page live, `make_latest=true`.
+- ✅ Phase 4 fully closed.
+- ✅ `docs/contracts/adapter-protocol.md` is the canonical cross-adapter contract source (R89).
+- ✅ Phase 5 arc selection committed (R90+R91): Arc C primary, Arc D hot-backup, Arc E/F deferred to Phase 6+. ADR-027 Draft, promotes at R92 post-spike.
+- ✅ Adapter zero-regression streak R52→R91 = **39 rounds** (project-history high, +1 each round since v0.5.0/R55).
+- ✅ A2 close-out 11-chain (R48-A through R91) — structural constant grade-A++.
 
-**Trigger**: chosen as a warm-up if R90 wants the lightest possible round (e.g. low-time-budget slot).
+### Cost outlook for R92
 
-**Goal**: migrate `tests/unit/test_adapter_anthropic_agents.py` to use shared fixtures from `tests/unit/fixtures/anthropic_agents_stubs.py` (R84 deferred this 6th site; 5 already migrated). Closes the 6-of-6 fixture migration count.
-
-**Pre-budget**: 0.5–1 slot. R76→R84 fixture-migration playbook applies.
-
-**Risk**: minimal — mechanical refactor, tests stay green throughout.
-
-### Option δ — ADR-016 ↔ contracts doc reorg (md-only, **0.5 slot**)
-
-**Trigger**: chosen if R90 wants to clean up overlap between ADR-016 (decision rationale) and the new `docs/contracts/adapter-protocol.md` (operational details).
-
-**Goal**: decide canonical authority — keep ADR-016 for "why this protocol exists" + redirect operational details to contracts doc; OR fully reorg ADR-016 to archived status with contracts doc as the only source of truth.
-
-**Pre-budget**: 0.5 slot. md-only.
-
-**Risk**: minimal. Defer if R90 picks α and α's ADR-027 reorg implies a different ADR-016 disposition anyway.
-
-### Hard constraints / process invariants R90 must honor
-
-- **Pre-flight remote-state check** (R88 codified, R89 re-confirmed): always `git fetch` first; verify all 5 hard-prereqs above.
-- **R85/R89 doc-drift sweep heuristic** (NEW at R89): when documenting any contract, cross-check against runtime source AND scan all docs that touch the same surface. The `UserMessage → fn` drift survived 18 rounds because no round actively swept the table against the recorder's `_DEFAULT_KIND_MAP`.
-- **"Tracked for future" debt has 4-round half-life** (R89 calibration): scan most recent ADR closing-notes for `tracked for future` / `TBD` / `TODO` phrases at every cron slot start; surface aging debt before it normalizes away.
-- **Disprover-first** (R73 invariant, formalized R87): if R90 picks any option depending on a previous-round un-tested research conclusion, run smallest disprover before committing budget.
-- **2-slot pre-budget for impl rounds** (R48-A → R89 = 13-round inheritance chain): if R90 picks β, budget 2 slots with explicit slot-1 / slot-2 plan.
-- **Spike-first if uncertain** (`chronos-spike-authoring`): if Option β protocol-log capture path is uncertain, write `tests/spikes/spike15_protocol_log_replay.py` first.
-- **Strict-xfail forcing function** (R76→R77 / R79→R80 / R81→R82 pattern): if R90 picks β, write the 5 invariants as strict-xfail tests against the not-yet-existing fake shim, then implement until all 5 turn green.
-- **No retroactive AC unratchet on relay flake** (R86 invariant, codified R87): if R90 hits a relay flake, AC-3 stays `[x]`. Only a hard regression in adapter code unratchets a recorded AC.
-- **Docs-only round = cadence-restorer** (R89 NEW): after 2+ consecutive release-engineering rounds, schedule a docs-only round to drain accumulated md-debt. R86/R87/R88 → R89 pattern validated.
-- **Aspirational-release-doc trap detector — TWO variants** (`cron-slot-handoff-recovery`, R88 refinement): if R90 inherits any WIP or any release claim, run the 7-row diagnostic table to distinguish R86-shape (revert) vs R88-shape (complete-at-existing-commit). The discriminator is gate-evidence-validity.
-- **Post-action remote verification** (R88 finding #2): after any release-engineering step (commit, tag, push, Release POST), verify with a remote query (`git ls-remote --tags` + `releases/latest` API) before declaring done. Progress docs are intent + claim; ground truth is git history + remote API state.
-
-### What's done (no need to redo at R90)
-
-- ✅ All 5 ADR-026 §6 ACs `[x]` — AC-1 (recorder + 4-block contract), AC-2 (MCP live-smoke + R85 contract finding reconciled at R89), AC-3 (override-fork live-smoke), AC-4 (Phase B fork-with-tool-input/result-substitution), AC-5 (zero-regression streak).
-- ✅ v0.7.0 GA tag cut, GitHub Release page live, `make_latest=true` (R88 release-engineering completion of R87).
-- ✅ R86 dogfood scaffolding shipped (production-grade, no rebuild needed at R90).
-- ✅ Arc B slice 1 implementation series complete (R70-R83 alpha, R85-R87 GA close, R88 release-engineering completion, R89 contract docs reconciliation).
-- ✅ Adapter-1-3 zero-regression streak R52→R89 = **37 rounds** (un-changed at R88+R89, continuing).
-- ✅ R86 contract pre-finding promoted to finding at R87 (live observation matched source-inspection prediction).
-- ✅ `cron-slot-handoff-recovery` skill: 7-row diagnostic table + 5-step partial-execution recovery recipe + pre-flight remote-state sanity check (codified at R88).
-- ✅ R85 envelope-determines-kind contract finding reconciled at R89 — `docs/contracts/adapter-protocol.md` is the canonical source of truth; ADR-026 §6 AC-2 closing-note debt drained; per-adapter doc table fixed.
-- ✅ Doc drift sweep heuristic codified at R89 (F-1) — when documenting a contract, cross-check runtime source AND scan all docs touching the same surface.
-
-### Cost outlook for R90
-
-- Option α: $0 (planning + md only).
-- Option β: $0 (offline) for impl + $0.20 if recapture needed.
-- Option γ: $0 (test refactor only).
-- Option δ: $0 (docs reorg only).
+- Arc C slice 1 spike: $0 (frontend-only, zero relay).
+- Arc D fallback: $0 (test fixtures only, no relay required after capture).
 
 ### v0.7.0+ release version line
 
-- v0.7.0 ✅ shipped at R87 + release-engineering completed at R88 (Arc B slice 1 GA, all 5 ACs, AC-3 closed against live relay, tag + Release page live).
-- v0.7.1 — patch candidate: R89 contract docs + Option γ fixture migration if shipped + any Option δ reorg (~1-2 slots bundled, R90-R91 plausible). Tag once enough md polish accumulates. No semver-public-surface delta.
-- v0.7.2+ — depends on Phase 5 Arc selection (Option α output).
+- v0.7.0 ✅ shipped at R87+R88, R89-R91 docs polish accumulated under `[Unreleased]/Documentation`.
+- v0.7.1 — patch candidate: bundle R89 + R90 + R91 docs polish + Option δ (ADR-016 reorg) if shipped (~1 slot). Tag once enough md polish accumulates AND R92 spike confirms charter direction.
+- v0.8.0 — Phase 5 Arc C bundle (R92-R98, ~6-7 rounds): full Replay UI + state panel + fork-tree replay + URL deep-links + optional lockstep diff. Slice 1 (R92) opens the bundle.
 ## 7. 文档索引 (当你需要深入某个主题)
 
 | 主题 | 文档 |
@@ -1023,6 +985,9 @@ If any of those five fail, **another recovery round** is needed before any new w
 | Phase 4 charter (Arc A accepted) | `docs/decisions/ADR-023-phase-4-charter-skeleton.md` |
 | Arc A slice 4 (multi-pivot compare) ADR | `docs/decisions/ADR-024-multi-pivot-compare.md` |
 | Arc A slice 4 research survey | `docs/research/r61-multi-pivot-alignment.md` |
+| Adapter cross-protocol contract (R89) | `docs/contracts/adapter-protocol.md` |
+| Phase 5 Arc selection charter (R90+R91, Arc C primary + Arc D hot-backup) | `docs/decisions/ADR-027-phase-5-arc-selection.md` |
+| Phase 5 Arc selection 4-arc × 9-axis survey (R90) | `docs/research/r90-phase-5-arc-survey.md` |
 | 路线图 | `docs/roadmap.md` |
 | 所有历史进展 | `progress/*.md` (按时间排序) |
 
@@ -1051,7 +1016,9 @@ If any of those five fail, **another recovery round** is needed before any new w
 
 *Previous footer: 2026-05-19 (CST ~07:50, R86 cron slot inside 0–11 window, slot-2 of 2-slot impl round) by Round 86 agent — **GA-gate AC-3 attempt landed scaffolding (production dogfood + pytest live wrapper + extracted shared degradation classifier + 17-case unit test); AC-3 NOT closed (relay degradation env-flake, deferral conservative); v0.7.0 GA cut deferred to R87+; new failure-mode "aspirational-release-doc trap" discovered + recovered + codified into `cron-slot-handoff-recovery` skill**. A2 close-out #12 per skill over slot-1 (~05:30) WIP: 6 paths uncommitted (4 new files: `scripts/dogfood/_degradation.py` 145 LOC shared classifier extracting R85 inline 3-marker substring set + 14 envelope shapes + `is_relay_degraded_exception(exc)` API; `scripts/dogfood/arc_b_slice_3_fork_override.py` ~330 LOC AC-3 release-gate dogfood — record FN→record turn-1 LLM stamping ToolUseBlock with state_after['tool_use_id'] → fork(parent_run_id, up_to_message_id, tool_input_overrides) → child carries fresh tu_id with overridden args + UserMessage(ToolResultBlock) matching child's tu_id; `tests/live/test_anthropic_agents_fork_override_smoke.py` 28 LOC subprocess-runs dogfood + greps INVARIANTS-GREEN marker; `tests/unit/test_dogfood_degradation.py` 17 parametrized cases covering R69/R71/R85/R86 envelope shapes; 2 modified md: `CHANGELOG.md` + `docs/decisions/ADR-026-arc-b-scope.md` §6 AC-3 staying `[~]` w/ "GA-gate verdict R86: deferred (env-flake)" line). Slot-1 ran R86 dogfood → relay returned `{"error":{"message":"upstream provider error","code":500}}` (synthetic-model + provider 5xx cascade — 同一只 R85 也已 capture 的 OneAPI relay degraded mode), exit 2 with classifier-blessed degradation message; **slot-1 then made the right call**: instead of pretending green, reverted its own aspirational `[0.7.0] — 2026-05-19` CHANGELOG block back to `[Unreleased]` honest findings, kept ADR §6 AC-3 at `[~]`, kept production scaffolding (it's correct), captured failure-mode in skill (so all future cron slots learn). Slot-2 (this slot, A2 close-out): `git fetch` clean, `git status` 6 paths matching slot-1 honest revert, deleted scratch `scripts/dogfood/_r86_probe.py` 30-line probe (one-time scaffolding, learning encoded in production artifacts per R86 spike-disposal rule), gates green **648 pass / 9 skip / 0 xfail / 0 fail** in 18.40s (zero adapter regression vs R85 baseline; +17 unit dogfood-degradation tests confirms classifier extraction safe), `git diff pyproject.toml uv.lock` empty (no lockfile-trap), ruff check + format + mypy 全 clean (38 src files), wrote `docs/progress/2026-05-19-round-86.md` 472 LOC §0–§6 documenting trap discovery + recovery + 5 invariants + R87 path-A1 vs path-A2 plan, patched CONTEXT §5/§6 + footer (本 patch), commit + push gh-proxy + QQ war report. **Six R86 invariants 上墙**: (1) **Aspirational-release-doc trap** — never write release block before live-smoke 实际 green; never flip AC `[x]` before INVARIANTS-GREEN marker 实际观察到; codified in `cron-slot-handoff-recovery` skill so future slots inheriting half-built release WIP recognize the failure-mode. (2) **Relay-flake corollary** — environmental flakes don't retroactively unratchet historical adapter-code claims; AC-2 stays `[x]` even though R85 dogfood today exits 2 against the same relay; AC-3 stays `[~]` until *observed* green, not because R86 confidence-degraded. (3) **`is_relay_degraded_exception(exc) -> bool`** = mandatory shared classifier for any future dogfood touching OneAPI relay; R85's inline 3-marker mistake superseded by 14-envelope substring set in `_degradation.py` + 17 parametrized unit tests; new envelope shape requires substring + case + 17→18 test count. (4) **Spike disposal rule** — one-shot scaffolding (learning encoded into production artifacts) → delete (R86 chose for `_r86_probe.py`); multi-round-relevant contract probe → `tests/spikes/spikeN_*.py` per `chronos-spike-authoring`; default delete unless明显 reusable. (5) **A2 inheritance can include prior-slot-honest-revert** — slot-1 may revert its own aspirational claims before iteration-budget death; slot-2 verifies-and-ships not redo; this round 是首次 demonstrating slot-1 self-corrected before handoff. (6) **2-slot pre-budget for impl rounds with live-smoke** holds — R86 used both slots: slot-1 wrote scaffolding + caught trap + reverted; slot-2 verified + cleaned + shipped. **Adapter-1-3 zero-regression streak R52→R86 = 34 rounds** (no adapter touched in R86; classifier is `scripts/dogfood/` support module not `src/`). No tag cut. R87 default plan: probe-first (30-line spike calling R85 dogfood ~$0.05) → if relay green re-run R86 dogfood (~$0.14) → cut v0.7.0 GA per `chronos-release-pattern` 8-step skill (Option A path-A1); if relay still degraded → write ADR-027 + offline-fixture closure path (Option B path-A2) decoupling AC-3 gate from relay health long-term.*
 
-*Last updated: 2026-05-21 (CST ~06:30, R89 cron slot inside 0–11 window, single-slot docs-only contract reconciliation round) by Round 89 agent — **R85 envelope-determines-kind contract finding promoted from inline ADR closing-note to permanent contract doc**. Ships 5 artifacts: new `docs/contracts/adapter-protocol.md` (~10.6 KB / 187 lines authoritative cross-adapter contract doc with envelope-determines-kind subsection), `docs/adapters/anthropic_agents.md` Message → Node table fix (both `kind=fn` → `llm` AND name `user/assistant/system/result` → `UserMessage/AssistantMessage/SystemMessage/ResultMessage` drift — wrong since R71, undetected through 18 rounds + 5 alpha cuts + 1 GA), CHANGELOG `[Unreleased] / Documentation` R89 bullet, ADR-026 §6 AC-2 closing-note resolved via in-place reference, progress doc `docs/progress/2026-05-21-round-89.md`. Decision: Option C(a) "document envelope-determines-kind as intentional" chosen over option (b) "split blocks into separate nodes via ADR-027" — rationale is post-GA breaking-change cost asymmetry (1-round md-only vs 6+-round impl + alpha→GA cycle). Decision: keep dead `ToolUseBlock`/`ToolResultBlock` entries in `_DEFAULT_KIND_MAP` rather than prune (defensive forward-compat). Decision: skip `uv run pytest` this round (R88 baseline carries forward — 648/9/0/0 in 17.65s, mypy clean, ruff clean, `chronos --version=0.7.0`). **Four R89 findings on wall**: (F-1) Doc drift can persist GA-long if not actively swept — `UserMessage → fn` survived 18 rounds because no round actively swept the per-adapter table against `_DEFAULT_KIND_MAP`. (F-2) "Tracked for future" inline-ADR debt has 4-round half-life — codify scan-for-aging-debt as cron-slot pre-flight invariant. (F-3) Docs-only rounds are the right cadence-restorer after release-engineering churn — pattern after 2+ consecutive release rounds, schedule a docs round. (F-4) R48-B stale-ref trap re-confirmed at R89 (`git fetch` first, always). Pre-flight 5/5 prereqs green. **Adapter zero-regression streak R52→R89 = 37 rounds un-changed** (project-history high; R89 ships zero src/test code). Zero source code change, zero test change, zero version delta — pure documentation reconciliation. R90 default branch: Option α Phase 5 Arc selection planning (md-only, autonomous, recommended) — alternatives Option β (offline-fixture AC-3 / ADR-028 candidate), Option γ (6th fixture site migration), Option δ (ADR-016 ↔ contracts doc reorg).*
+*Last updated: 2026-05-22 (CST ~01:10, R91 cron slot inside 0–11 window, single-slot A2 close-out for R90 Phase 5 Arc selection charter) by Round 91 agent — **A2 close-out for R90's inherited Phase 5 Arc selection planning WIP** (3 md artifacts: ADR-027 Draft `docs/decisions/ADR-027-phase-5-arc-selection.md` 177 lines committing Arc C primary + Arc D pre-authorised hot-backup per R68 fallback-clause pattern; research survey `docs/research/r90-phase-5-arc-survey.md` 344 lines × 4-arc × 9-axis evaluation; roadmap §"Phase 5+" 29-line stub → committed charter replacement). R91 5-artifact ship: adopted R90's 3 WIP files verbatim (high-quality, scope-coherent, no rationale to redo) + added missing CHANGELOG `[Unreleased]/Documentation` R90 bullet (charter narrative) + R91 progress doc `docs/progress/2026-05-21-round-91.md` 17719 bytes documenting close-out + 6 R91 findings (F-1: A2-of-A2 cascade is new failure-shape — slot did successful close-out FIRST then started fresh research = budget exhaustion before second close-out; F-2: do NOT plan a second new round in same slot when inheriting close-out work; F-3: ADR-027 honors R57 in-place promotion rule by staying Draft until slice-1 spike runs green at R92+; F-4: 11-chain A2 inheritance R48-A→...→R91 is structural-constant grade-A++ confirmation; F-5: zero src/test churn on close-out rounds protects adapter zero-regression streak; F-6: charter ADR + research survey + roadmap edit is the canonical Phase-N+1 planning bundle, reusable for Phase 6+) + CONTEXT §5/§6/§7 updates + this footer. Decision: ADR-027 stays **Draft** this round (R57 rule — promote in-place at slice-1 spike-green proof, deferred to R92+). Decision: keep Arc D as hot-backup not Arc 1.5 (per ADR-027 §6 fallback clause, R68 pattern). Decision: skip `uv run pytest` re-run (R88 baseline carries — 648/9/0/0 in 17.65s, mypy clean, ruff clean, `chronos --version=0.7.0`; R89/R90 confirmed; R91 added zero src/test code). Pre-flight 5/5 prereqs green. **Adapter zero-regression streak R52→R91 = 39 rounds** (project-history high; +1 per round since v0.5.0/R55, un-broken across Phase 4 Arc A slices 1-5 + Phase 4 Arc B slice 1 + 4 stable releases v0.5.0/v0.5.1/v0.6.0/v0.7.0 + 2 alphas + 5 docs-polish rounds R85-R91). Zero source code change, zero test change, zero version delta — pure documentation reconciliation + Phase 5 charter close-out. R92 default plan: Phase 5 Arc C slice 1 spike per ADR-027 §2 — `tests/spikes/spike16_replay_ui.py` validating (a) `usePlayback` reusability (R37 hook) for linear replay, (b) timeline render perf ≤16ms for 200-node trace, (c) keyboard nav contract; followed by `frontend/src/pages/Replay.tsx` skeleton + `frontend/src/components/PlaybackTimeline.tsx`; ADR-027 promotes Draft → Accepted in same diff after spike runs green (R57 rule). Hot-backup if spike fails: Arc D (cross-framework golden-trace test fixtures) per ADR-027 §6 fallback clause without new ADR. Pre-budget 1-2 slots (spike-first per ADR-027 §3).*
+
+*Previous footer: 2026-05-21 (CST ~06:30, R89 cron slot inside 0–11 window, single-slot docs-only contract reconciliation round) by Round 89 agent — **R85 envelope-determines-kind contract finding promoted from inline ADR closing-note to permanent contract doc**. Ships 5 artifacts: new `docs/contracts/adapter-protocol.md` (~10.6 KB / 187 lines authoritative cross-adapter contract doc with envelope-determines-kind subsection), `docs/adapters/anthropic_agents.md` Message → Node table fix (both `kind=fn` → `llm` AND name `user/assistant/system/result` → `UserMessage/AssistantMessage/SystemMessage/ResultMessage` drift — wrong since R71, undetected through 18 rounds + 5 alpha cuts + 1 GA), CHANGELOG `[Unreleased] / Documentation` R89 bullet, ADR-026 §6 AC-2 closing-note resolved via in-place reference, progress doc `docs/progress/2026-05-21-round-89.md`. Decision: Option C(a) "document envelope-determines-kind as intentional" chosen over option (b) "split blocks into separate nodes via ADR-027" — rationale is post-GA breaking-change cost asymmetry (1-round md-only vs 6+-round impl + alpha→GA cycle). Decision: keep dead `ToolUseBlock`/`ToolResultBlock` entries in `_DEFAULT_KIND_MAP` rather than prune (defensive forward-compat). Decision: skip `uv run pytest` this round (R88 baseline carries forward — 648/9/0/0 in 17.65s, mypy clean, ruff clean, `chronos --version=0.7.0`). **Four R89 findings on wall**: (F-1) Doc drift can persist GA-long if not actively swept — `UserMessage → fn` survived 18 rounds because no round actively swept the per-adapter table against `_DEFAULT_KIND_MAP`. (F-2) "Tracked for future" inline-ADR debt has 4-round half-life — codify scan-for-aging-debt as cron-slot pre-flight invariant. (F-3) Docs-only rounds are the right cadence-restorer after release-engineering churn — pattern after 2+ consecutive release rounds, schedule a docs round. (F-4) R48-B stale-ref trap re-confirmed at R89 (`git fetch` first, always). Pre-flight 5/5 prereqs green. **Adapter zero-regression streak R52→R89 = 37 rounds un-changed** (project-history high; R89 ships zero src/test code). Zero source code change, zero test change, zero version delta — pure documentation reconciliation. R90 default branch: Option α Phase 5 Arc selection planning (md-only, autonomous, recommended) — alternatives Option β (offline-fixture AC-3 / ADR-028 candidate), Option γ (6th fixture site migration), Option δ (ADR-016 ↔ contracts doc reorg).*
 
 *Previous footer: 2026-05-20 (CST ~03:10, R88 cron slot, single-slot release-engineering recovery round) by Round 88 agent — **v0.7.0 GA tag + GitHub Release page complete (R87 partial-execution recovery)**. Trap detection: R87's progress doc claimed "tag pushed + Release page POST'd + make_latest=true" but actual remote state at slot start showed R87 commit `92a3e19` un-pushed (1-ahead-of-origin), no `v0.7.0` tag locally OR on remote (only v0.7.0a1/a2), and `releases/latest` API still returning v0.6.0. Per `cron-slot-handoff-recovery` skill 7-row diagnostic: this is the **partial-execution recovery variant** (gate evidence intact, only release-engineering steps missing) — distinct from R86's true-aspirational variant (gate evidence fabricated). Recovery sequence completed: gate re-verify → push R87 commit → annotated `v0.7.0` tag at R87's `92a3e19` → push tag → POST GitHub Release page (release_id `325261861`, prerelease=false, make_latest=true) → verify `releases/latest` returns v0.7.0 (de-throne v0.6.0). Skill updated with R88 7-row diagnostic table + 5-step partial-execution recipe + pre-flight remote-state sanity check. Adapter zero-regression streak R52→R87 = 35 rounds.*
 
