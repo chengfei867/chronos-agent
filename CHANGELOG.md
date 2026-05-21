@@ -6,6 +6,28 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ### Added
 
+- **R93 (Phase 5 Arc C slice 2)**: Adapter-aware `StatePanel.tsx` replaces the
+  raw `JSON.stringify(state_after)` `<pre>` in the linear Replay UI per ADR-027
+  §2 slice 2. New `frontend/src/format/registry.ts` dispatches on
+  `(adapter, node.kind)` to a per-adapter `formatState(node)` that returns a
+  list of labelled `FormattedSection`s. First two adapter formatters land:
+  `adapters/langgraph.ts` (top-level keys → sections; flat shape per
+  `docs/adapters/langgraph.md`) and `adapters/anthropic_agents.ts` (envelope
+  header + per-block sections with `tool_use_id` sub-labels for ToolUse /
+  ToolResult blocks per the R77 multi-block contract and R85
+  envelope-determines-kind finding). Other adapters (autogen, crewai,
+  openai_agents) keep the raw JSON dump unchanged via `adapters/default.ts` —
+  the registry's safety net (`try` around the per-adapter formatter)
+  guarantees a regression in one formatter cannot break the whole page. UI
+  affordances: AntD `<Collapse>` per section (top 5 anthropic blocks open by
+  default, rest collapsed), envelope `Tag`, "Show raw JSON" `Switch` toggle,
+  empty-state `<Empty>`. All visible strings route through `replay.state.*`
+  i18n keys in both `en.ts` and `zh.ts`. Validated by spike 17
+  (`tests/spikes/spike17_state_panel_format.py` 10/10 GREEN): per-adapter
+  dispatch namespace is collision-free (anthropic_agents `envelope` vs.
+  langgraph flat keys), 8-block ResultMessage round-trips byte-equal through
+  SqliteStore, worst-case 10-block payload ≤ 16KB JSON-encoded.
+
 - **R92 (Phase 5 Arc C slice 1)**: Linear Replay UI ships as the first Phase 5
   Arc C deliverable per ADR-027 §2 slice 1. New page at hash route
   `#/runs/<id>/replay` renders a single run as a horizontal step timeline

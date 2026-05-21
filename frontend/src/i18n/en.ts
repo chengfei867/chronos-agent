@@ -341,6 +341,12 @@ export default {
     model: "Model",
     tool: "Tool",
     stateAfter: "State after",
+    state: {
+      empty: "No state recorded for this step.",
+      showRaw: "Show raw JSON",
+      defaultHint: "Generic JSON view (no adapter-specific formatter).",
+      formatterHint: "Formatted by {{adapter}} adapter.",
+    },
   },
   diff: {
     title: "Compare runs",

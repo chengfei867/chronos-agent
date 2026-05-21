@@ -339,6 +339,12 @@ export default {
     model: "模型",
     tool: "工具",
     stateAfter: "执行后状态",
+    state: {
+      empty: "该步骤未记录状态.",
+      showRaw: "显示原始 JSON",
+      defaultHint: "通用 JSON 视图 (无对应适配器格式化).",
+      formatterHint: "由 {{adapter}} 适配器格式化.",
+    },
   },
   diff: {
     title: "运行对比",

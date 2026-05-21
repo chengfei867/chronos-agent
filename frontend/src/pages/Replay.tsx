@@ -40,6 +40,7 @@ import { fetchRun } from "../api";
 import type { Node as ChronosNode, NodeKind, Run } from "../types";
 import { usePlayback } from "../hooks/usePlayback";
 import PlaybackTimeline from "../components/PlaybackTimeline";
+import StatePanel from "../components/StatePanel";
 
 const KIND_COLORS: Record<NodeKind, string> = {
   llm: "#a371f7",
@@ -325,19 +326,7 @@ export default function Replay({ runId }: ReplayProps) {
               </Descriptions.Item>
             )}
             <Descriptions.Item label={t("replay.stateAfter")}>
-              <pre
-                style={{
-                  margin: 0,
-                  maxHeight: 280,
-                  overflow: "auto",
-                  background: token.colorFillTertiary,
-                  padding: 8,
-                  borderRadius: 4,
-                  fontSize: 12,
-                }}
-              >
-                {JSON.stringify(activeNode.state_after, null, 2)}
-              </pre>
+              <StatePanel node={activeNode} adapter={run.adapter} />
             </Descriptions.Item>
           </Descriptions>
         </Card>
