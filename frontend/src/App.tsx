@@ -10,6 +10,7 @@ import RunList from "./pages/RunList";
 import TreeView from "./pages/TreeView";
 import DiffView from "./pages/DiffView";
 import Replay from "./pages/Replay";
+import ForkTreeView from "./pages/ForkTreeView";
 import OnboardingTour from "./components/OnboardingTour";
 
 type Route =
@@ -17,6 +18,7 @@ type Route =
   | { name: "runs" }
   | { name: "tree"; runId: string }
   | { name: "replay"; runId: string }
+  | { name: "forks"; runId: string }
   | { name: "diff"; runAId: string; runBId: string };
 
 function parseHash(): Route {
@@ -36,6 +38,11 @@ function parseHash(): Route {
   const replayMatch = h.match(/^\/runs\/([^/]+)\/replay$/);
   if (replayMatch) {
     return { name: "replay", runId: decodeURIComponent(replayMatch[1]) };
+  }
+  // /runs/<id>/forks must be matched before /runs/<id>
+  const forksMatch = h.match(/^\/runs\/([^/]+)\/forks$/);
+  if (forksMatch) {
+    return { name: "forks", runId: decodeURIComponent(forksMatch[1]) };
   }
   const m = h.match(/^\/runs\/([^/]+)$/);
   if (m) return { name: "tree", runId: decodeURIComponent(m[1]) };
@@ -65,6 +72,8 @@ export default function App() {
         return <TreeView key={`tree-${route.runId}`} runId={route.runId} />;
       case "replay":
         return <Replay key={`replay-${route.runId}`} runId={route.runId} />;
+      case "forks":
+        return <ForkTreeView key={`forks-${route.runId}`} runId={route.runId} />;
       case "diff":
         return (
           <DiffView

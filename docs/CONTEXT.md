@@ -147,6 +147,32 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
+**截至 Round 96 结束 (2026-05-23 CST cron slot ~02:20, single-slot A2 close-out for R95 inherited Phase 5 Arc C slice 4 implementation WIP, in 0–11 窗口) — Phase 5 Arc C slice 4 SHIPPED end-to-end: spike 18 GREEN (16/16), `frontend/src/format/forkTree.ts` + `components/ForkTimeline.tsx` + `pages/ForkTreeView.tsx` + `#/runs/<id>/forks` route variant + `RouteName` widening + 6-key bilingual `replay.fork.*` i18n block; adapter zero-regression streak R52→R96 = 44 rounds (NEW project-history high, +2 across this slice).** R96 = textbook A2 close-out of an inherited *implementation* slot's WIP per `cron-slot-handoff-recovery` skill: prior cron slot (R95, executing CONTEXT §6's R95 plan from R94) ran the spike + 4 frontend artifacts + route wiring + AppHeader RouteName widen cleanly, but capped on tool-call iteration budget at the i18n step (the 7th of 8 deliverables — exactly the R46-A landmine the skill warns about). R96 inherited the 5 untracked files (spike18 + forkTree.ts + ForkTimeline.tsx + ForkTreeView.tsx + frontend/dist rebuild artifact) + 2 modified files (App.tsx route + AppHeader.tsx RouteName), executed the standard A2 recipe: ran the dynamic-string audit (R46-A pre-emption: grep extracted 6 actual `t("replay.fork.*")` references — `title, subtitle, root, branchAt, stepCount, empty` — and dropped the planned 7th `viewReplay` key because the inherited code path uses `window.location.hash` direct nav, not a labelled button), patched both `frontend/src/i18n/en.ts` and `frontend/src/i18n/zh.ts` with the missing bilingual `fork: { ... }` block, ran full gates clean (`npm run typecheck` exit 0, `npm run build` 1466.43 kB JS / 476.66 kB gzip in 8.04s, spike 18 16/16 GREEN, `uv run pytest -q --no-cov` 648 passed / 9 skipped in 20.88s — all byte-identical-or-better than R94 baseline), then close-out: CHANGELOG entry crediting both R95 (slot-1 implementation) and R96 (slot-2 close-out), this progress doc, CONTEXT §5/§6 refresh, commit + push + QQ. **A2 close-out chain length now 14** (R48-A → R51 → R52 → R53 → R59 → R63 → R65 → R67 → R70 → R72 → R88 → R91 → R92 → R93 → **R96**; R94/R95 broke the consecutive run since R94 was a single-slot impl-and-close and R95 self-capped) — structural-constant grade-A++. **5-place edit recipe (per `chronos-frontend-route-add` skill) fully covered across the R95+R96 pair**: (1) App.tsx Route discriminated union, (2) parseHash regex with more-specific-first ordering, (3) switch case wiring, (4) sibling AppHeader.tsx RouteName widen, (5) bilingual i18n. Phase 5 Arc C slice 4 closes; slice 5 (URL deep-links `#/runs/<id>/replay?step=N`) is next.
+
+- **Round: 96** (Phase 5 Arc C slice 4 implementation A2 close-out, single-slot, frontend-only — fork-tree replay i18n + close-out for R95 inherited WIP). 0 hard blocker. Code shipped this slot: `frontend/src/i18n/en.ts` (+8 LOC, `replay.fork.*` block), `frontend/src/i18n/zh.ts` (+8 LOC, same keys 中文版). Code adopted from R95 inheritance: `tests/spikes/spike18_fork_tree_replay.py` 512 LOC + `frontend/src/format/forkTree.ts` 151 LOC + `frontend/src/components/ForkTimeline.tsx` 139 LOC + `frontend/src/pages/ForkTreeView.tsx` 132 LOC + `frontend/src/App.tsx` (+9 LOC, Route+parseHash+switch) + `frontend/src/components/AppHeader.tsx` (+1 LOC, RouteName widen) + `frontend/dist/*` rebuild. All gates green: pytest **648 passed / 9 skipped (live opt-in)** in 20.88s (CONTEXT §5 R94 paragraph said 632 — that was R93 baseline; real number now 648 incl. accumulated tests since), tsc --noEmit clean, vite build clean (1466.43 kB JS / 26.01 kB CSS, no new chunk warnings), spike 18 16/16 GREEN (A1 round-trip 6 invariants + A2 projection 6 invariants + A3 perf 4 invariants — 50-fork worst case 0.04 ms / 1444 bytes, 400× under 16ms / 11× under 16KB budget per ADR-027 §3 A2). ADR-027 status unchanged (already Accepted at R92, slice 4 in-scope). CHANGELOG `[Unreleased]/Added` gains 1 large R95+R96 bullet covering full slice 4 surface.
+
+- **R96 关键发现 (上墙)**:
+  - **F-1: `cron-slot-handoff-recovery` skill matrix worked exactly as documented for the cap-out-at-i18n-step case.** Skill explicitly enumerates this pattern (R46-A landmine on dynamic i18n keys at the close-out edge). 60-second diagnostic resolved it to A2 close-out track in 1 grep + 1 git status. No deviation from skill's 5-step procedure. ← **structural confirmation — skill needs no patch this round**
+  - **F-2: Plan-key-count vs. actual-key-count drift is normal.** R95 plan said 5 keys, then bumped to 7 (incl. `viewReplay`), but actual code references 6. The 7th (`viewReplay`) was a planning-time guess that didn't materialize because the chosen UX is direct-nav-on-click (no button label needed). Lesson: trust the grep on actual `.tsx`/`.ts`/`.tsx` files at close-out time, NOT the pre-flight key list in CONTEXT §6. Don't add dead keys to satisfy a stale plan. ← **routine, codification deferred** (this is already the spirit of R46-A pre-empt grep audit; current skill text is enough)
+  - **F-3: Per-deliverable cap-out budget signal.** R95 hit cap at 7-of-8 deliverables. Pattern: when CONTEXT §6 plan has ≥6 explicit deliverables, the slot WILL cap before close-out — assume so, plan for slot-2 as a real round, not a polish round. R94 F-4 (estimation discipline) reinforced. The cron-slot-handoff-recovery skill's rule 8 ("plan-shape pre-flight" — TODO ≥6 deliverables = trim to 5) is the right rule but needs a corollary: even when not trimmed, expect implementation in slot-1 + close-out in slot-2 as the default for ≥6-deliverable plans. R95 (8 deliverables) → 1 slot was too tight, R95+R96 = 2 slots was correct. ← **process-validation, skill rule 8 corollary candidate** (defer codification — pattern needs 1 more occurrence to confirm)
+  - **F-4: BFS projection over fork-tree at 50 nodes = 0.04 ms / 1444 bytes.** Spike 18 A3 budget validation: even worst-case 50-fork tree at depth-10 projects under 1/400 of the 16ms budget and 1/11 of 16 KB per ADR-027 §3 A2. There's massive headroom for fork-tree visualizations of much chattier debug sessions than current dogfood data shows. ← **process-validation, capacity headroom recorded**
+
+- **R96 产出**:
+  - `frontend/src/i18n/en.ts` (**modified**, +8 LOC) — `replay.fork.{title,subtitle,root,branchAt,stepCount,empty}` 6-key block in EN.
+  - `frontend/src/i18n/zh.ts` (**modified**, +8 LOC) — same 6 keys in 简中 ("分叉树", "在第 {{step}} 步分叉", etc.).
+  - `frontend/dist/*` (**rebuild**) — vite output post-i18n (whitelisted in `.gitignore` per existing `!frontend/dist/**` rule).
+  - `tests/spikes/spike18_fork_tree_replay.py`, `frontend/src/format/forkTree.ts`, `frontend/src/components/ForkTimeline.tsx`, `frontend/src/pages/ForkTreeView.tsx`, `frontend/src/App.tsx`, `frontend/src/components/AppHeader.tsx` (**adopted from R95 inheritance**, see CHANGELOG R95+R96 bullet for line counts).
+  - `CHANGELOG.md` — `[Unreleased]/Added` gains 1 large R95+R96 bullet covering slice 4 full surface (spike 18 + forkTree.ts + ForkTimeline.tsx + ForkTreeView.tsx + App.tsx route + AppHeader.tsx RouteName + i18n bilingual block).
+  - `progress/2026-05-23-round-96.md` (**new**, ~9.3 KB / ~190 lines, §0 TL;DR + §1 接班状态 + §2 决策 + §3 干了什么 + §4 没踩新坑 + §5 产出 + §6 测试 + §7 R97 plan).
+  - `docs/CONTEXT.md` — §5 current-state R96 paragraph (this) + §6 R97 plan refresh + footer.
+  - **Zero adapter code change. Zero schema change. Zero ADR status change.** Frontend-only slice-4 close-out shipping.
+
+- **Adapter zero-regression streak**: R52→R94 = 42 rounds un-changed (R95 ships no adapter code → 43; R96 ships no adapter code → **44 rounds**, NEW project-history high, +2 across the slice 4 pair).
+
+- **Open drift items**: R95 progress doc not on disk (R95 capped before writing one) — **not material**, R96's progress doc covers both R95 and R96 narratives in the §3 "干了什么" / §4 "决策" sections. CHANGELOG R95+R96 bullet is single source of truth for what shipped in the slice 4 pair. Optional δ (ADR-016 ↔ contracts doc reorg) still available as 0.5-slot filler whenever a slot has spare budget (deferred from R90+).
+
+---
+
 **截至 Round 94 结束 (2026-05-22 CST cron slot ~04:55, single-slot impl + close-out for R94 Phase 5 Arc C slice 3 in 0–11 窗口) — Phase 5 Arc C slice 3 SHIPPED: block-content special rendering for `anthropic_agents` formatter live; `FormattedSection.payload` widened from `string` → `string | StructuredPayload` discriminated union; `buildBlockPayload(block)` helper branches on `block.type` (text / tool_use / tool_result / json fall-through); `StatePanel.renderPayload(payload)` switch dispatches to `<Typography.Paragraph>` for TextBlock prose, `<Descriptions>` key→value table for ToolUseBlock input, tinted `<pre>` + red `error` Tag for ToolResultBlock (incl. SDK list-of-text-chunks normalisation); 6 new bilingual `replay.state.{textBlockEmpty,toolUseBlock,toolUseEmpty,toolResultBlock,toolResultEmpty,toolError}` i18n keys; `frontend/scripts/r94-slice3-smoke.mjs` smoke harness 7/7 GREEN via `tsx`. Optional ε filler bundled: `progress/2026-05-22-round-92.md` → `docs/progress/2026-05-22-round-92.md` (R93 drift item closed). All gates GREEN: `npx tsc --noEmit` clean, `npx vite build` clean (1456.64 kB JS / 26.01 kB CSS), spike 17 still 10/10 GREEN, pytest unit suite **632 passed** (byte-identical to R93 baseline), zero adapter / schema / ADR change. **Adapter zero-regression streak R52→R94 = 42 rounds (NEW project-history high, +1).** ADR-027 stays Accepted (slice 3 is in-scope, no status change). Slice 4 (fork-tree replay) is the recommended R95 pick per ADR-027 §2 + R94 progress doc §"Next round TODO".
 
 - **Round: 94** (Phase 5 Arc C slice 3 implementation, single-slot, frontend-only — block-content special rendering for `anthropic_agents`). 0 hard blocker. New code shipped: `frontend/src/format/registry.ts` (+`StructuredPayload` + `SectionPayload` types, `FormattedSection.payload` widened), `frontend/src/format/adapters/anthropic_agents.ts` (+`buildBlockPayload` helper, ~70 LOC), `frontend/src/components/StatePanel.tsx` (+`renderPayload` switch, ~120 LOC), `frontend/src/i18n/{en,zh}.ts` (+6 keys × 2 locales = 12 strings), `frontend/scripts/r94-slice3-smoke.mjs` (NEW, 7-assertion smoke harness via `npx tsx`). Modified: `CHANGELOG.md` `[Unreleased]/Added` R94 bullet; frontend/dist/* rebuild. Optional ε file move (R92 progress doc relocate) bundled. All gates green: `npx tsc --noEmit` clean, `npx tsc -b && vite build` clean (1456.64 kB JS / 26.01 kB CSS, no new chunk warnings), `node frontend/scripts/r94-slice3-smoke.mjs` 7/7 GREEN (TextBlock / ToolUseBlock / ToolResultBlock-string / ToolResultBlock-list-chunks / unknown-fallthrough + 2 deep field-shape checks), `uv run python tests/spikes/spike17_state_panel_format.py` 10/10 GREEN, `uv run pytest tests/unit -x -q` **632 passed** in 20.58s (byte-identical to R93 baseline). ADR-027 status unchanged.
@@ -986,7 +1012,82 @@ R73 是 R69→R72 4-round chain 的第一个真 disprover round, 也是 Phase 4 
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 95 — Phase 5 Arc C slice 4: fork-tree replay (ForkTimeline.tsx + `#/runs/<id>/forks` route + spike 18 fork-tree projection) per ADR-027 §2 slice 4; 2-slot pre-budget; spike-first per ADR-027 §3 (NEW data-contract assumption — fork edge ordering + parent_run_id linkage round-trips through SqliteStore); ADR-027 stays Accepted**
+**Round 97 — Phase 5 Arc C slice 5: URL deep-links `#/runs/<id>/replay?step=N` per ADR-027 §2 slice 5; 1-slot pre-budget; frontend-only; NO new spike (existing playback contract from R92 + spike 16 is sufficient); ADR-027 stays Accepted**
+
+R96 closed out Phase 5 Arc C **slice 4** (fork-tree replay) cleanly via A2 close-out of R95's inherited WIP — spike 18 16/16 GREEN, forkTree.ts + ForkTimeline + ForkTreeView + `#/runs/<id>/forks` route + 6-key bilingual `replay.fork.*` i18n shipped end-to-end. Adapter zero-regression streak R52→R96 = **44 rounds** (project-history high, +2). All gates green: pytest 648 passed, vite build clean (1466.43 kB JS), tsc clean, spike 18 A3 perf 0.04 ms / 1444 B (massively under budget). Slice 5 (URL deep-links) is next per ADR-027 §2 + R96 progress doc §7.
+
+### R97 hard-prereqs to verify pre-flight (carried from R88+R89+R90+R91+R92+R93+R94+R95+R96)
+
+Before any new work, run the 60-second remote-state sanity check:
+
+1. `git fetch origin main` then `git status` clean + in-sync with origin/main. *(R48-B trap re-confirmed at R89/R90/R91/R92/R93/R96: ALWAYS fetch first.)*
+2. `git tag --list "v0.7*"` includes **`v0.7.0`**.
+3. `git ls-remote --tags <gh-proxy>/chengfei867/chronos-agent.git | grep v0.7.0` includes `v0.7.0`.
+4. `releases/latest` API returns `tag_name=v0.7.0`.
+5. `chronos --version` = `0.7.0`.
+
+### R97 default plan — Phase 5 Arc C slice 5 (URL deep-links to replay step)
+
+**Goal**: make a specific replay step shareable via URL — `#/runs/<id>/replay?step=N` should load the run AND auto-jump to step N. Lets users copy-paste "the bug is at step 12" links to teammates. Step navigation MUST update the URL in-place via `history.replaceState` (no browser-history pollution per playback frame).
+
+**Plan**:
+1. Read `docs/decisions/ADR-027-phase-5-arc-selection.md` §2 slice 5 row + R96 progress doc §7 (R97 plan) + `frontend/src/hooks/usePlayback.ts` (current contract with `index`, `jumpTo`, etc., shipped at R92).
+2. Pre-flight: `grep -rn "parseHash\|window.location.hash" frontend/src/App.tsx` to confirm the current hash-only routing surface; verify whether existing `parseHash` already handles query strings (likely NOT — it's strict regex, so query string handling needs adding).
+3. Decide query string handling: prefer **App.tsx `parseHash` extension** over a separate router lib (zero-dep keeps the bundle lean per R63 conservative stance). Update `Route` discriminated union: `replay` variant gains optional `initialStep?: number` field. Update `parseHash` to split `path?query`, parse `step=N` from query (`URLSearchParams`), validate `Number.isInteger(n) && n >= 0`, drop into `initialStep`.
+4. `frontend/src/hooks/usePlayback.ts` — extend hook: accept `initialStep?: number` option. On mount, if `initialStep` provided AND in `[0, totalSteps)`, set `index = initialStep`. Otherwise default to 0. Backward-compatible (existing callers pass undefined → behavior unchanged).
+5. `frontend/src/pages/Replay.tsx` — pass `initialStep={route.initialStep}` to `usePlayback`. On every `index` change, `history.replaceState(null, "", \`#/runs/\${runId}/replay?step=\${index}\`)` to keep URL in sync. Critical: `replaceState` not `pushState` — playback should NOT clutter back/forward history.
+6. Edge cases (handle in code + smoke check, no spike needed):
+   - `?step=N` where N ≥ totalSteps → clamp to `totalSteps - 1`.
+   - `?step=N` where N < 0 OR non-integer → ignore, default to 0.
+   - Sharing URL with `?step=N` then user clicks a different timeline tick → URL updates to new step (live sync).
+7. Add `replay.deepLink.{copied,copyTooltip}` keys to `i18n/{en,zh}.ts` IF a "copy current-step URL" button is added (OPTIONAL — R96 F-2 lesson: don't add dead keys; only add UI affordance + i18n if naturally needed).
+8. Standard close-out: progress doc + CHANGELOG (Added: deep-link query string in replay route; Changed: usePlayback initialStep option) + CONTEXT §5/§6 + commit + push.
+9. **No ADR status change** — ADR-027 already Accepted at R92; slice 5 is in-scope.
+10. **No new spike** — R96 F-2 lesson: query string parsing + `replaceState` are well-trodden web APIs; existing spike 16 already covered the `usePlayback` contract. Adding spike 19 for "URLSearchParams works" is over-engineering.
+
+**Pre-budget**: 1 slot (frontend-only, single hook extension + parseHash regex update + Replay.tsx history-sync; no new component, no spike, no backend touch). Plan size: 5 deliverables (App.tsx Route+parseHash, usePlayback option, Replay.tsx history-sync, i18n if needed, close-out). Per R96 F-3 corollary: ≤5 deliverables fits 1 slot. **If R97 inherits WIP from a prior cap-out, do A2 close-out only — do NOT start slice 6.**
+
+**Risk**: low — single-component change, well-understood web APIs, backward-compat hook extension, no schema/adapter touch. Mitigation: implement `replaceState` first to avoid history pollution being a regression.
+
+### Hot-backup: option (3) — Replay route polish (vertical playhead line + "step N of M" caption refinement)
+
+**Trigger**: chosen ONLY if R97 deep-link work blocks unexpectedly OR if a fundamental URL-state-sync issue surfaces. Per R93/R94/R96 progress docs, this is a 0.5-slot purely-cosmetic polish that doesn't depend on slice 5.
+
+### Hot-backup: Arc D — Cross-framework golden-trace test fixtures (still pre-authorised, ADR-027 §6)
+
+**Trigger**: chosen ONLY if R97 slice 5 fails fundamentally OR project decides to abandon Arc C mid-way. Per ADR-027 §6 fallback clause, swap Arc C → Arc D without a new ADR. **Note R92+R93+R94+R95+R96 already shipped slices 1+2+3+4 — Arc D fallback at R97+ would mean abandoning slice 5 onwards while keeping linear replay UI + StatePanel + block-rendering + fork-tree from R92→R96.**
+
+### Optional δ — ADR-016 ↔ contracts doc reorg (deferred from R90/R91/R92/R93/R94/R95/R96)
+
+Still available as a low-budget filler round. Decide canonical authority — keep ADR-016 for "why this protocol exists" + redirect operational details to `docs/contracts/adapter-protocol.md`; OR fully reorg ADR-016 → archived. md-only, 0.5 slot. Each round defers; would only consume R97 if slot has spare budget AFTER slice 5 ships.
+
+### Hard constraints / process invariants R97 must honor
+
+- **Pre-flight remote-state check** (R88 codified, R89-R96 re-confirmed): always `git fetch` first; verify all 5 hard-prereqs above.
+- **Disprover-first / spike-first** (ADR-027 §3 + R69 + R92/R93/R94/R96 lesson): R97 slice 5 introduces NO new data-contract assumption (URL is presentation-layer only; `usePlayback` contract already validated by spike 16). NO new spike needed. R96 F-2: don't write speculative spikes for well-understood web APIs.
+- **R57 in-place promotion rule**: N/A for R97 (ADR-027 already Accepted at R92). Slice 5 introduces no new ADR.
+- **Strict-xfail forcing function**: if a deterministic deep-link test is added (e.g. AC: `parseHash("#/runs/abc/replay?step=5")` returns `{name:"replay", runId:"abc", initialStep:5}`), write it as `xfail(strict=True)` first if the impl is not yet wired, then implement until strict-xfail trips → impl commit MUST remove markers in same diff.
+- **Tool-call iteration budget** (R69/R71/R78/R80/R90/R92/R93/R94/R96 patterns): R97 is a code round with frontend tooling churn (vite + tsc) only. Reserve last 8 calls for ship; commit at first green-gate intermediate, BEFORE attempting all polish. **R96 F-3 corollary: 5-deliverable plan should fit 1 slot, but if cap is hit at i18n step (the typical landmine), do A2 close-out next slot per `cron-slot-handoff-recovery` skill.**
+- **1-slot pre-budget for R97** (ADR-027 §2 slice 5 row + R96 F-3): single slot if all goes well; A2 close-out as backup pattern.
+- **Lockfile-trap**: if `package-lock.json` regenerates from `npm install` (unlikely — no new dep needed for slice 5), check `git diff package.json` first per R65/R68/R70 recipe.
+- **Adapter zero-change**: do NOT touch `src/chronos/adapters/*` in R97. Streak protected (currently 44 rounds, project-history high). Slice 5 is frontend-only.
+- **i18n bilingual rule** (R46-A trap, R92/R93/R94/R96 pre-empted via grep audit): IF any new `replay.deepLink.*` keys are added, MUST land in BOTH `frontend/src/i18n/en.ts` and `frontend/src/i18n/zh.ts` in the SAME diff. R96 F-2 corollary: only add keys actually referenced by code, not planning-time guesses.
+- **Sibling-type-union sweep** (R92 F-1, R96 confirmed): R97 does NOT add a new hash-route variant — it extends an existing one (`replay`) with an optional `initialStep` field. The `RouteName` union in AppHeader.tsx does NOT need changes. Verify via `grep -rn 'type Route\(Name\)\? = ' frontend/src/` pre-flight to confirm no ripple.
+- **`history.replaceState` not `pushState`** (R97-specific, NEW): playback step changes update URL in-place; clicking through 200 steps must NOT add 200 entries to browser history. This is the single non-obvious correctness invariant for slice 5.
+
+### R97 success criteria
+
+- [ ] `parseHash("#/runs/abc/replay?step=5")` returns `{name:"replay", runId:"abc", initialStep:5}`.
+- [ ] Loading `#/runs/abc/replay?step=5` jumps directly to step 5 on mount (assuming `totalSteps > 5`).
+- [ ] Clicking timeline tick at step 12 updates URL to `#/runs/abc/replay?step=12` via `replaceState` (browser back-button still goes to whatever was before the replay page, NOT step 11).
+- [ ] `?step=999` on a 50-step run clamps to step 49 silently.
+- [ ] `?step=foo` (non-integer) defaults to step 0 silently.
+- [ ] `tsc --noEmit` clean; `vite build` clean; pytest 648 passed (or higher if new tests added); spike 16 still 10/10 GREEN; spike 18 still 16/16 GREEN.
+- [ ] Adapter zero-regression streak extends to **45 rounds** (R52→R97 unchanged).
+
+---
+
+**Historical: Round 95 plan (slice 4 fork-tree replay) — SHIPPED via R95+R96 pair, see §5 R96 paragraph for outcome**
 
 R94 closed out Phase 5 Arc C **slice 3** (block-content special rendering for `anthropic_agents`) cleanly — `FormattedSection.payload` widened to discriminated union, `buildBlockPayload` helper, `StatePanel.renderPayload` switch, 6 new bilingual i18n keys, smoke harness 7/7 GREEN. Adapter zero-regression streak R52→R94 = **42 rounds** (new project-history high, +1). All gates green: pytest 632 passed, vite build clean (1456.64 kB JS), tsc clean. Slice 4 (fork-tree replay) is next per ADR-027 §2 + R94 progress doc §"Next-round TODO": render `parent_run_id` linkage as a tree visualization with per-node step counts and fork-edge labels.
 

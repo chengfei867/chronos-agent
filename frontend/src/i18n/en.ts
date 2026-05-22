@@ -353,6 +353,14 @@ export default {
       toolResultEmpty: "(empty result)",
       toolError: "error",
     },
+    fork: {
+      title: "Fork tree",
+      subtitle: "All runs forked from this one, plus the original — click any node to open its replay.",
+      root: "root",
+      branchAt: "forked at step {{step}}",
+      stepCount: "{{count}} steps",
+      empty: "This run has no recorded forks.",
+    },
   },
   diff: {
     title: "Compare runs",

@@ -351,6 +351,14 @@ export default {
       toolResultEmpty: "(空结果)",
       toolError: "错误",
     },
+    fork: {
+      title: "分叉树",
+      subtitle: "由这次运行派生出来的所有 fork — 加上它本身, 点任意节点查看对应回放.",
+      root: "根节点",
+      branchAt: "在第 {{step}} 步分叉",
+      stepCount: "{{count}} 步",
+      empty: "这次运行没有记录任何分叉.",
+    },
   },
   diff: {
     title: "运行对比",

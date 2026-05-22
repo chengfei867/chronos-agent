@@ -12,7 +12,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { ThemeContext } from "../theme";
 
-type RouteName = "landing" | "runs" | "tree" | "diff" | "replay";
+type RouteName = "landing" | "runs" | "tree" | "diff" | "replay" | "forks";
 
 export default function AppHeader({
   currentRoute,

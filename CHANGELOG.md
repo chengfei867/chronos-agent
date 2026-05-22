@@ -6,6 +6,44 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ### Added
 
+- **R95+R96 (Phase 5 Arc C slice 4)**: Fork-tree replay UI per ADR-027 §2
+  slice 4 — given a run and its fork descendants, render the
+  `parent_run_id` linkage as a clickable tree with per-node step counts and
+  fork-edge labels. New artifacts:
+    * `tests/spikes/spike18_fork_tree_replay.py` — 16/16 invariants GREEN
+      (A1 round-trip via `assemble_tree_with_descendants`, A2 projection
+      determinism + correctness, A3 perf budget: 50-node worst-case
+      projection in 0.04 ms / 1444 bytes, well under the 16 ms / 16 KB
+      single-frame budget).
+    * `frontend/src/format/forkTree.ts` — pure `projectForkTree(tree)`
+      helper that flattens an `assemble_tree_with_descendants` payload
+      into a list of `ForkTreeNode { run_id, parent_run_id, depth,
+      branch_at_step, step_count, adapter, task_description }` records,
+      depth-ordered (BFS), zero React imports (one-way contract per
+      `format/registry.ts` precedent).
+    * `frontend/src/components/ForkTimeline.tsx` — AntD `<Tree>` renderer;
+      orphans (missing parent in the flat list) surface at the top level
+      so they remain visible; click any node to navigate via
+      `onSelectRun`.
+    * `frontend/src/pages/ForkTreeView.tsx` — page shell with breadcrumb
+      + ForkTimeline + side panel; navigates to `#/runs/<id>/replay` on
+      node click.
+    * `frontend/src/App.tsx` — new `Route` variant `{ name: "forks";
+      runId: string }`, `parseHash` regex matched BEFORE the bare
+      `/runs/<id>$` matcher (per `chronos-frontend-route-add` skill
+      ordering rule), `switch` case wires the page.
+    * `frontend/src/components/AppHeader.tsx` — `RouteName` widened to
+      include `"forks"` (sibling-type-union sweep per R92 F-1 lesson).
+    * `frontend/src/i18n/{en,zh}.ts` — new bilingual `replay.fork.*`
+      block: `title`, `subtitle`, `root`, `branchAt`, `stepCount`,
+      `empty` (6 keys × 2 locales = 12 strings).
+  R95 (slot-1) shipped the spike + 4 frontend artifacts + route wiring
+  but capped on tool-call budget at the i18n step (7-of-8 deliverables);
+  R96 (slot-2, this commit) added the missing i18n block, ran full gates
+  (typecheck clean, vite build clean at 1466.43 kB JS, pytest 648 passed
+  / 9 skipped), and shipped the close-out. Adapter zero-regression streak
+  R52→R96 = **44 rounds** (project-history high, +2 across this slice).
+
 - **R94 (Phase 5 Arc C slice 3)**: Block-content special rendering for the
   `anthropic_agents` formatter per ADR-027 §2 slice 3. The
   `FormattedSection.payload` field grows from a plain pretty-printed JSON
