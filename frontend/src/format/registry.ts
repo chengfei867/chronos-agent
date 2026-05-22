@@ -26,6 +26,41 @@ import { formatAnthropicAgents } from "./adapters/anthropic_agents";
 import { formatDefault } from "./adapters/default";
 import { formatLangGraph } from "./adapters/langgraph";
 
+/**
+ * Discriminated payload for shape-aware rendering (R94, Phase 5 Arc C slice 3).
+ *
+ * `payload` may either be a plain pretty-printed JSON string (default /
+ * langgraph / non-block sections) OR a structured object whose `kind`
+ * tells the StatePanel how to render it:
+ *   - `text`         → plain text body (TextBlock)
+ *   - `tool_use`     → key→value table for the tool input (ToolUseBlock)
+ *   - `tool_result`  → code-fenced content + optional error tag (ToolResultBlock)
+ *   - `json`         → explicit "render as JSON" escape hatch (any unknown shape)
+ *
+ * Adapters are free to keep using plain strings for sections that don't
+ * benefit from structured rendering (header / extras / langgraph keys).
+ * The union is opt-in per section; the StatePanel's renderRaw fallback
+ * (Show raw / fall-through) is unchanged because `formatted.raw` is still
+ * a single pretty-printed JSON string.
+ */
+export type StructuredPayload =
+  | { kind: "text"; text: string }
+  | {
+      kind: "tool_use";
+      name?: string;
+      toolUseId?: string;
+      input: Record<string, unknown>;
+    }
+  | {
+      kind: "tool_result";
+      content: string;
+      isError?: boolean;
+      toolUseId?: string;
+    }
+  | { kind: "json"; value: unknown };
+
+export type SectionPayload = string | StructuredPayload;
+
 /** A single labelled chunk in the formatted view. */
 export interface FormattedSection {
   /** Stable id for React keys; e.g. `"block-0"`, `"tool_use_ids"`. */
@@ -34,8 +69,13 @@ export interface FormattedSection {
   label: string;
   /** Optional sub-label, e.g. `"toolu_bdrk_01ABC"`. */
   subLabel?: string;
-  /** Pretty-printed JSON payload to show under the label. */
-  payload: string;
+  /**
+   * Section body. A `string` is rendered as a pretty-printed code block
+   * (legacy path, used by the default and langgraph formatters). A
+   * `StructuredPayload` lets a per-adapter formatter ask for shape-aware
+   * rendering; see {@link StructuredPayload}.
+   */
+  payload: SectionPayload;
   /** When true, the section renders collapsed by default. */
   collapsed?: boolean;
 }

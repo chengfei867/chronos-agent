@@ -147,6 +147,35 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
+**截至 Round 94 结束 (2026-05-22 CST cron slot ~04:55, single-slot impl + close-out for R94 Phase 5 Arc C slice 3 in 0–11 窗口) — Phase 5 Arc C slice 3 SHIPPED: block-content special rendering for `anthropic_agents` formatter live; `FormattedSection.payload` widened from `string` → `string | StructuredPayload` discriminated union; `buildBlockPayload(block)` helper branches on `block.type` (text / tool_use / tool_result / json fall-through); `StatePanel.renderPayload(payload)` switch dispatches to `<Typography.Paragraph>` for TextBlock prose, `<Descriptions>` key→value table for ToolUseBlock input, tinted `<pre>` + red `error` Tag for ToolResultBlock (incl. SDK list-of-text-chunks normalisation); 6 new bilingual `replay.state.{textBlockEmpty,toolUseBlock,toolUseEmpty,toolResultBlock,toolResultEmpty,toolError}` i18n keys; `frontend/scripts/r94-slice3-smoke.mjs` smoke harness 7/7 GREEN via `tsx`. Optional ε filler bundled: `progress/2026-05-22-round-92.md` → `docs/progress/2026-05-22-round-92.md` (R93 drift item closed). All gates GREEN: `npx tsc --noEmit` clean, `npx vite build` clean (1456.64 kB JS / 26.01 kB CSS), spike 17 still 10/10 GREEN, pytest unit suite **632 passed** (byte-identical to R93 baseline), zero adapter / schema / ADR change. **Adapter zero-regression streak R52→R94 = 42 rounds (NEW project-history high, +1).** ADR-027 stays Accepted (slice 3 is in-scope, no status change). Slice 4 (fork-tree replay) is the recommended R95 pick per ADR-027 §2 + R94 progress doc §"Next round TODO".
+
+- **Round: 94** (Phase 5 Arc C slice 3 implementation, single-slot, frontend-only — block-content special rendering for `anthropic_agents`). 0 hard blocker. New code shipped: `frontend/src/format/registry.ts` (+`StructuredPayload` + `SectionPayload` types, `FormattedSection.payload` widened), `frontend/src/format/adapters/anthropic_agents.ts` (+`buildBlockPayload` helper, ~70 LOC), `frontend/src/components/StatePanel.tsx` (+`renderPayload` switch, ~120 LOC), `frontend/src/i18n/{en,zh}.ts` (+6 keys × 2 locales = 12 strings), `frontend/scripts/r94-slice3-smoke.mjs` (NEW, 7-assertion smoke harness via `npx tsx`). Modified: `CHANGELOG.md` `[Unreleased]/Added` R94 bullet; frontend/dist/* rebuild. Optional ε file move (R92 progress doc relocate) bundled. All gates green: `npx tsc --noEmit` clean, `npx tsc -b && vite build` clean (1456.64 kB JS / 26.01 kB CSS, no new chunk warnings), `node frontend/scripts/r94-slice3-smoke.mjs` 7/7 GREEN (TextBlock / ToolUseBlock / ToolResultBlock-string / ToolResultBlock-list-chunks / unknown-fallthrough + 2 deep field-shape checks), `uv run python tests/spikes/spike17_state_panel_format.py` 10/10 GREEN, `uv run pytest tests/unit -x -q` **632 passed** in 20.58s (byte-identical to R93 baseline). ADR-027 status unchanged.
+
+- **R94 关键发现 (上墙)**:
+  - **F-1: Discriminated-union widening preserves caller invariance.** `payload: string` → `payload: string | StructuredPayload` is a backward-compatible widening (covariant); langgraph + default + header/extras formatters keep emitting strings, only `anthropic_agents` opts into the structured branch. The TS narrowing in `renderPayload` is one extra `typeof === 'string'` check per section — negligible. Pattern: when adding shape-aware rendering to one site of a fan-out, prefer union-widen over flag-day rewrite. ← **routine, noted; reusable for future per-adapter affordances (e.g. fork-tree node rendering at slice 4+)**
+  - **F-2: `npx tsx` enables zero-setup TS smoke harnesses.** A one-shot Node script that imports a TS module directly, runs assertions, and exits 0/1 fits perfectly in slices that don't justify a full vitest/RTL setup. `tsx` auto-installs via `npx`; the harness is checked in under `frontend/scripts/` so future rounds re-run it as a regression check. R94 ships this pattern; future slices (slice 4 fork-tree, slice 5 URL deep-links) likely benefit. ← **new pattern, codification deferred** (worth a skill update if used 2 more times)
+  - **F-3: i18n bilingual rule applies to all user-visible strings, including empty placeholders.** CONTEXT plan estimated 4 keys; R94 shipped 6 because `(empty text)` / `(no input parameters)` / `(empty result)` are user-visible placeholder strings — hard-coding them would silently break the bilingual rule under R46-A. Pre-flight grep audit (`grep -nE "replay\.state\." StatePanel.tsx` cross-checked against both locale files) caught all 10 keys (4 from R93 + 6 from R94). ← **R46-A trap re-confirmed; pre-empted via grep audit, no incident**
+  - **F-4: Slice estimate accuracy depends on ground-truth pre-existence.** Slice 3 had a 1-slot pre-budget; actual usage was ~1/3 slot. The reason is that the underpinning (registry + StatePanel + section infra) was already in place from R92+R93, so slice 3 was a focused payload-type widening + one switch case + i18n. When future slices have similarly pre-existing scaffolding, 1-slot estimates may be conservative — but better safe than over-committing. R95 slice 4 (fork-tree) is genuinely 2-slot because it needs new ForkTimeline.tsx + new spike + Replay.tsx route variant. ← **estimation-discipline confirmation**
+
+- **R94 产出**:
+  - `frontend/src/format/registry.ts` (**modified**, +35 LOC) — added `StructuredPayload` discriminated union (text / tool_use / tool_result / json) + `SectionPayload = string | StructuredPayload` alias; `FormattedSection.payload` widened from `string` to `SectionPayload`. JSDoc explains opt-in semantics. Backward-compatible widening; no caller break.
+  - `frontend/src/format/adapters/anthropic_agents.ts` (**modified**, +75 LOC) — added pure `buildBlockPayload(block)` helper that branches on `block.type`; emits one of 4 structured payloads. Wired in via the existing `blocks.forEach(...)` loop, single line change (`payload: safeStringify(block)` → `payload: buildBlockPayload(block)`). Header / extras / result sections unchanged.
+  - `frontend/src/components/StatePanel.tsx` (**modified**, +120 LOC, -4 LOC) — added `renderPayload(payload)` switch (string fast-path → `<pre>`; structured: text → `<Typography.Paragraph>`, tool_use → `<Descriptions>` table with purple `tool_use` `<Tag>`, tool_result → tinted `<pre>` with cyan `tool_result` `<Tag>` + optional red `error` `<Tag>`, json/default → `<pre>` JSON dump). Wired into Collapse `children:` slot (replaces hardcoded `<pre>`).
+  - `frontend/src/i18n/{en,zh}.ts` (**modified**, +6 LOC each) — new `replay.state.*` keys: `textBlockEmpty`, `toolUseBlock`, `toolUseEmpty`, `toolResultBlock`, `toolResultEmpty`, `toolError`.
+  - `frontend/scripts/r94-slice3-smoke.mjs` (**new**, ~165 LOC) — Node + `npx tsx` smoke harness asserting structured payload shape across 5 block scenarios + 2 deep field-shape checks. Run via `node frontend/scripts/r94-slice3-smoke.mjs`. Exit 0 on green. Reusable as a regression check.
+  - `frontend/dist/*` (**rebuild**) — vite output for the new build (whitelisted in `.gitignore` per existing `!frontend/dist/**` rule).
+  - `CHANGELOG.md` — `[Unreleased]/Added` gains 1 large R94 bullet covering registry widening + buildBlockPayload helper + StatePanel renderPayload switch + 6 new bilingual i18n keys + smoke harness evidence.
+  - `docs/progress/2026-05-22-round-94.md` (**new**, ~14.8 KB / ~280 lines, §What-I-did + Decisions + Findings + Files + Stats + R95 next-round TODO).
+  - `docs/progress/2026-05-22-round-92.md` (**moved**, was `progress/2026-05-22-round-92.md`) — Optional ε filler; R93 drift item closed.
+  - `docs/CONTEXT.md` — §5 current-state R94 paragraph (this) + §6 R95 plan refresh + footer.
+  - **Zero adapter code change. Zero schema change. Zero ADR status change.** Frontend-only slice-3 shipping.
+
+- **Adapter zero-regression streak**: R52→R93 = 41 rounds un-changed (R94 ships no adapter code → streak extends to **42 rounds**, NEW project-history high).
+
+- **Open drift items**: none material at R94 close. R93's Optional ε (R92 progress doc relocate) closed by R94. Next defer-list item is Optional δ (ADR-016 ↔ contracts doc reorg), still ~0.5-slot filler whenever a slot has spare budget.
+
+---
+
 **截至 Round 93 结束 (2026-05-22 CST cron slot ~01:45, single-slot A2 close-out for R93 Phase 5 Arc C slice 2 implementation, in 0–11 窗口) — Phase 5 Arc C slice 2 SHIPPED: spike 17 GREEN (10/10), `frontend/src/format/registry.ts` + `adapters/{default,langgraph,anthropic_agents}.ts` + `StatePanel.tsx` + Replay.tsx wiring + `replay.state.*` i18n bilingual block.** R93 = textbook A2 close-out of an inherited implementation slot's WIP: prior cron slot (running CONTEXT §6's R93 default plan from R92) executed the spike + registry + 3 formatters + StatePanel + Replay wiring + i18n + CHANGELOG entry + R93 progress doc cleanly but ran out of budget before CONTEXT §5/§6 refresh + commit + push. R93 inherited 5 untracked + 5 modified files (incl. frontend/dist/* rebuild artifacts since `frontend/dist/**` is whitelisted in .gitignore), verified all gates green (spike 17 10/10, ruff clean, mypy clean, pytest 648/9/0/0 in 25.51s, `npm run build` clean 8.08s 1453.95 kB JS), then patched CONTEXT §5/§6 + commit + push + QQ. **A2 close-out chain length now 13** (R48-A → R51 → R52 → R53 → R59 → R63 → R65 → R67 → R70 → R72 → R88 → R91 → R92 → **R93**) — structural-constant grade-A++; chain extends across 4 consecutive rounds (R91/R92/R93 each inherited prior-slot WIP, R88 release-engineering recovery). Adapter zero-regression streak R52→R93 = **41 rounds** (project-history high). ADR-027 stays Accepted (no status change at R93 — slice 2 of an already-Accepted ADR ships in-place). Phase 5 Arc C slice 2 closes; slice 3 (block-content special rendering for `anthropic_agents` — TextBlock plain text / ToolUseBlock param table / ToolResultBlock code-fenced) is the recommended R94 pick per R93 progress doc.
 
 - **Round: 93** (Phase 5 Arc C slice 2 implementation A2 close-out, single-slot, frontend-only — StatePanel + per-adapter formatState registry). 0 hard blocker. New code shipped: `tests/spikes/spike17_state_panel_format.py` 439 LOC + `frontend/src/format/registry.ts` 109 LOC + `frontend/src/format/adapters/default.ts` 33 LOC + `frontend/src/format/adapters/langgraph.ts` 70 LOC + `frontend/src/format/adapters/anthropic_agents.ts` 143 LOC + `frontend/src/components/StatePanel.tsx` 150 LOC. Modified: `Replay.tsx` (-14/+2; raw `<pre>` block replaced by `<StatePanel node={activeNode} adapter={run.adapter} />`), `i18n/{en,zh}.ts` (+6 each, `replay.state.{empty,showRaw,defaultHint,formatterHint}`), CHANGELOG `[Unreleased]/Added` R93 bullet, frontend/dist/* rebuild. All gates green: pytest 648/9/0/0 in 25.51s (byte-identical to R92 baseline), mypy clean (38 src files), ruff check clean, `cd frontend && npm run build` clean (vite 8.08s, 1453.95 kB JS, 26.01 kB CSS), spike 17 invariants 10/10 GREEN. ADR-027 status unchanged (already Accepted at R92). CHANGELOG `[Unreleased]/Added` gains 1 large R93 bullet covering registry + 2 adapter formatters + StatePanel + spike 17 evidence.
@@ -957,11 +986,11 @@ R73 是 R69→R72 4-round chain 的第一个真 disprover round, 也是 Phase 4 
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 94 — Phase 5 Arc C slice 3: block-content special rendering for `anthropic_agents` (TextBlock plain text / ToolUseBlock param table / ToolResultBlock code-fenced) per ADR-027 §2 slice 3; 1-slot pre-budget; spike NOT strictly required (no new data-contract assumption — registry + StatePanel + section infra already shipped at R93); ADR-027 stays Accepted**
+**Round 95 — Phase 5 Arc C slice 4: fork-tree replay (ForkTimeline.tsx + `#/runs/<id>/forks` route + spike 18 fork-tree projection) per ADR-027 §2 slice 4; 2-slot pre-budget; spike-first per ADR-027 §3 (NEW data-contract assumption — fork edge ordering + parent_run_id linkage round-trips through SqliteStore); ADR-027 stays Accepted**
 
-R93 closed out Phase 5 Arc C **slice 2** (StatePanel + per-adapter formatState registry) cleanly — `frontend/src/format/registry.ts` + `adapters/{default,langgraph,anthropic_agents}.ts` + `StatePanel.tsx` + Replay.tsx wiring + bilingual `replay.state.*` i18n block. Spike 17 ran 10/10 GREEN. Adapter zero-regression streak R52→R93 = **41 rounds** (new project-history high). All gates green. Slice 3 is the recommended R94 pick per R93 progress doc §"Next-round TODO": **option (1) — block-content special rendering for `anthropic_agents`**, biggest user-visible UX gain, plumbing already in place.
+R94 closed out Phase 5 Arc C **slice 3** (block-content special rendering for `anthropic_agents`) cleanly — `FormattedSection.payload` widened to discriminated union, `buildBlockPayload` helper, `StatePanel.renderPayload` switch, 6 new bilingual i18n keys, smoke harness 7/7 GREEN. Adapter zero-regression streak R52→R94 = **42 rounds** (new project-history high, +1). All gates green: pytest 632 passed, vite build clean (1456.64 kB JS), tsc clean. Slice 4 (fork-tree replay) is next per ADR-027 §2 + R94 progress doc §"Next-round TODO": render `parent_run_id` linkage as a tree visualization with per-node step counts and fork-edge labels.
 
-### R94 hard-prereqs to verify pre-flight (carried from R88+R89+R90+R91+R92+R93)
+### R95 hard-prereqs to verify pre-flight (carried from R88+R89+R90+R91+R92+R93+R94)
 
 Before any new work, run the 60-second remote-state sanity check:
 
@@ -971,7 +1000,83 @@ Before any new work, run the 60-second remote-state sanity check:
 4. `releases/latest` API returns `tag_name=v0.7.0`.
 5. `chronos --version` = `0.7.0`.
 
-### R94 default plan — Phase 5 Arc C slice 3 (block-content special rendering for anthropic_agents)
+### R95 default plan — Phase 5 Arc C slice 4 (fork-tree replay)
+
+**Goal**: render fork relationships visually — given a run with `parent_run_id` linkage, project a tree of `RunSummary` nodes (root run + all descendant forks), with edge labels showing the fork point (parent step index) and per-run step count. New `#/runs/<id>/forks` route + `ForkTimeline.tsx` component.
+
+**Plan**:
+1. Read `docs/decisions/ADR-027-phase-5-arc-selection.md` §2 slice 4 row + `docs/research/r90-phase-5-arc-survey.md` §3 (Arc C scope detail) + R94 progress doc §"Next-round TODO" §1.
+2. Pre-flight: `grep -rn "parent_run_id\|fork" src/chronos/ frontend/src/api/ frontend/src/types.ts` to map the existing fork-data surface (RunSummary already exposes `parent_run_id` per R55+ schema; the API may need a new `/api/runs/<id>/fork-tree` endpoint OR client-side projection from `listRuns()`).
+3. Spike `tests/spikes/spike18_fork_tree_projection.py` — validate (a) given a 3-level fork tree (root→A→B + root→C) round-trips through SqliteStore with intact `parent_run_id` chain; (b) projection algorithm (BFS or DFS) produces stable depth-ordered output; (c) worst-case 50-fork tree (chain depth 10) projection ≤16ms + ≤16KB serialised — perf budget per ADR-027 §3 A2.
+4. Decide API surface: prefer **client-side projection** from existing `listRuns()` if it returns `parent_run_id` (zero backend churn — adapter zero-regression streak preserved); only add `/api/runs/<id>/fork-tree` if `listRuns()` filtering proves insufficient. Document decision in R95 progress doc.
+5. `frontend/src/components/ForkTimeline.tsx` — render tree using AntD `<Tree>` (canonical) OR custom SVG (richer visuals, only if `<Tree>` proves limiting). Each node shows run-id-prefix + step count badge + adapter tag; click navigates to `#/runs/<id>/replay`.
+6. `frontend/src/pages/ForkTree.tsx` — page with breadcrumb + ForkTimeline + selected-run side panel (re-uses StatePanel for the selected fork node).
+7. `frontend/src/App.tsx` — add `#/runs/<id>/forks` hash-route variant; widen `RouteName` in App.tsx + AppHeader.tsx (R92 F-1 sibling-type-union trap pre-empt).
+8. Add `replay.fork.{root,branchAt,stepCount,viewReplay,empty}` keys to `i18n/{en,zh}.ts` (5 keys × 2 locales = 10 strings; pre-flight grep audit per R46-A / R92 F-1 / R94 F-3 lessons).
+9. Standard close-out: progress doc + CHANGELOG (Added: ForkTimeline + fork-tree route + spike 18) + CONTEXT §5/§6 + commit + push.
+10. **No ADR status change** — ADR-027 already Accepted at R92; slice 4 is in-scope.
+
+**Pre-budget**: 2 slots per ADR-027 §2 slice 4 row (genuine 2-slot per R94 F-4 estimation-discipline — needs new spike + new component + new page + new route + i18n). Slot-1 (R95): spike + bare ForkTimeline + route wiring; slot-2 (R96): polish + side panel + close-out. **Apply R91 F-3 / R92 / R93 / R94 lesson: if slot inherits R95-WIP, do A2 close-out only — do NOT start slice 5.**
+
+**Risk**: medium — touches backend if `listRuns()` projection insufficient. Mitigation: prefer client-side first; only escalate to new API endpoint if data missing.
+
+### Hot-backup: option (3) — Replay route polish (vertical playhead line + "step N of M" caption)
+
+**Trigger**: chosen ONLY if R95 spike 18 fails (e.g. fork-tree round-trip breaks or perf blows past 16KB) OR if a fundamental problem surfaces with the projection approach. Per R93/R94 progress docs, this is a 0.5-slot purely-cosmetic polish that doesn't depend on slice 4.
+
+### Hot-backup: Arc D — Cross-framework golden-trace test fixtures (still pre-authorised, ADR-027 §6)
+
+**Trigger**: chosen ONLY if R95 slice 4 spike fails fundamentally OR project decides to abandon Arc C mid-way. Per ADR-027 §6 fallback clause, swap Arc C → Arc D without a new ADR. **Note R92+R93+R94 already shipped slices 1+2+3 — Arc D fallback at R95+ would mean abandoning slice 4 onwards while keeping the linear replay UI + StatePanel + block-rendering from R92+R93+R94.**
+
+### Optional δ — ADR-016 ↔ contracts doc reorg (deferred from R90/R91/R92/R93/R94)
+
+Still available as a low-budget filler round. Decide canonical authority — keep ADR-016 for "why this protocol exists" + redirect operational details to `docs/contracts/adapter-protocol.md`; OR fully reorg ADR-016 → archived. md-only, 0.5 slot. Each round defers; would only consume R95 if slot has extra budget AFTER slice 4 ships (unlikely, given 2-slot estimate).
+
+### Hard constraints / process invariants R95 must honor
+
+- **Pre-flight remote-state check** (R88 codified, R89-R94 re-confirmed): always `git fetch` first; verify all 5 hard-prereqs above.
+- **Disprover-first / spike-first** (ADR-027 §3 + R69 + R92/R93/R94 lesson): R95 slice 4 introduces a NEW data-contract assumption (fork-edge ordering + parent_run_id round-trip + perf budget on tree projection). Spike 18 must run GREEN before any UI is committed.
+- **R57 in-place promotion rule**: N/A for R95 (ADR-027 already Accepted at R92). If R95 introduces a NEW ADR (e.g. ADR-028 for fork-tree API contract), that ADR follows R57 — start Draft, promote post-spike-green in same diff.
+- **Strict-xfail forcing function**: if a deterministic projection test is added (e.g. AC: 50-fork tree projection returns BFS-ordered list with stable depths), write it as `xfail(strict=True)` first, then implement until strict-xfail trips → impl commit MUST remove markers in same diff.
+- **Tool-call iteration budget** (R69/R71/R78/R80/R90/R92/R93/R94 patterns): R95 is a code round with frontend tooling churn (vite + tsc + ESLint) + possible backend touch. Reserve last 8 calls for ship; commit at first green-gate intermediate, BEFORE attempting all polish.
+- **2-slot pre-budget for R95** (ADR-027 §2 slice 4 row, R94 F-4 estimation-discipline): R95 slot-1 = spike + bare component + route; R96 slot = close-out + polish.
+- **Lockfile-trap**: if `package-lock.json` regenerates from `npm install`, check `git diff package.json` first per R65/R68/R70 recipe.
+- **Adapter zero-change**: do NOT touch `src/chronos/adapters/*` in R95. Streak protected (currently 42 rounds, project-history high). If a new API endpoint is added to `src/chronos/api/`, that's allowed — adapter code is `src/chronos/adapters/*` only.
+- **i18n bilingual rule** (R46-A trap, R92/R93/R94 pre-empted via grep audit): any new `replay.fork.*` keys MUST land in BOTH `frontend/src/i18n/en.ts` and `frontend/src/i18n/zh.ts` in the SAME diff. Pre-flight `grep -nE "replay\.fork\." frontend/src/**/*.{ts,tsx} | sort -u` cross-checked against both locale files.
+- **Sibling-type-union sweep** (R92 F-1, NEW): R95 adds a new hash-route variant (`#/runs/<id>/forks`); `grep -rn 'type Route\(Name\)\? = ' frontend/src/` to catch parallel unions. Slice 4 IS adding a route so this sweep IS needed.
+- **A2-of-A2 cascade lesson** (R91 F-3 / R92 / R93 / R94 honored): if slot starts inheriting close-out work, do NOT plan a second new round in the same slot. Land the close-out, post QQ, end.
+- **Discriminated-union widening pattern** (R94 F-1, NEW): if R95 needs to extend `FormattedSection.payload` further (e.g. fork-tree node renderer), follow R94 pattern — widen union, narrow in switch, preserve string fast-path.
+
+### What's done (no need to redo at R95)
+
+- ✅ All 5 ADR-026 §6 ACs `[x]` — AC-1/2/3/4/5 closed, R88 release-engineered + R89 contract-doc-reconciled.
+- ✅ v0.7.0 GA tag cut, GitHub Release page live, `make_latest=true`.
+- ✅ Phase 4 fully closed.
+- ✅ `docs/contracts/adapter-protocol.md` is the canonical cross-adapter contract source (R89).
+- ✅ Phase 5 arc selection committed (R90+R91): Arc C primary, Arc D hot-backup, Arc E/F deferred to Phase 6+.
+- ✅ ADR-027 promoted Draft → Accepted at R92 (R57 in-place rule honored).
+- ✅ **Phase 5 Arc C slice 1 SHIPPED at R92** — Linear Replay UI: `Replay.tsx` + `PlaybackTimeline.tsx` + `usePlayback` extension + `#/runs/<id>/replay` route + replay.* i18n bilingual block + spike 16 11/11 GREEN.
+- ✅ **Phase 5 Arc C slice 2 SHIPPED at R93** — StatePanel + per-adapter formatState registry: `frontend/src/format/registry.ts` + `adapters/{default,langgraph,anthropic_agents}.ts` + `StatePanel.tsx` + Replay.tsx wiring + replay.state.* i18n bilingual block + spike 17 10/10 GREEN.
+- ✅ **Phase 5 Arc C slice 3 SHIPPED at R94** — Block-content special rendering for `anthropic_agents`: `StructuredPayload` discriminated union + `buildBlockPayload` helper + `StatePanel.renderPayload` switch (TextBlock / ToolUseBlock / ToolResultBlock + tinted error tag) + 6 new bilingual `replay.state.*` keys + `frontend/scripts/r94-slice3-smoke.mjs` 7/7 GREEN.
+- ✅ Adapter zero-regression streak R52→R94 = **42 rounds** (project-history high, +1 each round since v0.5.0/R55).
+
+### Cost outlook for R95
+
+- Arc C slice 4 spike: $0 (frontend + Python projection, zero relay).
+- Arc D fallback: $0 (test fixtures only, no relay required after capture).
+
+### v0.7.0+ release version line
+
+- v0.7.0 ✅ shipped at R87+R88, R89-R94 docs polish + slices 1+2+3 implementation accumulated under `[Unreleased]`.
+- v0.7.1 — patch candidate (low priority): becomes less likely now that slices 1+2+3 implementation already lives in `[Unreleased]` — better to wait and ship under v0.8.0.
+- v0.8.0 — Phase 5 Arc C bundle (R92-R98, ~6-7 rounds): full Replay UI + state panel + block-content rendering + fork-tree replay + URL deep-links + optional lockstep diff. **Slice 1 SHIPPED R92, slice 2 SHIPPED R93, slice 3 SHIPPED R94, slice 4 (fork-tree replay) ETA R95-R96, slice 5 (URL deep-links) ETA R97, slice 6 stretch (lockstep diff) ETA R98, release-cut R98+.**
+
+---
+
+<details>
+<summary>Archived: R94 plan (now superseded — R94 SHIPPED slice 3 successfully)</summary>
+
+**Round 94 — Phase 5 Arc C slice 3: block-content special rendering for `anthropic_agents`**
 
 **Goal**: replace the JSON-pretty payload inside each per-block section of `formatAnthropicAgents` with shape-aware rendering: `TextBlock` body as raw text (Markdown? — see decision below), `ToolUseBlock` input as a key→value table, `ToolResultBlock` content as a code-fenced block. The header section + envelope tag + tool_use_id sub-labels stay as-is.
 
@@ -1042,6 +1147,8 @@ Trivial 1-file `git mv` + nothing else — fits as a filler at the end of any fu
 - v0.7.0 ✅ shipped at R87+R88, R89-R93 docs polish + slice 1 + slice 2 implementation accumulated under `[Unreleased]`.
 - v0.7.1 — patch candidate (low priority): bundle docs polish + Option δ if shipped. Becomes less likely now that slice 1 + slice 2 implementation already lives in `[Unreleased]` — better to wait and ship under v0.8.0.
 - v0.8.0 — Phase 5 Arc C bundle (R92-R98, ~6-7 rounds): full Replay UI + state panel + block-content rendering + fork-tree replay + URL deep-links + optional lockstep diff. **Slice 1 SHIPPED R92, slice 2 SHIPPED R93, slice 3 (block-content rendering) ETA R94, slice 4 (fork-tree replay) ETA R95, slice 5 (URL deep-links) ETA R96, slice 6 stretch (lockstep diff) ETA R97, release-cut R98.**
+
+</details>
 
 ---
 

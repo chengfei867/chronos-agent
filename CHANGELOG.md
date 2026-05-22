@@ -6,6 +6,44 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ### Added
 
+- **R94 (Phase 5 Arc C slice 3)**: Block-content special rendering for the
+  `anthropic_agents` formatter per ADR-027 §2 slice 3. The
+  `FormattedSection.payload` field grows from a plain pretty-printed JSON
+  `string` to a discriminated union `string | StructuredPayload` (new
+  `StructuredPayload` exported from `frontend/src/format/registry.ts`); the
+  string branch keeps the legacy `<pre>` rendering for default / langgraph /
+  header / extras sections, and the structured branch lets a per-adapter
+  formatter ask for shape-aware UI:
+    * `{kind:'text', text}` — TextBlock body rendered as a wrapped
+      `Typography.Paragraph` (no JSON quoting, prose-readable).
+    * `{kind:'tool_use', name, toolUseId, input}` — ToolUseBlock input
+      rendered as an AntD `<Descriptions>` key→value table with a `tool_use`
+      tag and the tool name as the section title.
+    * `{kind:'tool_result', content, isError, toolUseId}` — ToolResultBlock
+      content normalised from string OR `[{type:'text',text:...}]` chunks
+      into a single code-fenced block with a `tool_result` tag and a red
+      `error` tag when `is_error===true` (tinted background).
+    * `{kind:'json', value}` — explicit fall-through escape hatch for
+      unknown block types so the panel never crashes on novel SDK output.
+  `adapters/anthropic_agents.ts` adds the pure `buildBlockPayload(block)`
+  helper that branches on `block.type` and emits one of the four
+  `StructuredPayload` shapes; all branches are shape-defensive (missing or
+  odd-typed fields fall through to `kind:'json'`), and the registry's
+  outer `try/catch` (R93 F-2 safety net) is preserved so a per-block
+  rendering bug still degrades to the default raw-JSON view rather than
+  crashing the Replay page. `StatePanel.tsx` gains a `renderPayload(payload)`
+  switch that picks the right component per `kind`. Six new bilingual i18n
+  keys land under `replay.state.*` in `i18n/{en,zh}.ts`:
+  `textBlockEmpty`, `toolUseBlock`, `toolUseEmpty`, `toolResultBlock`,
+  `toolResultEmpty`, `toolError`. Validated by
+  `frontend/scripts/r94-slice3-smoke.mjs` (7/7 GREEN via `tsx`): each block
+  kind produces the expected payload `kind`, list-of-text-chunks
+  `tool_result` content normalises correctly with `isError=true`, unknown
+  block types fall through to `kind:'json'`. Zero backend / adapter /
+  schema impact; adapter zero-regression streak R52→R94 = **42 rounds**.
+  Spike 17 still 10/10 GREEN (block shapes already canonical, no new
+  data-contract assumption introduced this round).
+
 - **R93 (Phase 5 Arc C slice 2)**: Adapter-aware `StatePanel.tsx` replaces the
   raw `JSON.stringify(state_after)` `<pre>` in the linear Replay UI per ADR-027
   §2 slice 2. New `frontend/src/format/registry.ts` dispatches on

@@ -344,6 +344,12 @@ export default {
       showRaw: "显示原始 JSON",
       defaultHint: "通用 JSON 视图 (无对应适配器格式化).",
       formatterHint: "由 {{adapter}} 适配器格式化.",
+      textBlockEmpty: "(空文本)",
+      toolUseBlock: "工具调用",
+      toolUseEmpty: "(无输入参数)",
+      toolResultBlock: "工具结果",
+      toolResultEmpty: "(空结果)",
+      toolError: "错误",
     },
   },
   diff: {

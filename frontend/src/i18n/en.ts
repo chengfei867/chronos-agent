@@ -346,6 +346,12 @@ export default {
       showRaw: "Show raw JSON",
       defaultHint: "Generic JSON view (no adapter-specific formatter).",
       formatterHint: "Formatted by {{adapter}} adapter.",
+      textBlockEmpty: "(empty text)",
+      toolUseBlock: "tool_use",
+      toolUseEmpty: "(no input parameters)",
+      toolResultBlock: "tool_result",
+      toolResultEmpty: "(empty result)",
+      toolError: "error",
     },
   },
   diff: {
