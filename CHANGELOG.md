@@ -6,6 +6,59 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ### Added
 
+- **R97 (Phase 5 Arc C slice 5)**: URL deep-links to a specific replay step
+  per ADR-027 §2 slice 5 — `#/runs/<id>/replay?step=N` now loads the run AND
+  jumps directly to step N on mount, making "the bug is at step 12" links
+  copy-pasteable to teammates. Step navigation keeps the URL in sync via
+  `history.replaceState` (NOT `pushState`), so clicking through 200 steps
+  doesn't pollute the browser back/forward stack with 200 entries. New
+  artifacts:
+    * `frontend/src/App.tsx` — `parseHash` now splits `path?query`, parses
+      `step=N` strictly via `URLSearchParams` (rejects floats, scientific
+      notation, whitespace, negative integers, non-digit values), and
+      surfaces `initialStep?: number` on the `replay` route variant.
+      Exported pure `parseStepParam(query)` helper for unit testing.
+    * `frontend/src/hooks/usePlayback.ts` — `usePlayback(total, options?)`
+      now accepts `{ initialStep }` to pre-seed the playback index at
+      mount. Backward-compatible: existing callers (`TreeView`, original
+      Replay shape) pass no options → identical behavior.
+    * `frontend/src/pages/Replay.tsx` — a one-shot post-load `useEffect`
+      seeds the playback index via `jumpTo(clamp(initialStep))` once
+      `total > 0` (covers the "data fetched async" case the synchronous
+      hook initializer can't see). A second effect calls
+      `history.replaceState` on every `index` change to keep the URL
+      reflecting the current step.
+    * `frontend/scripts/r97-slice5-smoke.mjs` — 16/16 GREEN invariant
+      smoke: matrix over `?step=5` / `0` / `999` (no clamp at parse) /
+      `-1` / `foo` / `5.5` / `5e1` / empty / wrong-key / no-query /
+      duplicate keys / mixed keys / whitespace, plus type/identity
+      assertions.
+- Out-of-range `?step=N` (N ≥ totalSteps) is silently clamped to
+  `totalSteps - 1` at the URL boundary in Replay.tsx (parseStepParam
+  itself is pure parsing, not policy — clamping is the caller's job).
+  Negative / non-integer / float / scientific-notation `?step=…` is
+  silently ignored (defaults to step 0 / "not started").
+
+### Changed
+
+- `usePlayback` signature widened from `(totalSteps)` to
+  `(totalSteps, options?: { initialStep? })`. No call-site changes
+  required; TreeView and the original Replay path keep working unchanged.
+
+### Notes
+
+- No backend / adapter / schema touch — slice 5 is frontend-only. Adapter
+  zero-regression streak R52→R97 = **45 rounds** (project-history high,
+  +1).
+- No new ADR — slice 5 is in-scope for ADR-027 (Accepted at R92).
+- No new spike — per R96 F-2 lesson, query-string parsing + `replaceState`
+  are well-trodden web APIs; the `usePlayback` contract was already
+  validated by spike 16. The smoke harness (`r97-slice5-smoke.mjs`) is
+  the appropriate granularity here.
+- No new i18n keys — slice 5 is invisible to the user (URL update only,
+  no UI affordance). Per R96 F-2, dead-key avoidance applied
+  preventatively.
+
 - **R95+R96 (Phase 5 Arc C slice 4)**: Fork-tree replay UI per ADR-027 §2
   slice 4 — given a run and its fork descendants, render the
   `parent_run_id` linkage as a clickable tree with per-node step counts and

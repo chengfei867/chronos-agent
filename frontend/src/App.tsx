@@ -17,12 +17,37 @@ type Route =
   | { name: "landing" }
   | { name: "runs" }
   | { name: "tree"; runId: string }
-  | { name: "replay"; runId: string }
+  | { name: "replay"; runId: string; initialStep?: number }
   | { name: "forks"; runId: string }
   | { name: "diff"; runAId: string; runBId: string };
 
+// R97 (Phase 5 Arc C slice 5): split path?query so deep-links like
+// `#/runs/<id>/replay?step=5` are honoured. URL is the source of truth on
+// page load — Replay.tsx passes `initialStep` to usePlayback. Step navigation
+// uses history.replaceState to keep the URL in sync without polluting
+// browser back/forward history (clicking through 200 steps must NOT add
+// 200 entries to session history).
+function parseStepParam(query: string): number | undefined {
+  if (!query) return undefined;
+  // Defensive: URLSearchParams accepts leading "?" or none — tolerate both.
+  const params = new URLSearchParams(query.replace(/^\?/, ""));
+  const raw = params.get("step");
+  if (raw === null) return undefined;
+  // Strict integer parse — `Number()` accepts floats / "5e1" / whitespace,
+  // which we don't want; require pure digits (optionally signed).
+  if (!/^-?\d+$/.test(raw)) return undefined;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 0) return undefined;
+  return n;
+}
+
 function parseHash(): Route {
-  const h = window.location.hash.replace(/^#/, "");
+  const raw = window.location.hash.replace(/^#/, "");
+  // Split path from query string. Anything after the first "?" is query.
+  const qIdx = raw.indexOf("?");
+  const h = qIdx >= 0 ? raw.slice(0, qIdx) : raw;
+  const query = qIdx >= 0 ? raw.slice(qIdx) : "";
+
   if (!h || h === "/") return { name: "runs" };
   if (h === "/home") return { name: "landing" };
   // /runs/<a>/diff/<b> must be matched before /runs/<id>
@@ -37,7 +62,13 @@ function parseHash(): Route {
   // /runs/<id>/replay must be matched before /runs/<id>
   const replayMatch = h.match(/^\/runs\/([^/]+)\/replay$/);
   if (replayMatch) {
-    return { name: "replay", runId: decodeURIComponent(replayMatch[1]) };
+    const route: Route = {
+      name: "replay",
+      runId: decodeURIComponent(replayMatch[1]),
+    };
+    const initialStep = parseStepParam(query);
+    if (initialStep !== undefined) route.initialStep = initialStep;
+    return route;
   }
   // /runs/<id>/forks must be matched before /runs/<id>
   const forksMatch = h.match(/^\/runs\/([^/]+)\/forks$/);
@@ -48,6 +79,10 @@ function parseHash(): Route {
   if (m) return { name: "tree", runId: decodeURIComponent(m[1]) };
   return { name: "runs" };
 }
+
+// Exported for r97 smoke harness (parseHash relies on window.location, so
+// we expose the pure helper instead).
+export { parseStepParam };
 
 export default function App() {
   const [route, setRoute] = useState<Route>(() => parseHash());
@@ -71,7 +106,13 @@ export default function App() {
       case "tree":
         return <TreeView key={`tree-${route.runId}`} runId={route.runId} />;
       case "replay":
-        return <Replay key={`replay-${route.runId}`} runId={route.runId} />;
+        return (
+          <Replay
+            key={`replay-${route.runId}`}
+            runId={route.runId}
+            initialStep={route.initialStep}
+          />
+        );
       case "forks":
         return <ForkTreeView key={`forks-${route.runId}`} runId={route.runId} />;
       case "diff":

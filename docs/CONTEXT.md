@@ -147,6 +147,33 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
+**截至 Round 97 结束 (2026-05-23 CST cron slot ~05:30, single-slot impl + close-out for R97 Phase 5 Arc C slice 5 in 0–11 窗口) — Phase 5 Arc C slice 5 SHIPPED end-to-end one-shot: `App.tsx` parseHash + Route union extension (`replay` variant gains optional `initialStep?: number`), pure `parseStepParam(query)` helper exported for testing, `usePlayback(total, options?)` widened with backward-compatible `{ initialStep }` option, `Replay.tsx` double useEffect (post-load `jumpTo(clamp(initialStep))` seed + per-step `history.replaceState` URL sync), `frontend/scripts/r97-slice5-smoke.mjs` 16/16 GREEN smoke harness over 14 query-string cases + 2 type/identity invariants. NO new ADR (slice 5 in-scope for ADR-027 Accepted at R92). NO new spike (per R96 F-2 lesson — query-string parsing + `replaceState` are well-trodden web APIs; spike 16 already validated `usePlayback` contract). NO new i18n keys (slice 5 invisible to user — URL update only, no UI affordance; R97 plan §7 explicitly conditional on "copy URL" button being added, which it wasn't). Adapter zero-regression streak R52→R97 = **45 rounds** (NEW project-history high, +1). All gates GREEN: `npm run typecheck` exit 0, `npm run build` 1467.24 kB JS / 476.96 kB gzip in 7.94s (+0.81 kB vs R96), spike 16 still 11/11 GREEN, spike 18 still 16/16 GREEN, R97 smoke 16/16 GREEN, pytest 648 passed / 9 skipped (byte-identical to R96 baseline). ADR-027 stays Accepted (slice 5 in-scope, no status change). Phase 5 Arc C now has slices 1+2+3+4+5 ALL SHIPPED — slice 6 (lockstep diff) is the only remaining Arc C scope and is a stretch goal per ADR-027 §2; v0.8.0 release-cut is the natural R98 default per R97 progress doc §7.
+
+- **Round: 97** (Phase 5 Arc C slice 5 implementation, single-slot, frontend-only — URL deep-links to replay step). 0 hard blocker. New code shipped: `frontend/scripts/r97-slice5-smoke.mjs` (NEW, 109 LOC, 16/16 GREEN parseStepParam invariant smoke). Modified: `frontend/src/App.tsx` (+39/-3, Route union widened with `initialStep?`, `parseStepParam` pure helper added + exported, `parseHash` splits `path?query`, switch case wires through `initialStep`), `frontend/src/hooks/usePlayback.ts` (+25/-2, `UsePlaybackOptions` interface + lazy-initializer honouring valid `initialStep`), `frontend/src/pages/Replay.tsx` (+38/-3, `initialStep` prop, post-load `seededRef`-guarded `jumpTo` effect, per-step `replaceState` URL-sync effect with idempotency guard for React 18 strict-mode dev double-call), `frontend/dist/*` rebuild (`index-DLbXMKTA.js` replaces `index-BnJhEQz2.js`). All gates GREEN: pytest **648 passed / 9 skipped** in 19.96s (byte-identical to R96 baseline), `npm run typecheck` exit 0, `npm run build` 1467.24 kB JS / 26.01 kB CSS (no new chunk warnings), spike 16 11/11 GREEN, spike 18 16/16 GREEN, R97 slice5 smoke 16/16 GREEN. ADR-027 status unchanged (already Accepted at R92, slice 5 in-scope). CHANGELOG `[Unreleased]/Added` gains 1 large R97 bullet covering parseStepParam + usePlayback widen + Replay double-effect + smoke harness, plus `Changed` (usePlayback signature widening) and `Notes` (no ADR/spike/i18n) sub-blocks.
+
+- **R97 关键发现 (上墙)**:
+  - **F-1: Pure-parsing vs. policy separation at the URL boundary.** `parseStepParam(query)` does NOT clamp out-of-range integers (`?step=999` returns `999`); clamping is the caller's policy in `Replay.tsx` via `Math.min(total - 1, ...)`. Reason: parser doesn't know `total`, and silently clamping at parse layer would erase the distinction between "user explicitly typed an out-of-range step" and "user random-typed a number". Policy decisions belong at callsite. ← **architectural lesson, codification candidate**: this is a general parse-vs-policy pattern (see also: `validate_node_kind` in adapters — they reject unknown kinds rather than coerce).
+  - **F-2: Sync hook initializer is a no-op when total is async.** `useState(() => initialStep < totalSteps ? initialStep : -1)` looks elegant but in `Replay.tsx` `total = 0` on first render (data still fetching), so the sync path never fires. Must add a post-load `useEffect` with `seededRef` guard. The sync path is kept for future SSR / synchronous-cache callers; not dead code, but documented as belt-and-suspenders. ← **routine, lesson noted; future hook-extension PRs should explicitly check whether totalSteps is sync or async at callsite**
+  - **F-3: `replaceState` idempotency guard for React 18 strict mode.** Without `if (currentHash === desired) return;` the dev console fires `replaceState` twice per step change in React 18 strict mode (effects double-fire to surface side-effect bugs). Production behavior unaffected, but dev signal-to-noise improves with idempotency. Pattern: any side-effecting effect in modern React should self-check whether it's already done its work before doing it again. ← **routine but reusable; codification deferred** (worth a skill update if observed in 2 more rounds).
+  - **F-4: i18n 0-key delivery is the correct outcome.** R96 F-2 (don't add dead keys for plan-time guesses) was preventatively applied — R97 plan §7 marked deepLink i18n as OPTIONAL pending a "copy URL" button affordance, which wasn't added because the URL update is invisible to users (just shows in address bar). Result: 0 new i18n keys, 0 dead references, 0 R46-A landmines. This is the "default to NO-key, only add when forced by UI" discipline. ← **R96 F-2 confirmed in second occurrence** — codification candidate (after 1 more round, lift into a skill rule).
+
+- **R97 产出**:
+  - `frontend/src/App.tsx` (**modified**, +39/-3) — Route union widened with `replay.initialStep?: number`; `parseStepParam` pure helper added (strict `^-?\d+$` regex + `Number.isInteger(n) && n >= 0` two-stage filter); `parseHash` splits `path?query` via `indexOf("?")`; switch case `replay` wires `initialStep` through to `<Replay />`; `parseStepParam` exported for smoke harness.
+  - `frontend/src/hooks/usePlayback.ts` (**modified**, +25/-2) — `UsePlaybackOptions { initialStep?: number }` interface; `usePlayback(totalSteps, options?)` signature widened (backward-compatible — TreeView and original Replay path zero-changes); `useState<number>(() => ...)` lazy initializer honours valid `initialStep` synchronously, falls back to `-1` ("not started") otherwise.
+  - `frontend/src/pages/Replay.tsx` (**modified**, +38/-3) — `ReplayProps.initialStep?: number`; `useRef`-guarded post-load seed effect calls `jumpTo(clamp(initialStep))` once `total > 0`; URL-sync effect calls `history.replaceState(null, "", desired)` on every `index >= 0` change with hash-prefix guard (defensive against stale unmount) and idempotency guard (defensive against React 18 strict mode dev double-call).
+  - `frontend/scripts/r97-slice5-smoke.mjs` (**new**, 109 LOC) — Node + `npx tsx` smoke harness; 14 query-string cases + 2 type/identity invariants; ALL GREEN.
+  - `frontend/dist/*` (**rebuild**) — vite output (`index-DLbXMKTA.js` replaces `index-BnJhEQz2.js`).
+  - `CHANGELOG.md` — `[Unreleased]/Added` gains 1 large R97 bullet (full slice 5 surface), plus `Changed` (usePlayback signature widening with backward-compat note) and `Notes` (no ADR/spike/i18n delta) sub-blocks.
+  - `progress/2026-05-23-round-97.md` (**new**, ~12 KB / ~150 lines, §0 TL;DR + §1 接班状态 + §2 决策路径 + §3 干了什么 + §4 没踩新坑 + §5 产出 + §6 测试 + §7 R98 plan).
+  - `docs/CONTEXT.md` — §5 current-state R97 paragraph (this) + §6 R98 plan refresh.
+  - **Zero adapter code change. Zero schema change. Zero ADR status change. Zero i18n change.** Frontend-only slice-5 shipping.
+
+- **Adapter zero-regression streak**: R52→R96 = 44 rounds un-changed (R97 ships no adapter code → streak extends to **45 rounds**, NEW project-history high, +1).
+
+- **Open drift items**: none material at R97 close. Optional δ (ADR-016 ↔ contracts doc reorg) still ~0.5-slot filler whenever a slot has spare budget (deferred from R90+ → R97). v0.8.0 release-cut now natural at R98 (slices 1+2+3+4+5 all shipped + accumulated under `[Unreleased]` since v0.7.0 / R88).
+
+---
+
 **截至 Round 96 结束 (2026-05-23 CST cron slot ~02:20, single-slot A2 close-out for R95 inherited Phase 5 Arc C slice 4 implementation WIP, in 0–11 窗口) — Phase 5 Arc C slice 4 SHIPPED end-to-end: spike 18 GREEN (16/16), `frontend/src/format/forkTree.ts` + `components/ForkTimeline.tsx` + `pages/ForkTreeView.tsx` + `#/runs/<id>/forks` route variant + `RouteName` widening + 6-key bilingual `replay.fork.*` i18n block; adapter zero-regression streak R52→R96 = 44 rounds (NEW project-history high, +2 across this slice).** R96 = textbook A2 close-out of an inherited *implementation* slot's WIP per `cron-slot-handoff-recovery` skill: prior cron slot (R95, executing CONTEXT §6's R95 plan from R94) ran the spike + 4 frontend artifacts + route wiring + AppHeader RouteName widen cleanly, but capped on tool-call iteration budget at the i18n step (the 7th of 8 deliverables — exactly the R46-A landmine the skill warns about). R96 inherited the 5 untracked files (spike18 + forkTree.ts + ForkTimeline.tsx + ForkTreeView.tsx + frontend/dist rebuild artifact) + 2 modified files (App.tsx route + AppHeader.tsx RouteName), executed the standard A2 recipe: ran the dynamic-string audit (R46-A pre-emption: grep extracted 6 actual `t("replay.fork.*")` references — `title, subtitle, root, branchAt, stepCount, empty` — and dropped the planned 7th `viewReplay` key because the inherited code path uses `window.location.hash` direct nav, not a labelled button), patched both `frontend/src/i18n/en.ts` and `frontend/src/i18n/zh.ts` with the missing bilingual `fork: { ... }` block, ran full gates clean (`npm run typecheck` exit 0, `npm run build` 1466.43 kB JS / 476.66 kB gzip in 8.04s, spike 18 16/16 GREEN, `uv run pytest -q --no-cov` 648 passed / 9 skipped in 20.88s — all byte-identical-or-better than R94 baseline), then close-out: CHANGELOG entry crediting both R95 (slot-1 implementation) and R96 (slot-2 close-out), this progress doc, CONTEXT §5/§6 refresh, commit + push + QQ. **A2 close-out chain length now 14** (R48-A → R51 → R52 → R53 → R59 → R63 → R65 → R67 → R70 → R72 → R88 → R91 → R92 → R93 → **R96**; R94/R95 broke the consecutive run since R94 was a single-slot impl-and-close and R95 self-capped) — structural-constant grade-A++. **5-place edit recipe (per `chronos-frontend-route-add` skill) fully covered across the R95+R96 pair**: (1) App.tsx Route discriminated union, (2) parseHash regex with more-specific-first ordering, (3) switch case wiring, (4) sibling AppHeader.tsx RouteName widen, (5) bilingual i18n. Phase 5 Arc C slice 4 closes; slice 5 (URL deep-links `#/runs/<id>/replay?step=N`) is next.
 
 - **Round: 96** (Phase 5 Arc C slice 4 implementation A2 close-out, single-slot, frontend-only — fork-tree replay i18n + close-out for R95 inherited WIP). 0 hard blocker. Code shipped this slot: `frontend/src/i18n/en.ts` (+8 LOC, `replay.fork.*` block), `frontend/src/i18n/zh.ts` (+8 LOC, same keys 中文版). Code adopted from R95 inheritance: `tests/spikes/spike18_fork_tree_replay.py` 512 LOC + `frontend/src/format/forkTree.ts` 151 LOC + `frontend/src/components/ForkTimeline.tsx` 139 LOC + `frontend/src/pages/ForkTreeView.tsx` 132 LOC + `frontend/src/App.tsx` (+9 LOC, Route+parseHash+switch) + `frontend/src/components/AppHeader.tsx` (+1 LOC, RouteName widen) + `frontend/dist/*` rebuild. All gates green: pytest **648 passed / 9 skipped (live opt-in)** in 20.88s (CONTEXT §5 R94 paragraph said 632 — that was R93 baseline; real number now 648 incl. accumulated tests since), tsc --noEmit clean, vite build clean (1466.43 kB JS / 26.01 kB CSS, no new chunk warnings), spike 18 16/16 GREEN (A1 round-trip 6 invariants + A2 projection 6 invariants + A3 perf 4 invariants — 50-fork worst case 0.04 ms / 1444 bytes, 400× under 16ms / 11× under 16KB budget per ADR-027 §3 A2). ADR-027 status unchanged (already Accepted at R92, slice 4 in-scope). CHANGELOG `[Unreleased]/Added` gains 1 large R95+R96 bullet covering full slice 4 surface.
@@ -1012,7 +1039,79 @@ R73 是 R69→R72 4-round chain 的第一个真 disprover round, 也是 Phase 4 
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-**Round 97 — Phase 5 Arc C slice 5: URL deep-links `#/runs/<id>/replay?step=N` per ADR-027 §2 slice 5; 1-slot pre-budget; frontend-only; NO new spike (existing playback contract from R92 + spike 16 is sufficient); ADR-027 stays Accepted**
+**Round 98 — v0.8.0 release-cut covering Phase 5 Arc C slices 1–5 (R92→R97); 1-slot pre-budget; release-engineering only; NO new ADR; NO new spike; ADR-027 stays Accepted; adapter zero-regression streak preservation (R52→R98 = 46 rounds target)**
+
+R97 closed out Phase 5 Arc C **slice 5** (URL deep-links `#/runs/<id>/replay?step=N`) cleanly via single-slot impl + close-out — `parseStepParam` pure helper exported, `usePlayback(total, options?)` widened backward-compat, `Replay.tsx` double-effect (post-load `jumpTo` seed + `replaceState` URL sync), 16/16 GREEN smoke harness. Adapter zero-regression streak R52→R97 = **45 rounds** (project-history high, +1). All gates green: pytest 648/9 unchanged, vite build 1467.24 kB JS / 476.96 kB gzip (+0.81 kB), tsc clean, no ADR/spike/i18n delta. Phase 5 Arc C slices 1+2+3+4+5 ALL SHIPPED — release-cut window opens.
+
+### R98 hard-prereqs to verify pre-flight (carried from R88+R89+R90+R91+R92+R93+R94+R95+R96+R97)
+
+Before any new work, run the 60-second remote-state sanity check:
+
+1. `git fetch origin main` then `git status` clean + in-sync with origin/main. *(R48-B trap re-confirmed at R89/R90/R91/R92/R93/R96/R97: ALWAYS fetch first.)*
+2. `git tag --list "v0.7*"` includes **`v0.7.0`** (the previous release).
+3. `git ls-remote --tags <gh-proxy>/chengfei867/chronos-agent.git | grep v0.7.0` includes `v0.7.0`.
+4. `releases/latest` API returns `tag_name=v0.7.0`.
+5. `chronos --version` = `0.7.0` (pre-bump).
+
+### R98 default plan — v0.8.0 release-cut (Phase 5 Arc C slices 1–5 wrap)
+
+**Goal**: cut `v0.8.0` covering all of Phase 5 Arc C (slices 1–5: replay UI skeleton, StatePanel, block-content rendering, fork-tree, URL deep-links). Bump `chronos.__version__` to `0.8.0`, finalise the `[Unreleased]` block in CHANGELOG into `[0.8.0] — 2026-05-23`, tag `v0.8.0`, push tag through gh-proxy, verify `releases/latest` API picks it up.
+
+**Plan** (follow `chronos-release-pattern` skill verbatim):
+1. Load skill: `skill_view chronos-release-pattern` — execute its 8-step recipe.
+2. Pre-flight: 5 hard-prereqs above + `git status` clean + `uv run pytest -q --no-cov` 648/9 baseline + `cd frontend && npm run build` clean.
+3. Bump version: `src/chronos/__init__.py` `__version__ = "0.8.0"`; update `pyproject.toml` if version is mirrored there.
+4. Finalise CHANGELOG: `[Unreleased]` → `[0.8.0] — 2026-05-23` with summary header listing Phase 5 Arc C slices 1–5 (R92 spike 16 + Replay skeleton, R93 StatePanel + per-adapter formatters, R94 block-content rendering, R95+R96 fork-tree, R97 URL deep-links) + the existing Added/Changed/Notes bullets accumulated since v0.7.0.
+5. Smoke: re-run all gates (typecheck, vite build, pytest, spike 16 + spike 18 + R97 smoke) and confirm byte-identical-or-better than R97 baseline.
+6. Commit: `release: cut v0.8.0 — Phase 5 Arc C slices 1–5 (replay + state panel + fork-tree + deep-links)` with Co-authored-by trailer.
+7. Tag: `git tag -a v0.8.0 -m "Phase 5 Arc C — replay UI complete"`.
+8. Push: `git push origin main && git push origin v0.8.0` via the gh-proxy URL.
+9. Verify post-push: `git ls-remote --tags <gh-proxy>/chengfei867/chronos-agent.git | grep v0.8.0` AND `https://api.github.com/repos/chengfei867/chronos-agent/releases/latest` returns `tag_name=v0.8.0` (note: GitHub creates a release-from-tag automatically only if a matching draft exists; otherwise the tag exists but the API may still return v0.7.0 — that's acceptable per R88 lesson, the tag is the source of truth).
+10. Standard close-out: progress doc + CONTEXT §5/§6 + QQ war report.
+
+**Pre-budget**: 1 slot (release-engineering, no new feature, well-rehearsed via the skill). Plan size: 6 mechanical steps + 2 verification steps. Per R96 F-3 corollary: ≤6 deliverables fits 1 slot.
+
+**Risk**: low — release pattern is codified in `chronos-release-pattern` skill, executed cleanly at v0.7.0 (R88) and earlier. Mitigation: follow skill verbatim; if mid-flight gate fails, abort release and revert version bump (do NOT push a broken tag).
+
+### Hot-backup: Phase 5 Arc C slice 6 — Lockstep diff (stretch goal, ADR-027 §2 stretch row)
+
+**Trigger**: chosen ONLY if R98 release-cut blocks unexpectedly (e.g. version mirroring drift, GitHub API outage). Slice 6 is "lockstep diff between two replay runs" — a stretch slice not required for v0.8.0 cut but available for v0.9.0 down the line. ~2-slot pre-budget. Per ADR-027 §2 it's the only remaining Arc C scope. Defer to R99+ unless release blocks.
+
+### Hot-backup: Optional δ — ADR-016 ↔ contracts doc reorg (deferred from R90→R97)
+
+Still available as a low-budget filler round. Decide canonical authority — keep ADR-016 for "why this protocol exists" + redirect operational details to `docs/contracts/adapter-protocol.md`; OR fully reorg ADR-016 → archived. md-only, 0.5 slot. Each round defers; would only consume R98 if release-cut takes <half a slot AND extra budget remains.
+
+### Hard constraints / process invariants R98 must honor
+
+- **Pre-flight remote-state check** (R88 codified, R89-R97 re-confirmed): always `git fetch` first; verify all 5 hard-prereqs above.
+- **Disprover-first / spike-first** (ADR-027 §3 + R69 + R92/R93/R94/R96/R97 lesson): R98 is release-engineering, no new code, no new spike needed.
+- **R57 in-place promotion rule**: N/A for R98 (no new ADR; release-cut consumes existing Accepted ADRs).
+- **Strict-xfail forcing function**: N/A for R98 (no new tests; existing 648 passed unchanged).
+- **Tool-call iteration budget** (R69/R71/R78/R80/R90/R92/R93/R94/R96/R97 patterns): R98 has minimal tool churn (version bump + CHANGELOG re-header + git ops). Reserve last 5 calls for the final push + QQ. Commit + tag + push must be in a single tight sequence per `chronos-release-pattern` skill.
+- **1-slot pre-budget for R98** (release-cut + close-out fits cleanly per R88 v0.7.0 precedent).
+- **Lockfile-trap**: N/A for R98 (no `npm install`; package-lock.json untouched).
+- **Adapter zero-change**: do NOT touch `src/chronos/adapters/*` in R98. Streak protected (currently 45 rounds, project-history high). Release-cut is metadata-only. Streak target: **46 rounds** at R98 close.
+- **i18n bilingual rule** (R46-A trap): N/A for R98 (no new keys; release notes are markdown-only).
+- **gh-proxy push URL**: MUST use `https://chengfei867:$GITHUB_TOKEN@gh-proxy.com/github.com/chengfei867/chronos-agent.git` for both `main` push AND tag push. Direct `github.com` is blocked per ops constraint.
+- **CHANGELOG format invariant**: R97's `[Unreleased]` block already has Added/Changed/Notes sub-blocks; R98 must rename header `[Unreleased]` → `[0.8.0] — 2026-05-23` and prepend a fresh empty `[Unreleased]` block above for future rounds (per `chronos-release-pattern` skill convention).
+- **Version mirror check**: `pyproject.toml` may carry `version = "0.7.0"` separately; if so, bump in same commit. `chronos --version` post-install must return `0.8.0`.
+- **Tag annotated, not lightweight**: use `git tag -a v0.8.0 -m "..."` per established pattern; lightweight tags don't trigger GitHub Releases API.
+
+### R98 success criteria
+
+- [ ] `chronos --version` returns `0.8.0` post-bump.
+- [ ] CHANGELOG has `[0.8.0] — 2026-05-23` block with summary header naming all 5 Arc C slices + a fresh empty `[Unreleased]` block prepended.
+- [ ] `git tag --list "v0.8*"` includes `v0.8.0` locally.
+- [ ] `git ls-remote --tags <gh-proxy> | grep v0.8.0` includes `v0.8.0` after push.
+- [ ] `npm run build` clean; `uv run pytest -q --no-cov` 648/9 unchanged; spike 16 + spike 18 + R97 smoke all GREEN.
+- [ ] Adapter zero-regression streak extends to **46 rounds** (R52→R98 unchanged).
+- [ ] No ADR status change; no new spike; no new i18n keys.
+
+---
+
+**Historical: Round 97 plan (slice 5 URL deep-links) — SHIPPED at R97, see §5 R97 paragraph for outcome**
+
+**Historical: Round 95 plan (slice 4 fork-tree) — SHIPPED via R95+R96 pair, see §5 R96 paragraph**
 
 R96 closed out Phase 5 Arc C **slice 4** (fork-tree replay) cleanly via A2 close-out of R95's inherited WIP — spike 18 16/16 GREEN, forkTree.ts + ForkTimeline + ForkTreeView + `#/runs/<id>/forks` route + 6-key bilingual `replay.fork.*` i18n shipped end-to-end. Adapter zero-regression streak R52→R96 = **44 rounds** (project-history high, +2). All gates green: pytest 648 passed, vite build clean (1466.43 kB JS), tsc clean, spike 18 A3 perf 0.04 ms / 1444 B (massively under budget). Slice 5 (URL deep-links) is next per ADR-027 §2 + R96 progress doc §7.
 

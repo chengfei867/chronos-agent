@@ -9,13 +9,39 @@
 // Replay UI can reuse this hook for keyboard nav (←/→/Space/q) and
 // click-to-jump on PlaybackTimeline. Backward compatible — TreeView keeps
 // using {playing, index, play, pause, reset} unchanged.
+//
+// R97 (Phase 5 Arc C slice 5): added optional `initialStep` so URL deep-links
+// like `#/runs/<id>/replay?step=5` can pre-seed the playback index without
+// tripping the auto-play timer. If `initialStep` is in [0, totalSteps), we
+// land on it on mount; otherwise -1 (not started) like before.
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const STEP_MS = 900;
 
-export function usePlayback(totalSteps: number) {
+export interface UsePlaybackOptions {
+  /** R97: pre-seed playback index (e.g. from `?step=N` URL deep-link). */
+  initialStep?: number;
+}
+
+export function usePlayback(totalSteps: number, options?: UsePlaybackOptions) {
+  const initialStep = options?.initialStep;
   const [playing, setPlaying] = useState(false);
-  const [index, setIndex] = useState(-1); // -1 = not started; 0..total-1 = playing/highlighting
+  // R97: honour `initialStep` IF it's a valid index for the current totalSteps.
+  // Otherwise -1 ("not started") preserves R92 behaviour. We don't clamp
+  // out-of-range to N-1 silently here — Replay.tsx is responsible for that
+  // policy at the URL boundary, but defensively treat negative/non-integer as
+  // "ignore" to keep the hook honest if a caller passes garbage.
+  const [index, setIndex] = useState<number>(() => {
+    if (
+      typeof initialStep === "number" &&
+      Number.isInteger(initialStep) &&
+      initialStep >= 0 &&
+      initialStep < totalSteps
+    ) {
+      return initialStep;
+    }
+    return -1;
+  });
   const timerRef = useRef<number | null>(null);
 
   const stop = useCallback(() => {

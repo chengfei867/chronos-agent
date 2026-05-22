@@ -14,7 +14,7 @@
 // Design choice: this is a *linear* view — siblings/forks are ignored. For the
 // reasoning *tree*, users go to TreeView (#/runs/<id>). Replay is the
 // "watch the agent think, frame by frame" experience.
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Button,
@@ -53,9 +53,11 @@ const KIND_COLORS: Record<NodeKind, string> = {
 
 interface ReplayProps {
   runId: string;
+  /** R97 (slice 5): URL deep-link `?step=N` — pre-seed playback index. */
+  initialStep?: number;
 }
 
-export default function Replay({ runId }: ReplayProps) {
+export default function Replay({ runId, initialStep }: ReplayProps) {
   const { t } = useTranslation();
   const { token } = theme.useToken();
   const [run, setRun] = useState<Run | null>(null);
@@ -99,7 +101,42 @@ export default function Replay({ runId }: ReplayProps) {
     stepBack,
     stepForward,
     jumpTo,
-  } = usePlayback(total);
+  } = usePlayback(total, { initialStep });
+
+  // R97 (Phase 5 Arc C slice 5): URL deep-link `?step=N` post-load seeking.
+  //
+  // The hook's `initialStep` only fires synchronously when total is known at
+  // mount time. In Replay.tsx, total starts at 0 (loading) and grows after
+  // fetchRun resolves — so we re-seed once via `jumpTo` after nodes arrive.
+  // Out-of-range clamps to total-1 silently per ADR-027 §2 slice 5 spec.
+  // Negative / non-integer was already filtered in App.parseStepParam.
+  const seededRef = useRef(false);
+  useEffect(() => {
+    if (seededRef.current) return;
+    if (total === 0) return;
+    if (typeof initialStep !== "number") {
+      seededRef.current = true;
+      return;
+    }
+    const clamped = Math.max(0, Math.min(total - 1, Math.floor(initialStep)));
+    jumpTo(clamped);
+    seededRef.current = true;
+  }, [total, initialStep, jumpTo]);
+
+  // R97: keep URL in sync with current step via history.replaceState.
+  // CRITICAL: `replaceState` not `pushState` — playback through 200 steps
+  // must NOT add 200 entries to the browser back/forward stack. Skip while
+  // index is -1 ("not started") so the URL stays clean of `?step=0` until
+  // the user actually starts navigating.
+  useEffect(() => {
+    if (index < 0) return;
+    const currentHash = window.location.hash;
+    // Only meddle with URLs we own — guard against stale unmount.
+    if (!currentHash.includes(`/runs/${runId}/replay`)) return;
+    const desired = `#/runs/${runId}/replay?step=${index}`;
+    if (currentHash === desired) return;
+    window.history.replaceState(null, "", desired);
+  }, [index, runId]);
 
   // Active node — index === -1 means "not started"; show step 0 as a preview
   // so users see what's coming without auto-advancing.
