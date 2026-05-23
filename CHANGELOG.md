@@ -4,6 +4,12 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
+_Nothing yet — R99 will decide._
+
+## [0.8.0] — 2026-05-23 (Round 98 — Phase 5 Arc C slices 1–5: R92 + R93 + R94 + R95 + R96 + R97)
+
+**Phase 5 Arc C — Replay UI / Time-Travel Debugger Frontend** ships GA. Six rounds across five slices land the linear Replay page (`#/runs/<id>/replay`), adapter-aware StatePanel with per-block special rendering for `anthropic_agents`, fork-tree visualisation across `parent_run_id` lineage, and copy-pasteable `?step=N` URL deep-links. ADR-027 §2 slices 1–5 all delivered; ADR-027 stays **Accepted** (promoted in-place at R92 after spike 16). Adapter zero-regression streak **R52→R98 = 46 rounds** (project-history high). Backend / adapter / schema impact across the entire arc: **zero** — every slice reads the existing `GET /runs/{id}` + `GET /runs/{id}/tree` API surface validated by spike 16's data-contract sufficiency proof.
+
 ### Added
 
 - **R97 (Phase 5 Arc C slice 5)**: URL deep-links to a specific replay step
