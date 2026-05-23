@@ -1,7 +1,8 @@
 # ADR-028: Phase 5 Arc D — Cross-framework golden-trace test fixtures
 
-**Status**: Draft (R99, 2026-05-23 — promotes to Accepted in-place per R57 rule after R100 spike 19 lands GREEN)
-**Date**: 2026-05-23 (Beijing, in-window cron R99)
+**Status**: Accepted (R100, 2026-05-24 — promoted in-place per R57 rule; spike 19 GREEN 3/3, total 1.12 s, well under the 5 s budget)
+**Date**: 2026-05-23 (Beijing, in-window cron R99); promoted R100 2026-05-24
+**Spike-19 evidence**: `tests/spikes/spike19_golden_trace_invariants.py` (3/3 GREEN at HEAD), `tests/golden/_skeleton/expected_run.json` (595-byte canonical projection), `docs/contracts/golden-trace-format.md` (v0 spec)
 **Supersedes**: nothing
 **Depends on**: [ADR-016][ADR-016] (adapter `RecorderProtocol` — read-only impact), [ADR-027][ADR-027] (Phase 5 charter — Arc D was pre-authorised hot-backup, now promoted to second-arc primary), [ADR-001][ADR-001] (Python 3.11+ pin)
 **Related**: [ADR-026][ADR-026] (Arc B Anthropic Agents adapter — primary seed-adapter candidate after AC-3 relay-flake history), [docs/contracts/adapter-protocol.md][contract] (Arc D builds on this contract — recorder-side regression net)

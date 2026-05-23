@@ -4,7 +4,46 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
-_Nothing yet — R99 will decide._
+### Added
+
+- **R100 (Phase 5 Arc D slice 1 — golden-trace data contract)**: spike 19
+  lands GREEN 3/3 with the inline disprover-first probe for ADR-028, now
+  promoted Draft → Accepted in-place per R57. Three invariants validated:
+    * **INV-1** round-trip byte-equality: a synthetic 3-envelope Run
+      (agent_start/llm/agent_end) projected via `project_to_golden` round-
+      trips through real `SqliteStore` (no mocks) and matches the
+      pre-committed 595-byte `tests/golden/_skeleton/expected_run.json`.
+    * **INV-2** projection stability + closed field set: two projections
+      1 second apart are byte-equal (no clock leakage); top-level keys
+      are exactly `{schema, adapter, status, task_description,
+      node_count, node_kinds, node_names, states_after}`; adding a 4th
+      Node with a previously-unseen `NodeKind.TOOL` does NOT widen the
+      key set.
+    * **INV-3** sanitiser audit: five real-world secret shapes
+      (`sk-ant-…`, `sk-proj-…`, `Bearer eyJ…` JWTs, `AKIA…` AWS access-
+      key ids, URL `?token=…` params) all redact at fixture-load time,
+      while ten benign tokens (UUID-shaped node ids, `claude-opus-4-7`,
+      `Beijing`, etc.) survive intact. Sanitiser is idempotent.
+    * Whole-spike runtime: 1.12 s (perf budget 5 s).
+    * New artefacts: `tests/spikes/spike19_golden_trace_invariants.py`
+      (reference projection + sanitiser, hoists to
+      `src/chronos/golden/{projection,sanitise}.py` at R102),
+      `tests/golden/_skeleton/{envelopes.jsonl,expected_run.json,README.md}`
+      (skeleton fixture + regen instructions),
+      `docs/contracts/golden-trace-format.md` (v0 spec — closed field
+      set, canonical serialisation rules, v0→v1 evolution policy,
+      sanitiser audit gate).
+    * Zero production code touched; data-contract slice only. Slice 2
+      (R101+): seed-adapter capture for `anthropic_agents` per ADR-028
+      §4. Slice 3 (R102+): `chronos verify-golden` CLI verb.
+    * Adapter zero-regression streak: **R52→R100 = 48 rounds**.
+
+### Changed
+
+- **R100** ADR-028 status: Draft → **Accepted** (in-place per R57 rule;
+  spike 19 evidence cited in front matter). Spec frozen at v0; any
+  schema change now requires an ADR-028 amendment + `chronos.golden/v0`
+  → `v1` bump per `docs/contracts/golden-trace-format.md` §5.
 
 ## [0.8.0] — 2026-05-23 (Round 98 — Phase 5 Arc C slices 1–5: R92 + R93 + R94 + R95 + R96 + R97)
 

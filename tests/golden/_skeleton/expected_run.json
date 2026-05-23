@@ -1,0 +1,37 @@
+{
+  "adapter": "langgraph",
+  "node_count": 3,
+  "node_kinds": [
+    "fn",
+    "llm",
+    "end"
+  ],
+  "node_names": [
+    "agent_start",
+    "chat_call",
+    "agent_end"
+  ],
+  "schema": "chronos.golden/v0",
+  "states_after": [
+    {
+      "input": "hi",
+      "tools_loaded": [
+        "search",
+        "lookup"
+      ]
+    },
+    {
+      "messages": [
+        {
+          "content": "hello world",
+          "role": "assistant"
+        }
+      ]
+    },
+    {
+      "output": "hello world"
+    }
+  ],
+  "status": "completed",
+  "task_description": "spike19 synthetic 3-envelope round-trip"
+}
