@@ -6,6 +6,59 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ### Added
 
+- **R101 (Phase 5 Arc D slice 2 — offline capture driver for anthropic_agents)**:
+  lands `scripts/capture/capture_anthropic_agents.py`, the offline driver
+  that materialises golden trace fixtures from any recorded SQLite run.
+  Per ADR-028 §3 the recorder hot-path stays fixture-agnostic; capture
+  runs out-of-band against `SqliteStore` and emits the two-file
+  contract (`envelopes.jsonl` + `expected_run.json`) into
+  `tests/golden/anthropic_agents/<scenario>/`.
+    * **CLI surface**: `--db <path> --run-id <uuid> --out-dir <path>
+      [--force]`. Exit codes `0` success, `1` runtime error,
+      `2` DB / Run not found. Refuses to overwrite a populated
+      `out-dir` without `--force`.
+    * **Adapter gate**: aborts if `Run.adapter != "anthropic_agents"` —
+      the driver is recorder-specific by design (R102+ ships sibling
+      drivers for langgraph/crewai/autogen).
+    * **Sanitiser belt** (defence-in-depth alongside record-time
+      redaction): every envelope is JSON-serialised then run through
+      `sanitise_capture()` before write. Patterns: `sk-ant-…`,
+      `Bearer …`, `api_key=…`, `password=…`, `secret=…`, `token=…`,
+      `AKIA…`. Verified by `test_capture_belt_redacts_anthropic_secret`
+      planting a canonical key in `model_call.response_text` and
+      asserting absence on disk.
+    * **Byte-determinism**: re-invoking the driver on the same DB row
+      produces byte-identical files (`golden_dumps()` canonical
+      serialisation — ADR-028 §2 / spike 19 INV-2). Test:
+      `test_byte_stability_across_invocations`.
+    * **Reference parity**: helpers (`_canonicalise`, `golden_dumps`,
+      `project_to_golden`, `_SECRET_PATTERNS`, `sanitise_capture`)
+      are duplicated by-copy from
+      `tests/spikes/spike19_golden_trace_invariants.py`; a pin test
+      (`test_helpers_byte_match_spike_reference`) loads the spike
+      module via `importlib` and asserts byte-for-byte parity on the
+      `_skeleton` fixture, so silent drift is impossible. R102 hoists
+      both copies into `src/chronos/golden/` (ADR-028 §4 slot-2
+      Option A) when live capture lands.
+    * 15 new unit tests in `tests/unit/test_capture_anthropic_agents.py`
+      covering: shape contract (envelopes count + ordering + required
+      fields), expected_run.json byte-stability, sanitiser belt on
+      both `model_call.response_text` and `state_after` payloads,
+      empty-run rejection, wrong-adapter rejection, missing-DB
+      rejection, missing-run-id rejection, `--force` semantics,
+      stdout/stderr cleanliness, and the spike-19 byte-parity pin.
+    * New artefacts:
+      `scripts/capture/capture_anthropic_agents.py` (driver, ~360 LOC),
+      `scripts/capture/README.md` (driver matrix + R102 hoist plan),
+      `tests/unit/test_capture_anthropic_agents.py` (15 tests),
+      `tests/golden/anthropic_agents/.gitkeep` +
+      `tests/golden/anthropic_agents/README.md` (capture procedure +
+      scenario target list, no live fixtures yet — those are R102+
+      and gated on user-funded ANTHROPIC_API_KEY credit window).
+    * Gate: 663 passed / 9 skipped / 0 failed; spike 19 still 3/3
+      GREEN; ruff + mypy clean on all R101 artefacts.
+    * Adapter zero-regression streak: **R52→R101 = 49 rounds**.
+
 - **R100 (Phase 5 Arc D slice 1 — golden-trace data contract)**: spike 19
   lands GREEN 3/3 with the inline disprover-first probe for ADR-028, now
   promoted Draft → Accepted in-place per R57. Three invariants validated:
