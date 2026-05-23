@@ -229,34 +229,52 @@ the plan-artifact `fork plan emit → edit → fork plan exec` loop is the shipp
 
 ---
 
-## Phase 5 — Replay UI + post-Arc-C work (R90 charter, ADR-027)
+## Phase 5 — Replay UI (Arc C ✅) + Golden-trace fixtures (Arc D 🚧 underway)
 
-**Status**: Charter committed at R90 ([ADR-027][ADR-027-link] Draft, [r90-phase-5-arc-survey.md][r90-link]). Promotes to Accepted at R91 after slice 1 spike per R57 in-place rule.
+**Status**: Two-arc phase. Arc C charter at R90 ([ADR-027][ADR-027-link]) ✅ shipped end-to-end as v0.8.0 GA at R98. Arc D charter at R99 ([ADR-028][ADR-028-link] Draft) 🚧 — promotes to Accepted at R100 after slice 1 spike 19 per R57 in-place rule.
 
-### First arc — Arc C: Replay UI / Time-Travel Debugger Frontend (recommended, R91-R98 ~6 rounds)
+### First arc — Arc C: Replay UI / Time-Travel Debugger Frontend ✅ COMPLETE (R91-R98, v0.8.0 GA)
 
-The hero feature: interactive step-through replay of any recorded run, with state-evolution side panel, fork-tree replay mode, URL-shareable deep-links, optional lockstep two-run diff view. Read-only backend, zero adapter changes, target v0.8.0.
+The hero feature: interactive step-through replay of any recorded run, with state-evolution side panel, fork-tree replay mode, URL-shareable deep-links. Read-only backend, zero adapter changes, shipped as **v0.8.0 GA at R98** (2026-05-23) covering five slices across R92→R97.
 
-- [ ] Slice 1 (R91, spike-first) — `Replay.tsx` core: linear playback timeline + keyboard nav + perf spike.
-- [ ] Slice 2 (R92) — State-evolution side panel + per-adapter `formatState` registry.
-- [ ] Slice 3 (R93-R94) — Fork-tree replay mode with diverge-point highlight.
-- [ ] Slice 4 (R95) — URL-shareable state (hash-router deep-link + clipboard copy).
-- [ ] Slice 5 stretch (R96-R97) — Diff-aware lockstep two-run replay.
-- [ ] Slice 6 (R98) — Polish + dogfood + v0.8.0 cut.
+- [x] Slice 1 (R91→R92) — `Replay.tsx` core: linear playback timeline + keyboard nav + spike 16 (11/11 GREEN).
+- [x] Slice 2 (R92→R93) — State-evolution side panel + per-adapter `formatState` registry + spike 17 (10/10 GREEN).
+- [x] Slice 3 (R94) — Block-content special rendering for `anthropic_agents` (TextBlock / ToolUseBlock / ToolResultBlock).
+- [x] Slice 4 (R95→R96) — Fork-tree replay mode with diverge-point projection + spike 18 (16/16 GREEN).
+- [x] Slice 5 (R97) — URL-shareable deep-links (`#/runs/<id>/replay?step=N` + `history.replaceState` URL sync).
+- [x] Slice 6 (R98) — v0.8.0 GA release-cut (CHANGELOG roll, version bump, tag, GitHub Release object).
+- [ ] Slice 7 stretch — Diff-aware lockstep two-run replay (deferred from ADR-027 §2 stretch row; eligible for v0.9.x patch line if user demand surfaces).
 
-**Arc C ACs**: AC-1 keyboard parity with CLI replay; AC-2 state panel covers all 4 first-class adapters; AC-3 fork-tree replay; AC-4 URL deep-links; AC-5 bundle delta ≤ +150 KB raw; AC-6 stretch lockstep.
+**Arc C outcome**: AC-1 ✅ keyboard parity (←/→/space/q); AC-2 ✅ state panel covers 4 first-class adapters; AC-3 ✅ fork-tree replay; AC-4 ✅ URL deep-links; AC-5 ✅ bundle 1467.24 kB JS / 476.96 kB gzip vs R36-D baseline 452 KB gzip = +25 KB gzip (under +50 KB budget); AC-6 stretch deferred. Adapter zero-regression streak preserved across all 6 slices (R52→R98 = 46 rounds at GA cut).
 
-**Hot-backup arc (Arc D — Cross-framework golden-trace test fixtures)**: pre-authorised swap if R91 slice 1 spike fails OR if a relay-flake outage blocks a v0.7.x patch release. Per ADR-027 §6.
+### Second arc — Arc D: Cross-framework golden-trace test fixtures 🚧 UNDERWAY (R100-R102, v0.9.0 target)
+
+Foundation arc — deterministic regression net between unit tests (mocked SDK) and `CHRONOS_LIVE=1` smoke (relay-dependent, not in CI). Promoted from ADR-027 §6 hot-backup status to ADR-028 second-arc primary at R99 after Arc C succeeded. Test-only feature; zero user-visible surface; designed to grow incrementally over multiple minor releases.
+
+- [ ] Slice 1 (R100, spike-first) — Spike 19 (3 invariants: round-trip, projection stability, sanitiser audit) + fixture layout commit + `docs/contracts/golden-trace-format.md` spec.
+- [ ] Slice 2 (R101) — First seed fixture pair: `langgraph/simple_chat/{envelopes.jsonl, expected_run.json, assertions.yaml}` + `scripts/capture/capture_langgraph.py` + `tests/fakes/langgraph/replay.py`.
+- [ ] Slice 3 (R102) — `chronos verify-golden` CLI verb (`src/chronos/cli/verify_golden.py`) + pytest shim (`tests/golden/test_langgraph_golden.py`) + v0.9.0 release-cut.
+
+**Arc D ACs (per ADR-028 §5)**: AC-1 `chronos verify-golden --adapter langgraph` exits 0; AC-2 `--record` mode produces idempotent fixtures; AC-3 sanitiser redacts known-secret patterns; AC-4 pytest shim adds ≤2 s; AC-5 baseline 648/9 → 649+/9; AC-6 adapter zero-regression streak R52→R102 = **50 rounds** target.
+
+**Seed adapter**: `langgraph` (lowest-variance per round; 46-round zero-regression streak provides clean ground truth). Anthropic Agents seed deferred to v0.10.0+.
+
+**Tooling shape**: dedicated CLI verb (`chronos verify-golden`) over pytest plugin — see ADR-028 §3 trade-off table. Pytest matrix integration via thin `subprocess.run` shim in slice 3.
+
+**v0.10.0+ ratchet**: per-adapter coverage extension (autogen, crewai, anthropic_agents) is OUT OF SCOPE for v0.9.0; explicit re-scoping at v0.9.0 cut.
 
 ### Deferred to Phase 6+
 
-- **Arc E — 5th adapter** (Pydantic AI most likely, R68/R69 deferred set). Re-evaluate when Arc C ships OR external user surfaces with framework demand.
+- **Arc E — 5th adapter** (Pydantic AI most likely, R68/R69 deferred set). Re-evaluate after Arc D v0.9.0 lands AND external user surfaces with framework demand.
 - **Arc F — Recorder per-block split** (R85 Option (b)). Defer indefinitely without explicit user mandate; reverses R89 Option (a).
-- **Cloud-hosted option (opt-in SaaS)** — premature without external users + Arc C demo surface.
-- **Team features (shared trace libraries, comments, RBAC)** — premature; needs Arc C deep-link as foundation.
+- **Cloud-hosted option (opt-in SaaS)** — premature without external users + Arc C demo surface, despite Arc C now shipping.
+- **Team features (shared trace libraries, comments, RBAC)** — premature; needs deep-link infrastructure (Arc C ✅) AND user demand.
 - **Pricing / commercial model experiments** — premature.
+- **Cross-adapter golden equivalence** (same scenario shape-equal across two adapters) — Arc D ADR-028 §6 explicit non-goal; revisit in Phase 6+.
+- **Semantic-diff golden assertions** (LLM-as-judge) — Arc D ADR-028 §6 explicit non-goal.
 
 [ADR-027-link]: decisions/ADR-027-phase-5-arc-selection.md
+[ADR-028-link]: decisions/ADR-028-phase-5-arc-d-golden-traces.md
 [r90-link]: research/r90-phase-5-arc-survey.md
 
 ---

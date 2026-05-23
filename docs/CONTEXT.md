@@ -147,6 +147,35 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
+**截至 Round 99 结束 (2026-05-23 CST cron slot ~11:00, single-slot planning/docs-cadence in 0–11 窗口) — Phase 5 second-arc opened: ADR-028 Draft (Phase 5 Arc D — cross-framework golden-trace test fixtures, 24 235 bytes / 7 sections + spike 19 inline plan) committed, `docs/roadmap.md` Phase 5 section refreshed (Arc C ✅ shipped at v0.8.0 GA, Arc D 🚧 underway R100→R102 → v0.9.0 target, all 6 Arc C slices ticked `[x]` with R# + spike-result citations, Arc C bundle outcome recorded as +25 KB gzip vs R36-D baseline under +50 KB budget). `chronos-release-pattern` skill verified ALREADY patched with R98 F-1 (`uv run --no-sync` lesson at lines 3, 201–219) — no edit needed; R99 Track B reduced to NO-OP per F-2 discipline (no dead retro doc when content is preserved in skill body + R98 progress doc). NO new spike (R99 is planning-only; spike 19 handed to R100). NO i18n key change (md-only). v0.8.0 GA tag + Release object preserved. Adapter zero-regression streak R52→R99 = **47 rounds** (R99 md-only → streak extends, NEW project-history high, +1). All gates GREEN at HEAD inherited from R98: pytest 648 passed / 9 skipped / 0 fail / 0 error, mypy clean, `chronos --version` = `chronos 0.8.0`. Zero code change. Zero `pyproject.toml` / `uv.lock` change. Zero adapter change.
+
+- **Round: 99** (Phase 5 Arc D charter, single-slot, planning/docs-cadence, md-only). 0 hard blocker. ADR-028 created at Status: **Draft** (per R57 in-place rule, promotes to Accepted at R100 same commit as spike 19 GREEN proof). Roadmap §"Phase 5" rewritten with two-arc structure. Progress doc + CONTEXT update + push pending close-out.
+
+- **R99 关键决策 (上墙)**:
+  - **D-99-1: Promote Arc D from hot-backup → second-arc primary.** ADR-027 §6 had Arc D pre-authorised as a fallback if R91 spike 16 failed. The fallback never triggered (Arc C shipped clean over R92→R98). With Arc C done, Arc D becomes second-arc on its own merits per r90 ranking — not as a fallback consumption. r90 had ranked Arc D as "high test-infrastructure value, deferred unless Arc C blocks." Now: Arc C unblocked AND test-infra ROI peaks here (4 first-class adapters live, 46-round zero-regression streak gives clean ground-truth for golden capture).
+  - **D-99-2: CLI verb `chronos verify-golden` over pytest plugin.** ADR-028 §3 trade-off table: CLI wins on isolation (separate process), discovery side-effects (none), `--record` mode ergonomics (trivial), explicit local-dev verb. Pytest matrix integration delivered via thin `subprocess.run` shim in `tests/golden/test_*_golden.py` (slice 3, R102).
+  - **D-99-3: Seed adapter = `langgraph` (over anthropic_agents).** anthropic_agents tempting (R94 block-content rendering work fresh) but has higher per-round variance (block shape evolves with SDK). langgraph has lowest variance + longest streak → cleanest ground truth. anthropic_agents seed deferred to v0.10.0+.
+  - **D-99-4: Skip optional R98 release retrospective doc.** Track B reduces to NO-OP — `chronos-release-pattern` skill already inlines R98 F-1 lesson at 6 line locations. F-2 discipline: no dead docs when content preserved elsewhere.
+
+- **R99 产出**:
+  - `docs/decisions/ADR-028-phase-5-arc-d-golden-traces.md` (**new**, 24 235 bytes, Status: **Draft**) — §1 Context, §2 Scope (3 slices: spike → first fixture → CLI verb + release), §3 Decision (CLI verb over pytest plugin, trade-off table), §4 Fixture format (`envelopes.jsonl` + `expected_run.json` + `assertions.yaml`), §5 ACs (AC-1 through AC-6), §6 Non-goals (no cross-adapter golden equivalence; no semantic-diff/LLM-as-judge), §7 Consequences, plus inline **Spike 19 plan** (3 invariants: round-trip byte-equality / projection stability / sanitiser audit at fixture-load).
+  - `docs/roadmap.md` (**modified**) — Phase 5 section rewritten: title "Replay UI (Arc C ✅) + Golden-trace fixtures (Arc D 🚧 underway)"; all 6 Arc C slices `[x]`-ticked with R# + spike citations (spike 16: 11/11, spike 17: 10/10, spike 18: 16/16); Arc C bundle outcome recorded (1467.24 kB raw / 476.96 kB gzip = +25 KB gzip vs R36-D baseline = under +50 KB budget); Arc D second-arc subsection with 3 slices, 6 ACs, langgraph seed-adapter rationale, CLI-verb tooling-shape note, v0.10.0+ ratchet. 2 new "Deferred to Phase 6+" entries pinned to ADR-028 §6 (cross-adapter equivalence, semantic-diff).
+  - `progress/2026-05-23-round-99.md` (**new**, ~12 KB / 9 sections) — pre-flight, Track A execution, Track B no-op verification, decisions D-99-1 through D-99-4, spike 19 R100 hand-off (3 invariants, bail-out clause), files-touched table, streak update, R100 plan, sign-off.
+  - `docs/CONTEXT.md` — §5 current-state R99 paragraph (this) + §6 R100 plan refresh.
+  - **Zero code change. Zero `tests/` change. Zero adapter change. Zero `pyproject.toml`/`uv.lock` change. Zero spike. Zero i18n delta. Zero ADR status change for ADR-027.** Md-only planning round.
+
+- **Adapter zero-regression streak**: R52→R98 = 46 rounds (R99 ships no adapter code → streak extends to **47 rounds**, NEW project-history high, +1). Target: R102 = **50 rounds** at v0.9.0 GA cut.
+
+- **v0.8.0+ release version line**:
+  - v0.7.0 ✅ shipped at R87+R88.
+  - v0.8.0 ✅ shipped at R98 covering R92→R97 Phase 5 Arc C slices 1–5.
+  - v0.8.1 — patch candidate (low priority, ad-hoc; eligible for Arc C slice 7 stretch lockstep diff if user demand surfaces).
+  - v0.9.0 — Phase 5 Arc D bundle (spike 19 + first golden fixture + `chronos verify-golden` CLI verb), ETA R102 (3 slices: R100 spike-first, R101 first fixture, R102 CLI + release).
+
+- **Open drift items**: `tests/fixtures/` directory does not exist yet (only `tests/unit/fixtures/{anthropic_agents_stubs.py, three_run_pivot.py}`); `scripts/capture/` does not exist; `docs/contracts/` does exist. R100 slice 1 will create the missing fixture-skeleton dirs. CONTEXT.md bloat (1558→1576+ lines / ~325 KB) flagged as side concern — defer to filler-slot prune round; not blocking.
+
+---
+
 **截至 Round 98 结束 (2026-05-23 CST cron slot ~08:40, single-slot release-engineering for v0.8.0 GA cut covering Phase 5 Arc C slices 1–5, in 0–11 窗口) — v0.8.0 SHIPPED end-to-end: CHANGELOG `[Unreleased]` rolled into `[0.8.0] — 2026-05-23` with arc-summary header (R92→R97, six rounds across five slices), fresh empty `[Unreleased]` prepended for R99+, `__version__` + `pyproject.toml.version` bumped 0.7.0 → 0.8.0, commit `f0fed19` (3 files / +8/-2) pushed to origin/main via gh-proxy, annotated tag `v0.8.0` (`Phase 5 Arc C — replay UI complete`) pushed via gh-proxy, GitHub Release object created via REST API (`id=328193743`, `prerelease=false`, `make_latest=true`), `releases/latest` API now returns `tag_name=v0.8.0` ✅. NO new ADR (release-engineering only — ADR-027 stays Accepted). NO new spike (release-cut consumes existing Accepted ADRs per R88 precedent). NO new i18n keys (release notes are markdown-only). Adapter zero-regression streak R52→R98 = **46 rounds** (NEW project-history high, +1). All gates GREEN at the release commit: `uv run --no-sync chronos --version` → `chronos 0.8.0`, `uv run --no-sync pytest -q --no-cov` 648 passed / 9 skipped in 19.97s (byte-identical to R97 baseline), `npm run typecheck` exit 0, `npm run build` 1467.24 kB JS / 476.96 kB gzip / 26.01 kB CSS / 5.14 kB gzip in 7.89s (byte-identical to R97 baseline). Phase 5 Arc C is now **fully shipped + released** under v0.8.0 GA. The natural R99 candidate is kicking off Phase 5 Arc D (golden-trace fixtures, pre-authorised hot-backup arc per R90 charter) OR a small dev-loop polish round (the `chronos-release-pattern` skill needs a `uv --no-sync` pitfall note from R98 F-1 below).
 
 - **Round: 98** (v0.8.0 GA release-cut, single-slot, release-engineering only — Phase 5 Arc C slices 1–5 wrap). 0 hard blocker. Code shipped: `CHANGELOG.md` (`[Unreleased]` → `[0.8.0] — 2026-05-23 (Round 98 — Phase 5 Arc C slices 1–5: R92+R93+R94+R95+R96+R97)` + arc-summary header paragraph + fresh empty `[Unreleased]` prepended), `src/chronos/__init__.py` (`__version__ = "0.7.0"` → `"0.8.0"`), `pyproject.toml` (`version = "0.7.0"` → `"0.8.0"`). Total diff: 3 files / +8/-2 — clean release-only diff. All gates green at release commit: pytest **648 passed / 9 skipped** in 19.97s (byte-identical to R97 baseline), tsc --noEmit clean, vite build clean (1467.24 kB JS / 476.96 kB gzip / 26.01 kB CSS / 5.14 kB gzip in 7.89s, byte-identical to R97), `chronos --version` → `0.8.0`. Push: both `main` (`e19f249..f0fed19`) AND tag (`v0.8.0` new) pushed atomically via gh-proxy. GitHub Release: created explicitly via REST API POST `/repos/.../releases` with `make_latest=true` (per R88 lesson — plain tag push does NOT auto-create Release object); response `id=328193743`, `tag_name=v0.8.0`, `prerelease=false`, `html_url=https://github.com/chengfei867/chronos-agent/releases/tag/v0.8.0`. Post-push verify: `git ls-remote --tags` shows `v0.8.0` peeled commit `f0fed19` matches local HEAD ✅; `releases/latest` API returns `tag_name=v0.8.0 prerelease=False id=328193743` ✅.
@@ -1069,6 +1098,58 @@ R73 由 chat-driven 单 slot 完成 ("一气呵成" pattern):
 R73 是 R69→R72 4-round chain 的第一个真 disprover round, 也是 Phase 4 Arc B 第一个 user-facing release.
 
 ## 6. 下一轮该做什么 (Next Round TODO)
+
+**Round 100 — Phase 5 Arc D slice 1 (spike 19: golden-trace 3-invariant validation) + ADR-028 Draft→Accepted in-place promotion + `docs/contracts/golden-trace-format.md` v0 spec freeze; 2-slot pre-budget (R100 + 1 buffer for invariant-3 sanitiser hardening if real recorder envelopes turn up unexpected secret patterns); adapter zero-regression streak preservation (R52→R100 = 48 rounds target)**
+
+R99 closed cleanly as planning/docs-cadence single-slot — ADR-028 Draft (Phase 5 Arc D charter, 24 235 bytes, 7 sections + inline spike 19 plan) committed; `docs/roadmap.md` Phase 5 section refreshed with two-arc structure (Arc C ✅ shipped, Arc D 🚧 underway); `chronos-release-pattern` skill verified already-patched with R98 F-1 (Track B reduced to NO-OP per F-2 discipline). Adapter zero-regression streak R52→R99 = **47 rounds** (project-history high, +1). v0.8.0 GA tag + Release object intact. Zero code change. Zero `pyproject.toml`/`uv.lock` change. Zero ADR-027 status change.
+
+### R100 hard-prereqs to verify pre-flight (carried from R88→R99)
+
+Before any new work, run the 60-second remote-state sanity check:
+
+1. `git fetch origin main` then `git status` clean + in-sync with origin/main. *(R48-B trap re-confirmed at every round since R88: ALWAYS fetch first.)*
+2. `git tag --list "v0.8*"` includes **`v0.8.0`** (last release cut at R98).
+3. `git ls-remote --tags <gh-proxy>/chengfei867/chronos-agent.git | grep v0.8.0` includes `v0.8.0`.
+4. `releases/latest` API returns `tag_name=v0.8.0`.
+5. `chronos --version` = `0.8.0` (no R99 bump).
+6. `docs/decisions/ADR-028-phase-5-arc-d-golden-traces.md` exists at HEAD with Status: **Draft** (R99 commit).
+
+### R100 plan — Phase 5 Arc D slice 1 (spike-first)
+
+Per ADR-028 §2 slice 1 + inline spike 19 plan. **R100 is spike-first execution.**
+
+1. **Author spike 19** at `tests/spikes/spike19_golden_trace_invariants.py` — three independent invariant tests in one file:
+   - **Invariant 1 — round-trip byte-equality**: synthetic 3-envelope `envelopes.jsonl` → `replay()` → projected `RunSummary` → assert byte-equal to pre-committed `expected_run.json`. Failure mode: any non-determinism (dict ordering, time fields, UUID re-mint) breaks.
+   - **Invariant 2 — projection stability**: assert `RunSummary` field set is closed under addition of new envelope kinds. Adding a new envelope kind must NOT silently introduce new top-level `RunSummary` fields. Failure mode: latent `**kwargs` spread or `model_dump()` propagating SDK-specific fields.
+   - **Invariant 3 — sanitiser audit at fixture-load**: reject envelopes containing `sk-[A-Za-z0-9]{20,}`, `Bearer [A-Za-z0-9._-]+`, or AWS-key shapes. Tests at fixture-LOAD (not record) so externally-contributed fixtures must clear the gate.
+2. **Build hand-written 3-envelope fixture skeleton** at `tests/golden/_skeleton/envelopes.jsonl` + `expected_run.json` (synthetic, no real SDK call). Sufficient input for invariant 1.
+3. **Run spike**: `uv run --no-sync python tests/spikes/spike19_golden_trace_invariants.py` — target **3/3 GREEN**. (`--no-sync` safe: zero deps added.)
+4. **Promote ADR-028 Status: Draft → Accepted in-place** in same commit as spike-green proof. (R57 invariant.)
+5. **Commit `docs/contracts/golden-trace-format.md` v0**: spec frozen at slice 1 — defines `envelopes.jsonl` line shape, `expected_run.json` schema, `assertions.yaml` constraint vocabulary. Becomes the contract honored by R101 fixture-content authoring + R102 CLI verb.
+6. **CHANGELOG `[Unreleased]/Added`**: spike 19 + ADR-028 promotion + golden-trace format spec.
+7. **Hand off** fixture-content authoring + `scripts/capture/capture_langgraph.py` to **R101 slice 2**; CLI verb `chronos verify-golden` + pytest shim to **R102 slice 3** + v0.9.0 release-cut.
+
+### R100 invariants & guards
+
+- **R66 invariant**: `uv run` may churn `uv.lock` resolution-markers (~2500-line diff). `git status` BEFORE `git add -A`. `git checkout uv.lock` if modified. Spike 19 adds zero deps → no legitimate `uv.lock` change expected.
+- **R57 invariant**: ADR-028 Draft→Accepted promotion happens in-place same commit as spike-green proof. NOT in a separate commit.
+- **R88 invariant**: no premature success claims. Progress doc + CONTEXT update + push happen ONLY after spike GREEN + commit + push succeed.
+- **2-slot pre-budget**: slot 1 = spike + ADR promotion + format spec + commit + push. Slot 2 = buffer for invariant-3 sanitiser hardening if real recorder envelopes turn up unexpected secret patterns. If slot 1 finishes clean (likely), slot 2 buffer reverts to "filler δ available" (e.g., CONTEXT.md prune from 1576+ lines, or ADR-016 ↔ contracts doc reorg).
+- **Bail-out clause**: if invariant 1 (round-trip byte-equality) fails because the projector has latent non-determinism, cut a sub-spike to nail down the source BEFORE proceeding to slice 2. Do NOT paper over with `sort_keys=True` if root cause is elsewhere (e.g., time field, UUID re-mint, dict-comprehension order). Document root cause + fix in ADR-028 addendum or follow-up ADR.
+- **`uv run --no-sync` reuse**: per R98 F-1, safe when deps unchanged. R100 adds zero deps → `--no-sync` safe for spike runs and gates.
+
+### Out of scope for R100 (defer to R101+)
+
+- Actual `chronos verify-golden` CLI verb (R102 slice 3).
+- `langgraph/simple_chat` real fixture content via `scripts/capture/capture_langgraph.py` (R101 slice 2).
+- Pytest matrix integration `tests/golden/test_langgraph_golden.py` shim (R102 slice 3).
+- Per-adapter coverage extension to autogen / crewai / anthropic_agents (v0.10.0+ explicit ratchet per ADR-028 §2).
+
+### R100 streak target
+
+Adapter zero-regression streak: R52→R99 = 47 rounds. R100 is test-infra / docs (zero adapter source change). Spike 19 lives in `tests/spikes/`, fixture skeleton in `tests/golden/`, format spec in `docs/contracts/`. Streak should extend to **R52→R100 = 48 rounds**. Final Arc D target: **R102 = 50 rounds** at v0.9.0 GA cut.
+
+---
 
 **Round 99 — Phase 5 Arc D kickoff (golden-trace fixtures planning) OR small dev-loop polish (chronos-release-pattern skill patch + R98 retrospective); 1-slot pre-budget; A2 close-out posture if slot-1 inherited; adapter zero-regression streak preservation (R52→R99 = 47 rounds target)**
 
