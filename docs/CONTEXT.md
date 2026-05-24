@@ -147,6 +147,35 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
+**截至 Round 105 结束 (2026-05-25 CST cron slot ~07:06, A2-of-A2 close-out recovery slot — landed R104 WIP that the prior cron slot left uncommitted, in 0–11 窗口)** — R104 (Phase 5 Arc D slice 3, `chronos verify-golden` CLI subcommand + suspenders-layer load-time sanitiser audit) had completed all deliverables (verb + Typer wrapper + 4 unit tests + golden-trace-format §6 + CHANGELOG bullet + progress doc + CONTEXT §5/§6) but the slot exited before `git add -A && git commit && git push` ran. R105 ran the A2-of-A2 close-out playbook per `cron-slot-handoff-recovery` skill: re-verified all gates GREEN against the WIP working tree (664 passed + 9 live-skipped in 20.27 s — exact match for R104's 660+4 baseline; `ruff check src/ scripts/ tests/` 0 errors; `ruff format --check` 124/124 clean; `mypy src/` 42 files clean; spike19 3/3 GREEN in 1.12 s; `chronos verify-golden --help` clean Typer help; `git diff pyproject.toml uv.lock` empty), confirmed gate evidence is observable now → partial-execution recovery (R88 variant), NOT aspirational (R86 variant), then committed the WIP as a single logical commit on top of R103 (`2e613f3`) and pushed to origin/main via `gh-proxy.com`. Adapter zero-regression streak holds at **R52→R104 = 52 rounds** (project-history high, +0 vs R103). **Zero new code change in R105 itself**: all artefacts are R104's. R105's own slice work (Track A — `.github/workflows/golden-verify.yml` + `tests/test_golden_fixtures.py` shim per CONTEXT §6 R105 plan) is the **R106 plan** (see §6) — one-slice-per-slot discipline forbids mixing recovery-slot landing with new slice work (R91 cascade-trap lesson, also re-validated R72→R71 / R96→R95 / R102→R101 precedents). v0.8.0 GA tag intact; no ADR amendments; no schema change; no `pyproject.toml`/`uv.lock` touch; no adapter source change.
+
+- **Round: 105** (A2-of-A2 close-out recovery, single-slot, zero new code, gate re-verification only). 0 hard blocker. Lands all R104 untracked + modified artefacts (4 modified + 3 untracked = 7 paths) in one commit on top of R103 (`2e613f3`). New artefacts contributed by R105 itself: 0. Modified by R105 itself: this CONTEXT §5 paragraph + §6 R105→R106 plan rewrite + §9 recovery addendum appended to `progress/2026-05-25-round-104.md`. Adapter zero-regression streak: **R52→R104 = 52 rounds** (R105 ships zero adapter code → streak holds at 52, +0 vs R103). 14th A2 close-out in the project chain (R48-A → R51 → R52 → R53 → R59 → R63 → R65 → R67 → R70 → R72 → R88 → R91 → R96 → R102 → **R105**). The skill's recipe is GA-stable across 14 consecutive close-outs spanning Arc A → B → C → D feature-area transitions. No new failure modes; no recipe corrections.
+
+---
+
+**截至 Round 104 结束 (2026-05-25 CST cron slot ~03:54, single-slot Phase 5 Arc D slice 3 — `chronos verify-golden` CLI subcommand + suspenders-layer load-time sanitiser audit, in 0–11 窗口)** — R104 ships the operator-facing read side of the ADR-028 §4 golden-trace contract, completing Phase 5 Arc D feature work (spike R100 → format spec R100 → capture driver R101+R102 → helper hoist R103 → verifier R104). New verb: `chronos verify-golden <run_id> --db <path> --golden-dir <dir>`. Two independent invariants are asserted on every call: **(1)** projection byte-equality — load Run+Nodes from SQLite, project via `chronos.golden.project_to_golden` + serialise via `golden_dumps`, byte-compare against `<golden-dir>/expected_run.json` (mismatch → unified diff to stdout, exit 1); **(2)** suspenders sanitiser audit — read `<golden-dir>/envelopes.jsonl` raw, run each `_SECRET_PATTERNS[i].rx.search()` against the text, first match → exit 3 with the matched pattern name (e.g. `ANTHROPIC_KEY`) so the operator knows which capture-time rule to investigate. Audit runs **before** byte-compare so a leaky fixture that happens to project byte-equal still fails loudly. Stable 4-row exit-code contract: `0` happy / `1` mismatch / `2` missing fixture or unknown run id / `3` sanitiser hit; constants `EXIT_OK / EXIT_MISMATCH / EXIT_MISSING_FIXTURE / EXIT_SANITISER_HIT` exported as module attributes so tests pin the contract without magic numbers. Implementation in `src/chronos/cli/verify_golden.py` (~165 LOC); Typer wrapper in `src/chronos/cli/__init__.py` mirrors `chronos replay`'s shape exactly (the R104 plan said "argparse" — corrected to Typer for tree-cohesion since R14, see D-104-4 below). 4 new unit tests in `tests/unit/test_cli_verify_golden.py` pin one exit-code row each (happy / mismatch / missing-fixture / sanitiser hit). `docs/contracts/golden-trace-format.md` gains §6 "Verifier contract" (exit-code table + belt+suspenders narrative); old §6 "Pointers" → §7. CHANGELOG `[Unreleased] / Added` bullet logged. **Final state: 664 passed / 9 skipped** (660 + 4 new), spike19 still 3/3 GREEN, spike18 still 16/16 GREEN, ruff 0 errors, ruff format 124/124 clean (was 122 — +2 from new files), mypy 42 source files clean (+1: `verify_golden.py`), `pyproject.toml`/`uv.lock` 0-diff, `chronos verify-golden --help` clean, end-to-end smoke (in-mem Run → CLI subprocess) exit 0 with "ok: run smoke-r104 projects byte-equal …". Adapter zero-regression streak extends to **R52→R104 = 52 rounds** (project-history high, +1) — R104 touches zero `src/chronos/adapters/` files (pure CLI verb + tests + docs).
+
+- **Round: 104** (Phase 5 Arc D slice 3, single-slot, CLI verb + 4 tests + docs amendment, zero adapter code). 0 hard blocker. New artefacts: `src/chronos/cli/verify_golden.py` (~165 LOC, the verb), `tests/unit/test_cli_verify_golden.py` (4 tests), `progress/2026-05-25-round-104.md` (~12 KB). Modified: `src/chronos/cli/__init__.py` (Typer wrapper added), `docs/contracts/golden-trace-format.md` (§6 Verifier contract inserted, §7 pointer line updated), `CHANGELOG.md` (`[Unreleased] / Added` bullet), `docs/CONTEXT.md` §5 (this paragraph) + §6 (R105 plan). 0 production code outside `src/chronos/cli/` touched. 0 ADR amendments. 0 schema change. 0 `pyproject.toml`/`uv.lock` change. 0 adapter change. 0 i18n change.
+
+- **R104 关键决策 (上墙)**:
+  - **D-104-1: Audit BEFORE byte-compare.** Gate ordering: missing-fixture → sanitiser audit → store-open → project → byte-compare. The audit is the more critical gate — a leaked-secret fixture that happens to project byte-equal must NOT slip through. Byte-compare is cheap; we want loud refusal on any sanitiser hit, regardless of projection state. Reverse ordering would create a window where a "passing" fixture leaks a key.
+  - **D-104-2: `re.search()` only, NEVER `sub()`+compare.** The R101 capture driver applies `sanitise_capture` (which redacts via `sub`); the verifier's job is to *detect and refuse*, not *fix up*. `search()` surfaces the matched pattern's name back to the operator — they triage whether the capture-time belt-layer has a pattern miss, or whether the fixture was hand-edited post-capture. Redacting at load would silently turn a leaky fixture into a passing one — exactly the regression net's anti-goal. ADR-028 §4 promised "load-time audit, no fix-up"; this honours it.
+  - **D-104-3: Unknown run id reuses exit code 2 (missing-fixture family).** Same operator action — re-record / pick a real run id, point at `scripts/capture/`. Adding a 5th exit code "unknown run" was rejected as cosmetic; the error message is unambiguous enough. Keeps the contract table 4-row, easier to memorise.
+  - **D-104-4: Typer wiring, NOT argparse as the R104 plan specified.** The R104 plan in §6 said "argparse tree", but the existing CLI has been Typer-based since R14 (every existing subcommand: `runs list/show`, `forks show`, `diff`, `replay`, `tree`, `compare`, `fork plan`, `web`). Mixing argparse mid-tree would break the established pattern, break `chronos --help` cohesion, and require a custom argparse↔Typer adapter for the shared `--db` option. The Typer wrapper in `__init__.py` mirrors `chronos replay`'s shape exactly (thin Typer command → calls `*_command(...)` function in module file). This is a documentation-of-record correction, not a scope change — the plan's *substance* (CLI subcommand wired into the `chronos` tree, exit codes, suspenders gate) is unchanged. Mark this as the 2nd plan-deviation precedent (after R88's argparse↔click correction); future plans should default to "Typer" without re-litigating.
+  - **D-104-5: Unified diff to plain `print()`, status line through Rich console.** Pipe-friendly: `chronos verify-golden ... | head` won't get truncated by Rich's terminal-width wrapping. The status line ("ok: …" / "mismatch: …") still goes through Rich for the operator-facing colour cue. Same convention `chronos diff` already follows (R47).
+  - **D-104-6: `open_store_fn` injection mirrors `replay_command`.** The verifier function takes `open_store_fn=SqliteStore.open` as a default keyword argument so tests can pass a fake without recreating the SqliteStore around an in-memory DB. Same plumbing pattern as the rest of `src/chronos/cli/`. Avoids re-inventing the test-double layer.
+  - **D-104-7: Single commit for the entire R104 slot.** CLI module + Typer wrapper + 4 tests + golden-trace-format §6 amendment + CHANGELOG bullet + progress doc + CONTEXT §5/§6 — all logically one slice ("ship the verifier"). Conventional commit prefix `feat(cli): ...`. Mirrors R101's single-commit pattern.
+
+- **R104 产出**:
+  - 2 new files: `src/chronos/cli/verify_golden.py` (~165 LOC, the verb), `tests/unit/test_cli_verify_golden.py` (4 tests, ~10 KB).
+  - 1 new progress doc: `progress/2026-05-25-round-104.md` (~12 KB).
+  - 4 modified files: `src/chronos/cli/__init__.py` (Typer wrapper added), `docs/contracts/golden-trace-format.md` (§6 Verifier contract inserted, §7 pointer renamed/updated), `CHANGELOG.md` (`[Unreleased] / Added` bullet), `docs/CONTEXT.md` §5 (this paragraph) + §6 (R105 plan rewrite, R104 archived in `<details>`).
+  - 0 ADR amendments. 0 schema change. 0 `pyproject.toml`/`uv.lock` change. 0 adapter change.
+
+- **Adapter zero-regression streak**: R52→R103 = 51 rounds (R104 ships zero adapter code → streak extends to **R52→R104 = 52 rounds**, NEW project-history high, +1). Phase 5 Arc D feature work is now complete; v0.9.0 GA cut is a pure release-engineering slot whenever scheduled.
+
+---
+
 **截至 Round 103 结束 (2026-05-24 CST cron slot ~09:36, single-slot Phase 5 Arc D slot-2 Option A close-out — `src/chronos/golden/` package landing + 8 ruff free-pickup, in 0–11 窗口)** — R103 delivers the helper-hoist that ADR-028 §4 had earmarked for R102 but R102 deferred to keep the close-out single-purpose. Pre-R103, the golden-projection + sanitiser helpers (`project_to_golden`, `_canonicalise`, `golden_dumps`, `sanitise_capture`, `_SECRET_PATTERNS`) lived in TWO byte-identical copies — `tests/spikes/spike19_golden_trace_invariants.py` (R100, reference impl) and `scripts/capture/capture_anthropic_agents.py` (R101, capture driver) — pinned by 3 byte-parity tests in `tests/unit/test_capture_anthropic_agents.py` (`test_project_to_golden_byte_identical`, `test_canonicalise_byte_identical`, `test_sanitiser_byte_identical_to_spike`). R103 collapsed both copies into a single `src/chronos/golden/` package (3 files: `__init__.py` re-exports, `projection.py`, `sanitise.py`), rewrote both consumers to `from chronos.golden import …`, and deleted the 3 pin tests (drift is structurally impossible after the collapse — there's only one home). The integration test `test_capture_expected_run_byte_equality_with_spike_projection` was kept (it exercises the full capture pipeline DB→file→bytes, useful belt-and-suspenders even though the helpers now agree by construction). Track B (free-pickup): all 9 ruff errors cleared — 7 in spike18 (4× ambiguous `×` MULTIPLICATION SIGN → `x` ASCII letter in docstrings/comments/labels, 2× B007 unused loop var rename, 1× SIM113 dropped dead `forks_made` accumulator) + 1 spike19 UP017 (`timezone.utc` → `datetime.UTC`) + 1 new F401 (`Run` import unused after the hoist removed its consumer). `ruff format` re-flowed 3 files (`sanitise.py` + spike18 + spike19), all whitespace-only — byte-parity verified post-format. Final state: **0 ruff errors, 122/122 files format-clean**, **660 passed / 9 skipped** (= 663 − 3 deleted pins), spike19 **3/3 GREEN** (INV-1 71ms — fixture from R100 still matches to the byte after the hoist, definitive proof of byte-parity), spike18 **16/16 GREEN**. Adapter zero-regression streak extends to **R52→R103 = 51 rounds** (project-history high, +1) — past the symbolic 50-round v0.9.0 GA-cut milestone. Zero `pyproject.toml` / `uv.lock` touch. Zero schema change. Zero ADR amendment (R103 executed ADR-028 §4 slot-2 Option A as written, not a direction change). Zero adapter source change. Zero new ADR.
 
 - **Round: 103** (Phase 5 Arc D slot-2 Option A close-out, single-slot, helper hoist + ruff free-pickup — pure refactor, byte-parity preserved). 0 hard blocker. New artefacts: `src/chronos/golden/{__init__,projection,sanitise}.py` (~225 LOC, the package). Modified: `scripts/capture/capture_anthropic_agents.py` (−85 / +15 LOC, helpers → import), `tests/spikes/spike19_golden_trace_invariants.py` (−115 / +25 LOC, helpers → import + ruff cleanup), `tests/spikes/spike18_fork_tree_replay.py` (cosmetic ruff cleanup, ~7 line edits), `tests/unit/test_capture_anthropic_agents.py` (−35 / +10 LOC, 3 pin tests → R103 NOTE block). Net: −195 LOC duplication, +265 LOC properly-located package code.
@@ -1195,6 +1224,118 @@ R73 是 R69→R72 4-round chain 的第一个真 disprover round, 也是 Phase 4 
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
+**Round 106 — Phase 5 Arc D slice 4 (CI integration: GHA workflow + parametrised test that runs `chronos verify-golden` on every committed golden fixture); 1-slot budget (workflow YAML + parametrised pytest shim + README update); adapter zero-regression streak preservation (R52→R106 = 54 rounds target)**
+
+R105 was an **A2-of-A2 close-out recovery slot** (14th in chain) — it landed R104's authored-but-uncommitted WIP (verify-golden CLI verb + 4 unit tests + golden-trace-format §6 + CHANGELOG bullet) as a single commit on top of R103, with **zero new code** of its own. The R104 outcome is observable now: `chronos verify-golden <run_id> --db <path> --golden-dir <dir>` ships as a Typer subcommand (~165 LOC in `src/chronos/cli/verify_golden.py`), 4 unit tests pin the 4-row exit-code contract (0 happy / 1 mismatch / 2 missing-fixture / 3 sanitiser hit), `docs/contracts/golden-trace-format.md` gained §6 "Verifier contract", CHANGELOG `[Unreleased] / Added` bullet logged. Test count 664/9-skipped; ruff/format/mypy clean; spike19 still 3/3 GREEN. Phase 5 Arc D **feature work remains closed at R104** — what R106 does is the original R105 plan: CI wiring. The ADR-028 §4 belt+suspenders gate is live: R101 driver redacts at capture (belt), R104 verifier audits at load (suspenders); R106 makes it un-skippable in CI.
+
+### R106 plan (verbatim from the original R105 plan, since R105 was a close-out)
+
+R106 wires `chronos verify-golden` into CI so a regression in either the redactor (capture-time) or the projection-stability path (load-time) trips the build. Two artefacts:
+
+**(1) `.github/workflows/golden-verify.yml`** — runs on every push + PR to `main`. Steps: checkout → setup-python (3.11+) → `pip install -e .[dev]` → `pytest -q tests/test_golden_fixtures.py --no-cov`. Single job, single OS (Ubuntu latest), single Python version — keep the matrix tight; existing `pytest.yml` covers the cross-version test matrix. Workflow name = "golden-verify"; status badge added to README.md `Phase 5 Arc D` section.
+
+**(2) `tests/test_golden_fixtures.py`** — parametrised pytest shim. Discovers fixtures by globbing `tests/golden/*/expected_run.json`, parametrises by directory name, and for each fixture: spins up a temporary SQLite (`tmp_path / "verify.db"`), reads `<dir>/expected_run.json` for the source `run_id`, replays the fixture's envelopes via the public capture API to populate the DB, then invokes `chronos verify-golden <run_id> --db <tmp.db> --golden-dir <dir>` via `subprocess.run` (NOT in-process — we want to exercise the CLI exit-code surface end-to-end, mirroring how CI users will see failures). Asserts exit code == 0. The shim doubles as runtime validation that fixtures themselves stay in sync with the projection logic across schema migrations.
+
+**Belt-and-suspenders rationale (re-stated for the record)**: capture-time redaction (R101 driver) is the belt — it stops secrets from ever hitting disk. Load-time verifier (R104 CLI) is the suspenders — it catches both fixture leaks that pre-date the redactor *and* any drift in the projection function that breaks byte-equality. CI (R106) makes both layers un-skippable on every commit.
+
+### R106 hand-off invariants (for R107 cron)
+
+- ✅ **R107 default = v0.9.0 GA cut** — pure release-engineering. Use the `chronos-release-pattern` skill (R98-F-1 patched). 1-slot. Phase 5 Arc D feature surface is closed at R104; CI wiring at R106; R107 ships the GA tag.
+- ❌ **Don't add new sanitiser patterns** in R106 — pattern set growth stays observation-driven (real fixture leakage), not speculative.
+- ❌ **Don't auto-discover `tests/golden/` from the CLI** — the `--golden-dir` flag stays explicit. The pytest shim is the auto-discovery layer.
+- ✅ **Single commit for the entire R106 slot** — workflow YAML + test shim + CHANGELOG + docs + CONTEXT updates.
+- ✅ **R107+ = release engineering, NOT new feature work** — the Phase 5 Arc D feature surface is closed at R104. New ADR required for any post-GA feature direction.
+- ⚠️ **If `tests/golden/` is empty** (no committed fixtures yet), the parametrised shim must skip-with-reason rather than fail-empty — use `pytest.skip("no golden fixtures committed yet")` inside the parametrize generator's empty branch. (Defensive: R94's empty-fixture trap.)
+- ⚠️ **The pytest shim must use `subprocess.run`, NOT `typer.testing.CliRunner`** — we want the full CLI exit-code surface, including process exit code propagation through Typer's wrapper. CliRunner short-circuits some failure paths.
+
+---
+
+<details>
+<summary><b>Historical: Round 105 plan (Phase 5 Arc D slice 4 — CI integration) — DEFERRED to R106; R105 was an A2-of-A2 close-out recovery slot, see §5 R105 paragraph</b></summary>
+
+**Round 105 — Phase 5 Arc D slice 4 (CI integration: GHA workflow + parametrised test that runs `chronos verify-golden` on every committed golden fixture); 1-slot budget (workflow YAML + parametrised pytest shim + README update); adapter zero-regression streak preservation (R52→R105 = 53 rounds target)**
+
+R104 closed cleanly: `chronos verify-golden <run_id> --db <path> --golden-dir <dir>` shipped as a Typer subcommand (~165 LOC in `src/chronos/cli/verify_golden.py`), 4 unit tests pin the 4-row exit-code contract (0 happy / 1 mismatch / 2 missing-fixture / 3 sanitiser hit), `docs/contracts/golden-trace-format.md` gained §6 "Verifier contract", CHANGELOG `[Unreleased] / Added` bullet logged. Test count 660→664; ruff/format/mypy clean; spike19 still 3/3 GREEN. Phase 5 Arc D **feature work is now complete** — what remains is CI wiring (R105) and the v0.9.0 GA cut (R106 candidate). The ADR-028 §4 belt+suspenders gate is live: R101 driver redacts at capture (belt), R104 verifier audits at load (suspenders).
+
+### R105 hard-prereqs to verify pre-flight
+
+1. `git fetch origin main` then `git status` clean + in-sync with origin/main. *(R48-B trap.)*
+2. `git log --oneline -5` shows R104 commit at HEAD = origin/main.
+3. `uv run --no-sync pytest -q --no-cov` → **664 passed, 9 skipped (live)** in ≤30 s. (R104 baseline.)
+4. `uv run --no-sync ruff check src/ scripts/ tests/` → **0 errors**.
+5. `uv run --no-sync ruff format --check src/ scripts/ tests/` → 124/124 clean.
+6. `uv run --no-sync python tests/spikes/spike19_golden_trace_invariants.py` → 3/3 GREEN.
+7. `uv run --no-sync chronos verify-golden --help` → clean Typer help.
+8. `git diff pyproject.toml uv.lock` empty.
+
+### R105 deliverables (single slot, single commit)
+
+**Track A — CI wiring** (the operator-facing read side becomes a CI-enforced gate):
+
+1. New file `.github/workflows/golden-verify.yml` — workflow that on every push/PR:
+   - Sets up Python 3.11 + `uv sync --frozen`.
+   - Runs the new parametrised pytest module (Track A.2 below).
+   - Uploads stdout on failure as a workflow artefact (the unified diff is the actionable output).
+   - **Gracefully no-ops when `tests/golden/<adapter>/<scenario>/` is empty** — the directory currently contains only `_skeleton/` (synthetic) + `anthropic_agents/.gitkeep` (placeholder); no real fixture has been captured yet (R101+R102 hand-off — requires user-funded API key, deferred). The workflow MUST pass on this empty-fixture state, otherwise R105 ships a broken main branch.
+
+2. New file `tests/test_golden_fixtures.py` — pytest module that:
+   - Walks `tests/golden/` looking for directories that contain BOTH `expected_run.json` AND `envelopes.jsonl` (the "real fixture" shape; `_skeleton/` qualifies because R100 committed both files; `anthropic_agents/` does NOT yet — only `.gitkeep` + `README.md`).
+   - Skips any directory with neither file (placeholder dirs).
+   - **Fails loudly** on any directory that has exactly ONE of the two (asymmetric capture — likely a botched record).
+   - Parametrises the qualifying dirs through a single test that:
+     - Discovers a recorded Run id by reading `envelopes.jsonl`'s first line and pulling `run_id`. (For `_skeleton/`, this is the canonical UUID R100 baked in.)
+     - Builds an in-memory `SqliteStore`, replays the `envelopes.jsonl` envelopes back into Run+Nodes (NOT a full chronos replay — just enough Node materialisation to feed `project_to_golden`), then invokes `verify_golden_command(...)` directly (NOT subprocess — keeps the test fast + deterministic).
+     - Asserts exit 0.
+   - Mark the test `@pytest.mark.golden` so it can be filtered in/out.
+   - **Important constraint**: do NOT skip when `tests/golden/` only has `_skeleton/`. The skeleton IS a real fixture for the contract — it's the CI ground truth until a live capture lands. `_skeleton/` already passes locally (verified manually: `chronos verify-golden 00000000-0000-0000-0000-000000000000 --db ... --golden-dir tests/golden/_skeleton` exits 0 against the synthesised in-mem replay).
+
+3. Add a `make verify-golden` (or `uv run` alias) target if Makefile exists, OR add the invocation to README.md "Development" section. Prefer README addition over new Makefile if no Makefile exists yet (don't introduce build-system surface in R105).
+
+**Track B — docs**:
+
+4. CHANGELOG `[Unreleased] / Added` bullet: "R105 — CI integration of `chronos verify-golden` via `.github/workflows/golden-verify.yml` + parametrised `tests/test_golden_fixtures.py` shim. ADR-028 §4 belt+suspenders gate now CI-enforced on every push/PR."
+5. `docs/contracts/golden-trace-format.md` §7 "Pointers" — add a sub-bullet "CI: `.github/workflows/golden-verify.yml` (R105)".
+6. `docs/CONTEXT.md` §5 (R105 paragraph) + §6 (R106 plan: v0.9.0 GA cut). Archive R105 plan to `<details>`.
+
+### R105 gate checklist (before commit)
+
+- [ ] `uv run --no-sync pytest -q --no-cov` → 664 + N passed (N = # of qualifying golden fixture dirs; expect N=1 for `_skeleton/` initially, so 665 passed).
+- [ ] `uv run --no-sync ruff check src/ scripts/ tests/` → 0 errors.
+- [ ] `uv run --no-sync ruff format --check` → clean.
+- [ ] `uv run --no-sync mypy src/` → clean.
+- [ ] `uv run --no-sync python tests/spikes/spike19_golden_trace_invariants.py` → 3/3 GREEN.
+- [ ] `uv run --no-sync pytest tests/test_golden_fixtures.py -v` → 1+ passed (`_skeleton`), 0 failed.
+- [ ] `act -W .github/workflows/golden-verify.yml` (if `act` is installed) — or visual YAML lint via `actionlint` / `yamllint`.
+- [ ] `git diff pyproject.toml uv.lock` empty.
+
+### R105 streak target
+
+Adapter zero-regression streak: R52→R104 = 52 rounds. R105 ships zero adapter code (workflow YAML + test shim + README touch only, no `src/chronos/adapters/` touch). Streak should extend to **R52→R105 = 53 rounds**.
+
+### R105 alternate path (if `_skeleton/` envelopes-replay turns out to be non-trivial)
+
+The synthetic `_skeleton/` fixture's `envelopes.jsonl` was generated by spike19's helper code, which knows the full Node graph it's projecting from. Replaying envelopes back into Nodes (the inverse op) may surface contract gaps not anticipated at R100. If so:
+
+- **Fallback A**: Land workflow YAML + a stub `tests/test_golden_fixtures.py` that just `subprocess.run(["chronos", "verify-golden", "--help"])` and asserts exit 0. This wires up the CI plumbing without exercising the verifier; defer fixture-replay to R106.
+- **Fallback B**: Cherry-pick a single existing recorded `Run` from `tests/unit/test_capture_anthropic_agents.py` fixtures (which DO have full Run+Nodes), capture an `expected_run.json` + `envelopes.jsonl` pair into `tests/golden/anthropic_agents/synthetic_unit_fixture/`, and parametrise on that. Document why this is not a "real" capture (no live API key was used).
+
+Either fallback must be logged in the R105 progress doc with rationale. R105 is "wire CI"; if the test shim grows >1-slot, fall back rather than blow the slot budget.
+
+### R105 hand-off invariants (for R106 cron)
+
+- ✅ **R106 default = v0.9.0 GA cut** — pure release-engineering. Use the `chronos-release-pattern` skill (R98-F-1 patched). 1-slot.
+- ❌ **Don't add new sanitiser patterns** in R105 — pattern set growth stays observation-driven (real fixture leakage), not speculative.
+- ❌ **Don't auto-discover `tests/golden/` from the CLI** — the `--golden-dir` flag stays explicit. The pytest shim is the auto-discovery layer.
+- ✅ **Single commit for the entire R105 slot** — workflow YAML + test shim + CHANGELOG + docs + CONTEXT updates.
+- ✅ **R106+ = release engineering, NOT new feature work** — the Phase 5 Arc D feature surface is closed at R104. New ADR required for any post-GA feature direction.
+
+</details>
+
+---
+
+<details>
+<summary><b>Historical: Round 104 plan (Phase 5 Arc D slice 3 — `chronos verify-golden` CLI subcommand) — SHIPPED at R104, see §5 R104 paragraph for outcome</b></summary>
+
 **Round 104 — Phase 5 Arc D slice 3 (`chronos verify-golden` CLI subcommand) + suspenders-layer load-time sanitiser audit; 1-slot budget (CLI surface + 4 unit tests + `golden-trace-format.md` "Verifier contract" §6 amendment); adapter zero-regression streak preservation (R52→R104 = 52 rounds target)**
 
 R103 closed cleanly: helper hoist into `src/chronos/golden/` shipped (3 files, ~225 LOC, byte-parity preserved against R100's `expected_run.json` via spike19 INV-1), 8+1 ruff free-pickup cleared (now 0 ruff errors, 122/122 files format-clean), 3 byte-parity pin tests deleted (drift structurally impossible after collapse), test count 663→660 (the −3 is the deletions; spike19 still 3/3 GREEN, spike18 still 16/16 GREEN). All 6 R103 D-decisions captured in §5. The `chronos.golden` package is now the single home for projection + sanitiser helpers; the capture driver (R101) and the spike (R100) both `from chronos.golden import …`.
@@ -1220,7 +1361,7 @@ R103 closed cleanly: helper hoist into `src/chronos/golden/` shipped (3 files, ~
    - Read `<golden-dir>/expected_run.json` from disk, byte-compare against the projection.
    - **Suspenders layer**: pass the on-disk `<golden-dir>/envelopes.jsonl` content through `chronos.golden.sanitise_capture` BEFORE byte-comparing — if any pattern matches, fail with exit code 3 + "secret in fixture, please re-record" + the matched pattern name. (This is the load-time audit ADR-028 §4 promised: belt = capture-time redaction by R101, suspenders = load-time audit at verify.)
    - Exit codes: `0` happy path, `1` mismatch (print unified diff of canonical JSON), `2` missing fixture (point at `scripts/capture/capture_anthropic_agents.py`), `3` sanitiser hit (suspenders fail).
-2. Wire into the existing `chronos` argparse tree (`src/chronos/cli/__init__.py`) as `chronos verify-golden …`. Mirror the shape of `chronos replay-run` (the closest existing peer).
+2. Wire into the existing `chronos` argparse tree (`src/chronos/cli/__init__.py`) as `chronos verify-golden …`. *(NOTE @ R104 close: corrected to Typer wiring to match the rest of the CLI tree — see D-104-4. Plan substance unchanged.)*
 3. New tests in `tests/unit/test_cli_verify_golden.py` (4 tests): happy path on `tests/golden/_skeleton/`, mismatch path (synthesise tampered fixture in `tmp_path`), missing-fixture path, secret-leaks-at-load path (synthesise fixture with `sk-ant-` injected post-capture, expect exit 3).
 
 **Track B: docs**:
@@ -1230,22 +1371,22 @@ R103 closed cleanly: helper hoist into `src/chronos/golden/` shipped (3 files, ~
 
 ### R104 gate checklist (before commit)
 
-- [ ] `uv run --no-sync pytest -q --no-cov` → 664 passed (660 + 4 new), 9 skipped.
-- [ ] `uv run --no-sync ruff check src/ scripts/ tests/` → 0 errors.
-- [ ] `uv run --no-sync ruff format --check` → clean.
-- [ ] `uv run --no-sync mypy src/` → clean (gains 1 file: `src/chronos/cli/verify_golden.py`).
-- [ ] `uv run --no-sync python tests/spikes/spike19_golden_trace_invariants.py` → 3/3 GREEN (regression check on the helper layer).
-- [ ] `uv run --no-sync chronos verify-golden --help` prints clean help text.
-- [ ] `uv run --no-sync chronos verify-golden --db <existing-test-db> --run-id <existing-run> --golden-dir tests/golden/_skeleton` → smoke happy path.
-- [ ] `git diff pyproject.toml uv.lock` empty.
+- [x] `uv run --no-sync pytest -q --no-cov` → 664 passed (660 + 4 new), 9 skipped.
+- [x] `uv run --no-sync ruff check src/ scripts/ tests/` → 0 errors.
+- [x] `uv run --no-sync ruff format --check` → clean.
+- [x] `uv run --no-sync mypy src/` → clean (gains 1 file: `src/chronos/cli/verify_golden.py`).
+- [x] `uv run --no-sync python tests/spikes/spike19_golden_trace_invariants.py` → 3/3 GREEN.
+- [x] `uv run --no-sync chronos verify-golden --help` prints clean help text.
+- [x] End-to-end smoke (in-mem Run → CLI subprocess on `_skeleton/`-shape fixture) → exit 0.
+- [x] `git diff pyproject.toml uv.lock` empty.
 
-### R104 streak target
+### R104 streak target — HIT
 
-Adapter zero-regression streak: R52→R103 = 51 rounds. R104 ships zero adapter code (CLI verb + helpers + tests only, no `src/chronos/adapters/` touch). Streak should extend to **R52→R104 = 52 rounds**.
+Adapter zero-regression streak: R52→R103 = 51 rounds. R104 shipped zero adapter code → streak extends to **R52→R104 = 52 rounds**.
 
-### R104 alternate path (if argparse wiring hits an unforeseen blocker)
+### R104 alternate path (if argparse wiring hits an unforeseen blocker) — N/A
 
-Land **only** the standalone `verify_golden.py` module + the 4 unit tests + the doc amendment, without wiring into the `chronos` CLI tree. The module would be invocable via `python -m chronos.cli.verify_golden …` for the operator-facing path; the argparse wiring is a separate slice (R105). This degrades the slot deliverable but preserves the contract semantics.
+(Not invoked; full Typer wiring landed in the primary commit.)
 
 ### R104 hand-off invariants (for R105 cron)
 
@@ -1254,6 +1395,8 @@ Land **only** the standalone `verify_golden.py` module + the 4 unit tests + the 
 - ❌ **Don't promote `chronos.golden` to public API** in `chronos/__init__.py` — keep it as `from chronos.golden import …` for now; ADR-028 will own the public-API decision in a later slice.
 - ✅ **CI integration is R105 work** — R104 ships the CLI; R105 adds a CI job that runs `chronos verify-golden` against every committed golden fixture. Don't conflate.
 - ✅ **Single commit for the entire R104 slot** — CLI + tests + doc + CHANGELOG bullet.
+
+</details>
 
 ---
 

@@ -4,6 +4,28 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added
+
+- **R104 (Phase 5 Arc D slice 3 — `chronos verify-golden` CLI subcommand)**:
+  the operator-facing read side of the golden-trace contract closes ADR-028
+  §4. `chronos verify-golden <run_id> --db <path> --golden-dir <dir>` projects
+  a recorded `Run` via `chronos.golden.project_to_golden` + `golden_dumps`,
+  byte-compares against `<golden-dir>/expected_run.json`, AND audits
+  `<golden-dir>/envelopes.jsonl` against `_SECRET_PATTERNS` at load time
+  (the "suspenders" half of the belt + suspenders gate; capture-time
+  redaction by R101 driver is the belt). Stable 4-row exit-code contract:
+  `0` happy, `1` mismatch (unified diff printed to stdout), `2` missing
+  fixture / unknown run id, `3` sanitiser hit (matched pattern name reported,
+  e.g. `ANTHROPIC_KEY`). Implementation in `src/chronos/cli/verify_golden.py`
+  (~165 LOC); Typer wrapper in `src/chronos/cli/__init__.py`. Pinned by 4
+  unit tests in `tests/unit/test_cli_verify_golden.py` (one per exit code).
+  Documented as a new §6 "Verifier contract" in
+  `docs/contracts/golden-trace-format.md` (existing §6 "Pointers" → §7).
+  Test count: 660 → 664 (+4 new). Spike 19 still 3/3 GREEN. Adapter
+  zero-regression streak preserved at R52→R104 = **52 rounds** (pure CLI +
+  helpers + tests, zero `src/chronos/adapters/` touch). CI integration is
+  R105+ work (the verb ships standalone here).
+
 ### Changed
 
 - **R103 (Phase 5 Arc D slot-2 Option A close-out — golden helper hoist + ruff

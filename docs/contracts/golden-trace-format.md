@@ -120,10 +120,57 @@ Until `chronos.golden/v0` is deprecated:
    ship with a spike-19-style assertion that ten representative benign
    tokens survive.
 
-## 6 Pointers
+## 6 Verifier contract (`chronos verify-golden`, R104)
+
+The fixture-side regression net is the `chronos verify-golden` CLI verb,
+shipped at R104 (Phase 5 Arc D slice 3). Operators run it locally or in CI
+to assert that a recorded `Run` still projects byte-for-byte to a committed
+`expected_run.json`, AND that the on-disk `envelopes.jsonl` is free of
+known-secret shapes at *load time* (the "suspenders" half of the
+belt+suspenders gate ADR-028 §4 promised).
+
+**Invocation:**
+
+```
+chronos verify-golden <run_id> --db chronos.db --golden-dir tests/golden/<adapter>/<scenario>/
+```
+
+**Exit-code contract** (stable — pinned by `tests/unit/test_cli_verify_golden.py`,
+mirrored by the constants `EXIT_OK`, `EXIT_MISMATCH`, `EXIT_MISSING_FIXTURE`,
+`EXIT_SANITISER_HIT` exported from `chronos.cli.verify_golden`):
+
+| Exit | Meaning | Operator action |
+|------|---------|-----------------|
+| 0    | Recorded run projects byte-equal to `expected_run.json` AND `envelopes.jsonl` is sanitiser-clean. | (none) |
+| 1    | Projection mismatch — unified diff of canonical JSON is printed. | Investigate adapter regression OR re-record if change is intentional. |
+| 2    | Missing `--golden-dir`, missing `expected_run.json`, missing `envelopes.jsonl`, or unknown `--run-id`. | Re-record via `scripts/capture/capture_<adapter>.py`. |
+| 3    | `envelopes.jsonl` contains a string matching one of the `_SECRET_PATTERNS`. The matched pattern name (e.g. `ANTHROPIC_KEY`, `OPENAI_KEY`, `BEARER_TOKEN`, `AWS_AKID`, `URL_TOKEN`) is reported. | Re-record (capture-time belt-layer should have caught it; treat as a sanitiser-pattern miss bug if the leak survived two layers). |
+
+**Belt + suspenders narrative (ADR-028 §4):**
+
+* **Belt** — capture time. `scripts/capture/capture_<adapter>.py` runs the
+  recorder live, then passes the JSONL through `sanitise_capture` BEFORE
+  bytes hit disk. The fixture as committed must already be clean.
+* **Suspenders** — load / verify time. `chronos verify-golden` runs each
+  pattern's `re.search()` against the on-disk envelopes content and
+  refuses to "OK" any fixture where a pattern matches. The redaction
+  function is *not* applied at load — we want loud refusal, not silent
+  fix-up, so a leaked fixture cannot become a regression-net green tick.
+
+The two layers are independent: a capture-time miss is caught at verify;
+a verify-time bypass (e.g. someone hand-edits an `envelopes.jsonl` after
+capture) is still gated by the fact that `expected_run.json` came from a
+clean source. Either layer alone is insufficient.
+
+**Pattern-set evolution:** R104 ships zero new patterns. New patterns
+follow §5 rule 3 (grow without v-bump, no existing fixture's load output
+may change, ten benign-token survival assertions per pattern in spike 19).
+
+## 7 Pointers
 
 - Reference projection: `tests/spikes/spike19_golden_trace_invariants.py`
   (R100; hoisted to `src/chronos/golden/projection.py` at R102).
 - Reference sanitiser: same file (hoisted to `src/chronos/golden/sanitise.py` at R102).
-- Capture-replay CLI: `chronos verify-golden` — slice 3 (R102+) per ADR-028 §4.
+- Capture-replay CLI: `chronos verify-golden` — slice 3 (R104) per ADR-028 §4.
+  Source: `src/chronos/cli/verify_golden.py`. Tests: `tests/unit/test_cli_verify_golden.py`.
 - Skeleton fixture: `tests/golden/_skeleton/`.

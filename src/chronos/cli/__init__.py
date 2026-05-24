@@ -472,6 +472,52 @@ def compare_cmd(
 
 
 # ---------------------------------------------------------------------------
+# `chronos verify-golden` — golden-trace fixture verification (Phase 5 Arc D)
+# ---------------------------------------------------------------------------
+
+
+@app.command("verify-golden")
+def verify_golden_cmd(
+    run_id: str = typer.Argument(..., help="Run id (see `chronos runs list`)."),
+    golden_dir: Path = typer.Option(
+        ...,
+        "--golden-dir",
+        help=(
+            "Path to a `tests/golden/<adapter>/<scenario>/` directory containing "
+            "`expected_run.json` + `envelopes.jsonl`."
+        ),
+    ),
+    db: Path | None = typer.Option(
+        None, "--db", help="Path to chronos.db (overrides $CHRONOS_DB)."
+    ),
+) -> None:
+    """Verify a recorded run matches an on-disk golden-trace fixture.
+
+    Projects the run to its canonical RunSummary (via `chronos.golden`),
+    compares byte-for-byte against `<golden-dir>/expected_run.json`, AND
+    audits `<golden-dir>/envelopes.jsonl` for known-secret shapes at load
+    time (belt + suspenders, ADR-028 §4).
+
+    Exit codes:
+      0 — happy path (byte-equal AND sanitiser-clean).
+      1 — projection mismatch (unified diff printed).
+      2 — missing fixture or unknown run id.
+      3 — secret detected in envelopes.jsonl (re-record needed).
+    """
+    from chronos.cli.verify_golden import verify_golden_command
+
+    code = verify_golden_command(
+        db=db,
+        run_id=run_id,
+        golden_dir=golden_dir,
+        open_store_fn=_open_store,
+        console=console,
+    )
+    if code != 0:
+        raise typer.Exit(code=code)
+
+
+# ---------------------------------------------------------------------------
 # `chronos fork plan` — emit fork plan artifact (ADR-008)
 # ---------------------------------------------------------------------------
 
