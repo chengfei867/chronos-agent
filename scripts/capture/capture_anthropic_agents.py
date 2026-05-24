@@ -50,11 +50,11 @@ Usage (live capture)
 Design notes
 ------------
 - Reference impls (``project_to_golden``, ``_canonicalise``, ``golden_dumps``,
-  ``sanitise_capture``) are inlined here to avoid importing from
-  ``tests/spikes/`` (which isn't a package). The unit test pins byte-identity
-  between this file's helpers and spike 19's, so slot-2 Option A (hoist to
-  ``src/chronos/golden/`` at R102) is a mechanical follow-up — drift can't go
-  undetected.
+  ``sanitise_capture``) live in :mod:`chronos.golden` (hoisted at R103 per
+  ADR-028 §4 slot-2 Option A). Pre-R103 the helpers were duplicated by-copy
+  here and in ``tests/spikes/spike19_golden_trace_invariants.py``, with three
+  byte-parity pin tests preventing drift; R103 collapsed both copies into
+  this single home and deleted the pin scaffolding.
 - Envelope shape mirrors ``tests/golden/_skeleton/envelopes.jsonl``: one JSON
   object per Node with keys ``envelope`` (synthetic kind label),
   ``node_name``, ``kind``, ``step_index``, ``state_after``, plus an optional
@@ -68,7 +68,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -79,100 +78,29 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT / "src") not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT / "src"))
 
-from chronos.core.models import Node, Run
+from chronos.core.models import Node
+from chronos.golden import (
+    _canonicalise,
+    golden_dumps,
+    project_to_golden,
+    sanitise_capture,
+)
 from chronos.store import SqliteStore
 
-# ---------------------------------------------------------------------------
-# Reference projection (R101 inline; hoisted to chronos.golden.projection in R102)
-# Kept byte-identical to tests/spikes/spike19_golden_trace_invariants.py via the
-# unit test in tests/unit/test_capture_anthropic_agents.py.
-# ---------------------------------------------------------------------------
-
-_RUN_SUMMARY_KEYS = (
-    "schema",
-    "adapter",
-    "status",
-    "task_description",
-    "node_count",
-    "node_kinds",
-    "node_names",
-    "states_after",
-)
-_GOLDEN_SCHEMA = "chronos.golden/v0"
-
-
-def project_to_golden(run: Run, nodes: list[Node]) -> dict[str, Any]:
-    """Project (Run, [Node]) -> canonical golden RunSummary dict.
-
-    Mirrors spike 19's reference projection: drops machine-state fields
-    (run_id, timestamps, usage, cost), emits node_kinds + node_names in
-    step_index order, canonicalises per-node state_after via :func:`_canonicalise`.
-    Top-level field set is closed to :data:`_RUN_SUMMARY_KEYS`.
-    """
-    sorted_nodes = sorted(nodes, key=lambda n: n.step_index)
-    return {
-        "schema": _GOLDEN_SCHEMA,
-        "adapter": run.adapter,
-        "status": run.status.value,
-        "task_description": run.task_description,
-        "node_count": len(sorted_nodes),
-        "node_kinds": [n.kind.value for n in sorted_nodes],
-        "node_names": [n.node_name for n in sorted_nodes],
-        "states_after": [_canonicalise(n.state_after) for n in sorted_nodes],
-    }
-
-
-def _canonicalise(obj: Any) -> Any:
-    """Recursively rebuild dicts with sorted keys; pass-through for scalars/lists."""
-    if isinstance(obj, dict):
-        return {k: _canonicalise(obj[k]) for k in sorted(obj.keys())}
-    if isinstance(obj, list):
-        return [_canonicalise(x) for x in obj]
-    return obj
-
-
-def golden_dumps(payload: dict[str, Any]) -> str:
-    """Canonical golden serialisation: sort_keys + 2-space indent + trailing nl."""
-    return json.dumps(payload, sort_keys=True, indent=2) + "\n"
-
-
-# ---------------------------------------------------------------------------
-# Sanitiser (R101 inline; hoisted to chronos.golden.sanitise in R102)
-# Pinned byte-identical to spike 19 via the unit test.
-# ---------------------------------------------------------------------------
-
-_SECRET_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = (
-    # Anthropic API keys: sk-ant-{api03,test}-...{20+ chars}
-    ("ANTHROPIC_KEY", re.compile(r"sk-ant-[A-Za-z0-9_-]{20,}"), "<REDACTED:ANTHROPIC_KEY>"),
-    # OpenAI / project keys: sk-proj-..., sk-... (must NOT eat sk-ant- substrings)
-    (
-        "OPENAI_KEY",
-        re.compile(r"\bsk-(?!ant-)(?:proj-)?[A-Za-z0-9_-]{20,}"),
-        "<REDACTED:OPENAI_KEY>",
-    ),
-    # Bearer tokens (JWT-shaped or opaque)
-    (
-        "BEARER_TOKEN",
-        re.compile(r"\bBearer\s+[A-Za-z0-9._\-]{20,}"),
-        "Bearer <REDACTED:BEARER_TOKEN>",
-    ),
-    # AWS access key id
-    ("AWS_AKID", re.compile(r"\bAKIA[0-9A-Z]{16}\b"), "<REDACTED:AWS_AKID>"),
-    # Generic secret-shaped URL token query param
-    (
-        "URL_TOKEN",
-        re.compile(r"([?&](?:token|secret|api_key|key)=)[A-Za-z0-9._\-]{16,}"),
-        r"\1<REDACTED:URL_TOKEN>",
-    ),
-)
-
-
-def sanitise_capture(jsonl_str: str) -> str:
-    """Redact known-secret patterns in a JSONL capture string. Idempotent."""
-    out = jsonl_str
-    for _kind, rx, repl in _SECRET_PATTERNS:
-        out = rx.sub(repl, out)
-    return out
+# Re-export the golden helpers under the legacy module-level names so the
+# unit test in ``tests/unit/test_capture_anthropic_agents.py`` (which loads
+# this driver via ``importlib.util.spec_from_file_location`` and reads
+# attributes off the resulting module) keeps working without surgery.
+__all__ = [
+    "_canonicalise",
+    "capture_run",
+    "envelopes_dumps",
+    "golden_dumps",
+    "main",
+    "node_to_envelope",
+    "project_to_golden",
+    "sanitise_capture",
+]
 
 
 # ---------------------------------------------------------------------------

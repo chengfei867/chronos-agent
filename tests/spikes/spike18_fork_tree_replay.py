@@ -33,7 +33,7 @@ Three invariants to validate:
         iteration etc.).
 
     A3  Perf / size budget — worst-case fork tree of 50 nodes total
-        (1 root + 5 forks × ~10 nodes each) projects in ≤16ms (single-
+        (1 root + 5 forks x ~10 nodes each) projects in ≤16ms (single-
         digit ms expected) and serialises to JSON ≤16KB. This is the
         client-side render budget per ADR-027 §3 A2 / R93 spike 17 A3
         sibling rule.
@@ -146,7 +146,7 @@ def project_fork_tree(tree: dict[str, Any]) -> list[ForkTreeNode]:
     for n in tree["nodes"]:
         nodes_by_run.setdefault(n["run_id"], []).append(n)
     # Stable per-run step ordering.
-    for rid, ns in nodes_by_run.items():
+    for _rid, ns in nodes_by_run.items():
         ns.sort(key=lambda d: d["step_index"])
 
     summaries: dict[str, dict[str, Any]] = tree.get("run_summaries") or {}
@@ -174,7 +174,7 @@ def project_fork_tree(tree: dict[str, Any]) -> list[ForkTreeNode]:
     children_by_parent: dict[str, list[str]] = {}
     for fork in forks:
         children_by_parent.setdefault(fork["parent_run_id"], []).append(fork["child_run_id"])
-    for pid, kids in children_by_parent.items():
+    for _pid, kids in children_by_parent.items():
         kids.sort(key=lambda cid: (branch_by_child.get(cid, -1), cid))
 
     out: list[ForkTreeNode] = []
@@ -385,8 +385,7 @@ def main() -> int:
         bad = [
             n.run_id
             for n in proj1
-            if n.parent_run_id is not None
-            and depth_by_run.get(n.parent_run_id, -99) + 1 != n.depth
+            if n.parent_run_id is not None and depth_by_run.get(n.parent_run_id, -99) + 1 != n.depth
         ]
         check("I2.3 child.depth == parent.depth + 1", not bad, f"violations: {len(bad)}")
 
@@ -434,9 +433,8 @@ def main() -> int:
             root_nodes = [_make_node(root.id, i) for i in range(10)]
             for n in root_nodes:
                 store.put_node(n)
-            forks_made = 0
             child_runs: list[Run] = []
-            # 5 forks × 8 nodes each = 40 nodes; +10 root = 50 nodes total.
+            # 5 forks x 8 nodes each = 40 nodes; +10 root = 50 nodes total.
             for k in range(5):
                 child = _make_run("langgraph", label=f"fork_{k}")
                 store.put_run(child)
@@ -445,13 +443,12 @@ def main() -> int:
                     store.put_node(_make_node(child.id, i))
                 # Branch at varying root steps to exercise sort-order.
                 store.put_fork(_make_fork(root, root_nodes[k], child))
-                forks_made += 1
             tree = assemble_tree_with_descendants(store, root.id)
 
-        # I3.1 — total node count ≈ 50 (10 + 5×8 = 50).
+        # I3.1 — total node count ≈ 50 (10 + 5x8 = 50).
         total_nodes = len(tree["nodes"])
         check(
-            "I3.1 total node count == 50 (1 root + 5 forks × 8 nodes)",
+            "I3.1 total node count == 50 (1 root + 5 forks x 8 nodes)",
             total_nodes == 50,
             f"got {total_nodes}",
         )

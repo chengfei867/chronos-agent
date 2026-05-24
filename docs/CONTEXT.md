@@ -147,6 +147,30 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
+**截至 Round 103 结束 (2026-05-24 CST cron slot ~09:36, single-slot Phase 5 Arc D slot-2 Option A close-out — `src/chronos/golden/` package landing + 8 ruff free-pickup, in 0–11 窗口)** — R103 delivers the helper-hoist that ADR-028 §4 had earmarked for R102 but R102 deferred to keep the close-out single-purpose. Pre-R103, the golden-projection + sanitiser helpers (`project_to_golden`, `_canonicalise`, `golden_dumps`, `sanitise_capture`, `_SECRET_PATTERNS`) lived in TWO byte-identical copies — `tests/spikes/spike19_golden_trace_invariants.py` (R100, reference impl) and `scripts/capture/capture_anthropic_agents.py` (R101, capture driver) — pinned by 3 byte-parity tests in `tests/unit/test_capture_anthropic_agents.py` (`test_project_to_golden_byte_identical`, `test_canonicalise_byte_identical`, `test_sanitiser_byte_identical_to_spike`). R103 collapsed both copies into a single `src/chronos/golden/` package (3 files: `__init__.py` re-exports, `projection.py`, `sanitise.py`), rewrote both consumers to `from chronos.golden import …`, and deleted the 3 pin tests (drift is structurally impossible after the collapse — there's only one home). The integration test `test_capture_expected_run_byte_equality_with_spike_projection` was kept (it exercises the full capture pipeline DB→file→bytes, useful belt-and-suspenders even though the helpers now agree by construction). Track B (free-pickup): all 9 ruff errors cleared — 7 in spike18 (4× ambiguous `×` MULTIPLICATION SIGN → `x` ASCII letter in docstrings/comments/labels, 2× B007 unused loop var rename, 1× SIM113 dropped dead `forks_made` accumulator) + 1 spike19 UP017 (`timezone.utc` → `datetime.UTC`) + 1 new F401 (`Run` import unused after the hoist removed its consumer). `ruff format` re-flowed 3 files (`sanitise.py` + spike18 + spike19), all whitespace-only — byte-parity verified post-format. Final state: **0 ruff errors, 122/122 files format-clean**, **660 passed / 9 skipped** (= 663 − 3 deleted pins), spike19 **3/3 GREEN** (INV-1 71ms — fixture from R100 still matches to the byte after the hoist, definitive proof of byte-parity), spike18 **16/16 GREEN**. Adapter zero-regression streak extends to **R52→R103 = 51 rounds** (project-history high, +1) — past the symbolic 50-round v0.9.0 GA-cut milestone. Zero `pyproject.toml` / `uv.lock` touch. Zero schema change. Zero ADR amendment (R103 executed ADR-028 §4 slot-2 Option A as written, not a direction change). Zero adapter source change. Zero new ADR.
+
+- **Round: 103** (Phase 5 Arc D slot-2 Option A close-out, single-slot, helper hoist + ruff free-pickup — pure refactor, byte-parity preserved). 0 hard blocker. New artefacts: `src/chronos/golden/{__init__,projection,sanitise}.py` (~225 LOC, the package). Modified: `scripts/capture/capture_anthropic_agents.py` (−85 / +15 LOC, helpers → import), `tests/spikes/spike19_golden_trace_invariants.py` (−115 / +25 LOC, helpers → import + ruff cleanup), `tests/spikes/spike18_fork_tree_replay.py` (cosmetic ruff cleanup, ~7 line edits), `tests/unit/test_capture_anthropic_agents.py` (−35 / +10 LOC, 3 pin tests → R103 NOTE block). Net: −195 LOC duplication, +265 LOC properly-located package code.
+
+- **R103 关键决策 (上墙)**:
+  - **D-103-1: Verbatim hoist + post-hoist `ruff format` separately.** Helpers were copied character-for-character into `src/chronos/golden/` first, byte-parity smoke-verified against the still-inlined spike copies, THEN consumers were rewired, THEN `ruff format` was applied. This sequencing means the byte-parity proof comes from semantic identity (same text), and the format pass is a separately-reviewable whitespace transform — verified again post-format by re-running spike19 (still 3/3 GREEN, INV-1 fixture from R100 still matches). The R103 progress doc carries the proof artefact (the 5-pattern + 8-key smoke output) for replay.
+  - **D-103-2: Re-export underscore-prefixed names from `chronos.golden.__init__`.** `_SECRET_PATTERNS`, `_canonicalise`, `_RUN_SUMMARY_KEYS`, `_GOLDEN_SCHEMA` are public to the chronos package (consumed by the spike, the capture driver, the unit tests) but private to anything outside it. Mirroring the convention already used in `chronos.core._utils`. Without this, spike19's body (which still references `_GOLDEN_SCHEMA` etc. by their original names) would have needed extensive rewrites, increasing the diff surface and risking semantic drift.
+  - **D-103-3: Set `__all__` on the capture driver module to preserve the importlib-test contract.** `tests/unit/test_capture_anthropic_agents.py` loads the driver via `importlib.util.spec_from_file_location` and reaches into it by attribute (`driver.project_to_golden`, `driver._canonicalise`, etc.). Plain `from chronos.golden import …` already binds those at module scope, but the explicit `__all__` makes the contract visible and stable if someone later swaps the import shape.
+  - **D-103-4: Kept `test_capture_expected_run_byte_equality_with_spike_projection`, deleted only the 3 named pin tests.** That kept test exercises the full capture-driver pipeline (DB read → projection → sanitiser → file write → re-read), not the helper-byte-parity layer. Even though both fixtures (`driver`, `spike`) now reach the same `chronos.golden` impl, the integration coverage is independently valuable. The 3 deleted pin tests (`test_project_to_golden_byte_identical`, `test_canonicalise_byte_identical`, `test_sanitiser_byte_identical_to_spike`) tested helper-level byte-equality between driver-helpers and spike-helpers — a tautology after R103. Replaced with an inline R103 NOTE block in the test file documenting why drift is now structurally impossible.
+  - **D-103-5: F401 `Run` unused — drop the import, don't suppress.** After removing the inlined `project_to_golden(run, nodes)` body from the capture driver, `Run` is no longer referenced at runtime in that file (only `Node` is, in `node_to_envelope` and the type annotations on `capture_run`). Dropped the import cleanly rather than `# noqa: F401`-ing it. Type annotations elsewhere in the file that mention `Run` are inside docstrings, not actual `: Run` annotations, so no `from __future__ import annotations` shenanigans needed.
+  - **D-103-6: Track B (8+1 ruff errors) merged into the same commit as Track A.** Both are pure refactor — no semantic change. R102's D-102-3 deferred them to R103 explicitly so they could compose with the hoist. Composing them in one commit gives a single bisectable "clean up Arc D slot-2 + helper home" change, matching how R98 close-out bundled Arc-C slice cleanups.
+
+- **R103 产出**:
+  - 3 new files: `src/chronos/golden/__init__.py` (~58 LOC, re-exports), `src/chronos/golden/projection.py` (~95 LOC, projection helpers), `src/chronos/golden/sanitise.py` (~70 LOC, sanitiser helpers + 5-pattern table).
+  - 4 modified files: `scripts/capture/capture_anthropic_agents.py`, `tests/spikes/spike19_golden_trace_invariants.py`, `tests/spikes/spike18_fork_tree_replay.py`, `tests/unit/test_capture_anthropic_agents.py`.
+  - 1 new progress doc: `progress/2026-05-24-round-103.md` (~12 KB).
+  - 1 doc update: `docs/CONTEXT.md` §5 (this paragraph) + §6 (R103→R104 plan).
+  - 0 production code touched (the `chronos.golden` package IS production code, but it's a verbatim hoist of helpers that already ran in production via the capture driver).
+  - 0 ADR amendments. 0 schema change. 0 `pyproject.toml` / `uv.lock` change. 0 adapter change. 0 i18n change.
+
+- **Adapter zero-regression streak**: R52→R102 = 50 rounds (R103 ships no adapter code → streak extends to **51 rounds**, NEW project-history high, +1). v0.9.0 GA-cut symbolic 50-round target hit at R102, R103 banks the +1.
+
+---
+
 **截至 Round 102 结束 (2026-05-24 CST cron slot ~06:30, A2 close-out recovery slot — landed R101 WIP that the prior cron slot left uncommitted, in 0–11 窗口)** — R101 (Phase 5 Arc D slice 2, offline capture driver for `anthropic_agents`) had completed all five deliverables (driver + 15 tests + 2 READMEs + .gitkeep + CHANGELOG entry) but the slot exited before `git commit && push` ran. R102 ran the A2-of-A2 close-out playbook per `cron-slot-handoff-recovery` skill: re-verified all gates GREEN against the WIP working tree (15/15 capture tests pass in 0.31s, full suite 663 passed + 9 live-skipped in 20.57s — matches the +15 delta over R100's 648 baseline; `ruff check scripts/capture/ tests/unit/test_capture_anthropic_agents.py` clean; `git diff pyproject.toml` empty so no R65/R68 lockfile drift), confirmed the 8 pre-existing ruff errors in `tests/spikes/spike18_fork_tree_replay.py` (RUF002/RUF003/RUF001/B007/SIM113) + 1 UP017 in `spike19_golden_trace_invariants.py:190` are **NOT** in R101's footprint and stay deferred to R102-proper as free-pickup, then committed the WIP as a single logical commit on top of R100 (`9392dcb`) and pushed to origin/main via `gh-proxy.com`. Adapter zero-regression streak extends to **R52→R102 = 50 rounds** (project-history high, +1) — the symbolic v0.9.0 GA-cut milestone called out in CONTEXT §6 R100→R101 plan. **Zero new code change** in R102 itself: all artefacts are R101's. R102's own slice work (helper hoist into `src/chronos/golden/{projection,sanitise}.py` per ADR-028 §4 slot-2 Option A + the 8+1 ruff free-pickup) is the **R103 plan** (see §6) — one-slice-per-slot discipline forbids mixing recovery-slot landing with new slice work (R91 cascade-trap lesson, also re-validated R72→R71 and R96→R95 precedent). v0.8.0 GA tag intact; no ADR amendments; no schema change; no `pyproject.toml`/`uv.lock` touch; no adapter source change.
 
 - **Round: 102** (A2-of-A2 close-out recovery, single-slot, zero new code, gate re-verification only). 0 hard blocker. Lands all R101 untracked + modified artefacts in one commit on top of R100 (`9392dcb`). New artefacts contributed by R102 itself: 0. Modified by R102 itself: this CONTEXT §5 paragraph + §6 R102→R103 plan rewrite + (this) progress doc.
@@ -1171,6 +1195,71 @@ R73 是 R69→R72 4-round chain 的第一个真 disprover round, 也是 Phase 4 
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
+**Round 104 — Phase 5 Arc D slice 3 (`chronos verify-golden` CLI subcommand) + suspenders-layer load-time sanitiser audit; 1-slot budget (CLI surface + 4 unit tests + `golden-trace-format.md` "Verifier contract" §6 amendment); adapter zero-regression streak preservation (R52→R104 = 52 rounds target)**
+
+R103 closed cleanly: helper hoist into `src/chronos/golden/` shipped (3 files, ~225 LOC, byte-parity preserved against R100's `expected_run.json` via spike19 INV-1), 8+1 ruff free-pickup cleared (now 0 ruff errors, 122/122 files format-clean), 3 byte-parity pin tests deleted (drift structurally impossible after collapse), test count 663→660 (the −3 is the deletions; spike19 still 3/3 GREEN, spike18 still 16/16 GREEN). All 6 R103 D-decisions captured in §5. The `chronos.golden` package is now the single home for projection + sanitiser helpers; the capture driver (R101) and the spike (R100) both `from chronos.golden import …`.
+
+### R104 hard-prereqs to verify pre-flight
+
+1. `git fetch origin main` then `git status` clean + in-sync with origin/main. *(R48-B trap.)*
+2. `git log --oneline -5` shows R103 commit at HEAD = origin/main.
+3. `uv run --no-sync pytest -q --no-cov` → **660 passed, 9 skipped (live)** in ≤30 s. (R103 baseline.)
+4. `uv run --no-sync ruff check src/ scripts/ tests/` → **0 errors** (R103 cleared the board).
+5. `uv run --no-sync ruff format --check src/ scripts/ tests/` → 122/122 clean.
+6. `uv run --no-sync python tests/spikes/spike19_golden_trace_invariants.py` → 3/3 GREEN.
+7. `git diff pyproject.toml uv.lock` empty.
+8. Verify `chronos.golden` package importable: `uv run --no-sync python -c "from chronos.golden import project_to_golden, sanitise_capture, _SECRET_PATTERNS; print(len(_SECRET_PATTERNS))"` → `5`.
+
+### R104 deliverables (single slot, single commit)
+
+**Track A: `chronos verify-golden` CLI subcommand** (the operator-facing read side of the contract; capture is the write side, R101+R103):
+
+1. Create `src/chronos/cli/verify_golden.py` with a `verify_golden_command(args)` function that takes `--db`, `--run-id`, `--golden-dir` (path to `tests/golden/<adapter>/<scenario>/`):
+   - Load the recorded Run + Nodes from the SQLite DB (via `SqliteStore`).
+   - Project to golden via `chronos.golden.project_to_golden`, serialise via `chronos.golden.golden_dumps`.
+   - Read `<golden-dir>/expected_run.json` from disk, byte-compare against the projection.
+   - **Suspenders layer**: pass the on-disk `<golden-dir>/envelopes.jsonl` content through `chronos.golden.sanitise_capture` BEFORE byte-comparing — if any pattern matches, fail with exit code 3 + "secret in fixture, please re-record" + the matched pattern name. (This is the load-time audit ADR-028 §4 promised: belt = capture-time redaction by R101, suspenders = load-time audit at verify.)
+   - Exit codes: `0` happy path, `1` mismatch (print unified diff of canonical JSON), `2` missing fixture (point at `scripts/capture/capture_anthropic_agents.py`), `3` sanitiser hit (suspenders fail).
+2. Wire into the existing `chronos` argparse tree (`src/chronos/cli/__init__.py`) as `chronos verify-golden …`. Mirror the shape of `chronos replay-run` (the closest existing peer).
+3. New tests in `tests/unit/test_cli_verify_golden.py` (4 tests): happy path on `tests/golden/_skeleton/`, mismatch path (synthesise tampered fixture in `tmp_path`), missing-fixture path, secret-leaks-at-load path (synthesise fixture with `sk-ant-` injected post-capture, expect exit 3).
+
+**Track B: docs**:
+
+4. Amend `docs/contracts/golden-trace-format.md` with a new §6 "Verifier contract" — exit-code table, the belt+suspenders narrative, an example `chronos verify-golden` invocation. Keep §1–§5 intact (R100 froze them).
+5. CHANGELOG `[Unreleased]` / Added bullet: "R104 — `chronos verify-golden` CLI subcommand for golden-trace fixture verification with belt+suspenders sanitiser audit (ADR-028 §4 slice 3 close)."
+
+### R104 gate checklist (before commit)
+
+- [ ] `uv run --no-sync pytest -q --no-cov` → 664 passed (660 + 4 new), 9 skipped.
+- [ ] `uv run --no-sync ruff check src/ scripts/ tests/` → 0 errors.
+- [ ] `uv run --no-sync ruff format --check` → clean.
+- [ ] `uv run --no-sync mypy src/` → clean (gains 1 file: `src/chronos/cli/verify_golden.py`).
+- [ ] `uv run --no-sync python tests/spikes/spike19_golden_trace_invariants.py` → 3/3 GREEN (regression check on the helper layer).
+- [ ] `uv run --no-sync chronos verify-golden --help` prints clean help text.
+- [ ] `uv run --no-sync chronos verify-golden --db <existing-test-db> --run-id <existing-run> --golden-dir tests/golden/_skeleton` → smoke happy path.
+- [ ] `git diff pyproject.toml uv.lock` empty.
+
+### R104 streak target
+
+Adapter zero-regression streak: R52→R103 = 51 rounds. R104 ships zero adapter code (CLI verb + helpers + tests only, no `src/chronos/adapters/` touch). Streak should extend to **R52→R104 = 52 rounds**.
+
+### R104 alternate path (if argparse wiring hits an unforeseen blocker)
+
+Land **only** the standalone `verify_golden.py` module + the 4 unit tests + the doc amendment, without wiring into the `chronos` CLI tree. The module would be invocable via `python -m chronos.cli.verify_golden …` for the operator-facing path; the argparse wiring is a separate slice (R105). This degrades the slot deliverable but preserves the contract semantics.
+
+### R104 hand-off invariants (for R105 cron)
+
+- ❌ **Don't add new sanitiser patterns** in R104 — pattern set growth is observation-driven (real fixture leakage), not speculative. R104 only adds the *audit-at-load* check, not new patterns.
+- ❌ **Don't auto-discover fixtures** — `--golden-dir` is explicit. R105+ may layer a `--scenario` lookup, but that's a separate slice (mirrors R101 D-101-4 driver discipline).
+- ❌ **Don't promote `chronos.golden` to public API** in `chronos/__init__.py` — keep it as `from chronos.golden import …` for now; ADR-028 will own the public-API decision in a later slice.
+- ✅ **CI integration is R105 work** — R104 ships the CLI; R105 adds a CI job that runs `chronos verify-golden` against every committed golden fixture. Don't conflate.
+- ✅ **Single commit for the entire R104 slot** — CLI + tests + doc + CHANGELOG bullet.
+
+---
+
+<details>
+<summary><b>Historical: Round 103 plan (Phase 5 Arc D slot-2 Option A close-out — golden helper hoist + ruff free-pickup) — SHIPPED at R103, see §5 R103 paragraph for outcome</b></summary>
+
 **Round 103 — Phase 5 Arc D slice 2 follow-up (golden helper hoist into `src/chronos/golden/`) + R102 ruff free-pickup; 1-slot budget (refactor + ruff + green-gate, no new functionality); adapter zero-regression streak preservation (R52→R103 = 51 rounds target)**
 
 R102 closed cleanly as A2-of-A2 close-out recovery slot — landed R101's offline capture driver WIP (5 deliverables, ~860 LOC across script + tests + docs) on top of R100 (`9392dcb`) in one logical commit + push, re-verified all gates GREEN against the WIP working tree before commit (15/15 capture tests in 0.31 s, full suite 663 passed + 9 live-skipped in 20.57 s, ruff clean on R101 footprint, `pyproject.toml` untouched), preserved adapter zero-regression streak at **R52→R102 = 50 rounds** (the v0.9.0 GA-cut symbolic milestone). Zero new code in R102 itself; R102 produced only the close-out narrative (CONTEXT §5 paragraph + this §6 plan + `progress/2026-05-24-round-102.md`). All five R102 D-decisions captured in §5; ADR-028 + R101 progress doc preserved as the source of truth for R103.
@@ -1227,6 +1316,8 @@ Land **only** Track B (ruff free-pickup) + a 1-paragraph progress doc explaining
 - ❌ **Don't change the verbatim copy** during the hoist — the whole point of the hoist is byte-parity preservation. Any "while I'm in here" cleanup contaminates the refactor commit and makes bisection lie.
 - ✅ **Verify spike 19 standalone is still 3/3 GREEN** after the hoist. The spike is the source-of-truth disprover for the data contract; if it goes red the hoist introduced silent drift.
 - ✅ **Single commit for the entire R103 slot** — Track A + Track B + CHANGELOG. The ruff cleanup is filler, not a separate concern.
+
+</details>
 
 ---
 

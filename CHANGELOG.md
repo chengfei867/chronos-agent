@@ -4,6 +4,45 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Changed
+
+- **R103 (Phase 5 Arc D slot-2 Option A close-out — golden helper hoist + ruff
+  free-pickup)**: collapsed the three byte-identical copies of the
+  golden-projection + sanitiser helpers (R100 spike19, R101 capture driver,
+  and the planned `src/chronos/golden/` landing zone) into a single home at
+  `src/chronos/golden/{__init__.py, projection.py, sanitise.py}` per
+  ADR-028 §4 slot-2 Option A. Public surface re-exported by the package:
+  `project_to_golden`, `golden_dumps`, `sanitise_capture`, `_SECRET_PATTERNS`,
+  plus internal helpers `_canonicalise`, `_RUN_SUMMARY_KEYS`, `_GOLDEN_SCHEMA`
+  for spike19's standalone-runnability re-binding.
+    * `scripts/capture/capture_anthropic_agents.py` and
+      `tests/spikes/spike19_golden_trace_invariants.py` now both
+      `from chronos.golden import …` (verbatim hoist — semantics unchanged,
+      only `ruff format` whitespace re-flow on `sanitise.py`). Spike19
+      remains directly invocable via
+      `python tests/spikes/spike19_golden_trace_invariants.py` and stays
+      3/3 GREEN.
+    * Deleted 3 byte-parity pin tests in
+      `tests/unit/test_capture_anthropic_agents.py` (`#4 _canonicalise`,
+      `#5 project_to_golden`, `#8 sanitise_capture`) — they were
+      pin-against-drift scaffolding. With one home, drift is structurally
+      impossible (a tautology, not a test-enforced invariant). The
+      fixture-drift integration test
+      `test_capture_expected_run_byte_equality_with_spike_projection` is
+      kept as belt-and-suspenders since it exercises the full
+      capture-pipeline → file → bytes path.
+    * **Ruff free-pickup** (R102 D-102-3 deferred): cleared all 9
+      pre-existing errors (7 in spike18 + 1 UP017 in spike19 + 1 new F401
+      from the hoist removing the last `Run` consumer in the driver).
+      Three auto-fixes via `--fix`; six manual fixes in spike18 (4× RUF001/2/3
+      `×` → `x` in diagnostic strings, 2× B007 unused-loop-var rename to
+      `_rid`/`_pid`, 1× SIM113 dropped dead `forks_made` accumulator).
+      Final state: **0 ruff errors**, all 122 files format-clean (first
+      fully-clean ruff board since spike18 landed).
+    * Gate: 660 passed (663 − 3 deleted pin tests) / 9 skipped (live);
+      spike18 still 16/16 GREEN; spike19 still 3/3 GREEN. Adapter
+      zero-regression streak: **R52→R103 = 51 rounds**.
+
 ### Added
 
 - **R101 (Phase 5 Arc D slice 2 — offline capture driver for anthropic_agents)**:

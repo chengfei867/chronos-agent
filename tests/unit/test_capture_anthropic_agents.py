@@ -190,25 +190,15 @@ def test_capture_expected_run_byte_equality_with_spike_projection(
 
 # ---------------------------------------------------------------------------
 # Test 2: byte-identity between driver helpers and spike 19 helpers
+# (R103 NOTE: previously this section pinned three byte-parity invariants
+# between the spike's inlined helpers and the capture driver's inlined
+# copies. R103 hoisted both into ``src/chronos/golden/`` — there is now
+# only one home for the helpers, so byte-parity is a tautology. The pin
+# tests have been removed; drift is structurally impossible. The spike
+# itself still exercises the helpers end-to-end via INV-1/2/3, and
+# ``test_capture_expected_run_byte_equality_with_spike_projection`` above
+# still covers the capture-pipeline → spike-projection equality.)
 # ---------------------------------------------------------------------------
-
-
-def test_project_to_golden_byte_identical(driver, spike, synthetic_run_and_nodes):
-    run, nodes = synthetic_run_and_nodes
-    a = driver.golden_dumps(driver.project_to_golden(run, nodes))
-    b = spike.golden_dumps(spike.project_to_golden(run, nodes))
-    assert a == b
-
-
-def test_canonicalise_byte_identical(driver, spike):
-    sample = {
-        "z": [{"b": 2, "a": 1}, {"d": 4, "c": 3}],
-        "a": {"nested": {"y": 2, "x": 1}},
-        "m": "scalar",
-    }
-    a = json.dumps(driver._canonicalise(sample), sort_keys=True)
-    b = json.dumps(spike._canonicalise(sample), sort_keys=True)
-    assert a == b
 
 
 def test_sanitiser_redacts_known_secret_shapes(driver):
@@ -243,15 +233,6 @@ def test_sanitiser_idempotent(driver):
     once = driver.sanitise_capture(raw)
     twice = driver.sanitise_capture(once)
     assert once == twice
-
-
-def test_sanitiser_byte_identical_to_spike(driver, spike):
-    """Driver's sanitiser must equal spike 19's on a representative payload."""
-    raw = (
-        '{"key":"sk-ant-api03-AAAAAAAAAAAAAAAAAAAAAAAA","auth":"Bearer abc1234567'
-        '8901234567890","url":"https://x.test?token=CCCCCCCCCCCCCCCCCC"}'
-    )
-    assert driver.sanitise_capture(raw) == spike.sanitise_capture(raw)
 
 
 # ---------------------------------------------------------------------------

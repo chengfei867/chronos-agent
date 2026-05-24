@@ -49,14 +49,12 @@ invariants 2/3 fail = soft-fail per ADR-028 §8 (1-slot fix in slice 1).
 from __future__ import annotations
 
 import json
-import re
 import sys
 import tempfile
 import time
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any
 
 # Ensure the spike runs against the in-tree chronos package without
 # requiring an editable install if the tree is already on PYTHONPATH.
@@ -64,113 +62,33 @@ _REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_REPO / "src"))
 
 from chronos.core.models import Node, NodeKind, Run, RunStatus  # noqa: E402
+from chronos.golden import (  # noqa: E402
+    _GOLDEN_SCHEMA,
+    _RUN_SUMMARY_KEYS,
+    _SECRET_PATTERNS,
+    _canonicalise,
+    golden_dumps,
+    project_to_golden,
+    sanitise_capture,
+)
 from chronos.store import SqliteStore  # noqa: E402
 
-# ---------------------------------------------------------------------------
-# Reference projection (R100 inline; hoisted to chronos.golden.projection in R102)
-# ---------------------------------------------------------------------------
-
-# CLOSED field set for RunSummary projection. Adding a new envelope kind
-# downstream MUST NOT change this list. Any new key requires an explicit
-# ADR-028 amendment + golden-trace-format.md v-bump.
-_RUN_SUMMARY_KEYS = (
-    "schema",
-    "adapter",
-    "status",
-    "task_description",
-    "node_count",
-    "node_kinds",
-    "node_names",
-    "states_after",
-)
-_GOLDEN_SCHEMA = "chronos.golden/v0"
-
-
-def project_to_golden(run: Run, nodes: list[Node]) -> dict[str, Any]:
-    """Project (Run, [Node]) -> canonical golden RunSummary dict.
-
-    Determinism rules:
-      * run_id, started_at, ended_at, node ids, per-node started_at/ended_at
-        are STRIPPED (replaced with constants or omitted) — they leak machine
-        state.
-      * node_kinds + node_names are emitted in step_index order (same order
-        as ``store.get_nodes_for_run`` returns).
-      * states_after is per-node, JSON-canonicalised separately so dict
-        iteration order can never sneak through (we use sort_keys=True at
-        serialise time, but re-emit here as ordered dicts of canonical
-        primitives).
-      * Top-level keys are CLOSED to ``_RUN_SUMMARY_KEYS``. Any kwargs sneak
-        is caught by the closed-set assertion in INV-2.
-    """
-    sorted_nodes = sorted(nodes, key=lambda n: n.step_index)
-    return {
-        "schema": _GOLDEN_SCHEMA,
-        "adapter": run.adapter,
-        "status": run.status.value,
-        "task_description": run.task_description,
-        "node_count": len(sorted_nodes),
-        "node_kinds": [n.kind.value for n in sorted_nodes],
-        "node_names": [n.node_name for n in sorted_nodes],
-        # Each per-node dict is canonicalised at serialise time via
-        # json.dumps(sort_keys=True).
-        "states_after": [_canonicalise(n.state_after) for n in sorted_nodes],
-    }
-
-
-def _canonicalise(obj: Any) -> Any:
-    """Recursively rebuild dicts with sorted keys; pass-through for scalars/lists."""
-    if isinstance(obj, dict):
-        return {k: _canonicalise(obj[k]) for k in sorted(obj.keys())}
-    if isinstance(obj, list):
-        return [_canonicalise(x) for x in obj]
-    return obj
-
-
-def golden_dumps(payload: dict[str, Any]) -> str:
-    """Canonical golden serialisation: sort_keys + 2-space indent + trailing nl.
-
-    Choice of indent=2: matches the on-disk ``expected_run.json`` format
-    so the byte-equality assertion in INV-1 doesn't require a round-trip
-    through a parser. ``sort_keys=True`` belt-and-suspenders against the
-    in-memory canonicaliser; it enforces the contract at one more layer.
-    """
-    return json.dumps(payload, sort_keys=True, indent=2) + "\n"
-
-
-# ---------------------------------------------------------------------------
-# Sanitiser (R100 inline; hoisted to chronos.golden.sanitise in R102)
-# ---------------------------------------------------------------------------
-
-# Patterns chosen to match real-world secret shapes WITHOUT false-positiving
-# on common benign tokens (UUID4 hex strings, langgraph node ids, etc.).
-_SECRET_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = (
-    # Anthropic API keys: sk-ant-{api03,test}-...{40-200 chars}
-    ("ANTHROPIC_KEY", re.compile(r"sk-ant-[A-Za-z0-9_-]{20,}"), "<REDACTED:ANTHROPIC_KEY>"),
-    # OpenAI / project keys: sk-proj-..., sk-... (be careful: must not eat sk-ant- substrings)
-    ("OPENAI_KEY", re.compile(r"\bsk-(?!ant-)(?:proj-)?[A-Za-z0-9_-]{20,}"), "<REDACTED:OPENAI_KEY>"),
-    # Bearer tokens (JWT-shaped or opaque): "Bearer xxxxxxxxxxxxx..."
-    ("BEARER_TOKEN", re.compile(r"\bBearer\s+[A-Za-z0-9._\-]{20,}"), "Bearer <REDACTED:BEARER_TOKEN>"),
-    # AWS access key id: AKIA + 16 uppercase alnum
-    ("AWS_AKID", re.compile(r"\bAKIA[0-9A-Z]{16}\b"), "<REDACTED:AWS_AKID>"),
-    # Generic secret-shaped URL token query param: ?...token=<long>
-    (
-        "URL_TOKEN",
-        re.compile(r"([?&](?:token|secret|api_key|key)=)[A-Za-z0-9._\-]{16,}"),
-        r"\1<REDACTED:URL_TOKEN>",
-    ),
-)
-
-
-def sanitise_capture(jsonl_str: str) -> str:
-    """Redact known-secret patterns in a JSONL capture string.
-
-    Idempotent: running twice produces identical output (regexes don't match
-    the redaction markers themselves).
-    """
-    out = jsonl_str
-    for _kind, rx, repl in _SECRET_PATTERNS:
-        out = rx.sub(repl, out)
-    return out
+# Re-bind under the names the spike's body uses, so the rest of the file
+# (assertions, perf checks, log messages) reads exactly as it did pre-R103.
+# The reference impls now live in :mod:`chronos.golden` (hoisted at R103
+# per ADR-028 §4 slot-2 Option A); pre-R103 they were inlined here AND in
+# scripts/capture/capture_anthropic_agents.py with three byte-parity pin
+# tests. R103 collapsed both copies into the package and dropped the pins
+# (drift is now impossible — there's only one home).
+__all__ = [
+    "_GOLDEN_SCHEMA",
+    "_RUN_SUMMARY_KEYS",
+    "_SECRET_PATTERNS",
+    "_canonicalise",
+    "golden_dumps",
+    "project_to_golden",
+    "sanitise_capture",
+]
 
 
 # ---------------------------------------------------------------------------
@@ -187,7 +105,7 @@ def _build_synthetic_run() -> tuple[Run, list[Node]]:
       env2 -> kind=END node_name='agent_end'
     """
     run_id = str(uuid.uuid4())
-    base = datetime(2026, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+    base = datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC)
     run = Run(
         id=run_id,
         adapter="langgraph",
@@ -358,9 +276,16 @@ def invariant_3_sanitiser_audit() -> None:
         [
             json.dumps({"event": "auth", "key": "sk-ant-api03-" + "A" * 64}),
             json.dumps({"event": "auth", "key": "sk-proj-" + "B" * 48}),
-            json.dumps({"event": "header", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.payload.sig"}),
+            json.dumps(
+                {
+                    "event": "header",
+                    "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.payload.sig",
+                }
+            ),
             json.dumps({"event": "aws", "id": "AKIAIOSFODNN7EXAMPLE"}),
-            json.dumps({"event": "url", "u": "https://relay.example.com/?token=abcdefghijklmnop1234567890"}),
+            json.dumps(
+                {"event": "url", "u": "https://relay.example.com/?token=abcdefghijklmnop1234567890"}
+            ),
             # 10 benign tokens that MUST NOT trigger redaction:
             json.dumps({"node_id": "abc-def-1234", "step_index": 0, "counter": 42}),
             json.dumps({"adapter": "langgraph", "thread": "t1", "model": "claude-opus-4-7"}),
