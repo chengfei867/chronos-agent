@@ -302,6 +302,7 @@ def compare_command(
                 )
             except DiffRunNotFoundError as exc:
                 console.print(f"[red]error:[/] no such run: [bold]{exc.run_id}[/]")
+                console.print("[dim]Hint:[/] list available runs with `chronos runs list`.")
                 raise typer.Exit(code=1) from exc
     finally:
         store.close()
@@ -386,6 +387,7 @@ def _run_auto_pivot(
             )
         except DiffRunNotFoundError as exc:
             console.print(f"[red]error:[/] no such run: [bold]{exc.run_id}[/]")
+            console.print("[dim]Hint:[/] list available runs with `chronos runs list`.")
             raise typer.Exit(code=1) from exc
     finally:
         store.close()
@@ -487,6 +489,7 @@ def _run_matrix(
             )
         except DiffRunNotFoundError as exc:
             console.print(f"[red]error:[/] no such run: [bold]{exc.run_id}[/]")
+            console.print("[dim]Hint:[/] list available runs with `chronos runs list`.")
             raise typer.Exit(code=1) from exc
     finally:
         store.close()

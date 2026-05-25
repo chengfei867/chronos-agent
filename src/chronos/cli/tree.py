@@ -228,6 +228,7 @@ def tree_command(
                 )
             else:
                 console.print(f"[red]error:[/] no such run: [bold]{run_id}[/]")
+                console.print("[dim]Hint:[/] list available runs with `chronos runs list`.")
             raise typer.Exit(code=1)
 
         if descendants:

@@ -94,7 +94,16 @@ def main(
 
 @app.command()
 def info() -> None:
-    """Print environment diagnostics."""
+    """Print environment diagnostics (version, phase, command surface).
+
+    Use this first when triaging a chronos install — it reports the package
+    version, the current phase / release line, and the list of available
+    verbs. ``chronos doctor`` (R110) will layer health checks on top.
+
+    Example::
+
+        chronos info
+    """
     console.print(f"[bold]chronos[/bold] {__version__}")
     console.print(
         "Status: Phase 5 Arc D complete (v0.9.0 R100-R106, golden-trace data contract + capture driver + verify-golden CLI + CI gate), "
@@ -145,6 +154,12 @@ def web_cmd(
         chronos web                    # default: 127.0.0.1:8765
         chronos web --port 9000        # custom port
         chronos web --no-browser       # don't auto-open a tab (SSH/headless)
+
+    Exit codes:
+      0 — server started cleanly (Ctrl-C to stop).
+      1 — port already in use, or ``[web]`` extra not installed
+          (hint: ``uv pip install 'chronos-agent[web]'``).
+      2 — chronos.db missing or unreadable.
     """
     from chronos.cli.web import web_command
 
@@ -177,6 +192,17 @@ def replay_cmd(
     On a non-TTY stdin/stdout (CI, pipes, ``tee``) the command falls back
     to printing every node's detail view in order. Pass
     ``--no-interactive`` to force that fallback on a TTY too.
+
+    Example::
+
+        chronos replay 7c3f9e2a-...-a91         # interactive on a TTY
+        chronos replay 7c3f9e2a --no-interactive   # static dump (CI / pipe)
+        chronos replay 7c3f9e2a --db ./other.db    # explicit DB path
+
+    Exit codes:
+      0 — happy path (run replayed to completion or printed in full).
+      1 — run id not found (hint: ``chronos runs list``).
+      2 — chronos.db missing or unreadable.
     """
     from chronos.cli.replay import replay_command
 
@@ -207,7 +233,19 @@ def runs_list(
         help="Include summed tokens / cost columns. Extra SELECT per run — slower for large DBs.",
     ),
 ) -> None:
-    """List recorded runs (most recent first)."""
+    """List recorded runs (most recent first).
+
+    Example::
+
+        chronos runs list                  # most recent 50 runs (default)
+        chronos runs list -n 10            # last 10 runs only
+        chronos runs list --json           # machine-readable
+        chronos runs list --with-usage     # include token / cost columns
+
+    Exit codes:
+      0 — happy path (table or JSON printed; empty store prints empty table).
+      2 — chronos.db missing or unreadable.
+    """
     from chronos.cli.runs import runs_list_command
 
     runs_list_command(
@@ -228,7 +266,23 @@ def runs_show(
     ),
     json_out: bool = typer.Option(False, "--json", help="Emit JSON instead of a tree."),
 ) -> None:
-    """Show one run, including its node tree."""
+    """Show one run, including its node tree.
+
+    Renders the Run header (id, adapter, status, timing) plus an indented
+    list of every Node (kind, name, state-after preview). Pass ``--json``
+    for the machine-readable shape — the ``runs list`` row is a strict
+    subset of this payload.
+
+    Example::
+
+        chronos runs show 7c3f9e2a-...-a91
+        chronos runs show 7c3f9e2a --json | jq '.nodes | length'
+
+    Exit codes:
+      0 — happy path.
+      1 — run id not found (hint: ``chronos runs list``).
+      2 — chronos.db missing or unreadable.
+    """
     from chronos.cli.runs import runs_show_command
 
     runs_show_command(
@@ -253,7 +307,22 @@ def forks_show(
     ),
     json_out: bool = typer.Option(False, "--json", help="Emit JSON instead of a tree."),
 ) -> None:
-    """Show a fork: parent run + fork point + overrides + child run summary."""
+    """Show a fork: parent run + fork point + overrides + child run summary.
+
+    Each fork record links a parent Run to a child Run via a Node id and
+    a small set of state overrides. ``runs show`` already lists fork ids
+    on the parent — use this verb to expand one of them.
+
+    Example::
+
+        chronos forks show 4ab1...c2d
+        chronos forks show 4ab1c2d --json
+
+    Exit codes:
+      0 — happy path.
+      1 — fork id not found (hint: ``chronos runs show <parent_run_id>`` lists forks).
+      2 — chronos.db missing or unreadable.
+    """
     from chronos.cli.forks import forks_show_command
 
     forks_show_command(
@@ -288,7 +357,24 @@ def tree(
         False, "--json", help="Emit JSON (byte-for-byte the HTTP response shape)."
     ),
 ) -> None:
-    """Show the fork-family tree rooted at a run (ADR-025)."""
+    """Show the fork-family tree rooted at a run (ADR-025).
+
+    By default, walks upward to the run's root and prints every run that
+    descends from that root via fork records. Pass ``--descendants`` to
+    only show the family of runs that descend from the input run id (a
+    sub-tree rooted at *this* run, not the family root).
+
+    Example::
+
+        chronos tree 7c3f9e2a                 # full family tree
+        chronos tree 7c3f9e2a --descendants   # only this run's children/grand-children
+        chronos tree 7c3f9e2a --json          # HTTP-equivalent JSON shape
+
+    Exit codes:
+      0 — happy path.
+      1 — run id not found (hint: ``chronos runs list``).
+      2 — chronos.db missing or unreadable.
+    """
     from chronos.cli.tree import tree_command
 
     tree_command(
@@ -332,7 +418,26 @@ def diff(
         help="Include token/cost comparison between run A and run B (ADR-009).",
     ),
 ) -> None:
-    """Compare two recorded runs side-by-side (the 'compare' verb — ADR-006 alignment)."""
+    """Compare two recorded runs side-by-side (the 'compare' verb — ADR-006 alignment).
+
+    Renders a row-aligned table where each row is one logical step
+    (model_call / tool_call / state_update / agent_end). When run B is a
+    fork-child of run A, the shared prefix is hidden by default — pass
+    ``--full`` to compare end-to-end. Pass ``--verbose`` to expand
+    state_after deltas inline; ``--show-usage`` adds token / cost columns.
+
+    Example::
+
+        chronos diff 7c3f9e2a 9b1d8e4c
+        chronos diff 7c3f9e2a 9b1d8e4c --full --verbose
+        chronos diff 7c3f9e2a 9b1d8e4c --json | jq '.summary'
+        chronos diff 7c3f9e2a 9b1d8e4c --show-usage
+
+    Exit codes:
+      0 — happy path (table or JSON printed, runs aligned).
+      1 — either run id not found (hint: ``chronos runs list``).
+      2 — chronos.db missing or unreadable.
+    """
     from chronos.cli.diff import diff_command
 
     diff_command(
@@ -451,6 +556,14 @@ def compare_cmd(
         chronos compare run_001 run_002 --full                 # don't slice
         chronos compare --auto-pivot run_001 run_002 run_003   # auto-centroid
         chronos compare --matrix run_001 run_002 run_003       # matrix only
+
+    Exit codes:
+      0 — happy path (alignment table or JSON printed).
+      1 — runtime "no such run" — at least one id wasn't found
+          (hint: ``chronos runs list``).
+      2 — input validation error: bad ``--columns`` value, mutually-
+          exclusive flags, fewer than 2 candidate runs, or duplicate ids
+          (the error message is actionable).
     """
     from chronos.cli.compare import compare_command
 
@@ -591,6 +704,19 @@ def fork_plan_cmd(
         plan = load_plan("fork_plan.json")
         with recorder.fork(graph, **plan.recorder_kwargs()) as ref:
             graph.invoke(None, {"configurable": {"thread_id": plan.child_thread_id}})
+
+    Example::
+
+        chronos fork plan <run_id> --at-node tool_call -o retries=3
+        chronos fork plan <run_id> --at-index 4 --override-json '{"flag": true}'
+        chronos fork plan <run_id> --at-node-id <node_id> --emit python --out fork.py
+        chronos fork plan <run_id> --at-index 0 --json | jq .
+
+    Exit codes:
+      0 — happy path (plan written or printed).
+      1 — fork point not found / ambiguous, override key missing in
+          parent state_after (use ``--allow-new-keys`` if intentional).
+      2 — chronos.db missing or unreadable, or unknown ``--emit`` value.
     """
     from chronos.cli.fork import fork_plan_command
 

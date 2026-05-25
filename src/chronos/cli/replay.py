@@ -366,6 +366,7 @@ def replay_command(
         run = store.get_run(run_id)
         if run is None:
             console.print(f"[red]error:[/] no such run: [bold]{run_id}[/]")
+            console.print("[dim]Hint:[/] list available runs with `chronos runs list`.")
             raise typer.Exit(code=1)
         nodes = store.get_nodes_for_run(run_id)
     finally:

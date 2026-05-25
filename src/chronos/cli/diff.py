@@ -174,6 +174,7 @@ def diff_command(
             report = diff_runs(store, run_a, run_b, restrict_to_downstream=not full)
         except DiffRunNotFoundError as exc:
             console.print(f"[red]error:[/] no such run: [bold]{exc.run_id}[/]")
+            console.print("[dim]Hint:[/] list available runs with `chronos runs list`.")
             raise typer.Exit(code=1) from exc
         usage_a: _RunUsageSummary | None = None
         usage_b: _RunUsageSummary | None = None

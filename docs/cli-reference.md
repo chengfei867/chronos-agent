@@ -1,330 +1,326 @@
-# CLI Reference
+# `chronos` CLI Reference
 
-Chronos is installed as the `chronos` command. All subcommands accept `--db PATH` (overrides the `CHRONOS_DB` env var; falls back to `./chronos.db`).
+> Generated as part of **R108 — CLI Polish Track**. Mirrors the rich
+> `--help` docstrings that ship with the `chronos` binary. For the
+> source of truth, run `chronos <verb> --help`.
 
+`chronos` is the command-line surface of the **chronos-agent** time-travel
+debugger. Every verb is read-only against your local `chronos.db` unless
+otherwise noted.
+
+## Top-level
+
+```bash
+chronos --help          # list verbs
+chronos --version       # print version and exit
+chronos <verb> --help   # rich per-verb help with Examples + Exit codes
 ```
-chronos [OPTIONS] COMMAND [ARGS]...
-```
 
-## Global options
+`$CHRONOS_DB` (or `--db <path>` on most verbs) selects which SQLite file
+to read. Default search order: `--db` flag > `$CHRONOS_DB` > `./chronos.db`.
 
-| Flag          | Meaning                           |
-|---------------|-----------------------------------|
-| `-v` / `--version` | Print version and exit.      |
-| `--help`      | Show help for any command/subcmd. |
+## Verbs
+
+| Verb | Purpose | Reads | Writes |
+| --- | --- | --- | --- |
+| [`info`](#info) | Environment diagnostics | — | — |
+| [`web`](#web) | Local HTTP API + browser viewer | DB | — |
+| [`replay`](#replay) | Step through a run node-by-node (TUI) | DB | — |
+| [`tree`](#tree) | Print the fork-family tree | DB | — |
+| [`diff`](#diff) | Side-by-side compare of 2 runs | DB | — |
+| [`compare`](#compare) | N-way fork-sweep compare | DB | — |
+| [`verify-golden`](#verify-golden) | Compare run vs. on-disk fixture | DB + fixture | — |
+| [`runs list`](#runs-list) | List recorded runs | DB | — |
+| [`runs show`](#runs-show) | Show one run's nodes + metadata | DB | — |
+| [`forks show`](#forks-show) | Show a fork's parent ↔ child | DB | — |
+| [`fork plan`](#fork-plan) | Emit a fork plan JSON / Python stub | DB | `fork_plan.json` |
+
+### Exit-code conventions
+
+Most verbs follow this contract:
+
+| Code | Meaning |
+| --- | --- |
+| `0` | Happy path — output printed, no errors. |
+| `1` | Logical error: id not found, ambiguous fork point, etc. (actionable hint printed). |
+| `2` | Input / environment error: bad flag value, missing/unreadable DB, missing fixture. |
+| `3` | (`verify-golden` only) — secret detected in fixture; re-record needed. |
 
 ---
 
-## `chronos info`
+### `info`
 
-Print environment diagnostics (Python version, Chronos version, loaded modules). Useful for bug reports.
-
-```bash
+```
 chronos info
 ```
 
----
-
-## `chronos web`
-
-Serve the local HTTP API and open a browser tab pointed at it. The fastest path from "I recorded some runs" to "I can see them" — no frontend build step, no config. Requires the optional `[web]` extra (`uv pip install 'chronos-agent[web]'`).
-
-```bash
-chronos web [--host HOST] [-p PORT] [--db PATH] [--no-browser]
-```
-
-| Flag            | Default         | Meaning                                                           |
-|-----------------|-----------------|-------------------------------------------------------------------|
-| `--host HOST`   | `127.0.0.1`     | Bind address. Keep on loopback — there is no auth.                |
-| `-p`, `--port`  | `8765`          | TCP port.                                                         |
-| `--db PATH`     | `./chronos.db` or `$CHRONOS_DB` | Path to the Chronos DB.                           |
-| `--no-browser`  | off             | Don't auto-open a tab. Use on headless hosts / over SSH tunnels.  |
-
-Opens a dark-themed landing page at `/` that links to:
-- `/runs` — list of recorded runs (JSON)
-- `/runs/{id}` / `/runs/{id}/nodes` / `/runs/{id}/forks` / `/runs/{id}/tree` — per-run endpoints
-- `/docs` — Swagger UI (interactive API console)
-- `/healthz` — liveness + schema version
-
-Stop the server with `Ctrl-C`.
-
-Example:
-
-```bash
-chronos web --db examples/chronos.db
-# → http://127.0.0.1:8765 opens in your browser
-```
-
-Over SSH, forward the port and skip the auto-open:
-
-```bash
-# on the server
-chronos web --no-browser
-# on your laptop
-ssh -L 8765:127.0.0.1:8765 remote.host  # then open http://localhost:8765
-```
+Prints version, Python runtime, default DB path, and the registered
+command surface. Useful as a smoke test or for bug reports.
 
 ---
 
-## `chronos runs list`
+### `web`
 
-List recorded runs, most recent first.
-
-```bash
-chronos runs list [--db PATH] [-n LIMIT] [--json] [--with-usage]
+```
+chronos web [--host 127.0.0.1] [--port 8765] [--db PATH] [--no-browser]
 ```
 
-| Flag        | Default | Meaning                                       |
-|-------------|---------|-----------------------------------------------|
-| `--db PATH` | `./chronos.db` or `$CHRONOS_DB` | Path to the Chronos DB. |
-| `-n LIMIT`  | 50      | Max rows to return (1–10000).                 |
-| `--json`    | off     | Emit newline-terminated JSON instead of a table. |
-| `--with-usage` | off  | Aggregate token counts and cost (¢) for each run. One extra SQL fetch per row — opt-in for performance. Requires runs whose adapter was given a `usage_extractor` (see [ADR-009](decisions/ADR-009-usage-extractor-hook.md)). |
+Serves the local HTTP API (FastAPI, read-only, loopback by default) and
+opens the viewer in a browser tab. From the landing page you can hit
+`/runs`, `/runs/{id}/tree`, and `/docs` (Swagger UI).
 
-Exit codes: `0` success, `2` DB not found.
+Install the `[web]` extra once: `uv pip install 'chronos-agent[web]'`.
+
+**Examples**
+
+```bash
+chronos web                    # default: 127.0.0.1:8765
+chronos web --port 9000        # custom port
+chronos web --no-browser       # don't auto-open a tab (SSH/headless)
+```
+
+**Exit codes**
+
+- `0` — server started cleanly (Ctrl-C to stop).
+- `1` — port already in use, or `[web]` extra not installed (hint: `uv pip install 'chronos-agent[web]'`).
+- `2` — chronos.db missing or unreadable.
 
 ---
 
-## `chronos runs show <run_id>`
+### `replay`
 
-Print the node tree of a single run — one row per node with step index, name, kind, and timing. If any node has captured `usage`, per-node tokens appear inline and a total-usage line prints at the top.
-
-```bash
-chronos runs show <run_id> [--db PATH] [--json]
+```
+chronos replay <run_id> [--db PATH] [--from-index N] [...]
 ```
 
-Exit codes: `0` success, `1` run id not found, `2` DB not found.
+Interactive TUI for stepping through a recorded run node-by-node. Shows
+state-before / state-after / inputs / outputs at each step.
+
+**Examples**
+
+```bash
+chronos replay <run_id>
+chronos replay <run_id> --from-index 3
+```
+
+**Exit codes**
+
+- `0` — interactive session exited cleanly.
+- `1` — no such run (hint: `chronos runs list`).
+- `2` — chronos.db missing or unreadable.
 
 ---
 
-## `chronos replay <run_id>`
+### `tree`
 
-Step through the nodes of a recorded run interactively. See [ADR-007](decisions/ADR-007-replay-tui-framework.md) for why we use `rich.live` and roll a minimal keyboard reader instead of pulling in a full TUI framework.
-
-```bash
-chronos replay <run_id> [--db PATH] [--no-interactive]
+```
+chronos tree <run_id> [--json] [--depth N]
 ```
 
-| Flag                 | Default | Meaning                                                       |
-|----------------------|---------|---------------------------------------------------------------|
-| `--db PATH`          | `./chronos.db` | DB path.                                              |
-| `--no-interactive`   | off     | Force static (non-TTY) rendering. Auto-enabled when stdin/stdout isn't a TTY (CI, pipes, `tee`). |
+Prints the fork-family tree rooted at the given run (ADR-025). Each node
+is one run; children are forks of their parent. Use `--json` for
+machine-readable output (consumed by the web viewer).
 
-### Interactive keyboard
+**Examples**
 
-| Key                 | Action              |
-|---------------------|---------------------|
-| `space` / `→` / `↓` | Next node           |
-| `←` / `↑`           | Previous node       |
-| `home`              | Jump to first node  |
-| `end`               | Jump to last node   |
-| `q` / `Ctrl-C`      | Quit                |
+```bash
+chronos tree <run_id>
+chronos tree <run_id> --json | jq '.nodes | length'
+```
 
-### Non-interactive mode
+**Exit codes**
 
-When not attached to a TTY (or when `--no-interactive` is passed), `replay` prints every node's detail panel in order so the output can be captured to a file, piped to `jq`/`grep`, or run in CI.
-
-Exit codes: `0`, `1` run id not found, `2` DB not found.
+- `0` — tree printed.
+- `1` — no such run (hint: `chronos runs list`).
+- `2` — chronos.db missing or unreadable.
 
 ---
 
-## `chronos forks show <fork_id>`
+### `diff`
 
-Print a single fork record — parent run, child run, fork-point node, reason, overrides, and lineage.
-
-```bash
-chronos forks show <fork_id> [--db PATH] [--json]
+```
+chronos diff <run_a> <run_b> [--full] [--verbose] [--show-usage] [--json]
 ```
 
-Exit codes: `0`, `1` fork id not found, `2` DB not found.
+Side-by-side compare of two runs (ADR-006 alignment). When run B is a
+fork-child of run A, the shared prefix is hidden by default — pass
+`--full` to compare end-to-end.
+
+**Examples**
+
+```bash
+chronos diff 7c3f9e2a 9b1d8e4c
+chronos diff 7c3f9e2a 9b1d8e4c --full --verbose
+chronos diff 7c3f9e2a 9b1d8e4c --json | jq '.summary'
+chronos diff 7c3f9e2a 9b1d8e4c --show-usage
+```
+
+**Exit codes**
+
+- `0` — table or JSON printed.
+- `1` — either run id not found (hint: `chronos runs list`).
+- `2` — chronos.db missing or unreadable.
 
 ---
 
-## `chronos diff <run_a> <run_b>`
+### `compare`
 
-Structural diff of two runs (see [ADR-006](decisions/ADR-006-diff-alignment.md) for the alignment algorithm).
-
-```bash
-chronos diff <run_a> <run_b> [--db PATH] [--json] [--verbose] [--full] [--show-usage]
+```
+chronos compare <pivot> <other> [<other> ...] [--full] [--json]
+chronos compare --auto-pivot <run> <run> [<run> ...]
+chronos compare --matrix <run> <run> [<run> ...]
 ```
 
-| Flag          | Default | Meaning                                                     |
-|---------------|---------|-------------------------------------------------------------|
-| `--db PATH`   | `./chronos.db`| DB path.                                              |
-| `--json`      | off     | Emit the frozen ADR-006 JSON schema instead of a table. With `--show-usage` the JSON gains a `usage` field with A/B totals and Δ.  |
-| `-v` / `--verbose` | off | Expand every CHANGED node into per-key `key: <a> → <b>` diff. |
-| `--full`      | off     | Disable fork-aware slicing. By default, if B is a fork child of A, the diff is restricted to nodes *after* the fork point (because everything before it is identical by construction). Pass `--full` to force a full-run comparison. |
-| `--show-usage` | off    | Append a side-by-side A vs B token/cost table with Δ (B − A). Positive deltas render red (regression), negative green (savings). Requires `usage_extractor` was attached at record time ([ADR-009](decisions/ADR-009-usage-extractor-hook.md)). |
+N-way fork-sweep debugger. First positional is the pivot; the rest are
+aligned against it. `N=2` is numerically identical to `chronos diff` on
+the summary row.
 
-### Tags (row prefix column)
+- `--auto-pivot` (ADR-024) — selects the pivot by argmin mean
+  structural distance (tie-break: lex-smallest run id).
+- `--matrix` (R65) — emits only the pairwise distance matrix, no
+  centroid or merged alignment. Mutually exclusive with `--auto-pivot`.
 
-| Symbol | Tag      | Meaning |
-|--------|----------|---------|
-| `=`    | `equal`  | Same node position and identical `state_after`.   |
-| `~`    | `changed`| Same node position, **different** `state_after`.  |
-| `+`    | `added`  | Node present in B but not A.                      |
-| `−`    | `removed`| Node present in A but not B.                      |
+**Examples**
 
-### Details column
+```bash
+chronos compare run_001 run_002                        # N=2
+chronos compare run_001 run_002 run_003 run_004        # N=4
+chronos compare run_001 run_002 run_003 --json
+chronos compare run_001 run_002 --full                 # don't slice
+chronos compare --auto-pivot run_001 run_002 run_003
+chronos compare --matrix run_001 run_002 run_003
+```
 
-For `changed` entries, a compact summary `+added,-removed,~changed` of which keys in `state_after` differ. With `--verbose`, each changed key is expanded as `key: <repr(a)> → <repr(b)>` on its own line.
+**Exit codes**
 
-Exit codes: `0`, `1` a run id not found, `2` DB not found.
+- `0` — happy path.
+- `1` — at least one id wasn't found (hint: `chronos runs list`).
+- `2` — input validation: bad `--columns`, mutually-exclusive flags,
+  fewer than 2 candidate runs, or duplicate ids.
 
 ---
 
-## `chronos fork plan <run_id>`
+### `verify-golden`
 
-Emit a portable **fork plan** JSON artifact — a description of a proposed fork that your code consumes via `chronos.fork_plan.load_plan()`. The CLI never executes your graph; see [ADR-008](decisions/ADR-008-fork-cli-plan-artifact.md) for the rationale.
-
-```bash
-chronos fork plan <run_id> \
-  (--at-node <name> | --at-index <k> | --at-node-id <uid>) \
-  [--override key=value]... \
-  [--override-json '{"k": ...}'] \
-  [--child-thread-id <str>] \
-  [--reason <str>] \
-  [--tag <str>]... \
-  [--out <path>] \
-  [--json] \
-  [--allow-new-keys] \
-  [--db <path>]
+```
+chronos verify-golden <run_id> --golden-dir <dir> [--db PATH]
 ```
 
-**Fork-point selector** (exactly one required):
+Projects the run to its canonical `RunSummary`, compares byte-for-byte
+against `<golden-dir>/expected_run.json`, and audits
+`<golden-dir>/envelopes.jsonl` for known-secret shapes (ADR-028 §4).
 
-- `--at-node <name>` — by node name. Errors if the name appears more than once (loops/routers).
-- `--at-index <k>` — by 0-based `step_index`. Always unambiguous.
-- `--at-node-id <uid>` — by the node's SQLite id. Useful when piping.
+**Exit codes**
 
-**Overrides:**
+- `0` — byte-equal AND sanitiser-clean.
+- `1` — projection mismatch (unified diff printed).
+- `2` — missing fixture or unknown run id.
+- `3` — secret detected in `envelopes.jsonl` (re-record required).
 
-- `--override k=v` — single override. `v` is JSON-parsed first (`3`, `true`, `[1,2]`), falls back to raw string. Repeatable.
-- `--override-json '{...}'` — merge a full JSON object. Applied after `--override` tokens, so it wins on collisions.
-- `--allow-new-keys` — permit override keys that don't exist in the parent node's `state_after`. Default: reject unknown keys to catch typos.
+---
 
-**Output:**
+### `runs list`
 
-- Default: write plan to `./fork_plan.json` and print a Rich preview.
-- `--out <path>` — write somewhere else.
-- `--json` — emit plan JSON to stdout instead (no file, no preview). Ideal for piping.
+```
+chronos runs list [--db PATH] [--limit N] [--tag TAG]
+```
 
-**Consume the plan in your code:**
+Lists recorded runs (most recent first). Each row shows id, adapter,
+status, started_at, and tag chips.
+
+**Examples**
+
+```bash
+chronos runs list
+chronos runs list --limit 50
+chronos runs list --tag prod
+```
+
+**Exit codes**
+
+- `0` — table (or empty list) printed.
+- `2` — chronos.db missing or unreadable.
+
+---
+
+### `runs show`
+
+```
+chronos runs show <run_id> [--db PATH]
+```
+
+Renders a single run with its node sequence and any fork that produced
+it.
+
+**Exit codes**
+
+- `0` — run printed.
+- `1` — no such run (hint: `chronos runs list`).
+- `2` — chronos.db missing or unreadable.
+
+---
+
+### `forks show`
+
+```
+chronos forks show <fork_id> [--db PATH]
+```
+
+Shows a single fork record: parent run, fork point, overrides, child run.
+
+**Exit codes**
+
+- `0` — fork printed.
+- `1` — no such fork (hint: `chronos runs list` + `chronos tree <run_id>`).
+- `2` — chronos.db missing or unreadable.
+
+---
+
+### `fork plan`
+
+```
+chronos fork plan <run_id>
+                  (--at-node NAME | --at-index N | --at-node-id ID)
+                  [-o KEY=VAL ...] [--override-json JSON ...]
+                  [--child-thread-id ID] [--reason TEXT] [--tag T ...]
+                  [--out PATH] [--json] [--emit json|python]
+                  [--allow-new-keys] [--db PATH]
+```
+
+Emits a fork plan artifact (ADR-008). The CLI **does not execute your
+graph** — it resolves the fork point, validates overrides against the
+parent node's `state_after`, and writes a small portable plan file.
+
+Consume the plan in your code:
 
 ```python
 from chronos.fork_plan import load_plan
-
 plan = load_plan("fork_plan.json")
 with recorder.fork(graph, **plan.recorder_kwargs()) as ref:
     graph.invoke(None, {"configurable": {"thread_id": plan.child_thread_id}})
-print("forked →", ref.child_run_id)
 ```
 
-`plan.recorder_kwargs()` returns exactly the kwargs accepted by `LangGraphRecorder.fork()` — no extra fields leak through.
-
-**Example:**
+**Examples**
 
 ```bash
-chronos fork plan 2d8ba237-... \
-    --at-node research \
-    --override research="alt-take" \
-    --reason "swap researcher prompt" \
-    --tag experiment \
-    --db chronos.db
-# writes fork_plan.json; commit it alongside your experiment script.
+chronos fork plan <run_id> --at-node tool_call -o retries=3
+chronos fork plan <run_id> --at-index 4 --override-json '{"flag": true}'
+chronos fork plan <run_id> --at-node-id <node_id> --emit python --out fork.py
+chronos fork plan <run_id> --at-index 0 --json | jq .
 ```
+
+**Exit codes**
+
+- `0` — plan written or printed.
+- `1` — fork point not found / ambiguous, override key missing in parent
+  state_after (use `--allow-new-keys` if intentional).
+- `2` — chronos.db missing or unreadable, or unknown `--emit` value.
 
 ---
 
-## Token usage & cost tracking (ADR-009, ADR-010)
+## See also
 
-Chronos stores per-node `usage` (prompt/completion tokens, model name) and `cost_usd_cents` in the SQLite schema. These fields only populate if you supply a `usage_extractor` when constructing the adapter. Three batteries are included, one per common LangChain path:
-
-```python
-from chronos.adapters import LangGraphRecorder
-from chronos.adapters.langgraph_usage import (
-    aimessage_usage_extractor,      # AIMessage.usage_metadata (LC 0.3+ standard)
-    anthropic_usage_extractor,      # response_metadata["usage"]  (ChatAnthropic)
-    openai_usage_extractor,         # response_metadata["token_usage"] (ChatOpenAI)
-)
-
-recorder = LangGraphRecorder(
-    store,
-    kind_map=NODE_KIND_MAP,
-    usage_extractor=anthropic_usage_extractor,
-)
-```
-
-| Extractor | Reads from | Handles |
-|-----------|------------|---------|
-| `aimessage_usage_extractor` | `AIMessage.usage_metadata` | LangChain 0.3+ standard shape; `output_token_details.reasoning` |
-| `anthropic_usage_extractor` | `response_metadata["usage"]` | Anthropic shape; folds `cache_creation_input_tokens` + `cache_read_input_tokens` into `prompt_tokens` |
-| `openai_usage_extractor` | `response_metadata["token_usage"]` | OpenAI shape; surfaces `completion_tokens_details.reasoning_tokens` for o1/o3 |
-
-For mixed providers, compose them with `or`:
-
-```python
-def combined(ctx):
-    return (
-        anthropic_usage_extractor(ctx)
-        or openai_usage_extractor(ctx)
-        or aimessage_usage_extractor(ctx)
-    )
-```
-
-For custom providers or offline meters, write your own:
-
-```python
-from chronos.adapters.langgraph_usage import UsageContext, UsageResult
-
-def my_extractor(ctx: UsageContext) -> UsageResult | None:
-    # ctx.node_name, ctx.pre_values, ctx.post_values, ctx.task
-    ...
-    return UsageResult(prompt_tokens=..., completion_tokens=..., cost_usd_cents=..., model_name=...)
-```
-
-Extractor errors never break capture — any raise is logged at WARNING and the node stores `usage=None`. See [ADR-009](decisions/ADR-009-usage-extractor-hook.md) for the protocol and [ADR-010](decisions/ADR-010-native-usage-extractors.md) for the native extractors' field mappings.
-
-**Surface in CLI:**
-- `chronos runs show <id>` — total-usage line + per-node inline tokens.
-- `chronos runs list --with-usage` — per-run token/cost columns.
-- `chronos diff A B --show-usage` — side-by-side A vs B vs Δ.
-- All three also appear in `--json` output when the data is populated.
-
----
-
-## Environment variables
-
-| Var           | Used by | Meaning                                 |
-|---------------|---------|-----------------------------------------|
-| `CHRONOS_DB`  | all read commands | Default DB path when `--db` is not passed. |
-
----
-
-## Quick recipes
-
-**Find the most recent fork child:**
-
-```bash
-chronos runs list --json --db chronos.db \
-  | jq -r '[.[] | select(.tags | index("fork"))][0].id'
-```
-
-**Dump a run as JSON for external analysis:**
-
-```bash
-chronos runs show <id> --json --db chronos.db > run.json
-```
-
-**Compare two un-related runs (not fork-linked):**
-
-```bash
-chronos diff <run_a> <run_b> --db chronos.db
-# (fork-aware slicing is only applied when a Fork record exists linking a→b)
-```
-
-**Pipe JSON diffs into a script:**
-
-```bash
-chronos diff A B --json --db chronos.db | jq '.summary'
-```
+- [`docs/CONTEXT.md`](./CONTEXT.md) — full project state and roadmap.
+- [`docs/r120-acceptance.md`](./r120-acceptance.md) — R120 hard-acceptance gate.
+- [`docs/design/`](./design/) — ADRs and per-feature specs.
+- `chronos web` — interactive viewer that mirrors much of this surface.

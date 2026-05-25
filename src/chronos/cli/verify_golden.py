@@ -131,6 +131,7 @@ def verify_golden_command(
         run = store.get_run(run_id)
         if run is None:
             console.print(f"[red]error:[/] no such run: [bold]{run_id}[/]")
+            console.print("[dim]Hint:[/] list available runs with `chronos runs list`.")
             # Run-missing reuses exit 2 — same operator action
             # (re-record / pick a real run id), same family of failure.
             return EXIT_MISSING_FIXTURE

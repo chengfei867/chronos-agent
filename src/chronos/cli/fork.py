@@ -429,6 +429,7 @@ def fork_plan_command(
         parent_run = store.get_run(run_id)
         if parent_run is None:
             console.print(f"[red]error:[/] no such run: [bold]{run_id}[/]")
+            console.print("[dim]Hint:[/] list available runs with `chronos runs list`.")
             raise typer.Exit(code=1)
         nodes = store.get_nodes_for_run(run_id)
         if not nodes:
@@ -496,6 +497,9 @@ def fork_plan_command(
     if emit != "json":
         console.print(
             f"[red]error:[/] unknown --emit value: {emit!r} (expected 'json' or 'python')"
+        )
+        console.print(
+            "[dim]Hint:[/] supported values are `--emit json` (default) and `--emit python`."
         )
         raise typer.Exit(code=1)
 

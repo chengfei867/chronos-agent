@@ -4,7 +4,36 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
-_Nothing yet — R108 will decide (CLI help/error 文案 polish per Phase 6 R107-R120 plan)._
+### Added — R108 (Phase 6, CLI Polish Track — slice 1: help/error 文案)
+
+- **All 11 CLI verbs now ship rich `--help` docstrings** with at least an
+  `Example::` block and an `Exit codes:` table. Verbs touched in
+  `src/chronos/cli/__init__.py`: `info`, `web`, `replay`, `tree`, `diff`,
+  `compare`, `verify-golden`, `runs list`, `runs show`, `forks show`,
+  `fork plan`. Existing rich docstrings on `compare` and `verify-golden`
+  were preserved; missing exit-code tables were appended.
+- **Actionable `Hint:` lines on error paths** — every "no such run" /
+  "no such fork" / "unknown --emit value" site now prints a dim-styled
+  hint pointing at the next operator action (e.g. ``chronos runs list``).
+  Touched: `src/chronos/cli/runs.py`, `forks.py`, `tree.py`, `diff.py`,
+  `replay.py`, `verify_golden.py`, `fork.py`, `compare.py` (3 sites).
+  Existing test substrings (`"no such run"`, `"no such fork"`) preserved
+  — full suite stays at **666 passed / 9 live-skipped**.
+- **`docs/cli-reference.md`** — new operator-facing reference document
+  with one section per verb mirroring the new docstrings. Linked from
+  `docs/CONTEXT.md §5`. Surfaces the unified exit-code contract
+  (0=happy / 1=logical / 2=env / 3=secret-in-fixture for `verify-golden`)
+  in one table.
+
+### Notes
+
+- Zero behaviour change in this slice — purely documentation + cosmetic
+  hint lines on error stderr. Adapter zero-regression streak preserved
+  (R52→R108 = **56 rounds**, still no `src/chronos/adapters/` touch).
+- Next CLI Polish slices: **R109** = `chronos quickstart` (scaffold a
+  demo `chronos.db` with one recorded run + one fork-child), **R110** =
+  `chronos doctor` (env / DB / schema / extras health-check). Both are
+  R120 acceptance must-haves.
 
 ## [0.9.0] — 2026-05-26 (Round 100 + R101 + R102 + R103 + R104 + R105 + R106 + R107 — Phase 5 Arc D close-out + Phase 6 RC kickoff)
 

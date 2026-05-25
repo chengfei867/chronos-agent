@@ -38,6 +38,10 @@ def forks_show_command(
         fork = store.get_fork(fork_id)
         if fork is None:
             console.print(f"[red]error:[/] no such fork: [bold]{fork_id}[/]")
+            console.print(
+                "[dim]Hint:[/] list runs with `chronos runs list` — fork ids appear in the parent_run_id "
+                "→ child relationship; use `chronos tree <run_id>` to see fork structure."
+            )
             raise typer.Exit(code=1)
         parent = store.get_run(fork.parent_run_id)
         child = store.get_run(fork.child_run_id)
