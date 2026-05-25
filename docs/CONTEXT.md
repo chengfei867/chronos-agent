@@ -147,9 +147,67 @@ chronos-agent/
 
 ## 5. 当前状态 (Current State)
 
+---
+
+### 🚨 用户授权: R120 硬验收线 (写于 R106 close-out 后, 2026-05-25 CST)
+
+**用户在 2026-05-25 明确授权**: R120 时项目必须达到"完全可用"水平 — 前端 + CLI 都要足够好用、功能齐全。R120 验收通过后, 用户取消 cron。
+
+**路线选择**: B 路线 (激进 v1.0 候选) — 不仅 bug-clean, 还要对外可发布。
+
+**距离 R120**: 14 轮 (R107-R120) ≈ 3.5 天 (北京时间 0-11 工作窗口, 每天最多 4 slot)。
+
+**Phase 5 → Phase 6 切换**: R107 完成 v0.9.0 GA cut 后, 进入新的 Phase 6 ("v1.0 Release Candidate"), 把所有 cron 算力投入 polish & ship。
+
+#### R107-R120 阶段化路线 (强约束, 不可漂移)
+
+| 轮次 | Track | 任务 |
+|---|---|---|
+| **R107** | Phase 5 收口 | v0.9.0 GA cut (release engineering, `chronos-release-pattern` skill) |
+| **R108-R110** | CLI Polish | help/error 文案重写 → `chronos quickstart` 新 verb → `chronos doctor` 新 verb |
+| **R111-R114** | 前端 P0 清扫 | dogfood 全站走查 → 修 P0 → 首屏 Onboarding Tour |
+| **R115-R117** | 文档与 Demo | README 中英双语+demo GIF → 文档站 (mkdocs/vitepress + GH Pages) → `examples/` demo run 集合 |
+| **R118-R120** | v1.0-rc 发布 | E2E dogfood → v1.0.0-rc1 + (用户授权后) 公开仓库 → R120 自检+战报 |
+
+**详细验收清单**: 见 `docs/r120-acceptance.md` (R107 第一件事就是 commit 它)。
+
+#### 强约束 (R107-R120 期间)
+
+- ❌ **不加 Phase 6 之外的新方向** (新 adapter / SaaS / cloud / 5th adapter / fork-tree depth) — 这些 post-1.0 backlog
+- ❌ **不能跳过 R120 验收** — 即使写得起劲, R120 也必须停下做自检
+- ✅ **每轮必读 §5 这一段** — 确认还在 Phase 6 polish 轨道上
+- ✅ **R120 自检后**: 全过 → 战报"✅ R120 验收候选, 请拍板"等用户; 有未过项 → 申请 R121-R125 buffer 5 轮; 硬卡点 → 列出阻塞, 其余先做
+
+#### R120 必过项 (任一不过 = 验收失败)
+
+- [ ] CLI: `chronos quickstart` / `chronos doctor` 实装并跑通
+- [ ] CLI: 11 个 verb (含新增) `--help` 含 example, error 含 actionable hint
+- [ ] 前端: 5 核心页 (Landing/RunList/Replay/ForkTree/Diff) P0 全清, 任意操作有视觉反馈
+- [ ] 新用户路径: 新 venv → `chronos quickstart` → web UI 走完 record/replay/fork, 不读源码
+- [ ] 首屏 Tour: Landing 有 onboarding tour, 可跳过/重看
+- [ ] README: 中英双语, 顶部 demo GIF, 5 分钟 quickstart 段落
+- [ ] 文档站: GH Pages 上线, getting-started + cli-reference + concepts + FAQ 四章俱全
+- [ ] Demo: `examples/` ≥3 个真实 demo run, `chronos quickstart --demo <name>` 加载
+- [ ] 测试: 全套绿 (≥664 + Phase 6 新增), spike 全绿
+- [ ] Adapter 零回归: streak ≥ R52→R120 = 68 轮
+- [ ] Git: 所有改动 push 到 origin/main, CHANGELOG 完整
+
+---
+
+**截至 Round 106 结束 (2026-05-25 CST cron slot ~10:15, Phase 5 Arc D slice 4 — CI integration of `chronos verify-golden`, in 0–11 窗口)** — R106 closed ADR-028 §4 belt+suspenders gate by wiring `chronos verify-golden` (R104 CLI verb) into CI as an un-skippable gate. Two new artefacts: (1) `tests/test_golden_fixtures.py` (~12 KB) — parametrised pytest shim that auto-discovers `tests/golden/<adapter>/<scenario>/` directories containing both `envelopes.jsonl` and `expected_run.json`, parametrises them through `chronos verify-golden` via `subprocess.run` (full Typer-wrapped exit-code surface, NOT `CliRunner` — D-106-2), asserts exit 0; sibling sentinel `test_no_asymmetric_golden_fixtures` fails loudly on half-broken dirs (only one of the two required files; R94-trap defence — empty=skip, asymmetric=fail). Prefers `chronos` console script on PATH; falls back to `[sys.executable, "-c", "from chronos.cli import app; app()"]` for venv robustness. (2) `.github/workflows/golden-verify.yml` (~1.9 KB) — single-job CI workflow, `ubuntu-latest`, Python 3.11 only (cross-version stays in `ci.yml`; D-106-3 keeps contract gate fast/focused), style follows `astral-sh/setup-uv@v5`. Triggers on push + PR to `main`. Doc updates: `docs/contracts/golden-trace-format.md` §7 added CI-integration pointer line; `README.md` added `golden-verify` status badge alongside `CI` badge near top; `CHANGELOG.md` `[Unreleased] / Added` bullet. **D-106-1**: shim does NOT need a `run_id` param — projection strips it; `chronos verify-golden` takes a fixture dir, replays, projects, diffs internally. The phantom blocker (R105/R106 plan ambiguity around "where does run_id come from") is resolved: `run_id` is internal to replay, not surfaced in the contract. `pyproject.toml` line 186 — registered `golden` pytest marker (because `--strict-markers` is on; no dep change → R66 `uv.lock` invariant holds). Test count 664→666 (+2 R106 tests); ruff/format/mypy clean; spike19 still 3/3 GREEN. Adapter zero-regression streak holds at **R52→R106 = 54 rounds** (project-history high; R106 has zero `src/chronos/adapters/` touch). v0.8.0 GA tag intact; no ADR amendments; no schema change. ADR-028 §4 fully closed: R101 driver redacts at capture (belt), R104 verifier audits at load (suspenders), R106 makes both un-skippable in CI.
+
+- **Round: 106** (Phase 5 Arc D slice 4, single-slot, CI workflow + parametrised pytest shim, zero adapter code). 0 hard blocker. New artefacts: `tests/test_golden_fixtures.py` (~12 KB, 2 tests + parametrize generator), `.github/workflows/golden-verify.yml` (~1.9 KB), `progress/2026-05-25-round-106.md` (~6 KB). Modified: `pyproject.toml` (1 line — `golden` marker registered; no dep change), `CHANGELOG.md` (`[Unreleased] / Added` bullet), `docs/contracts/golden-trace-format.md` (§7 Pointers — CI line added), `README.md` (golden-verify badge near top), `docs/CONTEXT.md` §5 (this paragraph) + §6 (R107 plan). 0 production code outside `tests/`+`.github/`+docs touched. 0 ADR amendments. 0 schema change. 0 `uv.lock` change. 0 adapter change. 0 i18n change.
+
+---
+
+<details>
+<summary><b>Historical: Round 105 paragraph (A2-of-A2 close-out recovery, 14th in chain)</b></summary>
+
 **截至 Round 105 结束 (2026-05-25 CST cron slot ~07:06, A2-of-A2 close-out recovery slot — landed R104 WIP that the prior cron slot left uncommitted, in 0–11 窗口)** — R104 (Phase 5 Arc D slice 3, `chronos verify-golden` CLI subcommand + suspenders-layer load-time sanitiser audit) had completed all deliverables (verb + Typer wrapper + 4 unit tests + golden-trace-format §6 + CHANGELOG bullet + progress doc + CONTEXT §5/§6) but the slot exited before `git add -A && git commit && git push` ran. R105 ran the A2-of-A2 close-out playbook per `cron-slot-handoff-recovery` skill: re-verified all gates GREEN against the WIP working tree (664 passed + 9 live-skipped in 20.27 s — exact match for R104's 660+4 baseline; `ruff check src/ scripts/ tests/` 0 errors; `ruff format --check` 124/124 clean; `mypy src/` 42 files clean; spike19 3/3 GREEN in 1.12 s; `chronos verify-golden --help` clean Typer help; `git diff pyproject.toml uv.lock` empty), confirmed gate evidence is observable now → partial-execution recovery (R88 variant), NOT aspirational (R86 variant), then committed the WIP as a single logical commit on top of R103 (`2e613f3`) and pushed to origin/main via `gh-proxy.com`. Adapter zero-regression streak holds at **R52→R104 = 52 rounds** (project-history high, +0 vs R103). **Zero new code change in R105 itself**: all artefacts are R104's. R105's own slice work (Track A — `.github/workflows/golden-verify.yml` + `tests/test_golden_fixtures.py` shim per CONTEXT §6 R105 plan) is the **R106 plan** (see §6) — one-slice-per-slot discipline forbids mixing recovery-slot landing with new slice work (R91 cascade-trap lesson, also re-validated R72→R71 / R96→R95 / R102→R101 precedents). v0.8.0 GA tag intact; no ADR amendments; no schema change; no `pyproject.toml`/`uv.lock` touch; no adapter source change.
 
 - **Round: 105** (A2-of-A2 close-out recovery, single-slot, zero new code, gate re-verification only). 0 hard blocker. Lands all R104 untracked + modified artefacts (4 modified + 3 untracked = 7 paths) in one commit on top of R103 (`2e613f3`). New artefacts contributed by R105 itself: 0. Modified by R105 itself: this CONTEXT §5 paragraph + §6 R105→R106 plan rewrite + §9 recovery addendum appended to `progress/2026-05-25-round-104.md`. Adapter zero-regression streak: **R52→R104 = 52 rounds** (R105 ships zero adapter code → streak holds at 52, +0 vs R103). 14th A2 close-out in the project chain (R48-A → R51 → R52 → R53 → R59 → R63 → R65 → R67 → R70 → R72 → R88 → R91 → R96 → R102 → **R105**). The skill's recipe is GA-stable across 14 consecutive close-outs spanning Arc A → B → C → D feature-area transitions. No new failure modes; no recipe corrections.
+
+</details>
 
 ---
 
@@ -1224,6 +1282,40 @@ R73 是 R69→R72 4-round chain 的第一个真 disprover round, 也是 Phase 4 
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
+> ⚠️ **R107-R120 强约束**: 阅读 §5 顶部"用户授权 R120 硬验收线"。所有后续轮次按那个表格走。下面的 R107 计划是阶段 1。
+
+---
+
+**Round 107 — Phase 5 收口 + Phase 6 启动**: v0.9.0 GA cut (release engineering, 1-slot, 用 `chronos-release-pattern` skill)。**R107 是 Phase 5 Arc D 的最后一轮**, 之后所有 cron 算力转到 Phase 6 (v1.0 RC) polish。
+
+### R107 必做 (单 slot, 单 commit)
+
+1. 用 `chronos-release-pattern` skill 走 8 步发版流程
+2. CHANGELOG `[Unreleased]` → `[0.9.0]` (含 R100-R106 全部条目)
+3. `pyproject.toml` version `0.8.0` → `0.9.0`
+4. tag `v0.9.0` + GitHub Release object (用 `chronos-docs-screenshots` skill 配 hero 图可选)
+5. push 到 origin/main + tag 推送 (`gh-proxy.com`)
+6. **新增**: 把本仓库的 `docs/r120-acceptance.md` (用户授权清单) 在 progress doc 中确认已读, 并在 CHANGELOG `[Unreleased]` (新一轮) 里登记 "Phase 6 启动"
+7. progress/2026-XX-XX-round-107.md 写明 Phase 5 完整收尾 + Phase 6 开局
+8. CONTEXT.md §5 更新 + §6 写 R108 计划 (CLI help/error 文案重写, 见 §5 表格)
+
+### R107 硬约束
+
+- ✅ R107 是纯 release engineering, **不引入新功能** (即使 quickstart/doctor 已经在 R108-R110 排上号)
+- ✅ 全套测试必须绿 (`pytest -q --no-cov` 全过 + spike19 3/3 GREEN), 用 `chronos-release-pattern` skill 强制 full-suite (R45-A 教训)
+- ✅ 单一 commit, message: `release: v0.9.0 — Phase 5 Arc D close-out + Phase 6 RC kickoff`
+- ❌ 别在 R107 里改前端/新 CLI verb — 那些是 R108+ 的事
+- ⚠️ 如果 release 发现 stale assertion (`chronos-release-pattern` skill `phase 2` 类型), 修补后 + CHANGELOG `[0.9.1]` 立即跟 (参考 v0.3.1 fix 案例)
+
+### R108 plan preview (R107 写到 §6 时填的就是这一段)
+
+R108 = CLI Polish slice 1: 重写 9 个现有 verb 的 `--help` 段, 每个加 example block, 加 actionable error message 改造 (`Run not found: 'abc'. Hint: list runs with 'chronos runs list'`)。新建 `docs/cli-reference.md` 文档化 11 个 verb (含 R109/R110 的 quickstart/doctor 占位段)。1-slot, 单 commit, 0 新功能代码 (纯文案 + reference 文档)。
+
+---
+
+<details>
+<summary><b>Historical: R106 plan (Phase 5 Arc D slice 4 — CI integration of <code>chronos verify-golden</code>) — DONE in R106</b></summary>
+
 **Round 106 — Phase 5 Arc D slice 4 (CI integration: GHA workflow + parametrised test that runs `chronos verify-golden` on every committed golden fixture); 1-slot budget (workflow YAML + parametrised pytest shim + README update); adapter zero-regression streak preservation (R52→R106 = 54 rounds target)**
 
 R105 was an **A2-of-A2 close-out recovery slot** (14th in chain) — it landed R104's authored-but-uncommitted WIP (verify-golden CLI verb + 4 unit tests + golden-trace-format §6 + CHANGELOG bullet) as a single commit on top of R103, with **zero new code** of its own. The R104 outcome is observable now: `chronos verify-golden <run_id> --db <path> --golden-dir <dir>` ships as a Typer subcommand (~165 LOC in `src/chronos/cli/verify_golden.py`), 4 unit tests pin the 4-row exit-code contract (0 happy / 1 mismatch / 2 missing-fixture / 3 sanitiser hit), `docs/contracts/golden-trace-format.md` gained §6 "Verifier contract", CHANGELOG `[Unreleased] / Added` bullet logged. Test count 664/9-skipped; ruff/format/mypy clean; spike19 still 3/3 GREEN. Phase 5 Arc D **feature work remains closed at R104** — what R106 does is the original R105 plan: CI wiring. The ADR-028 §4 belt+suspenders gate is live: R101 driver redacts at capture (belt), R104 verifier audits at load (suspenders); R106 makes it un-skippable in CI.
@@ -1247,6 +1339,8 @@ R106 wires `chronos verify-golden` into CI so a regression in either the redacto
 - ✅ **R107+ = release engineering, NOT new feature work** — the Phase 5 Arc D feature surface is closed at R104. New ADR required for any post-GA feature direction.
 - ⚠️ **If `tests/golden/` is empty** (no committed fixtures yet), the parametrised shim must skip-with-reason rather than fail-empty — use `pytest.skip("no golden fixtures committed yet")` inside the parametrize generator's empty branch. (Defensive: R94's empty-fixture trap.)
 - ⚠️ **The pytest shim must use `subprocess.run`, NOT `typer.testing.CliRunner`** — we want the full CLI exit-code surface, including process exit code propagation through Typer's wrapper. CliRunner short-circuits some failure paths.
+
+</details>
 
 ---
 

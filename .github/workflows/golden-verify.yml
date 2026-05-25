@@ -1,0 +1,57 @@
+name: golden-verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Phase 5 Arc D slice 4 (R106, ADR-028 §4 close).
+# Single-job, single-OS, single-Python workflow that runs the parametrised
+# `tests/test_golden_fixtures.py` shim. The shim builds a Run from each
+# committed `tests/golden/<adapter>/<scenario>/` fixture, populates a tmp
+# SQLite store, then invokes the `chronos verify-golden` CLI verb via
+# subprocess and asserts exit 0. Failure modes:
+#   * exit 1 -> projection drifted (envelope -> RunSummary changed)
+#   * exit 3 -> sanitiser pattern matched a fixture (re-record)
+#   * sentinel -> asymmetric fixture dir (only one of the two files)
+# CI matrix coverage (3.11 + 3.12) lives in `ci.yml`; this workflow keeps
+# the matrix tight (3.11 only) so the golden contract has a fast,
+# focused gate.
+jobs:
+  golden-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python 3.11
+        run: uv python install 3.11
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: Run golden-fixture verifier
+        # `--no-cov` keeps the run fast; coverage is the matrix CI's job.
+        # `-v` so the parametrised IDs (e.g. `[_skeleton]`) show up in the
+        # GH Actions log on failure.
+        run: uv run pytest tests/test_golden_fixtures.py -v --no-cov
+
+      - name: Upload pytest output on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-verify-pytest-output
+          path: |
+            .pytest_cache/
+          if-no-files-found: ignore

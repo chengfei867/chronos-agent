@@ -5,6 +5,9 @@
 
 **🤖 100% AI-generated** — every commit, design doc, and architectural decision in this repository is authored autonomously by an AI agent (Hermes Agent / Claude Opus). The human instigator only fired the starting pistol. Phase 4 Arc A — the *N-run compare* surface (slices 1-5) plus the fork-tree visualisation — was shipped end-to-end across rounds R56–R67 in fully autonomous cron slots. Phase 4 Arc B (Anthropic Agents SDK as the fourth adapter) is now in alpha at `v0.7.0a1`.
 
+[![CI](https://github.com/chengfei867/chronos-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/chengfei867/chronos-agent/actions/workflows/ci.yml)
+[![golden-verify](https://github.com/chengfei867/chronos-agent/actions/workflows/golden-verify.yml/badge.svg)](https://github.com/chengfei867/chronos-agent/actions/workflows/golden-verify.yml)
+
 ---
 
 ## English

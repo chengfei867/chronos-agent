@@ -6,6 +6,32 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ### Added
 
+- **R106 (Phase 5 Arc D slice 4 — CI integration of `chronos verify-golden`)**:
+  the ADR-028 §4 belt+suspenders gate is now CI-enforced on every push / PR
+  to `main`. Two artefacts:
+  - `.github/workflows/golden-verify.yml` — single-job (Ubuntu / Python 3.11)
+    workflow that runs `uv run pytest tests/test_golden_fixtures.py -v`.
+    Cross-version matrix coverage stays in `ci.yml`; this workflow keeps the
+    contract gate fast and focused.
+  - `tests/test_golden_fixtures.py` — parametrised pytest shim (mark:
+    `@pytest.mark.golden`) that discovers every directory under
+    `tests/golden/` carrying BOTH `expected_run.json` AND `envelopes.jsonl`,
+    materialises a `Run` + `[Node]` from the fixture pair, populates a tmp
+    SQLite store, then invokes the `chronos verify-golden` console script
+    via `subprocess.run` (NOT `typer.testing.CliRunner` — we want the full
+    Typer-wrapped exit-code surface end-to-end). Asserts exit 0. A sibling
+    sentinel test (`test_no_asymmetric_golden_fixtures`) refuses to pass
+    silently when a fixture dir holds exactly one of the two required
+    files (botched-record guard). Empty-fixture state is `pytest.skip(...)`
+    rather than fail-empty (R94 trap defended).
+  Test count: 664 → 666 (+2: the parametrised shim + the sentinel; the
+  shim itself parametrises 1 fixture today — `_skeleton` — and grows
+  automatically as adapter scenarios commit). Adapter zero-regression
+  streak preserved at R52→R106 = **54 rounds** (zero `src/chronos/adapters/`
+  touch). Phase 5 Arc D feature surface remains closed at R104; R106 is
+  pure test-infra + workflow YAML. Registered new `golden` pytest marker
+  in `pyproject.toml [tool.pytest.ini_options].markers`.
+
 - **R104 (Phase 5 Arc D slice 3 — `chronos verify-golden` CLI subcommand)**:
   the operator-facing read side of the golden-trace contract closes ADR-028
   §4. `chronos verify-golden <run_id> --db <path> --golden-dir <dir>` projects

@@ -183,6 +183,7 @@ markers = [
     "integration: marks tests requiring external services (LLM API)",
     "slow: marks slow tests",
     "live: marks tests that make real LLM API calls (opt-in via CHRONOS_LIVE=1; skipped by default in CI)",
+    "golden: marks tests that exercise committed golden-trace fixtures (R106, ADR-028 §4)",
 ]
 asyncio_mode = "auto"
 

@@ -173,4 +173,10 @@ may change, ten benign-token survival assertions per pattern in spike 19).
 - Reference sanitiser: same file (hoisted to `src/chronos/golden/sanitise.py` at R102).
 - Capture-replay CLI: `chronos verify-golden` — slice 3 (R104) per ADR-028 §4.
   Source: `src/chronos/cli/verify_golden.py`. Tests: `tests/unit/test_cli_verify_golden.py`.
+- CI integration (R106): `.github/workflows/golden-verify.yml` runs
+  `tests/test_golden_fixtures.py` on every push / PR to `main`. The shim
+  parametrises every committed `tests/golden/<adapter>/<scenario>/`
+  fixture pair through `chronos verify-golden` via `subprocess.run` and
+  asserts exit 0. Asymmetric directories (only one of the two required
+  files) are caught by a sibling sentinel test that fails loudly.
 - Skeleton fixture: `tests/golden/_skeleton/`.
