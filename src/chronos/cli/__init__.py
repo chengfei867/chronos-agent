@@ -97,13 +97,13 @@ def info() -> None:
     """Print environment diagnostics."""
     console.print(f"[bold]chronos[/bold] {__version__}")
     console.print(
-        "Status: Phase 4 Arc A complete (v0.6.0 R65-R67), "
-        "Arc B slice 1 GA (R70-R87, anthropic_agents adapter, record + fork + override + MCP + override-fork live-smoke), "
-        "adapter-1-3 zero-regression streak R52->R87 = 35 rounds, "
-        "v0.7.0"
+        "Status: Phase 5 Arc D complete (v0.9.0 R100-R106, golden-trace data contract + capture driver + verify-golden CLI + CI gate), "
+        "Phase 6 RC kickoff (R107-R120 polish target: quickstart/doctor verbs, frontend P0 clearance, onboarding tour, bilingual README, docs site), "
+        "adapter zero-regression streak R52->R107 = 55 rounds, "
+        "v0.9.0"
     )
     console.print(
-        "Commands: [green]runs list/show, forks show, diff, replay, fork plan, web[/green] "
+        "Commands: [green]runs list/show, forks show, diff, replay, fork plan, web, verify-golden[/green] "
         "available; [dim]record[/dim] [yellow](adapter-level only)[/yellow]"
     )
 

@@ -4,6 +4,32 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
+_Nothing yet — R108 will decide (CLI help/error 文案 polish per Phase 6 R107-R120 plan)._
+
+## [0.9.0] — 2026-05-26 (Round 100 + R101 + R102 + R103 + R104 + R105 + R106 + R107 — Phase 5 Arc D close-out + Phase 6 RC kickoff)
+
+**Phase 5 Arc D — cross-framework golden-trace test fixtures.** This release
+bundles the entire Arc D track (R100 spike-first → R101 capture driver →
+R103 helper hoist → R104 verifier CLI → R106 CI integration) plus the
+A2-of-A2 close-out recovery slots (R102 lands R101 WIP, R105 lands R104 WIP)
+under a single GA tag. ADR-028 §4 belt+suspenders golden-trace gate is now
+live and CI-enforced.
+
+**Phase 6 kickoff (R107 onwards).** v0.9.0 marks the boundary between
+Phase 5 (replay determinism + golden-trace contract) and Phase 6 (v1.0
+Release Candidate — polish & ship). Per the user-mandated R120 acceptance
+contract (`docs/r120-acceptance.md`), all R107-R120 work targets a fully
+usable v1.0-rc1 candidate: CLI quickstart/doctor verbs, frontend P0
+clearance, onboarding tour, bilingual README, docs site, demo run set,
+and end-to-end dogfood.
+
+**Adapter zero-regression streak**: R52→R107 = **55 rounds** preserved
+(zero `src/chronos/adapters/` touch across the entire bundle).
+
+**Quality bar**: 666 passed / 9 live-skipped (was 648 at v0.8.0 baseline,
++18 across the bundle); ruff/ruff-format/mypy clean; spike19 3/3 GREEN
+(1.12 s); zero schema migration; zero `uv.lock` dependency churn.
+
 ### Added
 
 - **R106 (Phase 5 Arc D slice 4 — CI integration of `chronos verify-golden`)**:

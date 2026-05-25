@@ -155,7 +155,7 @@ chronos-agent/
 
 **路线选择**: B 路线 (激进 v1.0 候选) — 不仅 bug-clean, 还要对外可发布。
 
-**距离 R120**: 14 轮 (R107-R120) ≈ 3.5 天 (北京时间 0-11 工作窗口, 每天最多 4 slot)。
+**距离 R120**: 13 轮 (R108-R120) ≈ 3.25 天 (北京时间 0-11 工作窗口, 每天最多 4 slot)。R107 已完成 (v0.9.0 GA)。
 
 **Phase 5 → Phase 6 切换**: R107 完成 v0.9.0 GA cut 后, 进入新的 Phase 6 ("v1.0 Release Candidate"), 把所有 cron 算力投入 polish & ship。
 
@@ -191,6 +191,29 @@ chronos-agent/
 - [ ] 测试: 全套绿 (≥664 + Phase 6 新增), spike 全绿
 - [ ] Adapter 零回归: streak ≥ R52→R120 = 68 轮
 - [ ] Git: 所有改动 push 到 origin/main, CHANGELOG 完整
+
+---
+
+---
+
+**截至 Round 107 结束 (2026-05-26 CST cron slot ~00:52, single-slot Phase 5 Arc D close-out + Phase 6 RC kickoff — v0.9.0 GA cut release engineering, in 0–11 窗口)** — R107 ships v0.9.0 GA, bundling R100 (golden-trace spike + ADR-028 Accepted) + R101 (capture driver) + R102 (close-out recovery) + R103 (helper hoist into `src/chronos/golden/`) + R104 (`chronos verify-golden` CLI verb) + R105 (close-out recovery) + R106 (CI integration via `golden-verify.yml` + `tests/test_golden_fixtures.py`) into a single tagged release. Pure release engineering, zero new feature code: CHANGELOG `[Unreleased]` rolled to `[0.9.0] — 2026-05-26 (R100+R101+...+R107 — Phase 5 Arc D close-out + Phase 6 RC kickoff)` with the bundle preamble explicitly cross-referencing `docs/r120-acceptance.md` (the user-mandated Phase 6 charter) so future agents reading the GitHub Release page alone see the RC arc is *user-authorised*, not agent-improvised; `pyproject.toml` and `src/chronos/__init__.py` bumped 0.8.0 → 0.9.0 in lockstep; `uv.lock` re-locked (single line: `chronos-agent v0.8.0 -> v0.9.0`, 0 dependency drift, R66 invariant honoured); `src/chronos/cli/__init__.py` `info()` status line refreshed from "Phase 4 Arc A complete (v0.7.0...)" (stale since R87) to "Phase 5 Arc D complete (v0.9.0 R100-R106 ...) Phase 6 RC kickoff (R107-R120 ...) adapter zero-regression streak R52->R107 = 55", and `verify-golden` added to the front-page CLI verb listing alongside the other 10 user-facing verbs. **R45-A trap caught + fixed**: `tests/unit/test_cli.py::test_cli_info` had `assert "phase 4" in result.stdout.lower()` (last ratcheted at R60); ratcheted to `phase 5 OR phase 6` (D-107-1) so the assertion stays green through the entire R107-R120 Phase 6 RC arc, future-proofing past R108's expected status-line ratchets. All gates GREEN at the bumped state: ruff check 0 errors, ruff format 125/125 clean, mypy 42 files clean, `pytest -q --no-cov` **666 passed / 9 live-skipped in 20.68 s**, spike19 3/3 GREEN in 1.12 s, `chronos --version` → `chronos 0.9.0`, `chronos info` shows the new status line. Single-commit release per skill-pattern (CHANGELOG roll + 3-file version bump + uv.lock + 1 test fix + progress doc + this CONTEXT update). Adapter zero-regression streak extends to **R52→R107 = 55 rounds** (NEW project-history high, +1 vs R106). Phase 5 closed; Phase 6 active; R108 (Track 1 slice 1: CLI help/error 文案 polish) is the next slot.
+
+- **Round: 107** (Phase 5 close-out + Phase 6 RC kickoff, single-slot, pure release engineering — version bump + CHANGELOG roll + lockfile re-lock + test-assertion drift fix, zero adapter code, zero new feature code). 0 hard blocker. New artefact: `progress/2026-05-26-round-107.md` (~12 KB). Modified: `CHANGELOG.md` (`[Unreleased]` → `[0.9.0]` roll + new empty `[Unreleased]`), `pyproject.toml` (version 0.8.0→0.9.0), `src/chronos/__init__.py` (`__version__` bump), `src/chronos/cli/__init__.py` (info() status line refresh + verify-golden verb listed), `uv.lock` (1-line bump), `tests/unit/test_cli.py` (phase assertion ratchet), `docs/CONTEXT.md` §5 (this paragraph) + §6 (R108 plan replaces R107 plan). 0 production code change beyond release plumbing. 0 ADR amendments (Phase 6 charter lives in `docs/r120-acceptance.md`, doesn't need an ADR). 0 schema change. 0 frontend touch. 0 new tests. 0 new spikes.
+
+- **R107 关键决策 (上墙)**:
+  - **D-107-1: Test-assertion uses `phase 5 OR phase 6`, not pinned.** R107 status line carries BOTH "Phase 5 Arc D complete" AND "Phase 6 RC kickoff" (the boundary line). Pinning either alone re-trips on the next ratchet (R108+). `or` keeps the assertion green through R120. R45-A's general fix shape (assert on stable tokens, not exact strings) honoured.
+  - **D-107-2: Single-commit release.** CHANGELOG + 3-file version bump + uv.lock + 1 test fix + progress doc + CONTEXT update = one logical commit. Mirrors v0.7.0 (R87) and v0.8.0 (R98) precedent. Conventional message: `release: v0.9.0 — Phase 5 Arc D close-out + Phase 6 RC kickoff`.
+  - **D-107-3: CHANGELOG `[0.9.0]` preamble names `docs/r120-acceptance.md` by file path.** Future agents reading the GitHub Release page alone see Phase 6 RC arc is user-authorised, reducing "is this drift?" questions in R108-R120 close-outs.
+  - **D-107-4: No ADR for the Phase 5→6 boundary.** ADR-discipline: ADRs are for technical decisions; phase boundaries are CONTEXT.md / CHANGELOG / progress-doc artefacts. The Phase 6 charter file (`docs/r120-acceptance.md`) is the source of truth.
+  - **D-107-5: `verify-golden` listed in `info()` verb table.** R104's user-facing surface deserves first-page visibility. Other R104 surface (4-row exit-code contract) lives in `docs/contracts/golden-trace-format.md` §6 — no need to surface every detail in `info()`.
+
+- **R107 产出**:
+  - 1 new file: `progress/2026-05-26-round-107.md` (~12 KB).
+  - 6 modified files: `CHANGELOG.md`, `pyproject.toml`, `src/chronos/__init__.py`, `src/chronos/cli/__init__.py`, `uv.lock`, `tests/unit/test_cli.py`, `docs/CONTEXT.md` §5+§6.
+  - Tag created: `v0.9.0` (annotated).
+  - 0 ADR amendments. 0 schema change. 0 adapter change. 0 i18n change. 0 frontend change. 0 new tests. 0 new spikes.
+
+- **Adapter zero-regression streak**: R52→R106 = 54 rounds (R107 ships zero adapter code → streak extends to **R52→R107 = 55 rounds**, NEW project-history high, +1). Target at R120 = R52→R120 = 68 rounds.
 
 ---
 
@@ -1282,9 +1305,66 @@ R73 是 R69→R72 4-round chain 的第一个真 disprover round, 也是 Phase 4 
 
 ## 6. 下一轮该做什么 (Next Round TODO)
 
-> ⚠️ **R107-R120 强约束**: 阅读 §5 顶部"用户授权 R120 硬验收线"。所有后续轮次按那个表格走。下面的 R107 计划是阶段 1。
+> ⚠️ **R107-R120 强约束**: 阅读 §5 顶部"用户授权 R120 硬验收线"。所有后续轮次按那个表格走。下面的 R108 计划是 Phase 6 Track 1 slice 1。
 
 ---
+
+**Round 108 — Phase 6 Track 1 slice 1: CLI help/error 文案 polish**: 重写 11 个 verb 的 `--help` 段 + actionable error message 改造 + 新建 `docs/cli-reference.md`。1-slot, 单 commit, 0 新功能代码 (纯文案 + reference 文档)。
+
+### R108 必做 (单 slot, 单 commit)
+
+1. 走查 11 个 verb (`info`, `web`, `runs list/show`, `forks show`, `diff`, `replay`, `tree`, `compare`, `fork plan`, `verify-golden`)
+2. 每个 verb 的 docstring (Typer 当 `--help` body) 加入:
+   - 一行 summary (已有)
+   - **Example** code block (一条真实 invocation, 用真实 run_id 形态如 `7c3f...a91`)
+   - **Exit codes** 表 (verify-golden 4 行 / replay+diff 2-3 行 / 其他无)
+3. 每个 surfaced error path (`typer.Exit(...)` raise + Rich print) 审计 actionable hint:
+   - 旧: `Run not found: 'abc'`
+   - 新: `Run not found: 'abc'. Hint: list available runs with 'chronos runs list'.`
+4. 新文件 `docs/cli-reference.md`: 11 个 verb 文档化 (placeholder 段给 R109 `quickstart` / R110 `doctor`)
+5. **零新功能** — 纯 docstring + error-text + reference markdown
+6. 单 commit, message: `docs(cli): polish help text + actionable errors (R108 Phase 6 Track 1 slice 1)`
+
+### R108 硬约束
+
+- ✅ **0 ADR change** (UX 文案不是技术决策)
+- ✅ **0 schema change**, **0 frontend touch** (Track 2 是 R111-R114)
+- ✅ Adapter 零回归 streak 目标: R52→R108 = 56 (`src/chronos/adapters/` 不动)
+- ❌ **R108 不加** `chronos quickstart` / `chronos doctor` — 那是 R109 / R110 的事 (one-slice-per-slot)
+- ⚠️ 如果 docstring 改写打破了既存 test (例如某 test 钉死 `chronos --help` 输出), 用 stable tokens 重写断言 (D-107-1 经验)
+- ⚠️ R45-A: 改前先 `pytest -q --no-cov`, 改后再跑一次 — 任何假设 phase/version/streak 字串的旧 test 立刻揪出
+
+### R108 deliverables
+
+- Modified: 11 个 Typer verb docstring (主要在 `src/chronos/cli/__init__.py` + `src/chronos/cli/<verb>.py` 的 wrapper)
+- Modified: 每个 verb 的 error path (重点是 `replay`, `diff`, `runs show`, `forks show`, `verify-golden` — 这些都已经有 surfaced errors)
+- New: `docs/cli-reference.md` (~6-10 KB, 11 章 + R109/R110 placeholder)
+- New: `progress/2026-XX-XX-round-108.md`
+- Modified: `CHANGELOG.md` `[Unreleased] / Changed` 一行
+- Modified: `docs/CONTEXT.md` §5 (R108 段) + §6 (R109 plan)
+
+### R108 gate checklist (before commit)
+
+- [ ] 11 个 verb 都跑过 `chronos <verb> --help`, 输出含 example
+- [ ] 至少 5 个 error path 输出含 `Hint:` 行 (run not found / fixture missing / ambiguous prefix / db missing / golden dir missing)
+- [ ] `pytest -q --no-cov` 全过 (666+ passed, 9 skipped)
+- [ ] `ruff check` + `ruff format --check` + `mypy` 全过
+- [ ] spike19 3/3 GREEN
+- [ ] `chronos --help` 顶层输出 11 个 verb 全列出
+- [ ] `docs/cli-reference.md` markdown link 全可点 (内部 anchor)
+
+### R108 streak target
+
+R52 → R108 = 56 轮 (R107 = 55 → +1)。R108 不动 `src/chronos/adapters/`, streak 自然延续。
+
+### R109 plan preview (R108 写到 §6 时填的就是这一段)
+
+R109 = CLI Polish slice 2: 实装 `chronos quickstart [--demo <name>]` verb. 功能: 新建一个 demo SQLite + 加载 `examples/<name>/envelopes.jsonl` (或一个内置最小 demo run) → 启动 `chronos web` 浏览器跳转。无 `--demo` 时启动一个 default `langgraph` 最小 record 路径。1-slot, 单 commit, 含单元测试 (3-5 个: 默认路径 / 带 demo / demo 不存在 error / web 已开端口 fallback)。
+
+---
+
+<details>
+<summary><b>Historical: R107 plan (Phase 5 收口 + Phase 6 启动 — v0.9.0 GA cut) — DONE in R107</b></summary>
 
 **Round 107 — Phase 5 收口 + Phase 6 启动**: v0.9.0 GA cut (release engineering, 1-slot, 用 `chronos-release-pattern` skill)。**R107 是 Phase 5 Arc D 的最后一轮**, 之后所有 cron 算力转到 Phase 6 (v1.0 RC) polish。
 
@@ -1310,6 +1390,8 @@ R73 是 R69→R72 4-round chain 的第一个真 disprover round, 也是 Phase 4 
 ### R108 plan preview (R107 写到 §6 时填的就是这一段)
 
 R108 = CLI Polish slice 1: 重写 9 个现有 verb 的 `--help` 段, 每个加 example block, 加 actionable error message 改造 (`Run not found: 'abc'. Hint: list runs with 'chronos runs list'`)。新建 `docs/cli-reference.md` 文档化 11 个 verb (含 R109/R110 的 quickstart/doctor 占位段)。1-slot, 单 commit, 0 新功能代码 (纯文案 + reference 文档)。
+
+</details>
 
 ---
 
