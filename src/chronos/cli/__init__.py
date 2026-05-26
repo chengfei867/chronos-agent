@@ -107,12 +107,12 @@ def info() -> None:
     console.print(f"[bold]chronos[/bold] {__version__}")
     console.print(
         "Status: Phase 5 Arc D complete (v0.9.0 R100-R106, golden-trace data contract + capture driver + verify-golden CLI + CI gate), "
-        "Phase 6 RC kickoff (R107-R120 polish target: quickstart/doctor verbs, frontend P0 clearance, onboarding tour, bilingual README, docs site), "
-        "adapter zero-regression streak R52->R109 = 57 rounds, "
+        "Phase 6 RC kickoff (R107-R122 polish target: quickstart/doctor verbs, cost-visibility, evaluation scoring, frontend P0, onboarding tour, bilingual README, docs site), "
+        "adapter zero-regression streak R52->R110 = 58 rounds, "
         "v0.9.0"
     )
     console.print(
-        "Commands: [green]runs list/show, forks show, diff, replay, fork plan, quickstart, web, verify-golden[/green] "
+        "Commands: [green]runs list/show, forks show, diff, replay, fork plan, quickstart, doctor, web, verify-golden[/green] "
         "available; [dim]record[/dim] [yellow](adapter-level only)[/yellow]"
     )
 
@@ -159,6 +159,43 @@ def quickstart_cmd(
     from chronos.cli.quickstart import quickstart_command
 
     quickstart_command(demo=demo, db=db, force=force, console=console)
+
+
+@app.command("doctor")
+def doctor_cmd(
+    db: Path | None = typer.Option(
+        None,
+        "--db",
+        help="Path to chronos.db to probe (overrides $CHRONOS_DB; defaults to ./chronos.db).",
+    ),
+) -> None:
+    """Run an environment health check (Python / SQLite / DB / extras).
+
+    Prints a row per check with ``✅`` (ok) / ``⚠️`` (warning, non-fatal) /
+    ``❌`` (failure, exit 1). Use this first when triaging install issues —
+    it covers the runtime version, the on-disk DB schema compatibility, the
+    shipped demos directory, and which optional extras (``[web]``,
+    ``[langgraph]``, ``[anthropic_agents]``, ``[autogen]``, ``[crewai]``)
+    are installed.
+
+    Read-only: this command never mutates your DB or installs anything; it
+    just reports and emits ``Hint:`` lines you can copy-paste.
+
+    Example::
+
+        chronos doctor                        # probe everything
+        chronos doctor --db ./demo.db         # check a specific DB
+        CHRONOS_DB=./other.db chronos doctor  # via env var
+
+    Exit codes:
+      0 — all checks ok, or only warnings (warnings are non-fatal).
+      1 — one or more ❌ failures (Python too old, DB schema mismatch, …).
+    """
+    from chronos.cli.doctor import doctor_command
+
+    code = doctor_command(db=db, console=console)
+    if code != 0:
+        raise typer.Exit(code=code)
 
 
 @app.command("web")

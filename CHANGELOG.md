@@ -4,6 +4,33 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added — R110 (Phase 6, CLI Polish Track — slice 3: `chronos doctor`)
+
+- **`chronos doctor`** — new top-level verb running an environment health check
+  in one shot. Reads-only (never mutates DB or installs anything). Prints a
+  Rich-rendered table covering: Python version (≥ 3.11), `chronos` package
+  version, SQLite library version, `chronos.db` existence + openability +
+  schema-version compatibility (with row count summary on success), shipped
+  `examples/` directory + demo count, and the five optional extras (`web`,
+  `langgraph`, `anthropic_agents`, `autogen`, `crewai`) — each with installed
+  version on success or actionable `uv pip install 'chronos-agent[<extra>]'`
+  hint on miss. Exit-code policy: `0` unless ≥1 ❌ row, in which case `1`;
+  warnings (⚠️) never fail because a fresh install legitimately has no DB and
+  optional extras are, by design, optional. Useful for triage in support
+  threads ("paste your `chronos doctor` output") and as the first command a new
+  user runs after `pip install chronos-agent` to confirm their environment is
+  sound. Implementation: new module `src/chronos/cli/doctor.py` (~310 LOC)
+  following the established `*_command()` free-function factoring (Typer
+  wrapper in `__init__.py`, free function takes `console` + `db` + injectable
+  `open_store_fn` for testability), labels containing literal `[web]` etc.
+  routed through `_escape_label()` to prevent Rich from interpreting them as
+  markup. 12 new unit tests in `tests/unit/test_cli_doctor.py` covering help
+  shape, top-level verb advertisement, `info()` ratchet, all-green path on a
+  seeded DB, missing-DB-is-warning, schema-mismatch-is-failure, missing/empty
+  `examples/` warning paths, all-extras-row coverage, missing-extra warning
+  path with monkeypatched `importlib.import_module`, and current-env Python
+  version sanity. ([R110])
+
 ### Added — R109 (Phase 6, CLI Polish Track — slice 2: `chronos quickstart`)
 
 - **`chronos quickstart`** — new top-level verb that bootstraps a fresh

@@ -65,9 +65,7 @@ def _load_envelopes(path: Path) -> list[dict[str, Any]]:
             try:
                 obj = json.loads(raw)
             except json.JSONDecodeError as exc:  # pragma: no cover — defensive
-                raise ValueError(
-                    f"{path}:{lineno}: invalid JSON ({exc.msg})"
-                ) from exc
+                raise ValueError(f"{path}:{lineno}: invalid JSON ({exc.msg})") from exc
             if not isinstance(obj, dict):  # pragma: no cover — defensive
                 raise ValueError(f"{path}:{lineno}: expected JSON object")
             out.append(obj)
@@ -80,10 +78,12 @@ def _build_run(payload: dict[str, Any], started_at: datetime) -> Run:
     return Run(
         id=payload["id"],
         adapter=payload["adapter"],
-        adapter_thread_id=payload.get("adapter_thread_id"),
+        adapter_thread_id=payload.get("adapter_thread_id") or payload["id"],
         status=status,
         started_at=started_at,
-        ended_at=ended if status in (RunStatus.COMPLETED, RunStatus.FAILED, RunStatus.FORKED) else None,
+        ended_at=ended
+        if status in (RunStatus.COMPLETED, RunStatus.FAILED, RunStatus.FORKED)
+        else None,
         task_description=payload.get("task_description"),
         tags=payload.get("tags") or [],
         metadata=payload.get("metadata") or {},
@@ -152,10 +152,7 @@ def quickstart_command(
                 if child.is_dir() and (child / "envelopes.jsonl").exists():
                     available.append(child.name)
         listing = ", ".join(available) if available else "<none>"
-        console.print(
-            f"[red]error:[/] unknown demo [bold]{demo}[/]. "
-            f"Available: {listing}."
-        )
+        console.print(f"[red]error:[/] unknown demo [bold]{demo}[/]. Available: {listing}.")
         raise typer.Exit(code=2)
 
     # Refuse to clobber an existing non-empty DB.
@@ -212,8 +209,7 @@ def quickstart_command(
 
         # Build a run_id -> started_at map for node timestamping.
         run_starts = {
-            rp["id"]: _DEMO_EPOCH + timedelta(minutes=idx)
-            for idx, rp in enumerate(runs_payload)
+            rp["id"]: _DEMO_EPOCH + timedelta(minutes=idx) for idx, rp in enumerate(runs_payload)
         }
         for np in nodes_payload:
             run_started = run_starts.get(np["run_id"], _DEMO_EPOCH)
@@ -238,7 +234,5 @@ def quickstart_command(
     console.print("  • [cyan]chronos runs list[/cyan]              — see the seeded runs")
     if runs_payload:
         first_id = runs_payload[0]["id"]
-        console.print(
-            f"  • [cyan]chronos runs show {first_id}[/cyan]   — inspect the parent run"
-        )
+        console.print(f"  • [cyan]chronos runs show {first_id}[/cyan]   — inspect the parent run")
     console.print("  • [cyan]chronos web[/cyan]                    — explore in the browser")

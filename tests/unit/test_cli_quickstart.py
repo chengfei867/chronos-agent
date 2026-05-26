@@ -102,9 +102,7 @@ def test_quickstart_seeds_known_run_ids(tmp_path: Path) -> None:
 
 def test_quickstart_explicit_builtin_minimal_matches_default(tmp_path: Path) -> None:
     db = tmp_path / "chronos.db"
-    result = runner.invoke(
-        app, ["quickstart", "--demo", "builtin-minimal", "--db", str(db)]
-    )
+    result = runner.invoke(app, ["quickstart", "--demo", "builtin-minimal", "--db", str(db)])
     assert result.exit_code == 0, result.output
     runs, nodes, forks = _count(db)
     assert (runs, nodes, forks) == (2, 6, 1)
@@ -112,9 +110,7 @@ def test_quickstart_explicit_builtin_minimal_matches_default(tmp_path: Path) -> 
 
 def test_quickstart_unknown_demo_exits_2_with_hint(tmp_path: Path) -> None:
     db = tmp_path / "chronos.db"
-    result = runner.invoke(
-        app, ["quickstart", "--demo", "does-not-exist", "--db", str(db)]
-    )
+    result = runner.invoke(app, ["quickstart", "--demo", "does-not-exist", "--db", str(db)])
     assert result.exit_code == 2, result.output
     # Actionable hint per CLI-error-polish convention (R108).
     assert "does-not-exist" in result.output
@@ -134,9 +130,7 @@ def test_quickstart_refuses_existing_nonempty_db(tmp_path: Path) -> None:
     # Second time → refuse without --force.
     r2 = runner.invoke(app, ["quickstart", "--db", str(db)])
     assert r2.exit_code != 0, r2.output
-    assert "force" in r2.output.lower(), (
-        "expected hint mentioning --force, got:\n" + r2.output
-    )
+    assert "force" in r2.output.lower(), "expected hint mentioning --force, got:\n" + r2.output
 
 
 def test_quickstart_force_overwrites_existing(tmp_path: Path) -> None:
@@ -178,7 +172,5 @@ def test_shipped_envelopes_file_is_loadable(tmp_path: Path, name: str) -> None:
     path = repo_root / "examples" / name / "envelopes.jsonl"
     assert path.exists(), f"shipped demo {name} missing: {path}"
     db = tmp_path / "chronos.db"
-    result = runner.invoke(
-        app, ["quickstart", "--demo", name, "--db", str(db)]
-    )
+    result = runner.invoke(app, ["quickstart", "--demo", name, "--db", str(db)])
     assert result.exit_code == 0, result.output
