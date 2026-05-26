@@ -108,13 +108,57 @@ def info() -> None:
     console.print(
         "Status: Phase 5 Arc D complete (v0.9.0 R100-R106, golden-trace data contract + capture driver + verify-golden CLI + CI gate), "
         "Phase 6 RC kickoff (R107-R120 polish target: quickstart/doctor verbs, frontend P0 clearance, onboarding tour, bilingual README, docs site), "
-        "adapter zero-regression streak R52->R107 = 55 rounds, "
+        "adapter zero-regression streak R52->R109 = 57 rounds, "
         "v0.9.0"
     )
     console.print(
-        "Commands: [green]runs list/show, forks show, diff, replay, fork plan, web, verify-golden[/green] "
+        "Commands: [green]runs list/show, forks show, diff, replay, fork plan, quickstart, web, verify-golden[/green] "
         "available; [dim]record[/dim] [yellow](adapter-level only)[/yellow]"
     )
+
+
+@app.command("quickstart")
+def quickstart_cmd(
+    demo: str = typer.Option(
+        "builtin-minimal",
+        "--demo",
+        help="Which shipped demo to load (default: builtin-minimal).",
+    ),
+    db: Path | None = typer.Option(
+        None, "--db", help="Path to chronos.db (overrides $CHRONOS_DB; defaults to ./chronos.db)."
+    ),
+    force: bool = typer.Option(
+        False,
+        "--force",
+        help="Overwrite an existing chronos.db at the target path.",
+    ),
+) -> None:
+    """Bootstrap a fresh chronos.db with a built-in demo (zero-config on-ramp).
+
+    Use this on first install to get a working DB you can immediately
+    explore with ``chronos runs list``, ``chronos diff …``, and ``chronos web``
+    — no API keys, no adapters, no recording loop required.
+
+    The ``builtin-minimal`` demo seeds a parent run (3 nodes:
+    greet → draft → finalize) plus a child run forked at ``greet`` with
+    ``tone=formal``, so the diff / fork-tree / replay views all have real data
+    to render.
+
+    Example::
+
+        chronos quickstart                          # seed ./chronos.db
+        chronos quickstart --db ./demo.db           # custom path
+        chronos quickstart --force                  # overwrite existing DB
+        chronos quickstart --demo builtin-minimal   # explicit demo selection
+
+    Exit codes:
+      0 — seeded successfully.
+      1 — target DB already has runs (pass --force or pick a fresh --db).
+      2 — unknown --demo name, or shipped demo file is malformed.
+    """
+    from chronos.cli.quickstart import quickstart_command
+
+    quickstart_command(demo=demo, db=db, force=force, console=console)
 
 
 @app.command("web")

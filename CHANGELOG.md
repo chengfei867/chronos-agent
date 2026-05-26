@@ -4,6 +4,47 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added — R109 (Phase 6, CLI Polish Track — slice 2: `chronos quickstart`)
+
+- **`chronos quickstart`** — new top-level verb that bootstraps a fresh
+  `chronos.db` with the shipped `builtin-minimal` demo (2 runs, 6 nodes,
+  1 fork edge linking parent `greet → draft → finalize` with a child run
+  forked at `greet` to switch `tone="friendly"` → `"formal"`). Zero deps,
+  zero API keys, zero clock — every value (UUIDs, timestamps via a fixed
+  epoch, state payloads) is deterministic.
+  - Flags: `--demo <name>` (defaults to `builtin-minimal`; reads
+    `examples/<name>/envelopes.jsonl`), `--db <path>` (overrides
+    `$CHRONOS_DB` / cwd default), `--force` (overwrite an existing DB).
+  - Exit codes: `0` happy, `1` target DB already has runs (hint:
+    `--force`), `2` unknown demo or malformed envelopes file.
+  - On success prints `runs list` / `runs show <parent>` / `web` next-step
+    hints so a brand-new user has an obvious cursor.
+- **`examples/builtin-minimal/`** — new shipped demo: `envelopes.jsonl`
+  (10 lines, 2.8 KB, fully literal) + a `README.md` explaining the
+  quickstart-internal envelope format and how to author additional demos.
+  Format is intentionally separate from the `tests/golden/<adapter>/.../envelopes.jsonl`
+  golden-trace contract — the two serve different purposes.
+- **`src/chronos/cli/quickstart.py`** — new module containing the loader
+  (`_load_envelopes`), the model builders (`_build_run` / `_build_node` /
+  `_build_fork`), and the public `quickstart_command` entry point. The
+  Typer wrapper in `src/chronos/cli/__init__.py` mirrors the existing
+  `replay_cmd` / `web_cmd` factoring pattern.
+- **`tests/unit/test_cli_quickstart.py`** — 9 new unit tests (default
+  load, deterministic IDs, next-step hints, `--demo builtin-minimal`
+  parity, unknown-demo error path, refuse-non-empty-DB safety,
+  `--force` overwrite, `--help` shows example, anti-bitrot guard on the
+  shipped envelopes file).
+
+### Notes
+
+- Zero adapter touch — adapter zero-regression streak preserved
+  (R52→R109 = **57 rounds**, no `src/chronos/adapters/` change).
+- Full unit + integration suite **675 passed / 9 live-skipped** (up from
+  666 / 9 at R108 — exactly the 9 new tests landed cleanly).
+- Next CLI Polish slice: **R110** = `chronos doctor` (env / DB / schema /
+  extras health-check). After that the CLI Polish arc closes and we
+  pivot into the **R111-R114** Frontend P0 sweep.
+
 ### Added — R108 (Phase 6, CLI Polish Track — slice 1: help/error 文案)
 
 - **All 11 CLI verbs now ship rich `--help` docstrings** with at least an
