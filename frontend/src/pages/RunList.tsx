@@ -93,6 +93,14 @@ export default function RunList() {
     });
   }, [runs, query, adapterFilter]);
 
+  // R111 / ADR-029: only show the Tokens + Cost columns when at least one
+  // run in the listing has recorded usage. Mirrors the CLI ``runs list``
+  // auto-hide rule so empty/zero-usage databases don't waste table width.
+  const showUsage = useMemo(() => {
+    if (!runs) return false;
+    return runs.some((r) => (r.usage_summary?.nodes_with_usage ?? 0) > 0);
+  }, [runs]);
+
   const columns: ColumnsType<EnrichedRun> = [
     {
       title: t("runs.columns.status"),
@@ -146,6 +154,54 @@ export default function RunList() {
       sorter: (a, b) => (a.started_at > b.started_at ? 1 : -1),
       defaultSortOrder: "descend",
     },
+    // R111 / ADR-029: Tokens column (right-aligned). Conditionally appended.
+    ...(showUsage
+      ? [
+          {
+            title: t("runs.columns.tokens", { defaultValue: "Tokens" }),
+            key: "tokens",
+            width: 100,
+            align: "right" as const,
+            render: (_: unknown, row: Run) => {
+              const summ = row.usage_summary;
+              if (!summ || summ.nodes_with_usage === 0) {
+                return <Text type="secondary">—</Text>;
+              }
+              return (
+                <Tooltip
+                  title={`prompt ${summ.prompt_tokens} + completion ${summ.completion_tokens}${
+                    summ.reasoning_tokens ? ` + reasoning ${summ.reasoning_tokens}` : ""
+                  } across ${summ.nodes_with_usage} node(s)`}
+                >
+                  <Text style={{ fontFamily: "monospace" }}>
+                    {summ.total_tokens.toLocaleString(i18n.language)}
+                  </Text>
+                </Tooltip>
+              );
+            },
+            sorter: (a: Run, b: Run) =>
+              (a.usage_summary?.total_tokens ?? 0) - (b.usage_summary?.total_tokens ?? 0),
+          },
+          {
+            title: t("runs.columns.cost", { defaultValue: "Cost (USD)" }),
+            key: "cost",
+            width: 110,
+            align: "right" as const,
+            render: (_: unknown, row: Run) => {
+              const cents = row.usage_summary?.cost_usd_cents;
+              if (cents == null) return <Text type="secondary">—</Text>;
+              const usd = cents / 100;
+              return (
+                <Text style={{ fontFamily: "monospace" }}>
+                  ${usd.toFixed(usd < 0.01 ? 4 : 2)}
+                </Text>
+              );
+            },
+            sorter: (a: Run, b: Run) =>
+              (a.usage_summary?.cost_usd_cents ?? 0) - (b.usage_summary?.cost_usd_cents ?? 0),
+          },
+        ]
+      : []),
   ];
 
   const handleRowClick = (run: Run) => {

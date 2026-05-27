@@ -22,6 +22,19 @@ export interface Usage {
   total_tokens?: number | null;
 }
 
+// Per-run aggregated usage summary (R111 / ADR-029). Returned by GET /runs
+// alongside each Run record. ``cost_usd_cents`` is null when no listed node
+// recorded a cost (parity with the CLI ``_RunUsageSummary.cost_cell()``
+// rendering rule).
+export interface RunUsageSummary {
+  nodes_with_usage: number;
+  prompt_tokens: number;
+  completion_tokens: number;
+  reasoning_tokens: number;
+  total_tokens: number;
+  cost_usd_cents: number | null;
+}
+
 export interface Node {
   id: string;
   run_id: string;
@@ -54,6 +67,11 @@ export interface Run {
   final_state: Record<string, unknown> | null;
   tags: string[];
   metadata: Record<string, unknown>;
+  // R111 / ADR-029: aggregated usage across this run's nodes. Populated by
+  // GET /runs (server uses ``_summarise_usage``). Optional + nullable on the
+  // type so older fixtures and individual GET /runs/{id} payloads (which do
+  // not include the summary) still type-check.
+  usage_summary?: RunUsageSummary | null;
 }
 
 export interface Fork {

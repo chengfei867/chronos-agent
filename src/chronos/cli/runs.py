@@ -41,24 +41,46 @@ def runs_list_command(
     limit: int,
     json_out: bool,
     with_usage: bool,
+    no_usage: bool,
     open_store_fn: Callable[[Path | None], SqliteStore],
     console: Console,
 ) -> None:
-    """List recorded runs (most recent first)."""
+    """List recorded runs (most recent first).
+
+    Per ADR-029 (R111), token & cost columns are shown **by default** when at
+    least one listed run has aggregate usage > 0. Pass ``--no-usage`` to
+    suppress the columns (e.g. for narrow terminals). The legacy
+    ``--with-usage`` flag is preserved as a deprecated no-op alias for
+    backward compatibility — slated for removal in v1.1.
+    """
+    # ADR-029: usage rendering is on by default. ``--no-usage`` opts out.
+    # ``--with-usage`` is a deprecated no-op (it's already the default now).
+    show_usage = not no_usage
+    # Note: ``with_usage`` deliberately ignored when ``no_usage`` is set —
+    # explicit opt-out wins. When neither flag is set, ``show_usage = True``
+    # by virtue of the default.
+    _ = with_usage  # accepted for backward-compat; intentionally unused
+
     store = open_store_fn(db)
     try:
         runs = store.list_runs(limit=limit)
         usage_by_run: dict[str, _RunUsageSummary] = {}
-        if with_usage:
+        if show_usage:
             for r in runs:
                 nodes = store.get_nodes_for_run(r.id)
                 usage_by_run[r.id] = _summarise_usage(nodes)
     finally:
         store.close()
 
+    # Suppress columns when all listed runs have zero usage (avoid wall of "—").
+    any_usage = show_usage and any(s.nodes_with_usage > 0 for s in usage_by_run.values())
+
     if json_out:
         payload: list[dict[str, Any]] = [_run_to_dict(r) for r in runs]
-        if with_usage:
+        # In JSON mode, attach usage_summary whenever we computed it (which is
+        # ``show_usage``). Even when all-zero, expose the summary so machine
+        # consumers can distinguish "no LLM usage recorded" from "field absent".
+        if show_usage:
             for item, r in zip(payload, runs, strict=True):
                 item["usage_summary"] = usage_by_run[r.id].to_dict()
         _emit_json(payload)
@@ -78,7 +100,7 @@ def runs_list_command(
     table.add_column("thread")
     table.add_column("status")
     table.add_column("started_at")
-    if with_usage:
+    if any_usage:
         table.add_column("tokens", justify="right")
         table.add_column("cost ¢", justify="right")
     table.add_column("task", overflow="fold")
@@ -90,7 +112,7 @@ def runs_list_command(
             r.status.value,
             r.started_at.isoformat(timespec="seconds"),
         ]
-        if with_usage:
+        if any_usage:
             summ = usage_by_run[r.id]
             row.append(summ.tokens_cell())
             row.append(summ.cost_cell())

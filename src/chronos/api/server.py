@@ -268,8 +268,21 @@ def build_app(store: SqliteStore) -> FastAPI:
     def list_runs(
         limit: int = Query(default=100, ge=1, le=1000),
     ) -> dict[str, Any]:
+        # Per ADR-029 (R111): include per-run aggregate ``usage_summary`` so
+        # the frontend RunList can render Tokens / Cost columns by default.
+        # Reuses ``_summarise_usage`` from the CLI usage helpers — it's the
+        # same code path ``chronos runs list`` uses, so CLI and web stay in
+        # lockstep on the aggregation.
+        from chronos.cli._usage import _summarise_usage
+
         runs = store.list_runs(limit=limit)
-        return {"runs": [_run_to_dict(r) for r in runs], "count": len(runs)}
+        out: list[dict[str, Any]] = []
+        for r in runs:
+            payload = _run_to_dict(r)
+            nodes = store.get_nodes_for_run(r.id)
+            payload["usage_summary"] = _summarise_usage(nodes).to_dict()
+            out.append(payload)
+        return {"runs": out, "count": len(out)}
 
     # /runs/compare MUST be registered before /runs/{run_id}, otherwise
     # FastAPI treats the literal "compare" as a run_id and the diff

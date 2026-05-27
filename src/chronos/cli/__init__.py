@@ -311,17 +311,29 @@ def runs_list(
     with_usage: bool = typer.Option(
         False,
         "--with-usage",
-        help="Include summed tokens / cost columns. Extra SELECT per run — slower for large DBs.",
+        help=(
+            "[deprecated alias — token/cost columns are now ON by default per "
+            "ADR-029; pass --no-usage to opt out]. Will be removed in v1.1."
+        ),
+    ),
+    no_usage: bool = typer.Option(
+        False,
+        "--no-usage",
+        help="Suppress the tokens / cost ¢ columns (narrow terminals).",
     ),
 ) -> None:
     """List recorded runs (most recent first).
 
+    Token & cost ¢ columns are shown by default (ADR-029) whenever at least
+    one listed run has recorded LLM usage; in databases without LLM nodes the
+    columns auto-hide so you don't see a wall of em-dashes.
+
     Example::
 
-        chronos runs list                  # most recent 50 runs (default)
+        chronos runs list                  # most recent 50 runs (default, with token/cost)
         chronos runs list -n 10            # last 10 runs only
-        chronos runs list --json           # machine-readable
-        chronos runs list --with-usage     # include token / cost columns
+        chronos runs list --json           # machine-readable (includes usage_summary)
+        chronos runs list --no-usage       # narrow-terminal mode (hide token/cost)
 
     Exit codes:
       0 — happy path (table or JSON printed; empty store prints empty table).
@@ -334,6 +346,7 @@ def runs_list(
         limit=limit,
         json_out=json_out,
         with_usage=with_usage,
+        no_usage=no_usage,
         open_store_fn=_open_store,
         console=console,
     )

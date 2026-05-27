@@ -856,8 +856,13 @@ def test_runs_list_with_usage_json(db_with_usage: tuple[Path, dict[str, str]]) -
 def test_runs_list_without_flag_omits_usage_columns(
     db_with_usage: tuple[Path, dict[str, str]],
 ) -> None:
+    """ADR-029 (R111): usage columns are now ON by default, but ``--no-usage``
+    explicitly opts out. Test the explicit opt-out path here; the default-on
+    path is covered by ``test_runs_list_with_usage_flag`` (which passes the
+    legacy ``--with-usage`` alias) and the new R111 default-on tests below.
+    """
     db, _ = db_with_usage
-    result = runner.invoke(app, ["runs", "list", "--db", str(db)])
+    result = runner.invoke(app, ["runs", "list", "--no-usage", "--db", str(db)])
     assert result.exit_code == 0
     # No 'tokens' or 'cost ¢' header present
     assert "tokens" not in result.stdout.lower().replace("thread", "")
@@ -909,3 +914,138 @@ def test_diff_without_flag_no_usage_block(
     assert result.exit_code == 0
     payload = json.loads(result.stdout)
     assert "usage" not in payload
+
+
+# -----------------------------------------------------------------------------
+# R111 (ADR-029) — default-on token/cost columns
+# -----------------------------------------------------------------------------
+
+
+@pytest.fixture
+def db_zero_usage(tmp_path: Path) -> Path:
+    """A chronos.db with one run, 1 fn-kind node, NO usage anywhere.
+
+    Used to verify the auto-hide path: when no listed run has aggregate
+    usage > 0, the default-on column logic must suppress the columns.
+    """
+    db_path = tmp_path / "zero.db"
+    t0 = datetime(2026, 4, 23, 6, 0, 0, tzinfo=UTC)
+    store = SqliteStore.open(db_path)
+    try:
+        store.put_run(
+            Run(
+                id="run-zero-1",
+                adapter="langgraph",
+                adapter_thread_id="t-z",
+                status=RunStatus.COMPLETED,
+                started_at=t0,
+                ended_at=t0,
+                task_description="zero usage test",
+                initial_state={},
+                final_state={"done": True},
+                tags=[],
+                metadata={},
+            )
+        )
+        store.put_node(
+            Node(
+                id="n-z-0",
+                run_id="run-zero-1",
+                step_index=0,
+                node_name="step",
+                kind=NodeKind.FN,
+                parent_node_id=None,
+                started_at=t0,
+                ended_at=t0,
+                state_after={"step": 0},
+                metadata={},
+            )
+        )
+    finally:
+        store.close()
+    return db_path
+
+
+def test_runs_list_default_shows_usage_columns_r111(
+    db_with_usage: tuple[Path, dict[str, str]],
+) -> None:
+    """R111 / ADR-029: ``runs list`` default surface includes tokens + cost ¢."""
+    db, _ = db_with_usage
+    result = runner.invoke(app, ["runs", "list", "--db", str(db)])
+    assert result.exit_code == 0, result.stdout
+    out = result.stdout
+    # Header present (in either order/style; lower-case to dodge bold-style noise)
+    assert "tokens" in out.lower()
+    assert "cost" in out.lower()
+    # Aggregate value present (440 = 100 + 50 + 10 + 200 + 80; from db_with_usage)
+    assert "440" in out
+
+
+def test_runs_list_no_usage_flag_hides_columns_r111(
+    db_with_usage: tuple[Path, dict[str, str]],
+) -> None:
+    """R111 / ADR-029: ``--no-usage`` opts out of the default-on columns."""
+    db, _ = db_with_usage
+    result = runner.invoke(app, ["runs", "list", "--no-usage", "--db", str(db)])
+    assert result.exit_code == 0
+    # 'thread' header contains substring 'thread' which is fine; we test the
+    # tokens/cost ¢ header substrings. Strip 'thread' to avoid the substring
+    # 'tok' false-positive (none, but defensive).
+    out = result.stdout.lower().replace("thread", "")
+    assert "tokens" not in out
+    assert "cost ¢" not in out
+
+
+def test_runs_list_with_usage_alias_still_works_r111(
+    db_with_usage: tuple[Path, dict[str, str]],
+) -> None:
+    """R111 / ADR-029: ``--with-usage`` is a deprecated no-op alias — accepting
+    it must not error and the result equals the default (columns shown).
+    """
+    db, _ = db_with_usage
+    result = runner.invoke(app, ["runs", "list", "--with-usage", "--db", str(db)])
+    assert result.exit_code == 0, result.stdout
+    assert "tokens" in result.stdout.lower()
+    assert "440" in result.stdout
+
+
+def test_runs_list_zero_usage_db_auto_hides_columns_r111(
+    db_zero_usage: Path,
+) -> None:
+    """R111 / ADR-029: when *all* listed runs have zero usage, auto-suppress
+    the columns to avoid a wall of em-dashes (ADR-029 Decision §CLI bullet 1).
+    """
+    result = runner.invoke(app, ["runs", "list", "--db", str(db_zero_usage)])
+    assert result.exit_code == 0
+    out = result.stdout.lower().replace("thread", "")
+    assert "tokens" not in out
+    assert "cost ¢" not in out
+
+
+def test_runs_list_default_json_includes_usage_summary_r111(
+    db_with_usage: tuple[Path, dict[str, str]],
+) -> None:
+    """R111 / ADR-029: JSON mode now includes ``usage_summary`` by default
+    (machine consumers should not have to opt in to get the data).
+    """
+    db, _ = db_with_usage
+    result = runner.invoke(app, ["runs", "list", "--json", "--db", str(db)])
+    assert result.exit_code == 0, result.stdout
+    payload = json.loads(result.stdout)
+    assert len(payload) == 1
+    summ = payload[0]["usage_summary"]
+    assert summ["total_tokens"] == 440
+    assert summ["cost_usd_cents"] == 18
+    assert summ["nodes_with_usage"] == 2
+
+
+def test_runs_list_no_usage_json_omits_summary_r111(
+    db_with_usage: tuple[Path, dict[str, str]],
+) -> None:
+    """R111 / ADR-029: ``--no-usage --json`` opts out — no ``usage_summary`` key."""
+    db, _ = db_with_usage
+    result = runner.invoke(app, ["runs", "list", "--no-usage", "--json", "--db", str(db)])
+    assert result.exit_code == 0, result.stdout
+    payload = json.loads(result.stdout)
+    assert len(payload) == 1
+    assert "usage_summary" not in payload[0]

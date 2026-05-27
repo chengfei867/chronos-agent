@@ -34,7 +34,7 @@ from typing import Any
 import typer
 from rich.console import Console
 
-from chronos.core.models import Fork, Node, NodeKind, Run, RunStatus
+from chronos.core.models import Fork, Node, NodeKind, Run, RunStatus, Usage
 from chronos.store.sqlite import SqliteStore
 
 # Demo runs use a fixed epoch so timestamps are reproducible.
@@ -96,6 +96,18 @@ def _build_node(payload: dict[str, Any], run_started_at: datetime) -> Node:
     step = int(payload["step_index"])
     started = run_started_at + timedelta(seconds=step)
     ended = started + timedelta(milliseconds=500)
+    # Optional usage block: ``{"prompt_tokens": .., "completion_tokens": ..,
+    # "reasoning_tokens": ..}``. Demo envelopes from R111 (ADR-029) carry this
+    # on LLM-kind nodes so quickstart users see populated token/cost columns
+    # in `runs list` and the frontend RunList page out of the box.
+    usage_payload = payload.get("usage")
+    usage_obj: Usage | None = None
+    if usage_payload is not None:
+        usage_obj = Usage(
+            prompt_tokens=int(usage_payload.get("prompt_tokens", 0) or 0),
+            completion_tokens=int(usage_payload.get("completion_tokens", 0) or 0),
+            reasoning_tokens=int(usage_payload.get("reasoning_tokens", 0) or 0),
+        )
     return Node(
         id=payload["id"],
         run_id=payload["run_id"],
@@ -107,6 +119,8 @@ def _build_node(payload: dict[str, Any], run_started_at: datetime) -> Node:
         ended_at=ended,
         state_after=payload.get("state_after") or {},
         model_name=payload.get("model_name"),
+        usage=usage_obj,
+        cost_usd_cents=payload.get("cost_usd_cents"),
         tool_name=payload.get("tool_name"),
         error_message=payload.get("error_message"),
         metadata=payload.get("metadata") or {},
