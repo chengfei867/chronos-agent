@@ -207,6 +207,34 @@ chronos-agent/
 
 ---
 
+**截至 Round 111 结束 (2026-05-27 CST cron slot ~11:14, single-slot Phase 6 ADR-029 Cost Visibility round — full-stack default-on token+cost, spike 20 GREEN, in 0–11 窗口)** — R111 ships ADR-029 end-to-end: `chronos runs list` now shows tokens + cost ¢ columns by default (auto-shown when ≥1 listed run has `nodes_with_usage > 0`, auto-hidden on all-zero DBs to avoid em-dash walls), with new `--no-usage` opt-out flag and `--with-usage` preserved as a deprecated no-op alias (v1.1 removal noted in help text). `GET /runs` API now embeds per-run `usage_summary` (delegates to the same `chronos.cli._usage._summarise_usage` the CLI uses → CLI/web stay in lockstep on aggregation). Frontend `RunList.tsx` conditionally appends Tokens (right-aligned, monospace, with prompt/completion/reasoning breakdown tooltip, sortable) + Cost (USD, sub-cent precision when needed, sortable) columns under the same "any run has usage → show" rule, mirroring the CLI auto-hide behaviour. New `RunUsageSummary` interface in `frontend/src/types.ts`; `Run.usage_summary?` field optional+nullable so older fixtures still type-check. Quickstart demo `examples/builtin-minimal/envelopes.jsonl` seeded with realistic `usage` (prompt/completion tokens) + `cost_usd_cents` on the 2 LLM-kind nodes, and `src/chronos/cli/quickstart.py` loader fixed to thread those fields through to `_build_node` (was previously dropping them silently — caught by spike 20). New spike 20 (`tests/spikes/spike20_quickstart_demo_has_usage.py`, 116 LOC) probes the JSONL → Pydantic Node → SqliteStore round-trip on the builtin-minimal fixture (INV-1 loader threads `usage`, INV-2 loader threads `cost_usd_cents`, INV-3 store round-trip preserves both byte-equally) plus a second test confirming `_summarise_usage` returns non-zero aggregate tokens (the auto-show column would render a real number, not '—'). All gates GREEN at the new state: full suite **693 passed / 9 live-skipped in 22.05 s** (was 687 / 9 at R110 — exactly the +6 R111 deltas: 2 new spike tests + 4 extended `test_usage_extractor.py` cases for auto-hide-on-empty + JSON-always-emit semantics, no flakes, no regressions); ruff check + ruff format clean across all R111-touched files (had to fix 2 SIM115 violations in spike20 — replaced bare `open()` in `with` block with nested context manager — and reformat `runs.py`); `npx tsc --noEmit` clean on the frontend. Adapter zero-regression streak ratchets to **R52→R111 = 59 rounds** (NEW project-history high, +1) — R111 touches zero `src/chronos/adapters/` files. **Slot recovery context (cron-slot-handoff-recovery applied)**: prior cron slot landed the backend half (CLI + server + quickstart loader + spike20 + tests) and the frontend half (types.ts + RunList.tsx) into the working tree but exited at iteration cap before `git add`; this slot validated all 9 modified/added files (full pytest green, frontend tsc clean), fixed the 2 ruff lints + 1 format pickup, then committed-and-pushed as a single logical commit (`a28544b`) per `chronos-commit-before-prose` skill's "commit before prose" discipline. Phase 6 RC arc progress: **5/16 rounds** (R107 ✅ + R108 ✅ + R109 ✅ + R110 ✅ + R111 ✅), **11 rounds to R122**.
+
+- **Round: 111** (Phase 6 ADR-029 Cost Visibility round, single-slot — full-stack default-on tokens+cost). 0 hard blocker. New artefacts: `tests/spikes/spike20_quickstart_demo_has_usage.py` (~116 LOC, 2 tests), `progress/2026-05-27-round-111.md` (~7 KB). Modified: `src/chronos/cli/runs.py` (auto-show/auto-hide rule + `--no-usage`), `src/chronos/cli/__init__.py` (`--no-usage` Typer option + deprecated-alias help text + docstring example block), `src/chronos/api/server.py` (`GET /runs` embeds `usage_summary` per run), `src/chronos/cli/quickstart.py` (loader threads `usage` + `cost_usd_cents` to `_build_node`), `examples/builtin-minimal/envelopes.jsonl` (seeded usage on 2 LLM nodes), `frontend/src/types.ts` (new `RunUsageSummary` interface + optional `Run.usage_summary` field), `frontend/src/pages/RunList.tsx` (conditional Tokens + Cost columns + `showUsage` memo), `tests/unit/test_usage_extractor.py` (extended for auto-hide + always-emit-JSON semantics). 0 ADR amendments (executes ADR-029 §Acceptance as written). 0 schema change. 0 `pyproject.toml` / `uv.lock` change. 0 new adapter touch.
+
+- **R111 关键决策 (上墙)**:
+  - **D-111-1: `--with-usage` becomes a deprecated no-op, not removed.** Pre-1.0 still owes a deprecation cycle; alternative "emit stderr warning when passed" deferred to R116 doc-day if it actually causes confusion in practice.
+  - **D-111-2: Auto-hide tokens/cost columns on all-zero DBs (CLI + frontend, identical rule).** ADR-029 §UX called for "always show" but on a fresh empty store every cell would be '—' — worse UX than no column. Single `any_usage` (CLI) / `showUsage` memo (frontend) gates both. Keeps CLI and web visually aligned.
+  - **D-111-3: JSON mode always emits `usage_summary` when computed.** Even when the table hides columns, machine consumers need a stable shape — distinguishing "no usage recorded" (`nodes_with_usage: 0`) from "server didn't compute it" (field absent) matters for downstream diff/compare tooling.
+  - **D-111-4: Single source of truth for aggregation: `chronos.cli._usage._summarise_usage`.** API server imports it rather than re-implementing — CLI and web stay in lockstep on token rounding + cost cell rendering. Light coupling (`api` → `cli._usage`) acceptable per ADR-013 layering rules (CLI is the lowest-level operator surface).
+  - **D-111-5: Spike 20 covers the *loader* thread, not just storage.** Storage round-trip was already exercised in R45-era tests; the loader path (`quickstart_command` → `_build_node`) was silently dropping `usage` + `cost_usd_cents`. Spike 20 catches that regression class end-to-end through the demo seeding path — exactly the path a new user runs first.
+  - **D-111-6: Slot-recovery commit shape — single atomic commit, not "backend now / frontend later".** Per `chronos-commit-before-prose` "commit the completed half FIRST" rule, I considered splitting into two commits, but the working tree was *already* coherent across CLI + API + frontend (same conceptual feature, all 3 layers needed for ADR-029 acceptance). Atomic ship was correct call here. Rule still applies as written for cases where backend ships green but frontend is mid-edit.
+
+- **R111 self-check**: 仍在 R107-R122 polish + ADR-029/030 轨道 ✅ — R111 是 Route 表中 ADR-029 (Cost Visibility) 单轮 slot, 所有 deliverables 1:1 对应 ADR-029 §Acceptance (CLI 默认 ✓ / Frontend 列 ✓ / Quickstart demo 填 usage ✓ / README+docs Cost 行 deferred to R116 per route). 无方向漂移. ADR-030 (Evaluation) 显式留在 R115.
+
+- **R111 产出**:
+  - `tests/spikes/spike20_quickstart_demo_has_usage.py` — 116 LOC, 2/2 GREEN, ADR-029 round-trip pin.
+  - `src/chronos/cli/runs.py` — `--no-usage` opt-out + auto-show rule.
+  - `src/chronos/cli/__init__.py` — Typer `--no-usage` option + deprecated `--with-usage` help text update + 4-line example block.
+  - `src/chronos/api/server.py` — `GET /runs` embeds `usage_summary`.
+  - `src/chronos/cli/quickstart.py` — loader bug fix (was dropping `usage` + `cost_usd_cents`).
+  - `examples/builtin-minimal/envelopes.jsonl` — seeded realistic usage on 2 LLM nodes.
+  - `frontend/src/types.ts` + `frontend/src/pages/RunList.tsx` — Tokens + Cost columns + showUsage memo.
+  - `tests/unit/test_usage_extractor.py` — extended cases (auto-hide + always-emit-JSON).
+  - `progress/2026-05-27-round-111.md` — ~7 KB.
+  - Single commit `a28544b`, pushed to origin/main via gh-proxy.
+
+---
+
 **截至 Round 110 结束 (2026-05-27 CST cron slot ~01:35, single-slot Phase 6 Track 1 slice 3 — `chronos doctor` 新 verb 实装, in 0–11 窗口)** — R110 ships the third and final slice of the R107-R122 CLI Polish track: a brand-new top-level verb `chronos doctor` (registered between `quickstart` and `web` in `chronos --help`, advertised as `chronos doctor` in the verb table) that prints a one-shot environment health check covering Python version (≥ 3.11 hard-required by `pyproject.toml`), `chronos` package version (info-only ✅), SQLite library version (warn if < 3.38, the JSON-path-operator threshold), `chronos.db` resolution (existence at `--db` / `$CHRONOS_DB` / `./chronos.db`, openability via `SqliteStore.open()`, schema-version major-compat check + run/node/fork count summary on success), `examples/` directory + demo count, and the five optional extras — `web`, `langgraph`, `anthropic_agents`, `autogen`, `crewai` — each with installed version on success or actionable `uv pip install 'chronos-agent[<extra>]'` hint on miss. Read-only by contract — never mutates DB, never installs anything, never touches network. Implementation lives in new module `src/chronos/cli/doctor.py` (~310 LOC) following the established `quickstart_command` / `replay_command` factoring (Typer wrapper in `__init__.py`, free function `doctor_command(*, db, console, open_store_fn=None, examples_root=None) -> int` in the sibling module that takes injectable `console` + `db` + `open_store_fn` + `examples_root` so unit tests can capture output via `Console(file=StringIO())` and inject deterministic I/O failures). Exit-code policy (D-110-1) is asymmetric on purpose: `0` unless ≥ 1 ❌ row, in which case `1`; warnings (⚠️) NEVER fail because a fresh install legitimately has no DB (just ran `pip install chronos-agent`, hasn't `quickstart`-ed yet) and optional extras are by definition optional — failing on either would make `doctor` un-usable as the on-ramp's first command, contrary to the use case. Real ❌ surfaces are: Python < 3.11, DB present-but-corrupt, DB schema major mismatch (would explode the user's next CLI call anyway, so loud failure is correct). Rich markup pitfall caught & fixed during smoke run (D-110-3): labels literally contain `[web]`, `[langgraph]`, etc. — without escaping, Rich consumed `[web]` as a (non-existent) style tag and rendered `Extra:` (column blank). Fixed via hand-rolled `_escape_label()` (`[` → `\[`) plus raw-width column padding computed before the escape so columns align deterministically; chose hand-roll over `rich.markup.escape` for one-line code path (same trick as `verify_golden.py` for secret-detected output). Optional-extra detection uses `importlib.import_module(probe)` not `importlib.util.find_spec` (D-110-4) because `find_spec` returns truthy for namespace packages even without an installed submodule — `import_module` matches the same code path the rest of `chronos` would hit at runtime, so doctor's verdict and the "real" CLI verb's verdict on the same env are always identical. 12 new unit tests in `tests/unit/test_cli_doctor.py` covering: `--help` shape (Example block + Exit codes table + `--db` flag visibility), top-level verb advertisement in `chronos --help`, `info()` status line lists `doctor` (R110 ratchet), all-green path on a seeded quickstart DB → exit 0 with "2 runs, 6 nodes, 1 forks" line, missing-DB path → ⚠️ + exit 0 + hint pointing at `quickstart`, schema-mismatch path (forge `schema_info.schema_version = '99.0.0'` after `quickstart`) → exit 1 + ❌ row, `_check_examples` (3 cases: missing dir → warn, empty dir → warn, ≥1 demo → ok), `_check_optional_extras` row coverage for all 5 extras, missing-extra path (monkeypatched `importlib.import_module` to raise on `fastapi`) → ⚠️ + `uv pip install` hint (NOT ❌ — extras-optional contract honoured), `_check_python_version` ok in current env. **R45-A trap pre-checked**: `tests/unit/test_cli.py::test_cli_help_default` asserts only on `"time-travel"` substring (not verb count), so adding the 12th top-level verb is safe — verified via `pytest -k cli_help` 29/29 GREEN before AND after registration. All gates GREEN at the new state: full suite **687 passed / 9 live-skipped in 21.84 s** (up from 675 / 9 at R109 — exactly the 12 new R110 tests, no flakes, no regressions); ruff check + ruff format + mypy all clean (one auto-fix during commit prep — `from typing import Callable` → `from collections.abc import Callable` per UP035). Smoke E2E verified at two states: clean tmpdir → exit 0 with 1 ⚠️ (no DB) + 9 ✅; after `chronos quickstart` → exit 0 with 10 ✅ rows including "2 runs, 6 nodes, 1 forks at chronos.db". Adapter directory `src/chronos/adapters/` untouched — zero-regression streak ratchets to **R52→R110 = 58 rounds** (NEW project-history high, +1). Phase 6 RC arc progress: **4/16 rounds** (R107 ✅ + R108 ✅ + R109 ✅ + R110 ✅), **12 rounds to R122**.
 
 - **Round: 110** (Phase 6 Track 1 slice 3, single-slot — `chronos doctor` verb, zero adapter code, zero new feature outside `chronos.cli` namespace, zero deps). 0 hard blocker. New artefacts: `src/chronos/cli/doctor.py` (~310 LOC), `tests/unit/test_cli_doctor.py` (12 tests, ~210 LOC), `progress/2026-05-27-round-110.md` (~11 KB). Modified: `src/chronos/cli/__init__.py` (Typer wrapper for `doctor` + `info()` status line refresh — `doctor` listed in verb table, streak counter bumped to R52→R110=58, phase-target window updated to `R107-R122`), `CHANGELOG.md` (`[Unreleased] / Added — R110` block prepended above the R109 block), `docs/CONTEXT.md` §5 (this paragraph) + §6 (R111 plan replaces R109 plan). 0 production code outside `src/chronos/cli/` and `tests/unit/`. 0 ADR amendments. 0 schema change. 0 `pyproject.toml` / `uv.lock` change. 0 adapter change. 0 i18n change. 0 frontend change. 0 new spikes.
@@ -1390,9 +1418,68 @@ R73 是 R69→R72 4-round chain 的第一个真 disprover round, 也是 Phase 4 
 >
 > 🆕 **2026-05-26 R109 后用户决策**: 终点从 R120 延到 R122, 加 ADR-029 (Cost Visibility, R111) + ADR-030 (Evaluation/Scoring, R115)。
 >
-> **R110 ✅ 完成 (2026-05-27 cron slot ~01:35)** — `chronos doctor` 已实装 (12 新单测全过, 687/9 全套绿). **下一轮 = R111: ADR-029 Cost Visibility**, 必读 `docs/decisions/ADR-029-cost-visibility.md` 全文再动手。R111 是第一个 ADR 轨道轮, 严格按 ADR §Decision 干, ADR §Out of scope 列的东西全部不做。
+> **R111 ✅ 完成 (2026-05-27 cron slot ~11:14)** — ADR-029 Cost Visibility 全栈落地 (CLI 默认 on / 自动隐显 / `--no-usage` opt-out / `--with-usage` deprecated no-op / API embeds usage_summary / Frontend Tokens+Cost 列 / quickstart demo seeded usage + loader bugfix / spike 20 GREEN, 693/9 全套绿). **下一轮 = R112: 前端 P0 dogfood 第一刀** (Phase 6 路线表 row 6 R112-R114 三轮中第一轮).
 
 ---
+
+**Round 112 — Phase 6 前端 P0 cleanup 第一刀 (单 slot, 单 commit)**
+
+R112-R114 是 R107-R122 路线表 row 6 (前端 P0 清扫 + 首屏 Onboarding Tour). R112 是第一刀: 系统性 dogfood 5 核心页 → 列 P0 + P1 → 优先修 P0, P1 留给 R113-R114. 0 后端代码改动, 纯前端 + dogfood 报告.
+
+### R112 必做 (单 slot, 单 commit)
+
+1. **必读**: skill `dogfood:dogfood` (用 browser tool 系统性走 web UI), skill `dogfood:visual-review-loop` (前端改动后视觉验证).
+2. **环境**: `chronos quickstart && chronos web` 起本地 8000 + frontend dev (vite). 用 dogfood 流程逐页走.
+3. **走查 5 核心页**:
+   - Landing (`/`)
+   - RunList (`/runs`) — 验证 R111 新增的 Tokens + Cost 列实际渲染正确 (这是 dogfood 第一手验证!)
+   - RunDetail (`/runs/:id`) — 节点树 + per-node usage
+   - TreeView / Compare (`/compare?...`)
+   - NodeDetails (RunDetail 子组件 / drawer)
+4. **列出所有 P0 (功能阻塞: 报错 / 白屏 / 数据缺失) 和 P1 (体验差: 加载状态缺 / 空态丑 / 文案错)**.
+5. **本轮范围: 修 ≥ 2 个 P0**, P1 + 剩余 P0 留给 R113.
+6. 任何前端代码改动 → `npx tsc --noEmit` 必过, lint 必过.
+7. 写 `docs/dogfood/2026-05-XX-round-112-frontend-p0.md` (P0/P1 清单 + 截图引用 + 本轮修了哪些).
+8. `progress/2026-05-XX-round-112.md` (含 self-check "仍在 R107-R122 + ADR-029/030 轨道").
+9. `docs/CONTEXT.md` §5 加 R112 段; §6 用 R113 plan 替换本块.
+10. `CHANGELOG.md` `[Unreleased] / Fixed — R112 (Phase 6 frontend P0 第一刀)` 块.
+
+### R112 硬约束
+
+- ❌ 0 后端代码改动 (`src/chronos/api/`, `src/chronos/cli/`, `src/chronos/adapters/`, `src/chronos/store/` 全部不动).
+- ❌ 0 新依赖 (`pyproject.toml` / `uv.lock` 不动; `frontend/package.json` 不动除非真的修 P0 必须).
+- ❌ 不做 Onboarding Tour (那是 R114).
+- ❌ 不开始 ADR-030 (R115).
+- ✅ Adapter 零回归 streak: R52→R112 = 60 (`src/chronos/adapters/` 不动).
+- ✅ 修的每个 P0 在 dogfood 报告里有 before/after 截图引用或操作日志.
+
+### R112 deliverables
+
+- New: `docs/dogfood/2026-05-XX-round-112-frontend-p0.md` (dogfood 报告)
+- Modified: `frontend/src/...` (修 ≥ 2 P0)
+- Modified: `CHANGELOG.md` (Fixed — R112)
+- New: `progress/2026-05-XX-round-112.md`
+- Modified: `docs/CONTEXT.md` §5 + §6
+
+### R112 gate checklist
+
+- [ ] dogfood skill 已加载 + 走查了 5 核心页
+- [ ] P0/P1 清单写入 dogfood 报告
+- [ ] ≥ 2 个 P0 已修
+- [ ] `npx tsc --noEmit` 全过, frontend lint 全过
+- [ ] `pytest -q --no-cov` 全过 (≥ 693, R111 baseline)
+- [ ] Adapter 目录未动 (streak → 60)
+- [ ] `pyproject.toml` / `uv.lock` 无 drift
+
+### R113-R114 plan preview (R112 写时填这里)
+
+- **R113**: 继续清扫剩下的 P0 (从 R112 dogfood 报告里没修完的) + P1 高分项. 单 slot, 单 commit, 仍是纯前端.
+- **R114**: 首屏 Onboarding Tour (Landing 页加 tour, 可跳过/可重看). R114 完成后, R107-R122 路线表 row 5 (CLI Polish) + row 6 (前端 P0) 都关了, 进 R115 ADR-030 (Evaluation/Scoring) 的 ADR 轮.
+
+---
+
+<details>
+<summary><b>Historical: R111 plan (Phase 6 ADR-029 Cost Visibility) — DONE in R111</b></summary>
 
 **Round 111 — Phase 6 ADR-029 Cost Visibility (单 slot, 单 commit)**
 
@@ -1439,51 +1526,17 @@ R73 是 R69→R72 4-round chain 的第一个真 disprover round, 也是 Phase 4 
 22. `progress/2026-XX-XX-round-111.md` 写 R111 报告 (含 self-check "仍在 R107-R122 + ADR-029/030 轨道").
 23. `docs/CONTEXT.md` §5 加 R111 close paragraph; §6 用 R112 plan 替换本块 (R112-R114 = 前端 P0 dogfood + 修, 第一刀 R112).
 
-### R111 硬约束 (ADR-029 §Out of scope)
+### R111 硬约束 (ADR-029 §Out of scope) — followed in R111
 
 - ❌ 0 新 schema, 0 新 adapter 工作, 0 新 dep
 - ❌ 不加 per-provider 价格表 (chronos 只显示 adapter 已经记的)
 - ❌ 不做 cost 时序图表 / 预算 / alert (post-1.0 backlog)
 - ❌ 不做 token-level streaming 可视化
 - ❌ 不开始 ADR-030 (那是 R115)
-- ✅ Adapter 零回归 streak: R52→R111 = 59 (`src/chronos/adapters/` 不动)
-- ✅ `pyproject.toml` / `uv.lock` 不能 drift (R66)
+- ✅ Adapter 零回归 streak: R52→R111 = 59 (`src/chronos/adapters/` 不动) ✅
+- ✅ `pyproject.toml` / `uv.lock` 不能 drift (R66) ✅
 
-### R111 deliverables
-
-- Modified: `src/chronos/cli/runs.py` (或同名) — `--with-usage` 默认 on + 新增 `--no-usage` + 全 0 时隐藏
-- Modified: `examples/builtin-minimal/envelopes.jsonl` — 给 draft 节点填 usage
-- Modified: `src/chronos/cli/quickstart.py` (如需) — 把 envelope `usage` 块映射到 `Node.usage`
-- Modified: `apps/web/src/pages/RunList.tsx` (或同等路径) — 加 Tokens + Cost 列
-- Modified: API server 的 runs-list endpoint (如需) — 返回 `usage_summary`
-- Modified: `README.md` — Cost Tracking feature 行
-- Modified: `docs/cli-reference.md` — `runs list` 段更新
-- New: `tests/spikes/spike20_quickstart_demo_has_usage.py`
-- Modified: `tests/unit/test_cli_runs.py` (新增 ≥2 测) + 可能 `tests/unit/test_cli_quickstart.py`
-- Modified: `CHANGELOG.md` (Added — R111 块)
-- New: `progress/2026-XX-XX-round-111.md`
-- Modified: `docs/CONTEXT.md` §5 (R111 段) + §6 (R112 plan replaces R111 plan)
-
-### R111 gate checklist (before commit)
-
-- [ ] 必读 `docs/decisions/ADR-029-cost-visibility.md` 全文 *before* coding
-- [ ] `chronos quickstart` (在 tmpdir) 后 `chronos runs list` *默认* 看到 tokens + cost ¢ 列, 数值非 `—`
-- [ ] `chronos runs list --no-usage` 隐藏 tokens + cost 列
-- [ ] `chronos runs list --with-usage` 不报错且行为同默认 (deprecated alias)
-- [ ] 全 0-usage 数据库下 `chronos runs list` 默认 *不* 显示 tokens 列
-- [ ] 前端 `RunList` 页 (本地 `chronos web` 启动后浏览器访问) 出现 Tokens + Cost (USD) 列
-- [ ] README 顶部 feature matrix 含 💰 Cost & Token Tracking 行
-- [ ] `docs/cli-reference.md` `runs list` 段提到 `--no-usage`
-- [ ] `pytest -q --no-cov` 全过 (target ≥ 690 passed: 687 + ≥3 新)
-- [ ] `pytest tests/spikes/spike20_quickstart_demo_has_usage.py -v` 全过
-- [ ] `ruff check` + `ruff format --check` + `mypy` 全过
-- [ ] `chronos --help` 顶层 verb 列表不变 (R111 不加 verb)
-- [ ] `uv.lock` 无 drift, `pyproject.toml` 无 drift
-- [ ] Adapter 目录 `src/chronos/adapters/` 完全未动 (streak → 59)
-
-### R112 plan preview (R111 写到 §6 时填的就是这一段)
-
-R112 = 前端 P0 dogfood 第一刀 (Phase 6 路线表 row 6 R112-R114 三轮中第一轮): 用 dogfood 流程 (skill `dogfood:dogfood`) 系统性走 5 核心页 (Landing / RunList / RunDetail / TreeView / NodeDetails), 列出所有 P0 (功能阻塞) 和 P1 (体验明显差) 问题, 优先修 P0, 留 P1 给 R113-R114. R112 单 slot 单 commit, 0 后端代码改动, 纯前端 + dogfood 报告. 产出: `docs/dogfood/2026-XX-XX-round-112-frontend-p0.md` 报告 + 前端 patch (修 ≥2 个 P0). 下下轮 R113 继续清扫剩下的 P0 + P1 高分项.
+</details>
 
 ---
 

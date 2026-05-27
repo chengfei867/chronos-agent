@@ -4,6 +4,19 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added — R111 (Phase 6, ADR-029 Cost Visibility — full-stack default-on tokens + cost)
+
+- **`chronos runs list` shows tokens + cost ¢ columns by default** (ADR-029 §Acceptance). Auto-shown when ≥1 listed run has `nodes_with_usage > 0`; auto-hidden on all-zero DBs to avoid em-dash walls.
+- **New `--no-usage` flag** — explicit opt-out for narrow terminals or scripts that want the legacy 5-column shape.
+- **`--with-usage` preserved as a deprecated no-op alias** (will be removed in v1.1; help text + module docstring note the deprecation).
+- **`GET /runs` API** now embeds per-run `usage_summary` (delegates to `chronos.cli._usage._summarise_usage` — single source of truth shared with the CLI).
+- **Frontend `RunList`** now renders Tokens (right-aligned, monospace, with prompt/completion/reasoning breakdown tooltip) + Cost (USD, sub-cent precision when needed) columns, both sortable, conditionally appended under the same auto-hide rule as the CLI. New `RunUsageSummary` interface in `frontend/src/types.ts`; `Run.usage_summary?` is optional+nullable so older fixtures and `GET /runs/{id}` payloads still type-check.
+- **Quickstart demo** (`examples/builtin-minimal/envelopes.jsonl`) seeded with realistic `usage` (prompt/completion tokens) + `cost_usd_cents` on the 2 LLM-kind nodes so a fresh `chronos quickstart && chronos runs list` immediately renders non-zero numbers — the new-user on-ramp now demonstrates the cost feature without any extra setup.
+- **Quickstart loader bugfix** (`src/chronos/cli/quickstart.py`): `_build_node` was silently dropping the envelope `usage` + `cost_usd_cents` fields; spike 20 caught this and the loader now threads both through correctly.
+- **Spike 20** (`tests/spikes/spike20_quickstart_demo_has_usage.py`, 116 LOC): new spike pinning the JSONL → Pydantic Node → SqliteStore round-trip on the builtin-minimal fixture (INV-1/2/3) plus `_summarise_usage` non-zero aggregation guarantee.
+- **Test deltas**: 4 extended `tests/unit/test_usage_extractor.py` cases for auto-hide-on-empty + JSON-always-emit semantics + 2 new spike20 tests = +6 total.
+- **Gate**: 693 passed / 9 live-skipped / 0 failed (was 687 / 9 in R110). Adapter zero-regression streak: **R52→R111 = 59 rounds** (project-history high, +1).
+
 ### Added — R110 (Phase 6, CLI Polish Track — slice 3: `chronos doctor`)
 
 - **`chronos doctor`** — new top-level verb running an environment health check
