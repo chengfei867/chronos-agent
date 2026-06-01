@@ -5,6 +5,7 @@ import { Copy, AlertTriangle, Brain, Globe, HardDrive, Database, ExternalLink } 
 import type { ComponentType } from "react";
 import { useTranslation } from "react-i18next";
 import type { Node as ChronosNode, NodeKind } from "../types";
+import { totalTokens, formatCostUsd } from "../format/usage";
 import ConceptTip from "./ConceptTip";
 
 // Effect tags written by adapters into node.metadata.effects (PH3-02).
@@ -242,10 +243,10 @@ export default function NodeDetails({
             {node.usage.completion_tokens ?? "–"}
           </Descriptions.Item>
           <Descriptions.Item label={t("nodeDetails.fields.totalTokens")}>
-            {node.usage.total_tokens ?? "–"}
+            {totalTokens(node.usage) ?? "–"}
           </Descriptions.Item>
           <Descriptions.Item label={t("nodeDetails.fields.costUsd")}>
-            {node.cost_usd_cents == null ? "–" : `$${(node.cost_usd_cents / 100).toFixed(4)}`}
+            {formatCostUsd(node.cost_usd_cents)}
           </Descriptions.Item>
         </Descriptions>
       )}

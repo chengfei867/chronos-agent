@@ -92,8 +92,7 @@ export default function Landing({
             <Col xs={24} md={8} key={key}>
               <motion.div
                 initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-10% 0px" }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.1 + idx * 0.12 }}
               >
                 <Card className="chr-step-card" hoverable>

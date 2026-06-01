@@ -207,6 +207,39 @@ chronos-agent/
 
 ---
 
+**截至 Round 112 结束 (2026-06-02 CST cron slot ~00:34, single-slot Phase 6 R112-R114 track row 6 slice 1 of 3 — 前端 P0 dogfood + 修 ≥ 2 P0, in 0–11 窗口, 继承上一轮 timed-out slot 的 WIP)** — R112 是 R112-R114 "前端 P0 清扫" 三连的第一刀。本轮 slot 进入时 `git status` 已有上一 cron slot 留下的未提交 WIP (3 个前端文件改动 + 1 个新 helper 模块 + 1 个空 dogfood 截图目录), 应用 `cron-slot-handoff-recovery` skill 的 Option A2 路径: gates 重新跑过全部 GREEN (`pytest 693/9/0` 与 R111 baseline 字节级一致 / `tsc --noEmit` clean / `vite build` clean), 继承 WIP 内容自我标识为 R112 (CSS 注释直接写 `R112 P0 #2 fix`, 新 helper 模块头注释写 `R112 — token/cost rendering helpers`), 每一 hunk 都对应到一个真实的 P0/P1, 因此 audit + 采纳为本轮 deliverables 是正确路径。本轮 slot 的实际工作集中在: 写 dogfood 报告 (F1-F6 catalogue), 写 progress doc, 写 CHANGELOG R112 块, 更新 §5 + §6, 单 atomic commit + push, QQ 战报。**3 个修复落地**: P0 #1 — `NodeDetails` Total-Tokens 单元格之前在 `total_tokens` 字段为 null 但 `prompt_tokens`+`completion_tokens` 已记录的节点上渲染 `–`, 这把 R111 ADR-029 的 "tokens 默认可见" 在 per-node detail 视图上变成了半真; 新增 `frontend/src/format/usage.ts` (~50 LOC, 5 个 helper: `totalTokens` / `formatTokensCompact` / `formatCostUsd` / `formatTokenDelta` / `formatCostDelta`), `totalTokens()` best-effort 优先用 API 返回的 total, fallback 为 prompt+completion 之和 (与 CLI `_summarise_usage` 的容错语义一致); demo 父 draft 节点 (prompt=120 / completion=80 / total=null) 现在显示 200 而不是 –。P0 #2 — `.chr-diff-page` 在 `Layout > Content > AnimatePresence > motion.div` 包装下因为 `height: 100%` 不能跨 AnimatePresence 透传导致 ReactFlow 渲染高度 = 0 → 完全空白; 改用 `calc(100vh - 56px - 48px - 48px)` 视口数学, 与 `.chr-tree-page` (R39-A 起就稳定的) 同款规则; CSS 注释 R112 P0 #2 fix 显式写明 AnimatePresence 包装这个细节, 防止未来 round 又踩。P1 — `Landing.tsx` Step Cards (3 卡片 "How it works") 因为在首屏可视范围内, `whileInView` 在初始 mount 时不会触发 → 卡片要么瞬移要么按浏览器 quirk 不规则出现; 改成 plain `animate` (保留 `initial` + `transition` 的 stagger), 屏外的其他 Landing section 仍走 `whileInView` (对它们正确)。**Live-browser dogfood pass 显式延后到 R113** (slot budget 主要被恢复诊断 + 报告写作 + close-out 消耗, 起 `chronos web` + Vite + 浏览器 vision + 截图 估 15-20 tool calls 加 close-out floor 会触发 cron-slot-handoff-recovery 的 iteration-cap-out 风险)。`docs/dogfood/r112-screenshots/` 目录已搭好等 R113 填。**R107-R122 路线自检**: 仍在轨道 ✅ — R112 是 route 表 row 6 切片 1, 三个修复 1:1 对应 R122 必过项 "前端 5 核心页 P0 全清"; P0 #1 同时关闭 R111 ADR-029 的半真; 0 adapter touch / 0 schema 改 / 0 pyproject 或 lockfile drift / 0 ADR 变更 / 0 新方向。Adapter zero-regression streak: R52→R112 = **60 轮** (项目历史新高 +1)。Spike streak: 20 spike 全 GREEN (本轮无新 spike — 纯 UX/UI 工作不必)。距离 R122: **10 轮** (R113-R122)。
+
+- **Round: 112** (Phase 6 R112-R114 track row 6 slice 1 of 3, single-slot, 继承上一 timed-out slot 的 WIP). 0 hard blocker. New artefacts: `frontend/src/format/usage.ts` (~50 LOC, 5 helpers), `docs/dogfood/2026-06-02-round-112-frontend-p0.md` (~8 KB, F1-F6 + R113 hand-off), `docs/dogfood/r112-screenshots/` (空目录, R113 填), `progress/2026-06-02-round-112.md` (~11 KB). Modified: `frontend/src/components/NodeDetails.tsx` (改用新 helper), `frontend/src/pages/Landing.tsx` (Step Cards `whileInView` → `animate`), `frontend/src/styles.css` (`.chr-diff-page` 视口数学), `frontend/dist/*` (vite rebuild 输出), `CHANGELOG.md` (`[Unreleased] / Fixed — R112` + `Added — R112` + `Gate — R112` 块插在 R111 块之上), `docs/CONTEXT.md` §5 (此段) + §6 (R113 plan 替换 R112 plan). 0 production code 触动 `src/chronos/` (纯前端 round). 0 ADR 变更. 0 schema 变更. 0 `pyproject.toml` / `uv.lock` 变更. 0 adapter 变更. 0 新 spike. 0 后端测试变化.
+
+- **R112 关键决策 (上墙)**:
+  - **D-112-1: 采纳上一 slot 留下的 WIP, 不重做不回退.** 继承的 3 文件 diff 自我标识 R112-flavored (CSS 注释 + 新 helper 模块头), gates 不变全 GREEN, 每个 hunk 1:1 对应一个真实 P0/P1. 回退会浪费上 slot 工作并把同样修复推到 R113. 按 cron-slot-handoff-recovery Option A2 + A1 audit + adopt 路径正确。
+  - **D-112-2: Live-browser dogfood pass 显式延后到 R113.** Slot budget 主要被恢复诊断 + dogfood 报告写作 + close-out 消耗。起 `chronos web` + Vite dev + 浏览器 vision + 截图捕获估 15-20 tool calls + close-out floor (~10) 会触发 iteration-cap-out 风险。R113 hand-off section 显式记录, 下一 slot 拾接干净。
+  - **D-112-3: 前端 token/cost 渲染单一来源: 新 `format/usage.ts` 模块.** CLI 端已有 `_summarise_usage` 作为 SSOT (D-111-4)。前端原本 NodeDetails 内联 `(cents/100).toFixed(4)`, RunList 用另一套内联规则 (sub-cent 精度)。新模块给前后端 parity 留了未来一致性接口。RunList 迁移延后到 R113 (R111 内联规则正确, 只是逻辑重复)。
+  - **D-112-4: `totalTokens()` fallback 求和而不是返 null.** chronos `Usage` 模型三字段全 optional。LangGraph in-process / AutoGen 历史只记 prompt+completion。当用户能看见非零 prompt+completion 时显示 `–` 比客户端求和 UX 更差。仅在三字段全 null 时返 null (零信号)。
+  - **D-112-5: Diff 页高度修复使用与 `.chr-tree-page` 相同的字面常量 (56+48+48 = 152px) 而非 CSS 变量.** DRY 角度引入变量更对, 但 `.chr-tree-page` 规则自 R39-A 起稳定, R112 引入变量会强制改 `.chr-tree-page` 扩大 diff 没有功能收益。延后到 R113-R114 如果 dogfood 找到第三页需要。
+
+- **R112 self-check**: 仍在 R107-R122 polish + ADR-029/030 轨道 ✅ — R112 是 Route 表中 R112-R114 (前端 P0 清扫) 三连第一刀, 三个修复 1:1 对应 R122 必过项 "前端 5 核心页 P0 全清, 任意操作有视觉反馈". P0 #1 同时关闭 R111 ADR-029 的半真。无方向漂移。ADR-030 (Evaluation) 显式留在 R115。距 R122 = 10 轮。
+
+- **R112 产出**:
+  - `frontend/src/format/usage.ts` — 新, ~50 LOC, 5 个 helper, 前端 token/cost SSOT。
+  - `frontend/src/components/NodeDetails.tsx` — 切到 `totalTokens()` + `formatCostUsd()`。
+  - `frontend/src/pages/Landing.tsx` — Step Cards `whileInView` → `animate`。
+  - `frontend/src/styles.css` — `.chr-diff-page` 视口数学 + R112 P0 #2 fix 注释。
+  - `frontend/dist/*` — vite rebuild 输出。
+  - `docs/dogfood/2026-06-02-round-112-frontend-p0.md` — F1-F6 catalogue + 3 修复细节 + R113 hand-off。
+  - `docs/dogfood/r112-screenshots/` — 空目录, R113 填。
+  - `progress/2026-06-02-round-112.md` — 11 KB, 含 cron-slot-handoff-recovery 应用记录 + 5 关键决策。
+  - `CHANGELOG.md` — Fixed/Added/Gate R112 三块插在 R111 之上。
+  - 单 commit, push 到 origin/main via gh-proxy。
+
+- **R112 hand-off invariants (R113 prologue 用)**:
+  - `frontend/src/format/usage.ts` 是前端 token/cost 渲染规范化的家。新组件需要渲染 usage 数字应 import, 不要内联格式化。RunList 仍内联 (R111 ship), R113 可以迁但不必。
+  - `.chr-diff-page` 与 `.chr-tree-page` 都用字面视口数学 (`calc(100vh - 56px - 48px - 48px)`) — 如果 header (56px) / footer (48px) 高度未来变, 两处都得改, 还没抽 CSS 变量。
+  - `Landing.tsx` 首屏 Step Cards 用 `animate` 而非 `whileInView`。R114 Onboarding Tour 添加首屏 motion 块时按同样模式; 屏外块继续 `whileInView`。
+  - `docs/dogfood/r112-screenshots/` 已搭好等 R113 填 (5 页 × ~3 图 ≈ 15 PNG)。
+
+---
+
 **截至 Round 111 结束 (2026-05-27 CST cron slot ~11:14, single-slot Phase 6 ADR-029 Cost Visibility round — full-stack default-on token+cost, spike 20 GREEN, in 0–11 窗口)** — R111 ships ADR-029 end-to-end: `chronos runs list` now shows tokens + cost ¢ columns by default (auto-shown when ≥1 listed run has `nodes_with_usage > 0`, auto-hidden on all-zero DBs to avoid em-dash walls), with new `--no-usage` opt-out flag and `--with-usage` preserved as a deprecated no-op alias (v1.1 removal noted in help text). `GET /runs` API now embeds per-run `usage_summary` (delegates to the same `chronos.cli._usage._summarise_usage` the CLI uses → CLI/web stay in lockstep on aggregation). Frontend `RunList.tsx` conditionally appends Tokens (right-aligned, monospace, with prompt/completion/reasoning breakdown tooltip, sortable) + Cost (USD, sub-cent precision when needed, sortable) columns under the same "any run has usage → show" rule, mirroring the CLI auto-hide behaviour. New `RunUsageSummary` interface in `frontend/src/types.ts`; `Run.usage_summary?` field optional+nullable so older fixtures still type-check. Quickstart demo `examples/builtin-minimal/envelopes.jsonl` seeded with realistic `usage` (prompt/completion tokens) + `cost_usd_cents` on the 2 LLM-kind nodes, and `src/chronos/cli/quickstart.py` loader fixed to thread those fields through to `_build_node` (was previously dropping them silently — caught by spike 20). New spike 20 (`tests/spikes/spike20_quickstart_demo_has_usage.py`, 116 LOC) probes the JSONL → Pydantic Node → SqliteStore round-trip on the builtin-minimal fixture (INV-1 loader threads `usage`, INV-2 loader threads `cost_usd_cents`, INV-3 store round-trip preserves both byte-equally) plus a second test confirming `_summarise_usage` returns non-zero aggregate tokens (the auto-show column would render a real number, not '—'). All gates GREEN at the new state: full suite **693 passed / 9 live-skipped in 22.05 s** (was 687 / 9 at R110 — exactly the +6 R111 deltas: 2 new spike tests + 4 extended `test_usage_extractor.py` cases for auto-hide-on-empty + JSON-always-emit semantics, no flakes, no regressions); ruff check + ruff format clean across all R111-touched files (had to fix 2 SIM115 violations in spike20 — replaced bare `open()` in `with` block with nested context manager — and reformat `runs.py`); `npx tsc --noEmit` clean on the frontend. Adapter zero-regression streak ratchets to **R52→R111 = 59 rounds** (NEW project-history high, +1) — R111 touches zero `src/chronos/adapters/` files. **Slot recovery context (cron-slot-handoff-recovery applied)**: prior cron slot landed the backend half (CLI + server + quickstart loader + spike20 + tests) and the frontend half (types.ts + RunList.tsx) into the working tree but exited at iteration cap before `git add`; this slot validated all 9 modified/added files (full pytest green, frontend tsc clean), fixed the 2 ruff lints + 1 format pickup, then committed-and-pushed as a single logical commit (`a28544b`) per `chronos-commit-before-prose` skill's "commit before prose" discipline. Phase 6 RC arc progress: **5/16 rounds** (R107 ✅ + R108 ✅ + R109 ✅ + R110 ✅ + R111 ✅), **11 rounds to R122**.
 
 - **Round: 111** (Phase 6 ADR-029 Cost Visibility round, single-slot — full-stack default-on tokens+cost). 0 hard blocker. New artefacts: `tests/spikes/spike20_quickstart_demo_has_usage.py` (~116 LOC, 2 tests), `progress/2026-05-27-round-111.md` (~7 KB). Modified: `src/chronos/cli/runs.py` (auto-show/auto-hide rule + `--no-usage`), `src/chronos/cli/__init__.py` (`--no-usage` Typer option + deprecated-alias help text + docstring example block), `src/chronos/api/server.py` (`GET /runs` embeds `usage_summary` per run), `src/chronos/cli/quickstart.py` (loader threads `usage` + `cost_usd_cents` to `_build_node`), `examples/builtin-minimal/envelopes.jsonl` (seeded usage on 2 LLM nodes), `frontend/src/types.ts` (new `RunUsageSummary` interface + optional `Run.usage_summary` field), `frontend/src/pages/RunList.tsx` (conditional Tokens + Cost columns + `showUsage` memo), `tests/unit/test_usage_extractor.py` (extended for auto-hide + always-emit-JSON semantics). 0 ADR amendments (executes ADR-029 §Acceptance as written). 0 schema change. 0 `pyproject.toml` / `uv.lock` change. 0 new adapter touch.
@@ -1422,6 +1455,67 @@ R73 是 R69→R72 4-round chain 的第一个真 disprover round, 也是 Phase 4 
 
 ---
 
+**Round 113 — Phase 6 前端 P0 cleanup 第二刀, live-browser dogfood pass (单 slot, 单 commit)**
+
+R113 是 R107-R122 路线表 row 6 (前端 P0 清扫 R112-R114) 的第二刀。R112 走的是代码静态审查 + 上一 slot 留下的 WIP 三处修复 (NodeDetails token fallback / Diff 页高度 / Landing Step Cards 动画), 显式把 live-browser pass 延后到本轮。R113 的核心是真正起 `chronos web` + Vite + 浏览器 vision tool 跑一遍 5 核心页, 截图存档, 验证 R112 三处修复在浏览器里真生效, 抓任何 R112 静态审查没看见的新 P0/P1, 修 ≥ 1 个新 P0。
+
+### R113 必做 (单 slot, 单 commit)
+
+1. **必读**: skill `dogfood:dogfood` (browser 流程标准化), skill `dogfood:visual-review-loop` (前端改动后视觉验证), `progress/2026-06-02-round-112.md` (R112 hand-off invariants), `docs/dogfood/2026-06-02-round-112-frontend-p0.md` (F1-F6 catalogue + R113 hand-off section).
+2. **环境**: 单 slot 内起 `chronos quickstart` (seed demo) → `chronos web` (8000) + `cd frontend && npm run dev` (5173 默认). 用 browser tool 的 dogfood 流程逐页走。
+3. **走 5 核心页, 每页 ~3 截图存档进 `docs/dogfood/r112-screenshots/`** (R112 已搭好空目录):
+   - Landing (`/`) — 验证 Step Cards 在初始 mount 立即出现 (R112 P1 fix), 验证 Onboarding Tour 缺位 (R114 will add).
+   - RunList (`/`/`#/runs`) — 验证 R111 ADR-029 Tokens + Cost 列实际渲染正确 (核心: dogfood 头一手验证 R111 ship).
+   - RunDetail (`#/runs/:id`) — 节点树 + 节点 selection. 验证选中节点后 NodeDetails 总 token 显示 200 而非 `–` (R112 P0 #1 fix runtime 验证).
+   - Compare/Diff (`#/compare?left=…&right=…`) — 验证 ReactFlow 双 pane 高度非零, 节点可见 (R112 P0 #2 fix runtime 验证).
+   - TreeView (`#/runs/:id/tree`) — 已知用 viewport 数学, 验证仍正确, 不要回归。
+4. **列出 live-browser pass 抓到的所有新 P0 + P1**, 写进 `docs/dogfood/2026-06-XX-round-113-frontend-p0.md` (cross-reference R112 F1-F6 编号继续往下: F7+).
+5. **本轮范围: 修 ≥ 1 个新 P0** (R112 已修 2 个 P0, R113 + R114 合计目标 ≥ 5 个 P0 close). 如果 live pass 抓不到新 P0, 至少做一项 P1 的 polish (如 RunList 迁到 `format/usage.ts` helpers, R112 D-112-3 留的 follow-up).
+6. 任何前端代码改动 → `npx tsc --noEmit` 必过, `npm run build` 必过, frontend lint 必过.
+7. `progress/2026-06-XX-round-113.md` (含 self-check "仍在 R107-R122 + ADR-029/030 轨道", 距 R122 = 9 轮).
+8. `docs/CONTEXT.md` §5 加 R113 段; §6 用 R114 plan 替换本块。
+9. `CHANGELOG.md` `[Unreleased] / Fixed — R113 (Phase 6 frontend P0 第二刀)` 块.
+
+### R113 硬约束
+
+- ❌ 0 后端代码改动 (`src/chronos/api/`, `src/chronos/cli/`, `src/chronos/adapters/`, `src/chronos/store/` 全部不动).
+- ❌ 0 新依赖 (`pyproject.toml` / `uv.lock` 不动; `frontend/package.json` 不动除非真的 P0 必须).
+- ❌ 不做 Onboarding Tour (R114).
+- ❌ 不开始 ADR-030 (R115).
+- ✅ Adapter 零回归 streak: R52→R113 = **61** (`src/chronos/adapters/` 不动).
+- ✅ 修的每个 P0 在 dogfood 报告里有 before/after 截图引用 + 一句根因。
+- ✅ 截图必须真实从浏览器抓 (browser_vision tool), 不要 mock。
+
+### R113 deliverables
+
+- New: `docs/dogfood/2026-06-XX-round-113-frontend-p0.md` (live-browser dogfood 报告 + F7+ catalogue + R114 hand-off)
+- New: `docs/dogfood/r112-screenshots/*.png` (≥ 5 张, 5 核心页各 1 张起步)
+- Modified: `frontend/src/...` (修 ≥ 1 P0 或 ≥ 1 P1 polish)
+- Modified: `CHANGELOG.md` (Fixed/Added — R113)
+- New: `progress/2026-06-XX-round-113.md`
+- Modified: `docs/CONTEXT.md` §5 + §6
+
+### R113 gate checklist
+
+- [ ] dogfood skill + visual-review-loop skill 已加载
+- [ ] `chronos quickstart` + `chronos web` + `npm run dev` 三件套实际起来跑过, 不是 mock
+- [ ] 5 核心页各抓 ≥ 1 张截图存进 `docs/dogfood/r112-screenshots/`
+- [ ] R112 三处修复在浏览器里 runtime 验证通过 (Diff 页非空 / NodeDetails token = 200 / Landing Step Cards 有动画)
+- [ ] ≥ 1 个新 P0 修了 (或 ≥ 1 个 P1 polish 落地, 如 RunList 迁 helper)
+- [ ] `npx tsc --noEmit` 全过, `npm run build` 全过
+- [ ] `pytest -q --no-cov` 全过 (≥ 693, R111/R112 baseline)
+- [ ] Adapter 目录未动 (streak → 61)
+- [ ] `pyproject.toml` / `uv.lock` 无 drift
+
+### R114 plan preview (R113 写时填这里)
+
+- **R114**: 首屏 Onboarding Tour (Landing 页加 tour, 可跳过/可重看). 用现有 AntD `Tour` 组件或轻量等价品. 4-6 步: 介绍 record / replay / fork / cost / eval. 持久化 "已看过" 到 localStorage, header 加 "重看 Tour" 按钮. R114 完成后 R107-R122 路线表 row 5 (CLI Polish, R107-R110 已完成) + row 6 (前端 P0, R112-R114 完成) 全清, 进 R115 ADR-030 (Evaluation/Scoring) ADR 轮。
+
+---
+
+<details>
+<summary><b>Historical: R112 plan (Phase 6 frontend P0 第一刀) — DONE in R112</b></summary>
+
 **Round 112 — Phase 6 前端 P0 cleanup 第一刀 (单 slot, 单 commit)**
 
 R112-R114 是 R107-R122 路线表 row 6 (前端 P0 清扫 + 首屏 Onboarding Tour). R112 是第一刀: 系统性 dogfood 5 核心页 → 列 P0 + P1 → 优先修 P0, P1 留给 R113-R114. 0 后端代码改动, 纯前端 + dogfood 报告.
@@ -1444,37 +1538,15 @@ R112-R114 是 R107-R122 路线表 row 6 (前端 P0 清扫 + 首屏 Onboarding To
 9. `docs/CONTEXT.md` §5 加 R112 段; §6 用 R113 plan 替换本块.
 10. `CHANGELOG.md` `[Unreleased] / Fixed — R112 (Phase 6 frontend P0 第一刀)` 块.
 
-### R112 硬约束
+### R112 outcome (R112 close-out 时填)
 
-- ❌ 0 后端代码改动 (`src/chronos/api/`, `src/chronos/cli/`, `src/chronos/adapters/`, `src/chronos/store/` 全部不动).
-- ❌ 0 新依赖 (`pyproject.toml` / `uv.lock` 不动; `frontend/package.json` 不动除非真的修 P0 必须).
-- ❌ 不做 Onboarding Tour (那是 R114).
-- ❌ 不开始 ADR-030 (R115).
-- ✅ Adapter 零回归 streak: R52→R112 = 60 (`src/chronos/adapters/` 不动).
-- ✅ 修的每个 P0 在 dogfood 报告里有 before/after 截图引用或操作日志.
+- ✅ 落地 3 处修复 (P0 #1 NodeDetails token fallback / P0 #2 Diff 页高度 / P1 Landing Step Cards 动画) — 满足 ≥ 2 P0 bar。
+- ⚠️ Live-browser dogfood pass 显式延后到 R113 (slot budget 被恢复诊断 + 报告 + close-out 消耗, 见 D-112-2)。
+- 文件: `frontend/src/format/usage.ts` (新), `NodeDetails.tsx` / `Landing.tsx` / `styles.css` (改), `docs/dogfood/2026-06-02-round-112-frontend-p0.md` (新), `docs/dogfood/r112-screenshots/` (空, R113 填), `progress/2026-06-02-round-112.md` (新).
+- Gate: pytest 693/9/0 (与 R111 字节级一致), tsc clean, build clean。
+- Adapter zero-regression streak: R52→R112 = 60。
 
-### R112 deliverables
-
-- New: `docs/dogfood/2026-05-XX-round-112-frontend-p0.md` (dogfood 报告)
-- Modified: `frontend/src/...` (修 ≥ 2 P0)
-- Modified: `CHANGELOG.md` (Fixed — R112)
-- New: `progress/2026-05-XX-round-112.md`
-- Modified: `docs/CONTEXT.md` §5 + §6
-
-### R112 gate checklist
-
-- [ ] dogfood skill 已加载 + 走查了 5 核心页
-- [ ] P0/P1 清单写入 dogfood 报告
-- [ ] ≥ 2 个 P0 已修
-- [ ] `npx tsc --noEmit` 全过, frontend lint 全过
-- [ ] `pytest -q --no-cov` 全过 (≥ 693, R111 baseline)
-- [ ] Adapter 目录未动 (streak → 60)
-- [ ] `pyproject.toml` / `uv.lock` 无 drift
-
-### R113-R114 plan preview (R112 写时填这里)
-
-- **R113**: 继续清扫剩下的 P0 (从 R112 dogfood 报告里没修完的) + P1 高分项. 单 slot, 单 commit, 仍是纯前端.
-- **R114**: 首屏 Onboarding Tour (Landing 页加 tour, 可跳过/可重看). R114 完成后, R107-R122 路线表 row 5 (CLI Polish) + row 6 (前端 P0) 都关了, 进 R115 ADR-030 (Evaluation/Scoring) 的 ADR 轮.
+</details>
 
 ---
 

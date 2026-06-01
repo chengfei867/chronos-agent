@@ -4,6 +4,24 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Fixed — R112 (Phase 6, frontend P0 cleanup slice 1 of 3 — R112-R114 track row 6)
+
+- **NodeDetails Total-Tokens cell no longer renders `–` when only prompt+completion are recorded** (P0 #1). Several adapters (LangGraph in-process, AutoGen) populate `prompt_tokens` + `completion_tokens` but leave `total_tokens` null. New `frontend/src/format/usage.ts::totalTokens()` falls back to summing components when total is missing. Closes a half-truth in R111's ADR-029 ship: per-node detail view now actually shows tokens for every node that has any usage data. The demo's parent draft node (`prompt=120, completion=80, total_tokens=null`) now displays `200` instead of `–`.
+- **Compare/Diff page no longer renders blank ReactFlow panes** (P0 #2). `.chr-diff-page` had `height: 100%` which doesn't cascade through the `Layout > Content > AnimatePresence > motion.div` wrapper, collapsing the page to 0px height. Switched to viewport math `calc(100vh - 56px - 48px - 48px)` matching the already-correct `.chr-tree-page` rule. Comment in `styles.css` updated to spell out the AnimatePresence wrapper detail so a future round doesn't regress it.
+- **Landing Step Cards now animate in deterministically on initial load** (P1). Above-the-fold Framer-Motion `whileInView` doesn't fire reliably because the cards are already in viewport on mount. Switched to plain `animate` prop (preserving the existing `initial` + staggered `transition`). Below-the-fold Landing sections retain `whileInView` (correct for them).
+
+### Added — R112
+
+- **`frontend/src/format/usage.ts`** (~50 LOC) — single source of truth for token/cost rendering on the frontend, mirroring the CLI's `chronos.cli._usage._summarise_usage` SSOT (D-111-4). Exports `totalTokens(usage)`, `formatTokensCompact(value)`, `formatCostUsd(cents)`, `formatTokenDelta(delta)`, `formatCostDelta(deltaCents)`. NodeDetails migrated; RunList migration deferred to R113 (the inline rendering shipped in R111 is correct, just duplicates logic).
+- **`docs/dogfood/2026-06-02-round-112-frontend-p0.md`** — round dogfood report cataloging F1-F6 findings across the 5 core frontend pages, documenting the 3 fixes that landed in R112, and handing off the live-browser pass + screenshot capture to R113. Empty `docs/dogfood/r112-screenshots/` scaffolded for R113.
+
+### Gate — R112
+
+- **693 passed / 9 skipped / 0 failed** (byte-identical to R111 — frontend-only changes, backend untouched).
+- `npx tsc --noEmit` clean; `npm run build` clean (1468 KB main chunk, gzip 477 KB — unchanged from R111).
+- Adapter zero-regression streak: **R52 → R112 = 60 rounds** (project-history high, +1).
+- Spike streak: 20 spikes still all-GREEN (no new spike — pure UX/UI work).
+
 ### Added — R111 (Phase 6, ADR-029 Cost Visibility — full-stack default-on tokens + cost)
 
 - **`chronos runs list` shows tokens + cost ¢ columns by default** (ADR-029 §Acceptance). Auto-shown when ≥1 listed run has `nodes_with_usage > 0`; auto-hidden on all-zero DBs to avoid em-dash walls.

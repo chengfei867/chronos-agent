@@ -452,13 +452,14 @@ body {
 
 /* ============ R39-A Diff page layout ============ */
 /* NOTE: height mirrors .chr-tree-page — we can't rely on `height: 100%` because
-   the ancestor chain (Layout > Content > motion.div) doesn't cascade
-   height: 100% all the way down, so the ReactFlow panes would collapse to 0px.
-   Use viewport math (header 56px + footer 48px + page padding 48px). */
+   the ancestor chain (Layout > Content > AnimatePresence motion.div) doesn't
+   cascade height: 100% all the way down (the AnimatePresence wrapper has no
+   explicit height), so the ReactFlow panes would collapse to 0px. Use viewport
+   math (header 56px + footer 48px + page padding 48px = 152px). R112 P0 #2 fix. */
 .chr-diff-page {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  height: calc(100vh - 56px - 48px - 48px);
   min-height: 0;
   padding-bottom: 8px;
 }
