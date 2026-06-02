@@ -1465,8 +1465,8 @@ R114 是 R107-R122 路线表 row 6 (前端 P0 清扫 R112-R114) 的第三刀, �
 
 ### R114 必做 (单 slot, 单 commit)
 
-1. **必读**: skill `dogfood:dogfood`, skill `dogfood:visual-review-loop`, skill `chronos-web-cron-port-leak` (这是第三次踩, 必须 patch skill), `progress/2026-06-02-round-113.md` (R113 hand-off invariants), `docs/dogfood/2026-06-02-round-113-frontend-p0.md` (F7-F11 catalogue + R114 fix mandate). 截图证据在 `docs/dogfood/r112-screenshots/01-04`.
-2. **环境 + cleanup-trap**: `chronos quickstart` (seed) + `chronos web --port 8000` (background) + `cd frontend && npm run dev --port 5173` (background). **必加 `trap 'kill_dev_servers' EXIT` 在 cron prompt** — `chronos-web-cron-port-leak` skill 第三次触发了, R114 完成同时把 skill patch 加 trap 段进去 (修同时修工具).
+1. **必读**: skill `dogfood:dogfood`, skill `dogfood:visual-review-loop`, skill `chronos-web-cron-port-leak` (**强制读 + 执行 Pre-flight check + 套 trap, 这是第三次踩**), `progress/2026-06-02-round-113.md` (R113 hand-off invariants), `docs/dogfood/2026-06-02-round-113-frontend-p0.md` (F7-F11 catalogue + R114 fix mandate). 截图证据在 `docs/dogfood/r112-screenshots/01-04`.
+2. **环境 + cleanup-trap**: `chronos quickstart` (seed) + `chronos web --port 8000` (background) + `cd frontend && npm run dev --port 5173` (background). **必加 `trap 'kill_dev_servers' EXIT` 在 cron prompt** — `chronos-web-cron-port-leak` skill 第三次触发了 (R109/R112/R113), skill 的"Round-end discipline"段早就写了 trap snippet, **问题是过去 3 轮 cron slot 都没读 skill**. R114 fix mandate 改向: **不 patch skill 内容**, 而是 (a) cron prompt 顶部明确 "**必读 + 必执行** `chronos-web-cron-port-leak` skill 的 Pre-flight check + trap snippet"; (b) skill 的 "When to use" 加一行 `MUST be loaded by ANY cron round whose prompt contains "chronos web" OR "npm run dev"`; (c) 给 chronos-agent 实装 PID-file (skill backlog 选项 1, ~30 LOC `chronos/cli/web.py` 改动) — 这个是真正的 long-term fix.
 3. **第一动作: 走完 6 个 R113 没覆盖的 surface, 各抓 ≥1 张截图存进 `docs/dogfood/r112-screenshots/`**:
    - **Compare/Diff** (`#/compare?left=<id>&right=<id>`) — runtime 验证 R112 F2 高度修, ReactFlow 双 pane 非空, 节点可见.
    - **Bookmarks** 页 — 检查空态 + ≥1 bookmark 时的渲染.
