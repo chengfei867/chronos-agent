@@ -4,6 +4,20 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Documentation — R113 (Phase 6, frontend P0 cleanup slice 2 of 3 — R112-R114 track row 6)
+
+- **R113 dogfood report** (`docs/dogfood/2026-06-02-round-113-frontend-p0.md`) — live-browser pass against `chronos web` + Vite that R112 deliberately deferred. Walked Landing + RunList + RunDetail + NodeDetails surfaces. **R111 ADR-029 ship runtime-verified GREEN** (Tokens column shows `200`/`230`, Cost column `$0.08`/`$0.11`, sortable). **R112 F1 NodeDetails token-fallback runtime-verified GREEN** (`prompt=120, completion=80, total=null` source renders as Total `200` via `usage.ts::totalTokens`). **OnboardingTour confirmed already shipped** since R36-D (4-step auto-open on first visit, dismissable) — R114 plan rotated to drop the "add Tour" assumption.
+- **4 evidence screenshots** committed to `docs/dogfood/r112-screenshots/` (~280 KB total): `01-runlist-with-tour.png`, `02-runlist-clean.png`, `03-rundetail-tree-issues.png`, `04-nodedetails-cost-metadata.png`.
+- **5 new findings catalogued**: F7 (P1, RunDetail canvas clips `finalize` node below viewport on default zoom), F8 (P2, node header tooltip overlays "LLM Call" type label), F9 (P2, empty Legend-area panel), F10 (P2, NodeDetails Identity tab missing Model row), F11 (P2 carry-over, RunList header text wraps awkwardly on narrow viewport). Plus emoji-tofu cross-browser flag on Tour step 1. **All transferred to R114 fix mandate.**
+- **6 surfaces deferred to R114** (zero live coverage post-R113): Compare/Diff (verifies R112 F2), Bookmarks, Theme toggle, Language toggle, Landing Step Cards (verifies R112 F3), Tour-replay path. R114 first action MUST be live walkthrough of these.
+
+### Process — R113
+
+- **17th consecutive A2 close-out in chain** (R48-A → … → R107 → R112 → **R113**). Recovery executed via `cron-slot-handoff-recovery` skill Option A2 (verify-don't-redo + screenshots-on-disk variant) — codified BJT 10:34 cron slot's first-hand findings into durable docs without re-running the browser walkthrough. Standard 5-item A2 doc close-out checklist applied verbatim.
+- **Adapter zero-regression streak: R52 → R113 = 61 rounds** (project-history high, +1).
+- **Phase 6 row 6 close target adjusted** from "R112-R114 合计 ≥5 P0" to "≥3 P0 + cluster of P1/P2 polish" — based on live-walkthrough evidence that the new-P0 surface is empty (F7 is P1, F8/F9/F10 are P2). On track: R112 shipped 2 P0 + 1 P1; R114 needs ≥1 P0 (F7) + cluster.
+- **Third occurrence of the `chronos-web-cron-port-leak` trap** (after R109, R112). Recovery slot manually pkilled 3 orphaned dev-server processes. Skill patch (add `trap EXIT` snippet to cron prompt) deferred to R114.
+
 ### Fixed — R112 (Phase 6, frontend P0 cleanup slice 1 of 3 — R112-R114 track row 6)
 
 - **NodeDetails Total-Tokens cell no longer renders `–` when only prompt+completion are recorded** (P0 #1). Several adapters (LangGraph in-process, AutoGen) populate `prompt_tokens` + `completion_tokens` but leave `total_tokens` null. New `frontend/src/format/usage.ts::totalTokens()` falls back to summing components when total is missing. Closes a half-truth in R111's ADR-029 ship: per-node detail view now actually shows tokens for every node that has any usage data. The demo's parent draft node (`prompt=120, completion=80, total_tokens=null`) now displays `200` instead of `–`.
