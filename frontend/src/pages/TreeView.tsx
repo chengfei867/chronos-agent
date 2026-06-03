@@ -166,6 +166,20 @@ function InnerTree({
     setSelectedId(id);
   }, [playback.index, orderedNodes, baseNodes, rf]);
 
+  // R114 F7 fix: ReactFlow's `fitView` prop only fits on the very first
+  // render. When the node count changes (e.g. toggling "Show full fork tree"
+  // adds descendants, or initial layout completes after a microtask), the
+  // last node can sit below the visible viewport — user has to click Fit.
+  // Re-fit whenever the node count changes, with a tiny defer so React Flow's
+  // internal layout pass has settled.
+  useEffect(() => {
+    if (baseNodes.length === 0) return;
+    const handle = window.setTimeout(() => {
+      rf.fitView({ padding: 0.15, duration: 200, minZoom: 0.5 });
+    }, 50);
+    return () => window.clearTimeout(handle);
+  }, [baseNodes.length, rf]);
+
   const onNodeClick = useCallback(
     (_evt: React.MouseEvent, node: RFNode) => {
       if (node.type === "placeholder") return;
@@ -428,12 +442,19 @@ function InnerTree({
                 <Legend showLanes={includeDescendants && lanes.length > 1} />
               </Panel>
               <Controls showInteractive={false} />
-              <MiniMap
-                pannable
-                zoomable
-                nodeColor="#58a6ff"
-                maskColor="rgba(13,17,23,0.7)"
-              />
+              {/* R114 F9 fix: MiniMap on a 3-node graph renders as an empty
+                  dark rectangle (the per-node dots are too small to read at
+                  minimap scale and the dark mask dominates) — looks like a
+                  broken placeholder slot below the Legend. Only show the
+                  MiniMap when it actually adds value (≥6 nodes). */}
+              {rfNodes.length >= 6 && (
+                <MiniMap
+                  pannable
+                  zoomable
+                  nodeColor="#58a6ff"
+                  maskColor="rgba(13,17,23,0.7)"
+                />
+              )}
             </ReactFlow>
           )}
         </Col>

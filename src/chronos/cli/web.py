@@ -47,6 +47,7 @@ Design notes
 from __future__ import annotations
 
 import contextlib
+import os
 import threading
 import webbrowser
 from collections.abc import Callable
@@ -63,6 +64,60 @@ from chronos.store.sqlite import SqliteStore
 # without monkey-patching the uvicorn module at import time.
 _UvicornRunFn = Callable[..., None]
 _BrowserOpenFn = Callable[[str], bool]
+
+
+def _pid_file_path(host: str, port: int) -> Path:
+    """Return the PID-file path for a given (host, port) chronos web instance.
+
+    Lives under ``$XDG_RUNTIME_DIR`` when present (the right place for
+    ephemeral per-user runtime state on Linux), else ``/tmp``. Filename
+    encodes host+port so two instances on different ports don't trample
+    each other's PID files.
+    """
+    base = os.environ.get("XDG_RUNTIME_DIR") or "/tmp"
+    safe_host = host.replace(":", "_").replace("/", "_")
+    return Path(base) / f"chronos-web-{safe_host}-{port}.pid"
+
+
+def _reap_stale_pid_file(pid_file: Path, console: Console) -> None:
+    """If a PID-file exists and the process it names is dead, remove the file.
+
+    R114 long-term port-leak mitigation (per chronos-web-cron-port-leak skill).
+    Past failure mode: a previous ``chronos web`` got SIGKILLed, leaving a
+    socket on :8765 with no obvious owner; the next cron round saw "Address
+    in use" and either failed silently or chose a different port (cascading
+    confusion). With a PID-file we can detect "did our predecessor die
+    cleanly?" and emit an actionable message.
+
+    Returns silently if no PID file or if the process IS still alive (i.e.
+    a real conflict — the caller will surface that as a bind failure).
+    """
+    if not pid_file.exists():
+        return
+    try:
+        old_pid = int(pid_file.read_text().strip())
+    except (OSError, ValueError):
+        # Corrupt PID file — nuke it and move on.
+        with contextlib.suppress(OSError):
+            pid_file.unlink()
+        return
+    # signal 0 = "is this PID alive?" — raises ProcessLookupError if dead,
+    # PermissionError if alive but owned by another user. Either way the
+    # PID exists, so we leave the file untouched and let uvicorn's bind
+    # error surface naturally.
+    try:
+        os.kill(old_pid, 0)
+    except ProcessLookupError:
+        # Stale: process is gone, file is orphaned. Clean up.
+        console.print(
+            f"[yellow]note:[/] removing stale PID file {pid_file} "
+            f"(pid {old_pid} no longer alive)."
+        )
+        with contextlib.suppress(OSError):
+            pid_file.unlink()
+    except PermissionError:
+        # Alive, owned by someone else — leave alone.
+        pass
 
 
 def _default_run_server(**kwargs: Any) -> None:
@@ -129,6 +184,17 @@ def web_command(
     resolved_db = _resolve_db_path(db)
     store = open_store_fn(db)
 
+    # R114 port-leak mitigation: clear any orphaned PID file from a
+    # previously-killed sibling, then drop our own. Best-effort — if the
+    # filesystem is read-only or anything else goes wrong, we still serve.
+    pid_file = _pid_file_path(host, port)
+    _reap_stale_pid_file(pid_file, console)
+    try:
+        pid_file.write_text(f"{os.getpid()}\n")
+    except OSError as exc:  # pragma: no cover — defensive
+        console.print(f"[dim]note: could not write PID file {pid_file}: {exc}[/]")
+        pid_file = None  # type: ignore[assignment]
+
     url = f"http://{host}:{port}"
     console.print()
     console.print(f"[bold green]chronos web[/] — serving {resolved_db}")
@@ -176,3 +242,6 @@ def web_command(
     finally:
         with contextlib.suppress(Exception):
             store.close()
+        if pid_file is not None:
+            with contextlib.suppress(OSError):
+                pid_file.unlink()

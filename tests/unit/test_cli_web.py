@@ -281,3 +281,103 @@ class TestWebCLI:
         assert result.exit_code == 0, result.output
         assert spy_run.called
         assert spy_run.kwargs["port"] == 18765
+
+
+# ---------------------------------------------------------------------------
+# R114: PID-file lifecycle (port-leak mitigation, per
+# chronos-web-cron-port-leak skill).
+# ---------------------------------------------------------------------------
+
+
+class TestPidFile:
+    """``chronos web`` writes a PID file, cleans it up on exit, reaps stale ones."""
+
+    def test_pid_file_path_uses_xdg_runtime_dir(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When ``$XDG_RUNTIME_DIR`` is set, PID files go there."""
+        from chronos.cli.web import _pid_file_path
+
+        monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
+        path = _pid_file_path("127.0.0.1", 8765)
+        assert path == tmp_path / "chronos-web-127.0.0.1-8765.pid"
+
+    def test_pid_file_path_falls_back_to_tmp(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Without ``$XDG_RUNTIME_DIR`` we fall back to ``/tmp``."""
+        from chronos.cli.web import _pid_file_path
+
+        monkeypatch.delenv("XDG_RUNTIME_DIR", raising=False)
+        path = _pid_file_path("127.0.0.1", 8765)
+        assert str(path).startswith("/tmp/")
+        assert path.name == "chronos-web-127.0.0.1-8765.pid"
+
+    def test_pid_file_written_and_cleaned_up(
+        self, empty_db: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """``web_command`` writes the PID file before serving and removes it after."""
+        import os
+
+        from rich.console import Console
+
+        from chronos.cli._common import _open_store
+        from chronos.cli.web import _pid_file_path
+
+        monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
+        observed_pid = {}
+
+        def _spy_run(**kwargs: Any) -> None:
+            # While "uvicorn" is "running" the PID file should exist with our PID.
+            pf = _pid_file_path("127.0.0.1", 18099)
+            observed_pid["existed_during_run"] = pf.exists()
+            if pf.exists():
+                observed_pid["content"] = pf.read_text().strip()
+
+        web_command(
+            host="127.0.0.1",
+            port=18099,
+            db=empty_db,
+            no_browser=True,
+            open_store_fn=_open_store,
+            console=Console(),
+            run_server_fn=_spy_run,
+            open_browser_fn=_SpyBrowser(),
+        )
+
+        assert observed_pid["existed_during_run"] is True
+        assert observed_pid["content"] == str(os.getpid())
+        # After web_command returns, the file must have been cleaned up.
+        assert not _pid_file_path("127.0.0.1", 18099).exists()
+
+    def test_stale_pid_file_is_reaped(
+        self, empty_db: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A PID file naming a dead process is removed before serving."""
+        from rich.console import Console
+
+        from chronos.cli._common import _open_store
+        from chronos.cli.web import _pid_file_path
+
+        monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
+        # PID 999999 is essentially never a live process on a CI host.
+        stale_pid = 999_999
+        pid_file = _pid_file_path("127.0.0.1", 18100)
+        pid_file.write_text(f"{stale_pid}\n")
+
+        spy_run = _SpyRunner()
+        web_command(
+            host="127.0.0.1",
+            port=18100,
+            db=empty_db,
+            no_browser=True,
+            open_store_fn=_open_store,
+            console=Console(),
+            run_server_fn=spy_run,
+            open_browser_fn=_SpyBrowser(),
+        )
+
+        # Stale entry was reaped, our run wrote+removed its own, so end state
+        # must be: file does not exist (we cleaned up our own at exit).
+        assert not pid_file.exists()
+        assert spy_run.called  # serve still proceeded

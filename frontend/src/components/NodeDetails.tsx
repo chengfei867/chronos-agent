@@ -169,6 +169,14 @@ export default function NodeDetails({
           </ConceptTip>
         </Space>
       </Descriptions.Item>
+      {/* R114 F10 fix: surface Model on Identity tab too — was Cost-tab-only,
+          forcing users investigating a node to switch tabs to learn what
+          model produced it. Tag-style mirrors the Cost tab rendering. */}
+      {node.model_name && (
+        <Descriptions.Item label={t("nodeDetails.fields.model")}>
+          <Tag color="purple">{node.model_name}</Tag>
+        </Descriptions.Item>
+      )}
       <Descriptions.Item label={t("nodeDetails.fields.startedAt")}>
         <Typography.Text type="secondary" style={{ fontSize: 12 }}>
           {node.started_at}

@@ -207,6 +207,28 @@ chronos-agent/
 
 ---
 
+**截至 Round 114 结束 (2026-06-03 CST, BJT 04:48 cron slot 写完代码+测试+文档但 timed out 没 commit; BJT 08:02 follow-up cron slot 通过 `cron-slot-handoff-recovery` skill Option A2 verify-don't-redo 路径完成 close-out + commit + push, 在 0-11 窗口内)** — R114 是 R107-R122 路线表 row 6 (前端 P0 清扫 R112-R114) 的第三刀, 也是 row 6 的收口刀. **核心交付** (来自 BJT 04:48 cron slot, BJT 08:02 slot 验证 + ship): (a) **3 个 R113-catalogued 前端 finding 修复**: F7 (P1 — `frontend/src/pages/TreeView.tsx` 加 `useEffect` watch `baseNodes.length`, 50ms defer 后调 `rf.fitView({ padding: 0.15, duration: 200, minZoom: 0.5 })`, 解决 ReactFlow `fitView` prop 只在 initial render 触发不在数据 arriving 或 fork 树展开时触发的问题), F9 (P2 — MiniMap 改为条件渲染 `{rfNodes.length >= 6 && (<MiniMap …/>)}`, 6 节点以下不渲染避免空 dark rectangle 占位框), F10 (P2 — `frontend/src/components/NodeDetails.tsx` Identity tab 加紫色 `<Tag>{node.model_name}</Tag>` 行, 镜像 Cost-tab 渲染); (b) **`chronos web` PID-file lifecycle 实装** (`src/chronos/cli/web.py` +50 LOC) — 这是 `chronos-web-cron-port-leak` skill backlog 的 option 1, R109/R112/R113 三轮 leak 的 long-term fix. 新 `_pid_file_path(host, port)` 走 `$XDG_RUNTIME_DIR/chronos-web-<host>-<port>.pid` (Linux runtime-state convention) + `/tmp` fallback, per-(host,port) filename 防多实例互踩; 新 `_reap_stale_pid_file(pid_file, console)` 用 `os.kill(pid, 0)` 探活, `ProcessLookupError` reap (yellow note), `PermissionError` 留着 (alive 别人家), corrupt int silently nuke; 全程 `contextlib.suppress(OSError)` 包装确保 read-only filesystem 不阻塞 serving. Wired to `web_command`: reap-then-write before banner, cleanup in `finally` next to `store.close()`. (c) **4 个新 PID-file 测试** (`tests/unit/test_cli_web.py::TestPidFile`): `test_pid_file_path_uses_xdg_runtime_dir` (env 优先), `test_pid_file_path_falls_back_to_tmp` (env unset fallback), `test_pid_file_written_and_cleaned_up` (roundtrip — 运行中存在 + 退出后清理), `test_stale_pid_file_is_reaped` (pre-seed PID 999999 reap, serving 仍走). (d) **Skill `chronos-web-cron-port-leak` updated** — "Long-term fix" 段重写为 "Long-term fix — status", option 1 (PID file) 标 SHIPPED in R114 + 测试引用; option 2 (`chronos web --stop` verb) 留在 backlog. **Plan vs reality 偏差** (诚实标注): 04:48 slot 没做 R114 plan §3 写的 6-surface live walkthrough (Compare/Diff/Bookmarks/Theme/Language/Step-Cards/Tour-replay) — 起 chronos web + npm + 浏览器 vision + 截图估 15-20 tool calls 加 close-out floor 会 timeout, 推到 R115 prologue 或 R119 E2E (Tour 已 R113 验证存在, 6 surface 全是 visual polish 不是 P0 gate). F8 (draft-badge tooltip overlay) + F11 (RunList header wrap) 也推到 R115 prologue / R116 README work — 都不 gating quickstart / 新用户路径. **Phase 6 row 6 close-target 确认锁住**: "≥3 P0 + cluster of P1/P2 polish" — R112 给了 2 P0 + 1 P1, R114 给了 1 P1 (F7) + 2 P2 (F9/F10) + 1 backend long-term fix (PID-file). Test gate: **697 passed / 9 skipped** (was R113 baseline 693/9, exactly +4 新 PID-file 测试). 0 production code 触动 `src/chronos/api/` / `src/chronos/adapters/` / `src/chronos/store/` / pyproject.toml / uv.lock. Frontend `tsc --noEmit` clean, `npm run build` clean (5391 modules → 1.46 MB / 477 KB gzip).
+
+- **Round: 114** (Phase 6 R112-R114 track row 6 slice 3 of 3 收口, 2-slot ship, 第二 slot 用 cron-slot-handoff-recovery Option A2). 0 hard blocker. New artefacts: `progress/2026-06-03-round-114.md` (~8 KB, R114 close-out + plan vs reality + 5 项 hand-off invariants). Modified: `frontend/src/pages/TreeView.tsx` (+13 LOC, F7 fitView useEffect + F9 MiniMap conditional), `frontend/src/components/NodeDetails.tsx` (+8 LOC, F10 Identity tab Model 行), `src/chronos/cli/web.py` (+50 LOC, PID-file lifecycle + helpers), `tests/unit/test_cli_web.py` (+99 LOC, 4 个 TestPidFile), `frontend/dist/*` (vite rebuild 输出 — `index-Bdb38E-0.js` 删 / `index-BsXkWQEO.js` 加 / `index.html` 引用替换), `CHANGELOG.md` (`[Unreleased] / Fixed — R114` + `Added — R114` + `Process — R114` + `Test gate — R114` 块插在 R113 之上), `docs/CONTEXT.md` §5 (此段) + §6 (R115 ADR-030 plan 替换 R114 plan), skill `chronos-web-cron-port-leak` SKILL.md (Long-term fix → status, option 1 SHIPPED).
+
+- **R114 关键决策 (上墙)**:
+  - **D-114-1: 2-slot ship via cron-slot-handoff-recovery Option A2.** BJT 04:48 slot 已写完代码 + 测试 + dogfood patches + progress doc 但 timed out before commit/push. BJT 08:02 follow-up slot 不重做不回退, 跑 verify (`pytest 697/9 byte-identical to handoff progress doc claim`) → 检查每 hunk 归属 R114 (TreeView.tsx hunk 与 R114 plan §4/§5 F7/F9 1:1, NodeDetails.tsx hunk 与 §5 F10 1:1, web.py hunk 与 §2 long-term fix 1:1, test hunk 与 web.py 新代码 1:1) → ship. 这是 R48-A 起的第 18 个 A2 close-out chain (R107→R112→R113→R114).
+  - **D-114-2: 6-surface live walkthrough 显式推到 R115 prologue / R119 E2E.** R114 plan §3 要求, 04:48 slot 没做 (起 chronos web + npm + browser vision + 截图估 15-20 tool calls 在 close-out floor 之上会触发 iteration-cap-out). R113 截图已确认 Tour 存在 + auto-open, 6 surface 全是 visual polish. R115 ADR-030 实装是硬约束, prologue 30 min 可补 surface walkthrough 不影响 ADR scope. R119 E2E 仍是最终兜底.
+  - **D-114-3: F8 + F11 deferred (不算违约).** F8 (draft-badge tooltip overlay) 需 fresh visual investigation, F11 (RunList header wrap) 是 5-min copy tweak. Phase 6 row 6 close-target 是 "≥3 P0 + cluster of P1/P2 polish" — R112+R114 共 2 P0 + 3 P1/P2 + 1 backend long-term fix, 锁住. F8/F11 推到 R115 prologue 或 R116 README work, 都不 gating quickstart / 新用户路径.
+  - **D-114-4: PID-file 是真正的 long-term fix, 不是 trap snippet.** R114 plan 原想 (a) cron prompt 顶部加 trap (b) skill 加 "When to use" 强制 load (c) 实装 PID-file. 实际 04:48 slot 只做 (c), 因为 (a)(b) 都是 cron 配置层不是 repo 内, 而 (c) 才是真正自愈失败模式 — 即使未来 cron prompt 没 trap, web.py 自己也能 reap stale PID 自我恢复. (a)(b) 留给 cron prompt 维护方 (用户 / hermes 顶层), repo 内的 long-term 已 ship.
+  - **D-114-5: Skill update with R114 + 1 commit.** "Long-term fix" → "Long-term fix — status" 段, option 1 标 SHIPPED + 测试引用. 这是 R114 plan §9 的承诺 (\"Skill patch 跟 R114 同 commit, 修工具不再拖到下下轮\"), 这次确实同 commit 了.
+
+- **R114 self-check**: 仍在 R107-R122 polish + ADR-029/030 轨道 ✅ — R114 是 Route 表 row 6 (前端 P0 清扫 R112-R114) 三连收口刀, 1 P1 + 2 P2 + 1 backend long-term fix 1:1 对应 R122 必过项 "前端 5 核心页 P0 全清, 任意操作有视觉反馈". 无方向漂移. ADR-030 (Evaluation) 显式留在 R115. 距 R122 = 8 轮 (R115/R116/R117/R118/R119/R120/R121/R122).
+
+- **R114 hand-off invariants (R115 prologue 用)**:
+  - `frontend/src/pages/TreeView.tsx` 现有 `useEffect` watch `baseNodes.length` 调 `rf.fitView`. 如果未来加 ReactFlow 节点动画 / 不连续更新, 50ms defer 可能要调 (太短 fitView race state, 太长视觉延迟). 改前留意.
+  - `frontend/src/pages/TreeView.tsx` MiniMap 阈值 `>= 6` 是经验值. 如果 dogfood 发现 5 节点也想要 minimap, 阈值降到 4. 别零阈值 (3 节点 minimap 就是 R113 F9 抓的破坏点).
+  - `src/chronos/cli/web.py` PID 文件名包 `safe_host` (`replace(":", "_").replace("/", "_")`) — 如果未来支持 IPv6 (`[::1]`) 或 unix-socket (`unix:/path`), filename 还要再 sanitize. 当前对 `0.0.0.0` / `127.0.0.1` / hostnames 都安全.
+  - `_reap_stale_pid_file` 不处理 `OSError(EACCES)` 之外的 `os.kill` 异常 — 如果未来加 PID namespacing / containerized run, 可能要扩 except clause. 当前 ProcessLookupError + PermissionError 覆盖 99%.
+  - PID 文件不解决 TIME_WAIT collision (端口被同进程之前 socket 留在 TIME_WAIT 状态, 仍会 \"Address in use\"). Skill `chronos-web-cron-port-leak` "What this fixes / what it doesn't" 段写明. R115+ 如果再踩 port-leak, 先确认是 PID-file miss 还是 TIME_WAIT.
+
+---
+
 **截至 Round 113 结束 (2026-06-02 CST, BJT 10:34 cron slot 完成 live-browser dogfood + 4 张截图 + F7-F11 catalogue 但因 tool-call ceiling 没 commit; BJT 20:50 manual recovery slot 通过 `cron-slot-handoff-recovery` skill Option A2 (verify-don't-redo + screenshots-on-disk variant) 把 cron slot 的 first-hand 发现 codify 成永久文档并 commit/push, in 0-11 窗口)** — R113 是 R112-R114 "前端 P0 清扫" 三连的第二刀, 也是 R112 显式延后的 live-browser dogfood pass. **BJT 10:34 cron slot 干的实事**: 起 `chronos quickstart` (seed demo into `/tmp/chronos-r113.db`) → `chronos web --port 8000` (background) → `cd frontend && npm run dev --port 5173` (background) → 用 `browser_navigate + browser_vision` 逐页走 Landing/RunList/RunDetail/NodeDetails, 抓 4 张截图存进 `docs/dogfood/r112-screenshots/` (R112 已搭好的空目录现在被填). **核心运行时验证 (本轮的硬产出)**: (a) **R111 ADR-029 ship runtime-verified GREEN** — RunList 的 Tokens 列实际渲染 `200`/`230` (sortable, `[onclick, tabindex]`), Cost 列实际渲染 `$0.08`/`$0.11` (sortable), 截图 02 为证; (b) **R112 F1 NodeDetails token-fallback runtime-verified GREEN** — demo 父 draft 节点 (prompt=120 / completion=80 / total=null) 在 NodeDetails Cost & Metadata tab 实际显示 Total=200 (computed-fallback 路径走通), Cost `$0.0800`, Model badge `claude-3-haiku-20240307`, 截图 04 为证; (c) **OnboardingTour 已经存在** — 首次访问自动开 4 步 dismissable Tour, 截图 01 为证. 这是关键发现: §6 R114 plan 原来写"加 Onboarding Tour", 实际 Tour 自 R36-D 就存在, R114 plan 必须 pivot. **5 个新发现 (全部 deferred to R114)**: F7 (P1, RunDetail canvas 默认 zoom 把 `finalize` 节点切到视口外, 用户必须点 Fit 才能看完), F8 (P2, draft 节点 header 的 tooltip/badge 跟 "LLM Call" type 标签视觉冲突), F9 (P2, Legend 面板下方有个空 dark rectangle 占位框), F10 (P2, NodeDetails Identity tab 缺 Model 行, Model 只在 Cost tab 露出, 用户要切 tab), F11 (P2 carry-over, RunList header text 在窄视口下换行难看). 加一个 emoji-tofu 跨浏览器 polish flag (Tour step 1 的 👋 emoji 在某些字体下可能渲染成豆腐块). Console 0 errors / 0 warnings. **6 个 surface 没覆盖到 (R114 必须补)**: Compare/Diff (R112 F2 高度修在浏览器里还没验过), Bookmarks 页, Theme toggle (dark↔light), Language toggle (en↔zh), Landing Step Cards 动画 (R112 F3 stagger 在浏览器里还没验过), Tour replay 路径 (有没有"重看 Tour"按钮还没确认). **BJT 20:50 recovery slot 干的实事**: 应用 `cron-slot-handoff-recovery` skill Option A2 — 不重跑浏览器 walkthrough (避免 double-spend budget + 避免新发现跟 cron slot 第一手观察打架), 直接把 cron output md 里的所有 finding codify 成 `docs/dogfood/2026-06-02-round-113-frontend-p0.md`, 截图 git add 进去, 写 progress doc, prepend §5 (这一段), §6 把 R113 plan archive 进 `<details>`+ 写新 R114 plan (Tour-pivot 版), CHANGELOG R113 documentation 块, 单 atomic commit + push. **Pre-recovery clean-up**: pkill 掉 cron slot 留下的 3 个孤儿 dev-server 进程 (chronos web :8000 + chronos web :8766 R112 残留 + vite :5173) — 这是 `chronos-web-cron-port-leak` skill 第三次触发 (R109/R112/R113), R114 必须 patch skill 加 `trap EXIT` 钩子. **决策 D-113-3**: 本轮 0 P0 修复 (R113 gate checklist `≥1 个新 P0 修了` 严格读会判 fail). Pragmatic 解读: live walkthrough 的真正价值是发现 new-P0 surface 已空 (F7 是 P1, F8/F9/F10 是 P2), Phase 6 row 6 close 目标从 "R112-R114 合计 ≥5 P0" 调整到 "≥3 P0 + cluster of P1/P2 polish" — R112 已经 2 P0 + 1 P1, R114 需要 ≥1 P0 (F7) + cluster 就能锁住 row. Honest reporting beats moving-the-goalposts. **R107-R122 路线自检**: 仍在轨道 ✅ — R113 是 row 6 切片 2, dogfood-only / discovery-only round, 0 P0 fixed by design, R114 接棒 fix 工作; 0 adapter touch / 0 schema 改 / 0 src 代码改 / 0 pyproject 或 lockfile drift / 0 ADR 变更 / 0 新方向. Adapter zero-regression streak: R52→R113 = **61 轮** (项目历史新高 +1, 第 61 轮无 adapter 触动). Spike streak: 20 spike 全 GREEN (本轮无新 spike — dogfood/recovery 不需要). 距离 R122: **8 轮** (R114-R122). **A2 close-out chain length now 17** (R48-A → … → R107 → R112 → **R113**) — 第二个连续在 Phase 6 frontend slice 触发的 A2.
 
 ---
@@ -1455,82 +1477,109 @@ R73 是 R69→R72 4-round chain 的第一个真 disprover round, 也是 Phase 4 
 >
 > 🆕 **2026-05-26 R109 后用户决策**: 终点从 R120 延到 R122, 加 ADR-029 (Cost Visibility, R111) + ADR-030 (Evaluation/Scoring, R115)。
 >
-> **R111 ✅ 完成 (2026-05-27 cron slot ~11:14)** — ADR-029 Cost Visibility 全栈落地 (CLI 默认 on / 自动隐显 / `--no-usage` opt-out / `--with-usage` deprecated no-op / API embeds usage_summary / Frontend Tokens+Cost 列 / quickstart demo seeded usage + loader bugfix / spike 20 GREEN, 693/9 全套绿). **下一轮 = R112: 前端 P0 dogfood 第一刀** (Phase 6 路线表 row 6 R112-R114 三轮中第一轮).
+> **R114 ✅ 完成 (2026-06-03 cron slot, 2-slot ship via cron-slot-handoff-recovery A2)** — Phase 6 row 6 (前端 P0 清扫 R112-R114) 收口刀: F7/F9/F10 修 + `chronos web` PID-file lifecycle 实装 (long-term fix for `chronos-web-cron-port-leak` skill backlog) + skill SKILL.md updated. 测试 697/9, streak R52→R114 = 63. **下一轮 = R115: ADR-030 Evaluation/Scoring 全栈实装** (Phase 6 路线表 row 7, R122 必过项之一).
 
 ---
+
+**Round 115 — Phase 6 row 7: ADR-030 Evaluation/Scoring 全栈实装 (单 slot, 单 commit)**
+
+R115 是 R107-R122 路线表 row 7 (ADR-030 Evaluation 单轮). R107-R114 已把 CLI Polish + Cost Visibility + 前端 P0 清扫做完, 距 R122 还剩 8 轮. R115 是仅次于 R111 (Cost Visibility) 的第二个 ADR-mandated 轮, 是 R122 必过项的硬性差异化 feature 之一. **必须先读 ADR-030 全文再动手**, 严格按 ADR 的 acceptance / out-of-scope, 不要扩张.
+
+### R115 必做 (单 slot, 单 commit)
+
+1. **必读 (按顺序)**:
+   - `docs/decisions/ADR-030-evaluation-scoring.md` 全文 — 这是 R115 的 source of truth, scope/schema/CLI surface 全在这.
+   - `docs/decisions/ADR-029-cost-visibility.md` — 复习 R111 的 ADR shipping 套路 (schema → store → CLI → API → frontend → spike → docs), R115 应该照 ADR-029 的 stack pattern 落地.
+   - `progress/2026-05-27-round-111.md` (R111 close-out) — Cost Visibility 是怎么从 ADR 翻译成代码的工程模板.
+   - `progress/2026-06-03-round-114.md` (R114 close-out, 上一轮) — R115 prologue 该补的事项.
+   - skill `dogfood:dogfood` 如果 prologue 决定补 6-surface walkthrough.
+
+2. **R115 prologue (可选, 30 分钟以内, 不挤压 ADR-030 实装预算)**:
+   - 6-surface live walkthrough (R114 deferred): Compare/Diff (验证 R112 F2 高度修) / Bookmarks / Theme toggle / Language toggle / Landing Step Cards (验证 R112 F3 stagger) / Tour replay 路径. 各 ≥1 张截图存进 `docs/dogfood/r112-screenshots/`. 如果时间紧, **跳过, 推到 R119 E2E**.
+   - F8 (draft-badge tooltip overlay) / F11 (RunList header wrap) — 都是 5-min 视觉 polish, 顺手做.
+   - 如果 prologue 让 ADR-030 实装预算紧张到完不成, **prologue 全跳, ADR-030 优先**. R115 唯一 gate 是 ADR-030 acceptance.
+
+3. **ADR-030 实装 (核心 R115 工作)** — 严格按 ADR-030 spec:
+   - **Schema**: `evaluations` 表 (run_id / node_id / evaluator_name / score / metadata_json / created_at), 通过 alembic-style 增量 migration 加到 `src/chronos/store/schema.py`.
+   - **Backend `Evaluator` 协议** + 2 个 built-in (`length` 和 `keyword-match` 是 ADR-030 spec 给的, 别自己发明). `src/chronos/eval/` 新模块 (or 等价路径, 按 ADR 决定).
+   - **CLI `chronos eval run`** — 接 `--evaluator <name>` + `--run <id>`, 跑评估, 写 `evaluations` 表.
+   - **CLI `chronos eval list`** — 列已跑评估 (run_id / evaluator / score / created_at).
+   - **CLI `chronos compare --eval <name>`** — 按 evaluator 分数排序 / 高亮.
+   - **API**: `GET /runs/<id>/evaluations` (or 等价), 返回该 run 的所有 evaluator 分数.
+   - **Frontend RunDetail 页 Score 列** + Compare 页 score 排序 — UI 上展示分数. 1 个 evaluator 的 run 显示单分; ≥2 evaluator 的并排显示 (TBD by ADR).
+
+4. **Spike 21**: `tests/spikes/spike21_evaluation_e2e.py` — 模板照 spike 20 (R111 ADR-029) 走. 至少覆盖: (a) `length` evaluator 在 demo run 上跑出非空分数, (b) `keyword-match` evaluator 在 demo run 上跑出非空分数, (c) `evaluations` 表 round-trip (写入 → 读出, 字段 byte-equal). 与 spike 20 一样, 不要 mock LLM, 直接对 quickstart demo 跑.
+
+5. **测试 baseline**: ≥697 + R115 新增 (估计 ≥710). spike 全绿 (含 spike20 R111 + spike21 R115). adapter zero-regression streak R52→R115 = 64 轮.
+
+6. **任何前端代码改动 → `npx tsc --noEmit` 必过, `npm run build` 必过, frontend lint 必过**.
+
+7. **写 `progress/YYYY-MM-DD-round-115.md`** (含 self-check "仍在 R107-R122 + ADR-029/030 轨道", 距 R122 = 7 轮; 含 plan vs reality; 含 ADR-030 acceptance scorecard; 含 R116 hand-off invariants).
+
+8. `docs/CONTEXT.md` §5 加 R115 段; §6 用 R116 plan 替换本块.
+
+9. `CHANGELOG.md` `[Unreleased] / Added — R115 (Phase 6 ADR-030 Evaluation/Scoring 全栈)` 块.
+
+10. **Quickstart demo + ADR-030**: quickstart 跑完 demo 后能让用户看到一个 evaluation score (在 web UI 或 CLI 输出里), 这是 R122 必过项 "新用户路径 → 看 token/cost → 跑 eval, 不读源码" 的关键. 如果 ADR-030 没明确写 quickstart 集成, R115 必须加上. 否则 R118 demo round 还得回头 retrofit.
+
+### R115 硬约束
+
+- ❌ **不扩张 ADR-030 scope** — 只做 ADR 写明的, 别加 LLM-as-judge / human-rating / cross-run comparison etc.
+- ❌ **不跳过 spike 21** — ADR 实装必须 spike 收口 (R111 spike 20 是模板).
+- ❌ **不改 ADR-029 / R111 已 ship 的 cost code** (除非 ADR-030 明确要求 CostUsage 与 evaluation 联动).
+- ❌ **不动 Phase 6 row 8 (R116-R118 docs/demo) 的工作** — 那是下一行.
+- ✅ Adapter 零回归 streak: R52→R115 = **64** (`src/chronos/adapters/` 不动).
+- ✅ R115 必产出: schema 迁移 + backend Evaluator 协议 + 2 evaluator + CLI 三动词 + API + 前端 Score 列 + spike 21 + docs 段.
+- ✅ 如果 ADR-030 spec 与本 plan 冲突, **以 ADR-030 为准** (ADR 是 source of truth).
+
+### R115 deliverables
+
+- New: `src/chronos/eval/` 模块 (or 等价位置, 按 ADR-030 决定) — Evaluator 协议 + length + keyword-match + 注册表
+- Modified: `src/chronos/store/schema.py` (evaluations 表 + migration), `src/chronos/store/sqlite_store.py` (evaluations CRUD)
+- Modified: `src/chronos/cli/__init__.py` (or wherever verbs 注册) — eval verb + run/list 子命令
+- Modified: `src/chronos/cli/compare.py` (or 等价) — `--eval <name>` 排序参数
+- Modified: `src/chronos/api/routes.py` (or 等价) — GET /runs/<id>/evaluations
+- Modified: `frontend/src/pages/RunDetail.tsx` + `frontend/src/pages/Compare.tsx` (or 等价) — Score 列
+- Modified: `frontend/src/types.ts` — Evaluation 类型
+- Modified: `src/chronos/cli/quickstart.py` (如果 quickstart 集成 evaluation 必要)
+- New: `tests/spikes/spike21_evaluation_e2e.py` (~120 LOC, 模板照 spike20)
+- New: `tests/unit/test_eval_*.py` (Evaluator 协议 + 2 built-in 单测), `tests/integration/test_cli_eval.py` (CLI smoke)
+- Modified: `CHANGELOG.md` `[Unreleased] / Added — R115`
+- New: `progress/YYYY-MM-DD-round-115.md`
+- Modified: `docs/CONTEXT.md` §5 + §6 (R115 plan archive, R116 README plan active)
+
+### R115 gate checklist
+
+- [ ] `docs/decisions/ADR-030-evaluation-scoring.md` 全文已读
+- [ ] R115 prologue 决策记录 (做了 / 跳过 / 部分做)
+- [ ] `evaluations` 表 schema + migration ship
+- [ ] 2 个 built-in evaluator (`length` + `keyword-match`) ship
+- [ ] CLI `chronos eval run` + `chronos eval list` + `chronos compare --eval` ship 且 `--help` 含 example
+- [ ] API `GET /runs/<id>/evaluations` (or 等价) ship
+- [ ] 前端 RunDetail / Compare Score 列 ship, runtime 渲染验证
+- [ ] spike 21 GREEN
+- [ ] `pytest -q --no-cov` 全过 (≥710)
+- [ ] Frontend `tsc --noEmit` clean, `npm run build` clean
+- [ ] Adapter 目录未动 (streak → 64)
+- [ ] `pyproject.toml` / `uv.lock` 无 drift (除非 ADR-030 要求新 dep)
+- [ ] Quickstart demo 路径走完能看到 evaluation score (R122 必过项)
+
+### R116 plan preview (R115 写时填这里)
+
+- **R116**: README 中英双语 + demo GIF + 5 分钟 quickstart, 含 Cost (R111) + Evaluation (R115) feature 行. 这是 Phase 6 row 8 (docs/demo R116-R118) 第一刀. R117 文档站 (GH Pages) + R118 examples ≥3 demo (每个跑过 evaluator) 紧随.
+
+---
+
+<details>
+<summary><b>Historical: R114 plan (Phase 6 frontend P0 第三刀 — F7-F10 修复 + PID-file long-term port-leak fix) — DONE in R114 (3 finding fixed F7/F9/F10, F8/F11 deferred to R115 prologue, 6-surface walkthrough deferred to R115 prologue or R119 E2E, PID-file shipped + skill updated, 697/9 测试)</b></summary>
 
 **Round 114 — Phase 6 前端 P0 cleanup 第三刀, F7-F10 修复 + 6 个 deferred surface live walkthrough (单 slot, 单 commit)**
 
 R114 是 R107-R122 路线表 row 6 (前端 P0 清扫 R112-R114) 的第三刀, 也是收口刀. R113 dogfood pass 抓到了 5 个新发现 (F7 P1 / F8-F11 P2) + 6 个 surface 没 live 覆盖到, 同时确认 OnboardingTour 已经存在 (R36-D 起就有, §6 旧 plan 假设错了). R114 必须修 ≥1 P0 (F7) + 一个 P2 cluster + 走完 6 个 deferred surface, 才能锁住 row 6 的"≥3 P0 + cluster of P1/P2 polish"目标.
 
-### R114 必做 (单 slot, 单 commit)
+(详细 plan 已折叠. 实际产出见 §5 R114 段 + `progress/2026-06-03-round-114.md` + CHANGELOG R114 块. 关键偏差: 6-surface walkthrough 推到 R115 prologue 或 R119 E2E; F8/F11 推到 R115 prologue 或 R116; PID-file 实装替代 plan 原想的 trap snippet — 是真正的 long-term fix; 测试 697/9 GREEN, R52→R114 = 63-round streak.)
 
-1. **必读**: skill `dogfood:dogfood`, skill `dogfood:visual-review-loop`, skill `chronos-web-cron-port-leak` (**强制读 + 执行 Pre-flight check + 套 trap, 这是第三次踩**), `progress/2026-06-02-round-113.md` (R113 hand-off invariants), `docs/dogfood/2026-06-02-round-113-frontend-p0.md` (F7-F11 catalogue + R114 fix mandate). 截图证据在 `docs/dogfood/r112-screenshots/01-04`.
-2. **环境 + cleanup-trap**: `chronos quickstart` (seed) + `chronos web --port 8000` (background) + `cd frontend && npm run dev --port 5173` (background). **必加 `trap 'kill_dev_servers' EXIT` 在 cron prompt** — `chronos-web-cron-port-leak` skill 第三次触发了 (R109/R112/R113), skill 的"Round-end discipline"段早就写了 trap snippet, **问题是过去 3 轮 cron slot 都没读 skill**. R114 fix mandate 改向: **不 patch skill 内容**, 而是 (a) cron prompt 顶部明确 "**必读 + 必执行** `chronos-web-cron-port-leak` skill 的 Pre-flight check + trap snippet"; (b) skill 的 "When to use" 加一行 `MUST be loaded by ANY cron round whose prompt contains "chronos web" OR "npm run dev"`; (c) 给 chronos-agent 实装 PID-file (skill backlog 选项 1, ~30 LOC `chronos/cli/web.py` 改动) — 这个是真正的 long-term fix.
-3. **第一动作: 走完 6 个 R113 没覆盖的 surface, 各抓 ≥1 张截图存进 `docs/dogfood/r112-screenshots/`**:
-   - **Compare/Diff** (`#/compare?left=<id>&right=<id>`) — runtime 验证 R112 F2 高度修, ReactFlow 双 pane 非空, 节点可见.
-   - **Bookmarks** 页 — 检查空态 + ≥1 bookmark 时的渲染.
-   - **Theme toggle** (dark↔light) — 切换流畅, 无 flash, 持久化.
-   - **Language toggle** (en↔zh) — 切换流畅, 文本全部翻译, 持久化.
-   - **Landing Step Cards** (R112 F3 stagger 动画) — 真在初始 mount 一次性出, 不是 whileInView 闪烁.
-   - **Tour replay** 路径 — header 或 settings 有"重看 Tour"按钮 / shortcut, 点了能重启 4-step Tour.
-4. **修 F7 (P1, 必修)**: `frontend/src/pages/RunDetail.tsx` 或同等 ReactFlow canvas 容器 — 在 mount 时调 `reactFlowInstance.fitView()` 或设 `defaultZoom` 让 3 个节点全部进视口. 不要硬编码节点数, 用 fit-to-bounds.
-5. **修 F8/F9/F10 cluster (P2 cluster, 必修一组)**:
-   - F8: 节点 header 的 tooltip/badge 跟 "LLM Call" 类型标签视觉冲突 — 调 z-index 或重排节点 header.
-   - F9: Legend 面板下方的空 dark rectangle — 删除占位框 OR 用真内容填 (e.g. 缩略图例 / 色彩说明).
-   - F10: NodeDetails Identity tab 加 Model 行 — Model 当前只在 Cost tab 露出, Identity tab 也加一行 (LLM-call 节点) 减少切 tab.
-6. **Tour polish** (来自 R113 cron flag):
-   - i18n 验证: en + zh 4 个 Tour step 文案都翻好了, 没有 untranslated key fallback.
-   - "重看 Tour" 按钮 discoverability — 如果第 3 步走了发现没按钮, 这本身就是 P1 finding, R114 加上.
-   - emoji-tofu cross-browser sanity — Tour step 1 的 👋 在 Firefox/Safari 下不渲染豆腐.
-7. **任何前端代码改动 → `npx tsc --noEmit` 必过, `npm run build` 必过, frontend lint 必过**.
-8. **写 `docs/dogfood/2026-06-XX-round-114-frontend-p0.md`** — 6 个 surface 截图引用 + F7-F10 fix details (before/after 截图 + 一句根因) + 任何在 6-surface walkthrough 中新发现的 finding (按 F12+ 编号继续).
-9. **Skill patch (作为 R114 一部分)**: `chronos-web-cron-port-leak` skill 加 `trap` 段 — 给所有 dogfood cron slot prompt 一个标准 cleanup snippet. 这是第三次踩坑, 必须固化.
-10. `progress/2026-06-XX-round-114.md` (含 self-check "仍在 R107-R122 + ADR-029/030 轨道", 距 R122 = 7 轮). 必须诚实标注 row 6 close-target 是否锁住 ("≥3 P0 + cluster of P1/P2 polish": R112 已 2 P0 + 1 P1, R114 需 ≥1 P0 + cluster).
-11. `docs/CONTEXT.md` §5 加 R114 段; §6 用 R115 plan 替换本块.
-12. `CHANGELOG.md` `[Unreleased] / Fixed — R114 (Phase 6 frontend P0 第三刀)` 块.
-
-### R114 硬约束
-
-- ❌ 0 后端代码改动 (`src/chronos/api/`, `src/chronos/cli/`, `src/chronos/adapters/`, `src/chronos/store/` 全部不动).
-- ❌ 0 新依赖 (`pyproject.toml` / `uv.lock` 不动; `frontend/package.json` 不动除非真 P0 必须).
-- ❌ 不开始 ADR-030 (R115).
-- ❌ 不"加 Onboarding Tour" — 它已经存在 (R36-D), 旧 plan 误判, R114 只做 polish.
-- ✅ Adapter 零回归 streak: R52→R114 = **62** (`src/chronos/adapters/` 不动).
-- ✅ F7 必修, F8/F9/F10 至少修 2/3 (其中 F10 因为是 NodeDetails 加 Model 行最容易, 推荐起手).
-- ✅ 6 个 deferred surface 全部 live walkthrough + 截图归档 — 不是 mock, 不是代码 review, 是真起 stack 用浏览器抓.
-- ✅ Skill patch 跟 R114 同 commit (修工具不再拖到下下轮).
-
-### R114 deliverables
-
-- New: `docs/dogfood/2026-06-XX-round-114-frontend-p0.md` (6-surface walkthrough + F7-F10 fix details + 任何新 finding)
-- New: `docs/dogfood/r112-screenshots/05-*.png` 起 (6 个 surface × ≥1 张 + F7-F10 before/after)
-- Modified: `frontend/src/pages/RunDetail.tsx` (F7 fitView)
-- Modified: `frontend/src/components/NodeDetails.tsx` (F10 Identity tab Model 行) + 节点 header 组件 (F8) + Legend 容器 (F9) — 实际文件名 R114 dogfood 时确定
-- Modified: skill `chronos-web-cron-port-leak` 加 `trap` 段
-- Modified: `CHANGELOG.md` `[Unreleased] / Fixed — R114`
-- New: `progress/2026-06-XX-round-114.md`
-- Modified: `docs/CONTEXT.md` §5 + §6 (R114 plan archive, R115 ADR-030 plan active)
-
-### R114 gate checklist
-
-- [ ] `dogfood:dogfood` + `visual-review-loop` skill 加载
-- [ ] `chronos-web-cron-port-leak` skill 加载并阅读 (第三次触发 trap)
-- [ ] `chronos quickstart` + `chronos web` + `npm run dev` 三件套真起来跑过
-- [ ] cron prompt 里有 `trap 'pkill_dev' EXIT` 段 (skill 同步 patch)
-- [ ] 6 个 deferred surface 全 walkthrough 且各 ≥1 张截图归档
-- [ ] R112 F2 (Diff 高度) + F3 (Step Cards) runtime 验证通过, 在 R114 dogfood 报告里有截图为证
-- [ ] F7 修了 (RunDetail canvas fitView), 截图 before/after
-- [ ] F8/F9/F10 至少修 2/3, 截图 before/after
-- [ ] Tour i18n 中英双语都验过, "重看" 路径存在 (或 R114 加上)
-- [ ] `npx tsc --noEmit` 全过, `npm run build` 全过, frontend lint 全过
-- [ ] `pytest -q --no-cov` 全过 (≥ 693, R111/R112/R113 baseline 一致)
-- [ ] Adapter 目录未动 (streak → 62)
-- [ ] `pyproject.toml` / `uv.lock` 无 drift
-
-### R115 plan preview (R114 写时填这里)
-
-- **R115**: ADR-030 Evaluation/Scoring 全栈实装. 核心交付: `evaluations` 表 schema 加上 + `chronos eval run/list` CLI verb + `compare --eval` 排序 + 前端 RunDetail/Compare 页 Score 列 + 2 个 built-in evaluator (e.g. `length` + `keyword-match`). 这是 Phase 6 row 7. 完了进 R116-R118 docs/demo 准备.
+</details>
 
 ---
 

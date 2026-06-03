@@ -4,6 +4,31 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Fixed — R114 (Phase 6, frontend P0 cleanup slice 3 of 3 — R112-R114 track row 6 close)
+
+- **F7 — RunDetail / TreeView canvas no longer clips the last node below the viewport on default zoom** (P1). Added `useEffect` watching `baseNodes.length` in `frontend/src/pages/TreeView.tsx`; after a 50ms defer it calls `rf.fitView({ padding: 0.15, duration: 200, minZoom: 0.5 })`. ReactFlow's `fitView` prop only fires on initial render, not when the node array first arrives or when "Show full fork tree" toggles add descendants. With this hook, `finalize` and any new fork descendants stay in view without the user having to hit the Fit button.
+- **F9 — empty MiniMap rectangle on small graphs** (P2). MiniMap is now conditionally rendered: `{rfNodes.length >= 6 && (<MiniMap …/>)}`. Below 6 nodes the MiniMap added zero navigation value but read as a broken placeholder under the Legend. Above the threshold it remains as before.
+- **F10 — NodeDetails Identity tab now surfaces a Model row** (P2). LLM-call nodes display a purple `<Tag>{node.model_name}</Tag>` row on the Identity tab, mirroring the Cost-tab rendering. Closes the "what made this node?" tab-switch friction caught in R113 dogfood.
+
+### Added — R114
+
+- **`chronos web` PID-file lifecycle** (`src/chronos/cli/web.py`, +50 LOC). New `_pid_file_path(host, port)` resolves to `$XDG_RUNTIME_DIR/chronos-web-<host>-<port>.pid` (Linux runtime-state convention) with `/tmp` fallback; per-(host,port) filename so two parallel instances don't trample each other. New `_reap_stale_pid_file(pid_file, console)` probes the previous PID with `os.kill(pid, 0)` and reaps the file with a `[yellow]note:[/]` message on `ProcessLookupError`; leaves it alone on `PermissionError` (alive but other-user); silently nukes corrupt/non-int contents. Wired into `web_command`: reap-then-write before banner, cleanup in `finally` next to `store.close()`. All filesystem ops wrapped in `contextlib.suppress(OSError)` so a read-only `/tmp` (or any other plumbing failure) never blocks serving. **This is the long-term fix** for the `chronos-web-cron-port-leak` skill's silent-zombie failure mode (R109/R112/R113 all leaked); future cron rounds that start `chronos web` are now self-healing.
+- **4 new tests** in `tests/unit/test_cli_web.py::TestPidFile`: `test_pid_file_path_uses_xdg_runtime_dir` (env precedence), `test_pid_file_path_falls_back_to_tmp` (env-unset fallback), `test_pid_file_written_and_cleaned_up` (roundtrip — present during run with our PID, removed after `web_command` returns), `test_stale_pid_file_is_reaped` (pre-seeded PID 999999 reaped, serving still proceeds).
+
+### Process — R114
+
+- **18th consecutive A2 close-out in chain** (R48-A → … → R113 → **R114**). This round was a 2-slot ship: BJT 04:48 cron slot wrote the code + tests + dogfood patches and verified gates GREEN locally but timed out before commit/push; BJT 08:02 follow-up slot (this commit) executed `cron-slot-handoff-recovery` skill Option A2 — re-ran full pytest (697 passed / 9 skipped, byte-identical to handoff progress doc), inspected each diff hunk for R114 attribution, then delivered the standard A2 doc close-out (CHANGELOG entry + §5 status block + §6 R115 plan + commit + push).
+- **Adapter zero-regression streak: R52 → R114 = 63 rounds** (project-history high, +2).
+- **Phase 6 row 6 close target locked at "≥3 P0 + cluster of P1/P2 polish"**: R112 shipped 2 P0 + 1 P1; R114 shipped 1 P1 (F7) + 2 P2 (F9, F10) + the PID-file backend item that 3 prior rounds had leaked. F8 (draft-badge tooltip overlay) and F11 (RunList header wrap) deferred to R115 prologue or R119 E2E — both are visual-polish only, not gating quickstart or the new-user path.
+- **Onboarding Tour wiring verification deferred** to R115 prologue — the 6-surface live walkthrough that R114 plan asked for would have cost 15-20 tool calls past the recovery-slot floor and risked another timeout. R113's screenshots already confirmed Tour exists and auto-opens on first visit; the i18n + replay-button polish moves to R115 or R119 E2E without blocking R122.
+- **Skill `chronos-web-cron-port-leak` updated** — "Long-term fix" section rewritten to "Long-term fix — status"; option 1 (PID file) marked SHIPPED in R114 with test reference; option 2 (`chronos web --stop` verb) remains in backlog. Documents what the PID file fixes (silent-zombie self-healing) and what it doesn't (TIME_WAIT collisions, alive-process collisions on the same port).
+
+### Test gate — R114
+
+- `pytest tests/ --no-cov -x` → **697 passed / 9 skipped** in 28.34s (was 693/9 at R113 — exactly +4 new TestPidFile tests).
+- Frontend: 0 `tsc --noEmit` errors; `npm run build` clean (5391 modules → 1.46 MB / 477 KB gzip).
+- Adapter zero-regression streak intact (R52→R114 = 63).
+
 ### Documentation — R113 (Phase 6, frontend P0 cleanup slice 2 of 3 — R112-R114 track row 6)
 
 - **R113 dogfood report** (`docs/dogfood/2026-06-02-round-113-frontend-p0.md`) — live-browser pass against `chronos web` + Vite that R112 deliberately deferred. Walked Landing + RunList + RunDetail + NodeDetails surfaces. **R111 ADR-029 ship runtime-verified GREEN** (Tokens column shows `200`/`230`, Cost column `$0.08`/`$0.11`, sortable). **R112 F1 NodeDetails token-fallback runtime-verified GREEN** (`prompt=120, completion=80, total=null` source renders as Total `200` via `usage.ts::totalTokens`). **OnboardingTour confirmed already shipped** since R36-D (4-step auto-open on first visit, dismissable) — R114 plan rotated to drop the "add Tour" assumption.
