@@ -39,6 +39,7 @@ from typing import Any
 
 from chronos.core.models import (
     SCHEMA_VERSION,
+    Evaluation,
     Fork,
     Node,
     NodeKind,
@@ -269,6 +270,40 @@ class SqliteStore:
             ),
         )
 
+    def put_evaluation(self, evaluation: Evaluation) -> None:
+        """UPSERT an Evaluation (ADR-030, R115).
+
+        Re-running an evaluator on the same run overwrites the prior row via
+        ``INSERT … ON CONFLICT(run_id, evaluator_name) DO UPDATE``. The ``id``
+        column is left untouched on update — callers that care about a stable
+        evaluation_id should resolve via
+        :meth:`get_evaluation_for_run_evaluator` first.
+        """
+        self._conn.execute(
+            """
+            INSERT INTO evaluations (
+                id, run_id, evaluator_name, score, passed,
+                rationale, metadata_json, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(run_id, evaluator_name) DO UPDATE SET
+                score = excluded.score,
+                passed = excluded.passed,
+                rationale = excluded.rationale,
+                metadata_json = excluded.metadata_json,
+                created_at = excluded.created_at
+            """,
+            (
+                evaluation.id,
+                evaluation.run_id,
+                evaluation.evaluator_name,
+                evaluation.score,
+                None if evaluation.passed is None else (1 if evaluation.passed else 0),
+                evaluation.rationale,
+                json.dumps(evaluation.metadata),
+                _iso(evaluation.created_at),
+            ),
+        )
+
     # -----------------------------------------------------------------
     # Reads
     # -----------------------------------------------------------------
@@ -317,6 +352,41 @@ class SqliteStore:
             (parent_run_id,),
         ).fetchall()
         return [_row_to_fork(r) for r in rows]
+
+    # -----------------------------------------------------------------
+    # Evaluations (ADR-030, R115)
+    # -----------------------------------------------------------------
+
+    def get_evaluations_for_run(self, run_id: str) -> list[Evaluation]:
+        """All evaluations recorded against ``run_id``, oldest first.
+
+        Order is by ``created_at ASC`` — the frontend RunList Score column
+        and the ``chronos compare --eval`` selector both want the *latest*
+        evaluator's score, which is the last element. Callers that need
+        only the latest can use :meth:`get_evaluation_for_run_evaluator`
+        with a known evaluator name.
+        """
+        rows = self._conn.execute(
+            "SELECT * FROM evaluations WHERE run_id = ? ORDER BY created_at ASC",
+            (run_id,),
+        ).fetchall()
+        return [_row_to_evaluation(r) for r in rows]
+
+    def get_evaluation_for_run_evaluator(
+        self, run_id: str, evaluator_name: str
+    ) -> Evaluation | None:
+        """Resolve the (unique) evaluation row for ``(run_id, evaluator_name)``.
+
+        Returns ``None`` if the evaluator has never been run on this run.
+        Used by ``chronos compare --eval`` to fill the score column per
+        run, and by ``put_evaluation``-side retry logic to detect existing
+        rows.
+        """
+        row = self._conn.execute(
+            "SELECT * FROM evaluations WHERE run_id = ? AND evaluator_name = ?",
+            (run_id, evaluator_name),
+        ).fetchone()
+        return _row_to_evaluation(row) if row else None
 
 
 # -----------------------------------------------------------------
@@ -404,6 +474,24 @@ def _row_to_fork(row: sqlite3.Row) -> Fork:
         created_at=created,
         edited_fields=_json_or_default(row["edited_fields_json"], {}),
         reason=row["reason"],
+    )
+
+
+def _row_to_evaluation(row: sqlite3.Row) -> Evaluation:
+    created = _parse_dt(row["created_at"])
+    assert created is not None
+    raw_passed = row["passed"]
+    passed: bool | None
+    passed = None if raw_passed is None else bool(raw_passed)
+    return Evaluation(
+        id=row["id"],
+        run_id=row["run_id"],
+        evaluator_name=row["evaluator_name"],
+        score=row["score"],
+        passed=passed,
+        rationale=row["rationale"],
+        metadata=_json_or_default(row["metadata_json"], {}),
+        created_at=created,
     )
 
 

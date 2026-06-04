@@ -62,9 +62,15 @@ fork_app = typer.Typer(
     help="Plan a fork — emit a JSON artifact the user's code consumes.",
     no_args_is_help=True,
 )
+eval_app = typer.Typer(
+    name="eval",
+    help="Score recorded runs with registered evaluators (ADR-030, R115).",
+    no_args_is_help=True,
+)
 app.add_typer(runs_app, name="runs")
 app.add_typer(forks_app, name="forks")
 app.add_typer(fork_app, name="fork")
+app.add_typer(eval_app, name="eval")
 
 
 # ---------------------------------------------------------------------------
@@ -625,6 +631,16 @@ def compare_cmd(
             "how far apart N runs are. Mutually exclusive with --auto-pivot."
         ),
     ),
+    eval_evaluator: str | None = typer.Option(
+        None,
+        "--eval",
+        help=(
+            "Run this evaluator against every candidate run and append a "
+            "Score column to the merged alignment table (ADR-030, R115). "
+            "Results are persisted to the evaluations table; re-using --eval "
+            "with the same name reuses the cached score."
+        ),
+    ),
 ) -> None:
     """Compare N recorded runs against a pivot (fork-sweep debugger).
 
@@ -673,6 +689,7 @@ def compare_cmd(
         auto_pivot=auto_pivot,
         show_matrix=show_matrix,
         matrix=matrix,
+        eval_evaluator=eval_evaluator,
         open_store_fn=_open_store,
         console=console,
     )
@@ -832,6 +849,117 @@ def fork_plan_cmd(
         open_store_fn=_open_store,
         console=console,
     )
+
+
+# ---------------------------------------------------------------------------
+# `chronos eval run/list/list-evaluators` — ADR-030 / R115
+# ---------------------------------------------------------------------------
+
+
+@eval_app.command("run")
+def eval_run_cmd(
+    run_id: str = typer.Argument(..., help="Run id (see `chronos runs list`)."),
+    evaluator: str = typer.Option(
+        ...,
+        "--evaluator",
+        "-e",
+        help=(
+            "Registered evaluator name. Built-ins: 'output_length_chars', "
+            "'final_state_key_present'. List all with "
+            "`chronos eval list-evaluators`."
+        ),
+    ),
+    db: Path | None = typer.Option(
+        None, "--db", help="Path to chronos.db (overrides $CHRONOS_DB)."
+    ),
+    json_out: bool = typer.Option(
+        False,
+        "--json",
+        help="Emit the persisted Evaluation as JSON instead of a table.",
+    ),
+) -> None:
+    """Run an evaluator against a recorded run and persist the score.
+
+    Re-running with the same ``--evaluator`` overwrites the prior result
+    (UPSERT on (run_id, evaluator_name)). Results are surfaced in
+    ``chronos eval list <run_id>``, ``chronos compare --eval <name>``, and
+    the web frontend's RunList Score column.
+
+    Examples::
+
+        chronos eval run run_001 --evaluator output_length_chars
+        chronos eval run run_001 -e final_state_key_present --json
+
+    Exit codes:
+      0 — happy path.
+      1 — no such run, or unknown evaluator (hint printed).
+      2 — evaluator raised; DB untouched.
+    """
+    from chronos.cli.eval import eval_run_command
+
+    eval_run_command(
+        run_id=run_id,
+        evaluator=evaluator,
+        db=db,
+        json_out=json_out,
+        open_store_fn=_open_store,
+        console=console,
+    )
+
+
+@eval_app.command("list")
+def eval_list_cmd(
+    run_id: str = typer.Argument(..., help="Run id (see `chronos runs list`)."),
+    db: Path | None = typer.Option(
+        None, "--db", help="Path to chronos.db (overrides $CHRONOS_DB)."
+    ),
+    json_out: bool = typer.Option(
+        False,
+        "--json",
+        help="Emit the evaluations array as JSON instead of a table.",
+    ),
+) -> None:
+    """List every evaluation recorded against ``run_id``.
+
+    Examples::
+
+        chronos eval list run_001
+        chronos eval list run_001 --json
+
+    Exit codes:
+      0 — happy path (table or JSON printed; empty when no evaluations).
+      1 — no such run.
+    """
+    from chronos.cli.eval import eval_list_command
+
+    eval_list_command(
+        run_id=run_id,
+        db=db,
+        json_out=json_out,
+        open_store_fn=_open_store,
+        console=console,
+    )
+
+
+@eval_app.command("list-evaluators")
+def eval_list_evaluators_cmd(
+    json_out: bool = typer.Option(
+        False, "--json", help="Emit the evaluator names as a JSON array."
+    ),
+) -> None:
+    """List every registered evaluator (built-ins + plugin-loaded).
+
+    Built-ins ship with chronos; third-party packages register via the
+    ``chronos.evaluators`` entry-point group.
+
+    Examples::
+
+        chronos eval list-evaluators
+        chronos eval list-evaluators --json
+    """
+    from chronos.cli.eval import eval_list_evaluators_command
+
+    eval_list_evaluators_command(json_out=json_out, console=console)
 
 
 if __name__ == "__main__":

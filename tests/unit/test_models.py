@@ -26,7 +26,7 @@ def test_version_is_set() -> None:
 
 def test_schema_version_is_semver_string() -> None:
     # Matches the value INSERTed in migrations/001_init.sql.
-    assert SCHEMA_VERSION == "0.1.0"
+    assert SCHEMA_VERSION == "0.2.0"
 
 
 # --- Run -------------------------------------------------------------------

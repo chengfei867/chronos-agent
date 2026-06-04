@@ -23,6 +23,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import typer
 from rich.console import Console
@@ -158,6 +159,59 @@ def _render_summary(merged: MergedPivotAlignment, console: Console) -> None:
     console.print(t)
 
 
+def _render_eval_scores(
+    *,
+    evaluator: str,
+    pivot_run_id: str,
+    other_run_ids: list[str],
+    scores: dict[str, dict[str, Any] | None],
+    console: Console,
+) -> None:
+    """Pretty-print the ADR-030 ``--eval`` score column (R115).
+
+    Renders every (pivot + others) run with the evaluator's score / passed /
+    rationale, sorted descending by score (None last). The pivot row is
+    marked ``(pivot)`` for readability. Empty cells render as a dim em-dash
+    matching the ``runs list`` Cost column convention.
+    """
+    # Local import keeps cli/compare.py decoupled from cli/eval.py at module
+    # load time — only paid when --eval is actually passed.
+    from chronos.cli.eval import _fmt_passed, _fmt_score
+
+    all_run_ids = [pivot_run_id, *other_run_ids]
+
+    def _sort_key(rid: str) -> tuple[int, float]:
+        entry = scores.get(rid)
+        if entry is None or entry.get("score") is None:
+            return (1, 0.0)  # Nones land at the bottom
+        return (0, -float(entry["score"]))
+
+    sorted_ids = sorted(all_run_ids, key=_sort_key)
+
+    table = Table(
+        title=f"Evaluation: {evaluator}",
+        show_lines=False,
+        header_style="bold cyan",
+    )
+    table.add_column("run", style="cyan", no_wrap=True)
+    table.add_column("score", justify="right")
+    table.add_column("passed")
+    table.add_column("rationale", overflow="fold")
+    for rid in sorted_ids:
+        entry = scores.get(rid)
+        label = f"{rid} (pivot)" if rid == pivot_run_id else rid
+        if entry is None:
+            table.add_row(label, "[dim]—[/]", "[dim]—[/]", "[dim]—[/]")
+            continue
+        table.add_row(
+            label,
+            _fmt_score(entry.get("score")),
+            _fmt_passed(entry.get("passed")),
+            entry.get("rationale") or "",
+        )
+    console.print(table)
+
+
 def _render_distance_matrix(
     report: AutoPivotReport,
     console: Console,
@@ -206,6 +260,7 @@ def compare_command(
     auto_pivot: bool = False,
     show_matrix: bool = False,
     matrix: bool = False,
+    eval_evaluator: str | None = None,
 ) -> None:
     """N-run pivot-anchored compare (ADR-023 Arc A, design doc §3.1).
 
@@ -315,8 +370,37 @@ def compare_command(
             f"N={len(other_run_ids) + 1} is large; table may not fit in a typical terminal."
         )
 
+    # ADR-030 / R115: ``--eval <name>`` runs the evaluator against every
+    # candidate run (pivot + others), persists the result, and surfaces
+    # the scores. We compute eval_scores once and reuse for both JSON and
+    # text branches.
+    eval_scores: dict[str, dict[str, Any] | None] | None = None
+    if eval_evaluator is not None:
+        from chronos.cli.eval import annotate_with_evaluation
+
+        all_run_ids = [pivot_run_id, *other_run_ids]
+        eval_scores = annotate_with_evaluation(
+            run_ids=all_run_ids,
+            evaluator=eval_evaluator,
+            db=db,
+            open_store_fn=open_store_fn,
+        )
+        # If every score is None, the evaluator was unknown — surface a
+        # warning so JSON consumers see it too.
+        if all(v is None for v in eval_scores.values()):
+            merged.warnings.append(
+                f"--eval {eval_evaluator!r}: no scores computed (unknown evaluator "
+                "or every run missing). Try `chronos eval list-evaluators`."
+            )
+
     if json_out:
-        _emit_json(merged.to_dict())
+        payload = merged.to_dict()
+        if eval_scores is not None:
+            payload["eval"] = {
+                "evaluator": eval_evaluator,
+                "scores": eval_scores,
+            }
+        _emit_json(payload)
         return
 
     # Text mode ---------------------------------------------------------
@@ -335,6 +419,14 @@ def compare_command(
         )
     )
     _render_summary(merged, console)
+    if eval_scores is not None:
+        _render_eval_scores(
+            evaluator=eval_evaluator or "?",
+            pivot_run_id=pivot_run_id,
+            other_run_ids=other_run_ids,
+            scores=eval_scores,
+            console=console,
+        )
 
 
 def _run_auto_pivot(

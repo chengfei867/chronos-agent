@@ -19,8 +19,16 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-# SemVer string — MUST match migrations/NNN_init.sql's inserted value.
-SCHEMA_VERSION = "0.1.0"
+# SemVer string — MUST match the latest applied migration's
+# ``UPDATE schema_info SET schema_version = '<value>'`` (or, on a fresh DB,
+# the most recent ``INSERT OR IGNORE`` in ``001_init.sql``).
+#
+# History:
+#   0.1.0 — R0/Phase 1: runs / nodes / forks tables (001_init.sql).
+#   0.2.0 — R115/Phase 6 RC, ADR-030: additive ``evaluations`` table
+#           (002_evaluations.sql). Forward-compatible — a 0.1.0 library
+#           opening a 0.2.0 DB just ignores the extra table.
+SCHEMA_VERSION = "0.2.0"
 
 
 def _utcnow() -> datetime:
@@ -187,8 +195,60 @@ class Fork(BaseModel):
         return self
 
 
+# ---------------------------------------------------------------------------
+# Evaluation (ADR-030, R115) — a scored judgement on a recorded run.
+# ---------------------------------------------------------------------------
+
+
+class EvaluationResult(BaseModel):
+    """The shape an evaluator callable returns (ADR-030 §Evaluator API).
+
+    Evaluators are user-supplied callables of the form::
+
+        def evaluator(run: Run, nodes: list[Node]) -> EvaluationResult: ...
+
+    All four fields are optional — the evaluator decides what to populate.
+    Convention: ``score`` is "higher = better" (the caller picks the scale)
+    and ``passed`` is the boolean-evaluator path. ``rationale`` is free-form
+    human-readable; ``metadata`` is a JSON-serialisable dict for evaluator-
+    specific extras (e.g. the configured key for ``final_state_key_present``).
+    """
+
+    score: float | None = None
+    passed: bool | None = None
+    rationale: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class Evaluation(BaseModel):
+    """A persisted evaluator result (maps 1:1 to ``evaluations`` table).
+
+    One row per ``(run_id, evaluator_name)`` — re-running an evaluator
+    overwrites the prior row (UNIQUE INDEX, ``INSERT … ON CONFLICT DO
+    UPDATE``). See ADR-030 §Schema.
+    """
+
+    id: str  # UUID4 str
+    run_id: str
+    evaluator_name: str
+    score: float | None = None
+    passed: bool | None = None
+    rationale: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    created_at: datetime = Field(default_factory=_utcnow)
+
+    @field_validator("evaluator_name")
+    @classmethod
+    def _non_empty_evaluator_name(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("evaluator_name must be non-empty")
+        return v
+
+
 __all__ = [
     "SCHEMA_VERSION",
+    "Evaluation",
+    "EvaluationResult",
     "Fork",
     "Node",
     "NodeKind",

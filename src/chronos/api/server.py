@@ -273,6 +273,11 @@ def build_app(store: SqliteStore) -> FastAPI:
         # Reuses ``_summarise_usage`` from the CLI usage helpers — it's the
         # same code path ``chronos runs list`` uses, so CLI and web stay in
         # lockstep on the aggregation.
+        # Per ADR-030 (R115): include ``latest_evaluation`` so the RunList
+        # Score column renders without a per-row /evaluations fetch (the
+        # frontend Tour can't afford N extra round-trips). "Latest" = the
+        # last (newest by created_at) evaluation; mirrors the rule in
+        # ``store.get_evaluations_for_run`` ordering.
         from chronos.cli._usage import _summarise_usage
 
         runs = store.list_runs(limit=limit)
@@ -281,6 +286,10 @@ def build_app(store: SqliteStore) -> FastAPI:
             payload = _run_to_dict(r)
             nodes = store.get_nodes_for_run(r.id)
             payload["usage_summary"] = _summarise_usage(nodes).to_dict()
+            evaluations = store.get_evaluations_for_run(r.id)
+            payload["latest_evaluation"] = (
+                evaluations[-1].model_dump(mode="json") if evaluations else None
+            )
             out.append(payload)
         return {"runs": out, "count": len(out)}
 
@@ -644,6 +653,71 @@ def build_app(store: SqliteStore) -> FastAPI:
             raise HTTPException(status_code=404, detail=f"Run not found: {run_id}")
         forks = store.get_forks_for_parent(run_id)
         return {"forks": [_fork_to_dict(f) for f in forks], "count": len(forks)}
+
+    # ADR-030 / R115 — Evaluation surface. Read endpoint always available;
+    # POST is the storage-layer escape-hatch for power users (the CLI
+    # ``chronos eval run`` is the recommended path).
+    @app.get("/runs/{run_id}/evaluations")
+    def get_run_evaluations(run_id: str) -> dict[str, Any]:
+        """List every evaluation persisted against ``run_id``.
+
+        Returns ``{"evaluations": [...], "count": N}``. Order: oldest first,
+        matching ``store.get_evaluations_for_run``. The frontend RunDetail
+        Score column reads the *latest* (last) entry; the full list is
+        available for users who care about historical scoring.
+        """
+        run = store.get_run(run_id)
+        if run is None:
+            raise HTTPException(status_code=404, detail=f"Run not found: {run_id}")
+        evaluations = store.get_evaluations_for_run(run_id)
+        return {
+            "evaluations": [e.model_dump(mode="json") for e in evaluations],
+            "count": len(evaluations),
+        }
+
+    @app.post("/runs/{run_id}/evaluations")
+    def post_run_evaluation(
+        run_id: str,
+        body: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Persist a pre-computed evaluation directly (storage-layer escape).
+
+        Body shape: ``{evaluator_name: str, score?: float, passed?: bool,
+        rationale?: str, metadata?: dict}``. Re-using an evaluator_name
+        against the same run UPSERTs (per the unique index). Intended for
+        external eval pipelines that compute scores out-of-band; the
+        recommended in-band path is ``chronos eval run``.
+        """
+        import uuid as _uuid
+
+        from chronos.core.models import Evaluation
+
+        run = store.get_run(run_id)
+        if run is None:
+            raise HTTPException(status_code=404, detail=f"Run not found: {run_id}")
+        evaluator_name = body.get("evaluator_name")
+        if not evaluator_name or not isinstance(evaluator_name, str):
+            raise HTTPException(
+                status_code=400,
+                detail="missing or non-string 'evaluator_name'",
+            )
+        try:
+            evaluation = Evaluation(
+                id=str(_uuid.uuid4()),
+                run_id=run_id,
+                evaluator_name=evaluator_name,
+                score=body.get("score"),
+                passed=body.get("passed"),
+                rationale=body.get("rationale"),
+                metadata=body.get("metadata") or {},
+            )
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        store.put_evaluation(evaluation)
+        # Re-read so we return the canonical UPSERTed row (id may differ).
+        stored = store.get_evaluation_for_run_evaluator(run_id, evaluator_name)
+        assert stored is not None
+        return stored.model_dump(mode="json")
 
     @app.get("/runs/{run_id}/tree")
     def get_run_tree(

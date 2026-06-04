@@ -105,7 +105,7 @@ def test_schema_info_survives_reopen(tmp_path: Path) -> None:
     db = tmp_path / "reopen.db"
     for _ in range(5):
         with SqliteStore.open(db) as s:
-            assert s.schema_version == "0.1.0"
+            assert s.schema_version == "0.2.0"
 
     import sqlite3
 

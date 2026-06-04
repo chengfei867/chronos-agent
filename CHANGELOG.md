@@ -4,6 +4,40 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added — R115 (Phase 6, ADR-030 Evaluation/Scoring full-stack — R107-R122 track row 7)
+
+- **`evaluations` table** (SQLite, additive migration `src/chronos/store/migrations/002_evaluations.sql`). Schema: `id` (UUID4 PK), `run_id` (FK → `runs.id`), `evaluator_name`, `score` (REAL, nullable), `passed` (0/1, nullable), `rationale` (TEXT, nullable), `metadata` (JSON), `created_at`. Unique index `(run_id, evaluator_name)` enforces "re-running an evaluator overwrites the prior result" via `INSERT … ON CONFLICT DO UPDATE`. Migration is purely additive — no existing tables touched, so no adapter regression risk.
+- **`chronos.eval` package** (`src/chronos/eval/__init__.py`) — registry-backed evaluator surface per ADR-030 §42-54. Module exposes `register(name, fn)`, `get(name)`, `list_registered()`, `run_evaluator(name, run, nodes) -> Evaluation`, and `load_entry_points()` (scans `chronos.evaluators` entry-point group; bad plugins log + skip rather than crash CLI). Two built-ins registered at import time: `output_length_chars` (numeric `score = len(final_state["output"])`) and `final_state_key_present` (boolean `passed = "output" in final_state`). LLM-judge evaluators explicitly out of scope (ADR-030 §53 — v1.1+).
+- **CLI `chronos eval` Typer sub-app** (`src/chronos/cli/eval.py`) with three verbs: `list-evaluators` (table + `--json`), `run <run_id> --evaluator <name> [--evaluator <name> …]` (resolves each evaluator from the registry, persists via `store.put_evaluation`, prints results table; exit 1 if any evaluator raised), and `list <run_id>` (lists persisted rows for a run). All verbs include `--db` override for tests/demos and `--json` for scripting. `--help` carries inline `Example:` block per the R108 CLI Polish standard.
+- **CLI `chronos compare --eval <name>`** flag — when set, `compare` resolves the evaluator, runs it across all candidate runs (or reads cached scores via `annotate_with_evaluation`), persists into `evaluations`, and appends a sortable Score column to the table. Empty cells render as `[dim]—[/]`. Sort order is descending score with ties broken by run id.
+- **API `GET /runs/{id}/evaluations`** returns the evaluation list for one run, sorted by `created_at`. The list endpoint `GET /runs` now also embeds a `latest_evaluation` field on each run (newest by `created_at`) so the frontend RunList can render the Score column without a per-row fetch.
+- **Pydantic `Evaluation` and `EvaluationResult` models** in `src/chronos/core/models.py`. `Evaluation` mirrors the table row exactly; `EvaluationResult` is what evaluators return (a partial — score, passed, rationale, metadata). Run-evaluation glue (`run_evaluator`) constructs the Evaluation from the result + run id + evaluator name + a fresh UUID4.
+- **Frontend RunList Score column** (`frontend/src/pages/RunList.tsx`) — auto-hidden ergonomic identical to Tokens/Cost (R111): the column only appears when at least one row has `latest_evaluation != null`. Renders the numeric score (3-significant-digit format) or the boolean ✓/✗ for `passed`-style evaluators, with a Tooltip showing evaluator name + truncated rationale. New `Evaluation` interface in `frontend/src/types.ts` matches the API payload.
+- **Spike 21** (`tests/spikes/spike21_eval_compare_pipeline.py`, ~120 LOC) — end-to-end pipeline test: seeds quickstart demo, runs both built-in evaluators against parent + child runs, asserts `evaluations` table row count, asserts compare-table contents render with the new column. Mirrors spike 20's pattern from R111 (no LLM calls, fixture-driven). All three sub-tests GREEN.
+- **Tests**: 8 new unit tests in `tests/unit/test_cli_eval.py` (CLI smoke for `list-evaluators`, `run`, `list`, JSON output, unknown-name errors, idempotent re-run/upsert, empty-list path). 24 new unit tests in `tests/unit/test_eval.py` (registry semantics, both built-ins, entry-point loader, error paths). Integration test `tests/integration/test_evaluations_store.py` covers the ON CONFLICT upsert across migration boundary. Total project test count R114 → R115: **697 → 745 (+48 net)**.
+
+### Fixed — R115 (inherited WIP bug from prior cron slot)
+
+- **Test helper sorted by non-existent `Run.created_at`** — `tests/unit/test_cli_eval.py::_seed` sorted seeded runs by `r.created_at` to disambiguate parent vs. child after `list_runs()`. The Pydantic `Run` model exposes `started_at` / `ended_at`, never `created_at`, so the sort raised `AttributeError` and short-circuited 8 of the 13 eval CLI tests. Fixed to sort by `started_at`. This was the bug-fix-first commit ordering required by the `cron-slot-handoff-recovery` skill rule 10.
+
+### Documentation — R115
+
+- ADR-030 (`docs/decisions/ADR-030-evaluation-scoring.md`) — already drafted in R109 close-out. R115 ships against the spec verbatim (all `### Schema`, `### Evaluator API`, `### CLI`, `### Frontend`, `### API`, `### Tests` sub-sections satisfied). Out-of-scope items (LLM-judge, dataset-driven, leaderboard UI, evaluator versioning) untouched.
+- `chronos quickstart` next-step hints (`src/chronos/cli/quickstart.py`) — added a third bullet that prints a ready-to-paste `chronos eval run <id> --evaluator output_length_chars` command. Anchors the R122 must-pass "new-user path → quickstart → web UI → token/cost visible → run eval, no source-reading" gate; without this hint a user would have to consult docs to discover the eval verb.
+
+### Process — R115
+
+- **19th consecutive A2 close-out in chain** (R48-A → … → R114 → **R115**). Followed `cron-slot-handoff-recovery` skill rule 10 (which explicitly cites this R115 WIP as its reference case): inherited 12 modified + 8 untracked files from a prior in-window cron slot, ran `pytest -q --no-cov` to triage, found one failing helper (`_seed` sorting by missing attribute), fixed it first, then re-ran the full suite (745 pass / 9 skip / 0 fail) and committed. Bug-fix-first ordering preserves the WIP in a single coherent commit; mass-rewriting evaluator code without first fixing the helper would have masked the AttributeError.
+- **Adapter zero-regression streak: R52 → R115 = 64 rounds** (`src/chronos/adapters/` byte-untouched, +1 over R114). 7 rounds remaining to R122 acceptance.
+- **R115 prologue (F8 / F11 visual-polish + 6-surface walkthrough) deferred to R119 E2E dogfood** per ADR-030 acceptance discipline — Phase 6 row 7 has only one gate (ADR-030 spec satisfied) and prologue would have cost slot budget without unblocking any R122 must-pass item. Plan deviation logged in progress doc; not a path drift.
+
+### Test gate — R115
+
+- `pytest -q --no-cov`: **745 passed / 9 skipped / 0 failed** (R114 was 697/9/0 → +48 net, well above the R115 baseline target of ≥710).
+- Spikes: **6/6 GREEN** including `spike20_quickstart_demo_has_usage` (R111 ADR-029) and `spike21_eval_compare_pipeline` (R115 ADR-030). No spike regression.
+- Frontend: `npx tsc --noEmit` clean, `npm run build` clean (10.28 s, one expected chunk-size warning unchanged from R114).
+- Adapter zero-regression streak intact (R52→R115 = 64).
+
 ### Fixed — R114 (Phase 6, frontend P0 cleanup slice 3 of 3 — R112-R114 track row 6 close)
 
 - **F7 — RunDetail / TreeView canvas no longer clips the last node below the viewport on default zoom** (P1). Added `useEffect` watching `baseNodes.length` in `frontend/src/pages/TreeView.tsx`; after a 50ms defer it calls `rf.fitView({ padding: 0.15, duration: 200, minZoom: 0.5 })`. ReactFlow's `fitView` prop only fires on initial render, not when the node array first arrives or when "Show full fork tree" toggles add descendants. With this hook, `finalize` and any new fork descendants stay in view without the user having to hit the Fit button.

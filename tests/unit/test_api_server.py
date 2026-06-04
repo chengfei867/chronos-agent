@@ -1370,3 +1370,125 @@ def test_compare_matrix_does_not_shadow_run_detail_endpoint(
     # The run-detail endpoint still works.
     resp_run = compare_n_client.get(f"/runs/{ids['pivot']}")
     assert resp_run.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# R115 / ADR-030 — Evaluation endpoints
+# ---------------------------------------------------------------------------
+
+
+def test_get_run_evaluations_empty_for_run_with_no_evaluations(
+    scenario: tuple[SqliteStore, dict[str, str]],
+    client: TestClient,
+) -> None:
+    _, ids = scenario
+    resp = client.get(f"/runs/{ids['parent_run']}/evaluations")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["count"] == 0
+    assert body["evaluations"] == []
+
+
+def test_get_run_evaluations_404_for_unknown_run(client: TestClient) -> None:
+    resp = client.get("/runs/does-not-exist/evaluations")
+    assert resp.status_code == 404
+
+
+def test_post_run_evaluation_persists_and_round_trips(
+    scenario: tuple[SqliteStore, dict[str, str]],
+    client: TestClient,
+) -> None:
+    _, ids = scenario
+    rid = ids["parent_run"]
+    resp = client.post(
+        f"/runs/{rid}/evaluations",
+        json={
+            "evaluator_name": "external_judge",
+            "score": 0.875,
+            "rationale": "looks good",
+            "metadata": {"version": "v1"},
+        },
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["run_id"] == rid
+    assert body["evaluator_name"] == "external_judge"
+    assert body["score"] == 0.875
+    assert body["rationale"] == "looks good"
+    assert body["metadata"] == {"version": "v1"}
+
+    # Round-trip via GET.
+    resp2 = client.get(f"/runs/{rid}/evaluations")
+    assert resp2.status_code == 200
+    body2 = resp2.json()
+    assert body2["count"] == 1
+    assert body2["evaluations"][0]["score"] == 0.875
+
+
+def test_post_run_evaluation_upserts_on_same_evaluator_name(
+    scenario: tuple[SqliteStore, dict[str, str]],
+    client: TestClient,
+) -> None:
+    _, ids = scenario
+    rid = ids["parent_run"]
+    client.post(
+        f"/runs/{rid}/evaluations",
+        json={"evaluator_name": "judge_v1", "score": 1.0},
+    )
+    client.post(
+        f"/runs/{rid}/evaluations",
+        json={"evaluator_name": "judge_v1", "score": 9.0},
+    )
+    resp = client.get(f"/runs/{rid}/evaluations")
+    assert resp.json()["count"] == 1
+    assert resp.json()["evaluations"][0]["score"] == 9.0
+
+
+def test_post_run_evaluation_400_for_missing_evaluator_name(
+    scenario: tuple[SqliteStore, dict[str, str]],
+    client: TestClient,
+) -> None:
+    _, ids = scenario
+    resp = client.post(
+        f"/runs/{ids['parent_run']}/evaluations",
+        json={"score": 1.0},  # missing evaluator_name
+    )
+    assert resp.status_code == 400
+
+
+def test_post_run_evaluation_404_for_unknown_run(client: TestClient) -> None:
+    resp = client.post(
+        "/runs/does-not-exist/evaluations",
+        json={"evaluator_name": "x", "score": 1.0},
+    )
+    assert resp.status_code == 404
+
+
+def test_list_runs_includes_latest_evaluation_when_present(
+    scenario: tuple[SqliteStore, dict[str, str]],
+    client: TestClient,
+) -> None:
+    """The R111 list-runs payload extension carries `latest_evaluation`."""
+    _, ids = scenario
+    rid = ids["parent_run"]
+    client.post(
+        f"/runs/{rid}/evaluations",
+        json={"evaluator_name": "j", "score": 7.0, "rationale": "hi"},
+    )
+    resp = client.get("/runs", params={"limit": 200})
+    assert resp.status_code == 200
+    payload = resp.json()
+    target = next(r for r in payload["runs"] if r["id"] == rid)
+    assert target["latest_evaluation"] is not None
+    assert target["latest_evaluation"]["evaluator_name"] == "j"
+    assert target["latest_evaluation"]["score"] == 7.0
+
+
+def test_list_runs_latest_evaluation_is_none_when_absent(
+    scenario: tuple[SqliteStore, dict[str, str]],
+    client: TestClient,
+) -> None:
+    resp = client.get("/runs", params={"limit": 200})
+    payload = resp.json()
+    for r in payload["runs"]:
+        assert r["latest_evaluation"] is None

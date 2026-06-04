@@ -249,4 +249,10 @@ def quickstart_command(
     if runs_payload:
         first_id = runs_payload[0]["id"]
         console.print(f"  • [cyan]chronos runs show {first_id}[/cyan]   — inspect the parent run")
+        # R115 / ADR-030: surface the evaluator path so a new user can score
+        # the demo run without reading source. Anchors the R122 must-pass
+        # "new-user path → run eval" gate.
+        console.print(
+            f"  • [cyan]chronos eval run {first_id} --evaluator output_length_chars[/cyan] — score it"
+        )
     console.print("  • [cyan]chronos web[/cyan]                    — explore in the browser")

@@ -101,6 +101,14 @@ export default function RunList() {
     return runs.some((r) => (r.usage_summary?.nodes_with_usage ?? 0) > 0);
   }, [runs]);
 
+  // R115 / ADR-030: only show the Score column when at least one run has
+  // a recorded evaluation. Same auto-hide ergonomic as Tokens/Cost — the
+  // column is invisible to users who haven't started scoring yet.
+  const showEval = useMemo(() => {
+    if (!runs) return false;
+    return runs.some((r) => r.latest_evaluation != null);
+  }, [runs]);
+
   const columns: ColumnsType<EnrichedRun> = [
     {
       title: t("runs.columns.status"),
@@ -199,6 +207,67 @@ export default function RunList() {
             },
             sorter: (a: Run, b: Run) =>
               (a.usage_summary?.cost_usd_cents ?? 0) - (b.usage_summary?.cost_usd_cents ?? 0),
+          },
+        ]
+      : []),
+    // R115 / ADR-030: Score column (right-aligned). Conditionally appended
+    // when at least one run carries a latest_evaluation. Renders the
+    // evaluator's score (numeric) or passed (✓/✗) — whichever is set —
+    // with a Tooltip that names the evaluator + rationale.
+    ...(showEval
+      ? [
+          {
+            title: t("runs.columns.score", { defaultValue: "Score" }),
+            key: "score",
+            width: 110,
+            align: "right" as const,
+            render: (_: unknown, row: Run) => {
+              const ev = row.latest_evaluation;
+              if (!ev) return <Text type="secondary">—</Text>;
+              const tipParts = [`evaluator: ${ev.evaluator_name}`];
+              if (ev.rationale) tipParts.push(ev.rationale);
+              const tip = tipParts.join(" — ");
+              if (ev.score != null) {
+                const display =
+                  ev.score === Math.trunc(ev.score)
+                    ? String(Math.trunc(ev.score))
+                    : ev.score.toFixed(4);
+                return (
+                  <Tooltip title={tip}>
+                    <Text style={{ fontFamily: "monospace" }}>{display}</Text>
+                  </Tooltip>
+                );
+              }
+              if (ev.passed != null) {
+                return (
+                  <Tooltip title={tip}>
+                    <Text
+                      style={{
+                        fontFamily: "monospace",
+                        color: ev.passed
+                          ? "var(--chr-success, #52c41a)"
+                          : "var(--chr-danger, #ff4d4f)",
+                      }}
+                    >
+                      {ev.passed ? "✓" : "✗"}
+                    </Text>
+                  </Tooltip>
+                );
+              }
+              return (
+                <Tooltip title={tip}>
+                  <Text type="secondary">—</Text>
+                </Tooltip>
+              );
+            },
+            sorter: (a: Run, b: Run) => {
+              const sa = a.latest_evaluation?.score;
+              const sb = b.latest_evaluation?.score;
+              if (sa == null && sb == null) return 0;
+              if (sa == null) return -1;
+              if (sb == null) return 1;
+              return sa - sb;
+            },
           },
         ]
       : []),

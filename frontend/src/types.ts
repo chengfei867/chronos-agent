@@ -35,6 +35,20 @@ export interface RunUsageSummary {
   cost_usd_cents: number | null;
 }
 
+// Evaluator result persisted against a run (R115 / ADR-030). Mirrors
+// ``chronos.core.models.Evaluation``. Re-running an evaluator overwrites
+// the prior row via the (run_id, evaluator_name) unique index.
+export interface Evaluation {
+  id: string;
+  run_id: string;
+  evaluator_name: string;
+  score: number | null;
+  passed: boolean | null;
+  rationale: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
 export interface Node {
   id: string;
   run_id: string;
@@ -72,6 +86,11 @@ export interface Run {
   // type so older fixtures and individual GET /runs/{id} payloads (which do
   // not include the summary) still type-check.
   usage_summary?: RunUsageSummary | null;
+  // R115 / ADR-030: latest evaluator result for this run. Populated by
+  // GET /runs (server reads ``store.get_evaluations_for_run`` and picks
+  // the last). Optional + nullable so individual GET /runs/{id} (which
+  // does not include it) and pre-R115 fixtures still type-check.
+  latest_evaluation?: Evaluation | null;
 }
 
 export interface Fork {

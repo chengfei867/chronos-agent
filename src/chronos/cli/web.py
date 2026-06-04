@@ -110,8 +110,7 @@ def _reap_stale_pid_file(pid_file: Path, console: Console) -> None:
     except ProcessLookupError:
         # Stale: process is gone, file is orphaned. Clean up.
         console.print(
-            f"[yellow]note:[/] removing stale PID file {pid_file} "
-            f"(pid {old_pid} no longer alive)."
+            f"[yellow]note:[/] removing stale PID file {pid_file} (pid {old_pid} no longer alive)."
         )
         with contextlib.suppress(OSError):
             pid_file.unlink()

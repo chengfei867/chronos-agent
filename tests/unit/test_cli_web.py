@@ -302,9 +302,7 @@ class TestPidFile:
         path = _pid_file_path("127.0.0.1", 8765)
         assert path == tmp_path / "chronos-web-127.0.0.1-8765.pid"
 
-    def test_pid_file_path_falls_back_to_tmp(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_pid_file_path_falls_back_to_tmp(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Without ``$XDG_RUNTIME_DIR`` we fall back to ``/tmp``."""
         from chronos.cli.web import _pid_file_path
 

@@ -207,6 +207,27 @@ chronos-agent/
 
 ---
 
+**截至 Round 115 结束 (2026-06-05 BJT 03:xx cron slot, A2 close-out 第 19 链, in 0-11 工作窗口)** — R115 是 R107-R122 路线表 row 7 (ADR-030 Evaluation/Scoring 单轮), 也是仅次于 R111 (Cost Visibility, ADR-029) 的第二个 ADR-mandated 轮、R122 必过项的硬性差异化 feature. **核心交付**: (a) **`evaluations` SQLite 表** (additive migration `src/chronos/store/migrations/002_evaluations.sql`, 字段 `id` UUID4 PK / `run_id` FK / `evaluator_name` / `score` REAL / `passed` 0/1 / `rationale` TEXT / `metadata` JSON / `created_at`, unique idx `(run_id, evaluator_name)` 强制 INSERT…ON CONFLICT DO UPDATE 的"重跑 evaluator 覆盖前次"语义); (b) **`chronos.eval` 包** (`src/chronos/eval/__init__.py` ~270 LOC) — registry-backed Evaluator API per ADR-030 §42-54, 暴露 `register/get/list_registered/run_evaluator/load_entry_points`, 两个 import-time 注册的 built-in (`output_length_chars` 数值 evaluator + `final_state_key_present` 布尔 evaluator) 锚 ADR-030 §50-52, entry-point 组 `chronos.evaluators` 走 best-effort 加载 (bad plugin 只 log 不挂 CLI), LLM-judge 严格不实装 (ADR-030 §53 v1.1+); (c) **CLI `chronos eval` Typer sub-app** (`src/chronos/cli/eval.py` ~270 LOC) 三动词 `list-evaluators` / `run <id> --evaluator <name> [--evaluator <name> ...]` / `list <id>`, 全部带 `--db` override + `--json` + `--help` Example block (R108 polish 标准); (d) **CLI `chronos compare --eval <name>`** flag — resolve evaluator → 跑遍候选 run → persist → 加可排序 Score 列, 空 cell `[dim]—[/]`, sort desc by score 加 run id tiebreaker; (e) **API `GET /runs/{id}/evaluations`** + `GET /runs` 返回 `latest_evaluation` 嵌入 (newest by `created_at`), 让前端 RunList 不需要 per-row fetch 即可渲染 Score 列; (f) **Pydantic `Evaluation` + `EvaluationResult`** 加进 `core/models.py` (前者镜像表 row, 后者是 evaluator 返回的 partial); (g) **前端 RunList Score 列** (`frontend/src/pages/RunList.tsx`) — 自动隐藏 ergonomic 镜像 R111 Tokens/Cost (≥1 row 有 `latest_evaluation` 才显示), 数值/布尔双渲染, Tooltip 显示 evaluator 名 + truncated rationale; (h) **`Evaluation` TS interface** 加进 `frontend/src/types.ts`; (i) **Spike 21** (`tests/spikes/spike21_eval_compare_pipeline.py` ~120 LOC, 3 GREEN sub-tests, 模板照 spike20 — 不调 LLM, fixture-driven); (j) **`chronos quickstart` Next-steps 加 eval 提示行** — print 一条可粘贴的 `chronos eval run <id> --evaluator output_length_chars`, 锁 R122 必过项"新用户路径 → 跑 eval, 不读源码"的 gate. **本轮关键 fix**: 接手前一 cron slot WIP (12 modified + 8 untracked), `pytest -q` triage 暴露唯一 root-cause — `tests/unit/test_cli_eval.py::_seed` 用 `r.created_at` 排序 (Pydantic `Run` 模型只有 `started_at`/`ended_at`), 8 个 eval CLI 测因 `AttributeError` 短路. 一行改 `started_at` 即解, 全套绿. 这是 `cron-slot-handoff-recovery` skill rule 10 明确点名的 R115 reference WIP — bug-fix-first commit ordering 走完, 没回退没重写, 19th A2 close-out chain.
+
+- **Round: 115** (Phase 6 R107-R122 track row 7, ADR-030 Evaluation/Scoring 全栈, A2 close-out 第 19 链). 0 hard blocker. New artefacts: `progress/2026-06-05-round-115.md` (~12 KB, plan vs reality + ADR-030 acceptance scorecard 18 行 + R116 hand-off invariants + 5 项 D-115 决策). New code: `src/chronos/eval/__init__.py` (registry + 2 built-ins + entry-point loader), `src/chronos/cli/eval.py` (Typer sub-app + `annotate_with_evaluation`), `src/chronos/store/migrations/002_evaluations.sql`, `tests/spikes/spike21_eval_compare_pipeline.py`, `tests/unit/test_eval.py` (24 tests), `tests/unit/test_cli_eval.py` (13 tests, sorted by `started_at`), `tests/integration/test_evaluations_store.py`. Modified: `src/chronos/cli/__init__.py` (eval Typer 注册), `src/chronos/cli/compare.py` (`--eval` flag + `_render_eval_scores` + JSON path 复用 eval scores), `src/chronos/cli/quickstart.py` (eval Next-step 行), `src/chronos/core/models.py` (Evaluation + EvaluationResult), `src/chronos/store/sqlite.py` (`put_evaluation` + `get_evaluations_for_run` + migration runner), `src/chronos/api/server.py` (`/runs/{id}/evaluations` + RunList `latest_evaluation` 嵌入), `frontend/src/pages/RunList.tsx` (Score 列), `frontend/src/types.ts` (Evaluation 类型 + RunSummary.latest_evaluation), `tests/integration/test_sqlite_e2e.py` + `tests/unit/test_api_server.py` + `tests/unit/test_models.py` (ripple), `frontend/dist/*` (vite rebuild). `CHANGELOG.md` (`[Unreleased] / Added — R115` + `Fixed — R115` + `Documentation — R115` + `Process — R115` + `Test gate — R115` 五块插在 R114 之上). `docs/CONTEXT.md` §5 (此段) + §6 (R116 README plan 替换 R115 plan).
+- **R115 关键决策 (上墙)**:
+  - **D-115-1: bug-fix-first commit ordering**. 接手 12 modified + 8 untracked WIP, 第一动作 `pytest -q --no-cov` 找 root cause (test 帮助函数排序字段错), 一行 fix 后整套 745/9/0. 没回退没重写, `cron-slot-handoff-recovery` skill rule 10 reference WIP 落地标杆.
+  - **D-115-2: 跳过 R115 prologue (F8/F11 + 6-surface walkthrough)** 推到 R119 E2E. ADR-030 acceptance 是 R115 唯一 gate, prologue 与之竞 slot 预算; R119 已经 own 了 live-browser walkthrough mandate.
+  - **D-115-3: cli-reference.md eval 段推到 R116**. R116 plan 本来就开 docs arc (README 双语 + cli-reference refresh + Cost+Eval 行); 同一文件两轮各写一段会 race.
+  - **D-115-4: TreeView score badge 推后**. ADR-030 §69 明文"re-using existing surfaces keeps the change minimal", RunList Score 列是 gating frontend 项, TreeView badge 是 post-MVP polish.
+  - **D-115-5: POST `/runs/{id}/evaluations` 不实装**. ADR-030 §74 明文"CLI is the recommended path"; 没出现 user case, 推到 R121 RC buffer 或 v1.1.
+- **R115 acceptance (R122 必过项更新)**:
+  - ✅ ADR-030 §28-89 13/18 line items shipped verbatim (4 deferred items 全是 downstream-row work, 不 gate R122)
+  - ✅ Quickstart Next-steps 含 eval 命令行 (R122 "新用户路径 → 跑 eval" gate 满足)
+  - ✅ 745 passed / 9 skipped / 0 failed (+48 net over R114, 远超 R115 baseline ≥710)
+  - ✅ 6 spikes GREEN (含 spike20 + spike21)
+  - ✅ Frontend `tsc --noEmit` clean, `npm run build` clean
+  - ✅ Adapter zero-regression streak: R52→R115 = **64** (`src/chronos/adapters/` byte-untouched)
+  - ⚠️ Open polish 跨到 R116-R121: README "🎯 Evaluation" 段 (R116), `evaluators.md` 文档站页 (R117), TreeView score badge (R119 dogfood 视情况), POST `/runs/{id}/evaluations` (R121 视情况)
+- **距离 R122**: 7 轮 (R116 README 双语 + Cost+Eval feature 行 / R117 文档站 GH Pages / R118 examples ≥3 demo 跑过 evaluator / R119 E2E dogfood / R120 v1.0.0-rc1 cut / R121 RC buffer / R122 final acceptance).
+
+---
+
 **截至 Round 114 结束 (2026-06-03 CST, BJT 04:48 cron slot 写完代码+测试+文档但 timed out 没 commit; BJT 08:02 follow-up cron slot 通过 `cron-slot-handoff-recovery` skill Option A2 verify-don't-redo 路径完成 close-out + commit + push, 在 0-11 窗口内)** — R114 是 R107-R122 路线表 row 6 (前端 P0 清扫 R112-R114) 的第三刀, 也是 row 6 的收口刀. **核心交付** (来自 BJT 04:48 cron slot, BJT 08:02 slot 验证 + ship): (a) **3 个 R113-catalogued 前端 finding 修复**: F7 (P1 — `frontend/src/pages/TreeView.tsx` 加 `useEffect` watch `baseNodes.length`, 50ms defer 后调 `rf.fitView({ padding: 0.15, duration: 200, minZoom: 0.5 })`, 解决 ReactFlow `fitView` prop 只在 initial render 触发不在数据 arriving 或 fork 树展开时触发的问题), F9 (P2 — MiniMap 改为条件渲染 `{rfNodes.length >= 6 && (<MiniMap …/>)}`, 6 节点以下不渲染避免空 dark rectangle 占位框), F10 (P2 — `frontend/src/components/NodeDetails.tsx` Identity tab 加紫色 `<Tag>{node.model_name}</Tag>` 行, 镜像 Cost-tab 渲染); (b) **`chronos web` PID-file lifecycle 实装** (`src/chronos/cli/web.py` +50 LOC) — 这是 `chronos-web-cron-port-leak` skill backlog 的 option 1, R109/R112/R113 三轮 leak 的 long-term fix. 新 `_pid_file_path(host, port)` 走 `$XDG_RUNTIME_DIR/chronos-web-<host>-<port>.pid` (Linux runtime-state convention) + `/tmp` fallback, per-(host,port) filename 防多实例互踩; 新 `_reap_stale_pid_file(pid_file, console)` 用 `os.kill(pid, 0)` 探活, `ProcessLookupError` reap (yellow note), `PermissionError` 留着 (alive 别人家), corrupt int silently nuke; 全程 `contextlib.suppress(OSError)` 包装确保 read-only filesystem 不阻塞 serving. Wired to `web_command`: reap-then-write before banner, cleanup in `finally` next to `store.close()`. (c) **4 个新 PID-file 测试** (`tests/unit/test_cli_web.py::TestPidFile`): `test_pid_file_path_uses_xdg_runtime_dir` (env 优先), `test_pid_file_path_falls_back_to_tmp` (env unset fallback), `test_pid_file_written_and_cleaned_up` (roundtrip — 运行中存在 + 退出后清理), `test_stale_pid_file_is_reaped` (pre-seed PID 999999 reap, serving 仍走). (d) **Skill `chronos-web-cron-port-leak` updated** — "Long-term fix" 段重写为 "Long-term fix — status", option 1 (PID file) 标 SHIPPED in R114 + 测试引用; option 2 (`chronos web --stop` verb) 留在 backlog. **Plan vs reality 偏差** (诚实标注): 04:48 slot 没做 R114 plan §3 写的 6-surface live walkthrough (Compare/Diff/Bookmarks/Theme/Language/Step-Cards/Tour-replay) — 起 chronos web + npm + 浏览器 vision + 截图估 15-20 tool calls 加 close-out floor 会 timeout, 推到 R115 prologue 或 R119 E2E (Tour 已 R113 验证存在, 6 surface 全是 visual polish 不是 P0 gate). F8 (draft-badge tooltip overlay) + F11 (RunList header wrap) 也推到 R115 prologue / R116 README work — 都不 gating quickstart / 新用户路径. **Phase 6 row 6 close-target 确认锁住**: "≥3 P0 + cluster of P1/P2 polish" — R112 给了 2 P0 + 1 P1, R114 给了 1 P1 (F7) + 2 P2 (F9/F10) + 1 backend long-term fix (PID-file). Test gate: **697 passed / 9 skipped** (was R113 baseline 693/9, exactly +4 新 PID-file 测试). 0 production code 触动 `src/chronos/api/` / `src/chronos/adapters/` / `src/chronos/store/` / pyproject.toml / uv.lock. Frontend `tsc --noEmit` clean, `npm run build` clean (5391 modules → 1.46 MB / 477 KB gzip).
 
 - **Round: 114** (Phase 6 R112-R114 track row 6 slice 3 of 3 收口, 2-slot ship, 第二 slot 用 cron-slot-handoff-recovery Option A2). 0 hard blocker. New artefacts: `progress/2026-06-03-round-114.md` (~8 KB, R114 close-out + plan vs reality + 5 项 hand-off invariants). Modified: `frontend/src/pages/TreeView.tsx` (+13 LOC, F7 fitView useEffect + F9 MiniMap conditional), `frontend/src/components/NodeDetails.tsx` (+8 LOC, F10 Identity tab Model 行), `src/chronos/cli/web.py` (+50 LOC, PID-file lifecycle + helpers), `tests/unit/test_cli_web.py` (+99 LOC, 4 个 TestPidFile), `frontend/dist/*` (vite rebuild 输出 — `index-Bdb38E-0.js` 删 / `index-BsXkWQEO.js` 加 / `index.html` 引用替换), `CHANGELOG.md` (`[Unreleased] / Fixed — R114` + `Added — R114` + `Process — R114` + `Test gate — R114` 块插在 R113 之上), `docs/CONTEXT.md` §5 (此段) + §6 (R115 ADR-030 plan 替换 R114 plan), skill `chronos-web-cron-port-leak` SKILL.md (Long-term fix → status, option 1 SHIPPED).
@@ -1477,9 +1498,73 @@ R73 是 R69→R72 4-round chain 的第一个真 disprover round, 也是 Phase 4 
 >
 > 🆕 **2026-05-26 R109 后用户决策**: 终点从 R120 延到 R122, 加 ADR-029 (Cost Visibility, R111) + ADR-030 (Evaluation/Scoring, R115)。
 >
-> **R114 ✅ 完成 (2026-06-03 cron slot, 2-slot ship via cron-slot-handoff-recovery A2)** — Phase 6 row 6 (前端 P0 清扫 R112-R114) 收口刀: F7/F9/F10 修 + `chronos web` PID-file lifecycle 实装 (long-term fix for `chronos-web-cron-port-leak` skill backlog) + skill SKILL.md updated. 测试 697/9, streak R52→R114 = 63. **下一轮 = R115: ADR-030 Evaluation/Scoring 全栈实装** (Phase 6 路线表 row 7, R122 必过项之一).
+> **R115 ✅ 完成 (2026-06-05 cron slot, A2 close-out 第 19 链 via `cron-slot-handoff-recovery` skill rule 10)** — Phase 6 row 7 (ADR-030 Evaluation/Scoring 单轮) 实装: `evaluations` 表 + `chronos.eval` 注册表 + 2 built-in evaluator + CLI `eval` 三动词 + `compare --eval` + API + 前端 RunList Score 列 + spike21 + quickstart Next-step 加 eval 命令行. 745/9 测试, streak R52→R115 = 64. **下一轮 = R116: README 中英双语 + Cost+Eval feature 行 + demo GIF + 5 分钟 quickstart** (Phase 6 路线表 row 8 第一刀, R122 必过项之一).
 
 ---
+
+**Round 116 — Phase 6 row 8 first slice: README 中英双语 + Cost+Eval feature 行 + demo GIF + 5 分钟 quickstart (单 slot, 单 commit)**
+
+R116 是 R107-R122 路线表 row 8 (R116-R118 docs/demo arc) 的第一刀. R107-R115 已把 CLI Polish + Cost Visibility (ADR-029) + 前端 P0 + Evaluation (ADR-030) 全部做完, 距 R122 还剩 6 轮. R116-R118 是文档/demo arc, 第一刀 R116 是 README 双语化 + 把 Cost (R111) + Evaluation (R115) feature 行写进首屏, 锁 R122 必过项 "README 中英双语, demo GIF, 5 分钟 quickstart, 含 Cost+Eval feature 行".
+
+### R116 必做 (单 slot, 单 commit)
+
+1. **必读 (按顺序)**:
+   - `progress/2026-06-05-round-115.md` (R115 close-out, 上一轮) — R116 hand-off invariants 段 + ADR-030 acceptance scorecard 决定 R116 哪些遗留要补.
+   - `docs/decisions/ADR-029-cost-visibility.md` §README block — R111 写过的 README 草稿, R116 接进双语 README.
+   - `docs/decisions/ADR-030-evaluation-scoring.md` §86-87 (README "🎯 Evaluation" + `evaluators.md`) — R115 D-115-3 把 cli-reference 段也推到 R116.
+   - 现 `README.md` (走读, 评估哪段可保留 / 哪段要 rewrite / feature matrix 在哪).
+   - `examples/builtin-minimal/README.md` (R109 写的 demo 文档, R116 引用进 quickstart 段).
+
+2. **README 双语化** (核心交付):
+   - 顶部 hero: 项目名 / 一句话 pitch (中英) / badges 行.
+   - **Feature matrix** (中英对照): 已有的 record / replay / fork / diff / multi-adapter 行 + 新增 **💰 Cost & Token Tracking** 行 (R111) + **🎯 Evaluation & Scoring** 行 (R115). 每行右侧 link 到对应 ADR / docs page.
+   - **5 分钟 quickstart 段** — 一段 `pip install chronos-agent` (or `pipx`), 一段 `chronos quickstart`, 然后 paste 那条 Next-steps 输出, 再粘上 `chronos eval run` 命令的输出截图 (如果懒得截图, 用 fenced ASCII output block 也行).
+   - Cost + Eval 段各 ~6-10 行: 从 ADR 拷过来 + 简化术语, 不要直接嵌 ADR 全文 link.
+   - 中文版作为 README_zh.md (or README.zh-CN.md, 业界惯例) — 新文件, 顶部加 EN/中文 toggle link.
+3. **Demo GIF (轻量级)**: 如果时间紧, 用 ASCII recording (`asciinema` 或纯 fenced code block) 替代真 GIF. 真 GIF 录制可推到 R117 / R118. 不允许 demo 段空着.
+4. **`docs/cli-reference.md` eval 段** (R115 D-115-3 推过来) — 加 `chronos eval list-evaluators` / `chronos eval run` / `chronos eval list` / `chronos compare --eval` 的 Usage / Examples / Exit codes 段, 镜像现有 verb 段格式.
+5. **任何前端 / 后端代码改动 → 全套测试必过** — 但 R116 应该是 docs-only round, 0 src/ 触动. 如果发现 README 引用的 CLI 输出与实际有出入, 修代码而不是改 README copy.
+6. **写 `progress/2026-06-XX-round-116.md`** (含 self-check "仍在 R107-R122 + ADR-029/030 轨道", 距 R122 = 6 轮).
+7. **`docs/CONTEXT.md` §5 加 R116 段; §6 用 R117 plan 替换本块** (R117 = 文档站 GH Pages).
+8. **`CHANGELOG.md` `[Unreleased] / Documentation — R116`** 块.
+
+### R116 硬约束
+
+- ❌ **不动 src/** — R116 是 docs-only. 如果 README 引用与代码有出入, fix 代码不是 README, 但要小心: 任何代码修就触发 745/9 测试 + adapter streak invariants.
+- ❌ **不开始 R117 文档站** — 那是下一行 (one slice per slot).
+- ❌ **不录真 GIF 如果会拖时间** — fenced ASCII output 替代, R117/R118 再补真 GIF.
+- ✅ Adapter 零回归 streak 目标: R52→R116 = **65** (`src/chronos/adapters/` 不动 — 应该天然不动, 因为 docs-only).
+- ✅ R116 必产出: README + README_zh.md (双语) + cli-reference.md eval 段 + CHANGELOG + progress.
+- ✅ feature matrix 必含 Cost + Evaluation 行, 不能漏.
+
+### R116 deliverables
+
+- New: `README.zh-CN.md` (or `README_zh.md`, 业界惯例选一)
+- Modified: `README.md` (双语 toggle link + feature matrix Cost+Eval 行 + 5 分钟 quickstart 段重写 + demo block)
+- Modified: `docs/cli-reference.md` (eval 三动词 + `compare --eval` 段)
+- Modified: `CHANGELOG.md` (`[Unreleased] / Documentation — R116` 块)
+- New: `progress/2026-06-XX-round-116.md`
+- Modified: `docs/CONTEXT.md` §5 (R116 close 段) + §6 (R117 plan replace)
+
+### R116 gate checklist
+
+- [ ] `README.md` 含 "💰 Cost & Token Tracking" + "🎯 Evaluation & Scoring" feature 行
+- [ ] `README.md` 含 5 分钟 quickstart 段 (从 install 到 eval 一条龙)
+- [ ] `README.zh-CN.md` (or 同名变体) ship, 与英文版同步内容
+- [ ] `docs/cli-reference.md` eval 三动词 + `compare --eval` 段补齐
+- [ ] `pytest -q --no-cov` 全过 (≥745, 不变)
+- [ ] Adapter 目录未动 (streak → 65)
+- [ ] CHANGELOG R116 块写好
+- [ ] R115 deferred 的 README/docs items (ADR-030 §86 "🎯 Evaluation" + ADR-029 README block) 全部进 README
+
+### R117 plan preview (R116 写时填这里)
+
+- **R117**: 文档站 GH Pages 上线 (mkdocs-material 或 docusaurus, 选简单的) — getting-started / cli-reference / concepts / **evaluators** (ADR-030 §87 mandate) / **cost-tracking** (ADR-029 mandate) / FAQ. R118 examples ≥3 demo (每个跑过 evaluator) 紧随.
+
+---
+
+<details>
+<summary><b>Historical: R115 plan (Phase 6 row 7 ADR-030 Evaluation/Scoring) — DONE in R115 (`evaluations` 表 + `chronos.eval` 注册表 + 2 built-in + CLI eval 三动词 + compare --eval + API + 前端 Score 列 + spike21 + quickstart eval 提示, 745/9 测试, streak 64, A2 close-out chain 19, bug-fix-first commit ordering 经 cron-slot-handoff-recovery skill rule 10)</b></summary>
 
 **Round 115 — Phase 6 row 7: ADR-030 Evaluation/Scoring 全栈实装 (单 slot, 单 commit)**
 
