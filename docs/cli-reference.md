@@ -28,7 +28,10 @@ to read. Default search order: `--db` flag > `$CHRONOS_DB` > `./chronos.db`.
 | [`replay`](#replay) | Step through a run node-by-node (TUI) | DB | — |
 | [`tree`](#tree) | Print the fork-family tree | DB | — |
 | [`diff`](#diff) | Side-by-side compare of 2 runs | DB | — |
-| [`compare`](#compare) | N-way fork-sweep compare | DB | — |
+| [`compare`](#compare) | N-way fork-sweep compare (with `--eval` scoring) | DB | — |
+| [`eval run`](#eval-run) | Score a recorded run with a registered evaluator | DB | DB |
+| [`eval list`](#eval-list) | List a run's persisted evaluations | DB | — |
+| [`eval list-evaluators`](#eval-list-evaluators) | List registered evaluators | — | — |
 | [`verify-golden`](#verify-golden) | Compare run vs. on-disk fixture | DB + fixture | — |
 | [`runs list`](#runs-list) | List recorded runs | DB | — |
 | [`runs show`](#runs-show) | Show one run's nodes + metadata | DB | — |
@@ -197,6 +200,116 @@ chronos compare --matrix run_001 run_002 run_003
 - `1` — at least one id wasn't found (hint: `chronos runs list`).
 - `2` — input validation: bad `--columns`, mutually-exclusive flags,
   fewer than 2 candidate runs, or duplicate ids.
+
+---
+
+### `eval run`
+
+```
+chronos eval run <run_id> --evaluator <name> [--db PATH] [--json]
+```
+
+Score a recorded run with a registered evaluator (ADR-030). The result is
+upserted into the `evaluations` table — re-running with the same
+`--evaluator` name overwrites the prior result for that `(run_id,
+evaluator_name)` pair.
+
+Built-in evaluators ship with `chronos`:
+
+- `output_length_chars` — emits `score = len(final_state["output"])`.
+- `final_state_key_present` — emits `passed = "output" in final_state`.
+
+Third-party packages can register more via the `chronos.evaluators`
+entry-point group; list everything that's currently registered with
+`chronos eval list-evaluators`.
+
+**Examples**
+
+```bash
+chronos eval run <run_id> --evaluator output_length_chars
+chronos eval run <run_id> -e final_state_key_present --json
+```
+
+**Exit codes**
+
+- `0` — happy path; row persisted.
+- `1` — no such run, or unknown evaluator (hint: `chronos eval list-evaluators`).
+- `2` — evaluator raised at call time; the DB is untouched.
+
+---
+
+### `eval list`
+
+```
+chronos eval list <run_id> [--db PATH] [--json]
+```
+
+Prints every evaluation persisted against a run, most recent first
+(evaluator name, score, passed flag, rationale, timestamp).
+
+**Examples**
+
+```bash
+chronos eval list <run_id>
+chronos eval list <run_id> --json | jq .
+```
+
+**Exit codes**
+
+- `0` — table or JSON printed (empty when no evaluations).
+- `1` — no such run (hint: `chronos runs list`).
+
+---
+
+### `eval list-evaluators`
+
+```
+chronos eval list-evaluators [--json]
+```
+
+Lists every evaluator currently registered in the running process —
+both the chronos built-ins and any plugins discovered through the
+`chronos.evaluators` entry-point group.
+
+**Examples**
+
+```bash
+chronos eval list-evaluators
+chronos eval list-evaluators --json
+```
+
+**Exit codes**
+
+- `0` — list printed (one row per evaluator).
+
+---
+
+### `compare --eval`
+
+```
+chronos compare <pivot> <other> [<other> ...] --eval <evaluator_name>
+```
+
+The standard `chronos compare` (see above) gains an extra `--eval` flag
+that appends an "Evaluation: `<name>`" table after the alignment summary.
+Each row is one of the compared runs with its persisted score, passed
+flag, and rationale; runs that have never been evaluated by `<name>`
+render as a dim em-dash.
+
+Use this to answer *"of the N forks I just compared, which one scored
+highest?"* without leaving the terminal. Evaluators must have been run
+ahead of time (typically via `chronos eval run`).
+
+**Example**
+
+```bash
+chronos eval run <run_a> --evaluator output_length_chars
+chronos eval run <run_b> --evaluator output_length_chars
+chronos compare <run_a> <run_b> --eval output_length_chars
+```
+
+The flag stacks with `--auto-pivot` and `--matrix` (mutually exclusive
+with each other, both compatible with `--eval`).
 
 ---
 
