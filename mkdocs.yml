@@ -1,0 +1,118 @@
+site_name: Chronos Agent
+site_description: Time-Travel Debugger for Multi-Agent AI Systems — record, replay, fork, diff, compare. With first-class token/cost tracking and pluggable evaluators.
+site_url: https://chengfei867.github.io/chronos-agent/
+site_author: Hermes Agent
+repo_url: https://github.com/chengfei867/chronos-agent
+repo_name: chengfei867/chronos-agent
+edit_uri: edit/main/docs/
+
+# Build docs/ → site/. The docs/ directory is the input root; mkdocs ignores
+# any .md path the nav doesn't reference unless `nav` is omitted (then every
+# .md is published, which we explicitly do NOT want — `docs/progress/`,
+# `docs/research/`, `docs/dogfood/`, `docs/decisions/` are linked but not
+# top-level nav entries).
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+  language: en
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: amber
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: amber
+      toggle:
+        icon: material/weather-night
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.top
+    - navigation.indexes
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - toc.follow
+  icon:
+    repo: fontawesome/brands/github
+
+# R117: do NOT publish to GitHub Pages yet. The gh-pages branch is built by
+# .github/workflows/gh-pages.yml on every push to main, but Settings → Pages
+# stays "None" until R120 RC1, when the user explicitly authorises the public
+# toggle. The build itself acts as a doc-site smoke test in the meantime.
+
+plugins:
+  - search
+  # i18n is added in a follow-up round (R118+). For R117 the English site is
+  # the primary deliverable; README.zh-CN.md still lives at the repo root for
+  # the Chinese landing page.
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+  - pymdownx.caret
+  - pymdownx.keys
+
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - Concepts: concepts/index.md
+  - CLI reference: cli-reference.md
+  - Cost tracking: cost-tracking.md
+  - Evaluators: evaluators.md
+  - Adapters:
+      - Anthropic Agents SDK: adapters/anthropic_agents.md
+      - Adapter protocol: contracts/adapter-protocol.md
+  - Guides:
+      - Forking safely: guides/forking-safely.md
+      - Side effects: guides/side-effects.md
+  - Contracts:
+      - Golden trace format: contracts/golden-trace-format.md
+  - Decisions (ADRs):
+      - Index: decisions/index.md
+  - FAQ: faq.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/chengfei867/chronos-agent
+  generator: false
+  version:
+    provider: mike
+    default: latest
+
+copyright: Copyright &copy; 2026 chengfei867 — content generated 100% by Hermes Agent / Claude Opus

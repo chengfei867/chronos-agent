@@ -680,17 +680,28 @@ def build_app(store: SqliteStore) -> FastAPI:
         run_id: str,
         body: dict[str, Any],
     ) -> dict[str, Any]:
-        """Persist a pre-computed evaluation directly (storage-layer escape).
+        """Persist or run an evaluation against ``run_id``.
 
-        Body shape: ``{evaluator_name: str, score?: float, passed?: bool,
-        rationale?: str, metadata?: dict}``. Re-using an evaluator_name
-        against the same run UPSERTs (per the unique index). Intended for
-        external eval pipelines that compute scores out-of-band; the
-        recommended in-band path is ``chronos eval run``.
+        Two modes (selected by body shape):
+
+        1. **Server-side run** (preferred if you trust a built-in/registered
+           evaluator). Body: ``{evaluator_name: str, run: true}``. Server
+           resolves ``evaluator_name`` against ``chronos.eval`` registry,
+           executes it on the run + nodes, persists, and returns the
+           resulting row.
+        2. **Storage-layer escape** (external pipelines computing scores
+           out-of-band). Body: ``{evaluator_name: str, score?: float,
+           passed?: bool, rationale?: str, metadata?: dict}``.
+
+        Re-using an evaluator_name against the same run UPSERTs (per the
+        unique index). The recommended in-band CLI path remains
+        ``chronos eval run`` (ADR-030 §57-63).
         """
         import uuid as _uuid
 
         from chronos.core.models import Evaluation
+        from chronos.eval import get as get_evaluator
+        from chronos.eval import run_evaluator
 
         run = store.get_run(run_id)
         if run is None:
@@ -701,6 +712,27 @@ def build_app(store: SqliteStore) -> FastAPI:
                 status_code=400,
                 detail="missing or non-string 'evaluator_name'",
             )
+
+        # Mode 1 — server-side run. Triggered by ``run: true`` body field.
+        if body.get("run") is True:
+            try:
+                get_evaluator(evaluator_name)
+            except KeyError as exc:
+                raise HTTPException(status_code=404, detail=str(exc)) from exc
+            nodes = store.get_nodes_for_run(run_id)
+            try:
+                evaluation = run_evaluator(evaluator_name, run, nodes)
+            except Exception as exc:  # evaluator raised — surface as 422
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"evaluator raised: {exc}",
+                ) from exc
+            store.put_evaluation(evaluation)
+            stored = store.get_evaluation_for_run_evaluator(run_id, evaluator_name)
+            assert stored is not None
+            return stored.model_dump(mode="json")
+
+        # Mode 2 — storage-layer escape (R115 original behaviour).
         try:
             evaluation = Evaluation(
                 id=str(_uuid.uuid4()),

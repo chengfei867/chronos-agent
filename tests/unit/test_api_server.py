@@ -1464,6 +1464,61 @@ def test_post_run_evaluation_404_for_unknown_run(client: TestClient) -> None:
     assert resp.status_code == 404
 
 
+# R117 (ADR-030 deferred #3 — server-side run mode for POST /evaluations).
+def test_post_run_evaluation_run_mode_executes_builtin_evaluator(
+    scenario: tuple[SqliteStore, dict[str, str]],
+    client: TestClient,
+) -> None:
+    """``run: true`` with a built-in evaluator name runs it server-side."""
+    _, ids = scenario
+    rid = ids["parent_run"]
+    resp = client.post(
+        f"/runs/{rid}/evaluations",
+        json={"evaluator_name": "output_length_chars", "run": True},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["evaluator_name"] == "output_length_chars"
+    # output_length_chars returns numeric score >= 0; never errors on a real run.
+    assert body["score"] is not None
+    assert body["score"] >= 0
+
+
+def test_post_run_evaluation_run_mode_404_for_unknown_evaluator(
+    scenario: tuple[SqliteStore, dict[str, str]],
+    client: TestClient,
+) -> None:
+    """``run: true`` with an unregistered evaluator returns 404 with hint."""
+    _, ids = scenario
+    rid = ids["parent_run"]
+    resp = client.post(
+        f"/runs/{rid}/evaluations",
+        json={"evaluator_name": "nonexistent_judge", "run": True},
+    )
+    assert resp.status_code == 404
+    assert "nonexistent_judge" in resp.text
+
+
+def test_post_run_evaluation_run_mode_upserts_idempotently(
+    scenario: tuple[SqliteStore, dict[str, str]],
+    client: TestClient,
+) -> None:
+    """Re-running the same evaluator UPSERTs (same row count after 2 POSTs)."""
+    _, ids = scenario
+    rid = ids["parent_run"]
+    client.post(
+        f"/runs/{rid}/evaluations",
+        json={"evaluator_name": "output_length_chars", "run": True},
+    )
+    client.post(
+        f"/runs/{rid}/evaluations",
+        json={"evaluator_name": "output_length_chars", "run": True},
+    )
+    resp = client.get(f"/runs/{rid}/evaluations")
+    body = resp.json()
+    assert body["count"] == 1, body
+
+
 def test_list_runs_includes_latest_evaluation_when_present(
     scenario: tuple[SqliteStore, dict[str, str]],
     client: TestClient,

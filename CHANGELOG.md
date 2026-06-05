@@ -4,6 +4,38 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Documentation — R117 (Phase 6, mkdocs-material 文档站 — R107-R122 track row 8 slice 2 of 3)
+
+- **`mkdocs.yml`** (~3.5 KB, project root) — `theme: material` 主题 + light/dark palette toggle + 11 top-level nav 入口 (Home / Getting started / Concepts / CLI reference / Cost tracking / Evaluators / Adapters / Guides / Contracts / Decisions / FAQ). `markdown_extensions` 启 admonition + tables + footnotes + pymdownx (superfences/mermaid + details + tabbed + tasklist + highlight + keys + tilde + caret + inlinehilite + snippets). `extra.version.provider: mike` 留给 R120 多版本切换. site_url 指向 `https://chengfei867.github.io/chronos-agent/` (Pages settings 不开, 等 R120 用户拍板).
+- **`docs/index.md`** (~5 KB) — 文档站 landing. 三段: 快速理解 chronos-agent 是什么 (record / replay / fork / diff + cost + eval) / 5 分钟上手 / 学习路径 (Concepts → Getting started → CLI reference → Cost tracking → Evaluators → Adapters → FAQ). 顶部 hero + 三组卡片导航 (concepts / how-to / reference).
+- **`docs/concepts/index.md`** (~7 KB) — 五大核心概念 (Record / Replay / Fork / Diff / Compare) 的 user-facing 解释, 每节 ~150 字 + 典型 CLI 调用 + 链 `cli-reference.md` 对应 verb. \"How they fit together\" 段作为 mental model 收口. R122 必过项 \"concepts\" 那一档.
+- **`docs/cost-tracking.md`** (~7 KB) — ADR-029 (Cost Visibility) user-facing tutorial. CLI / Web UI / Demo / Disable / Math 五段; CLI 段含粘贴真实 `chronos runs list` token/cost ASCII 表; Math 段含公式 `cost_usd = (input_tok × in_price + output_tok × out_price) / 1e6`. 不直接 link ADR (R117 plan 要求), 只 See also 段引用 ADR-029. R122 必过项 \"cost-tracking\" 那一档.
+- **`docs/evaluators.md`** (~7 KB) — ADR-030 (Evaluation/Scoring) user-facing tutorial. Why / Built-ins / CLI / Custom step-by-step / API / What's not in v1.0 五段. Custom 段两条路径 (`register()` 内联 vs `chronos.evaluators` entry-point group, 含 pyproject.toml `[project.entry-points]` 片段). LLM-judge 明确标 v1.1+ post-1.0 backlog. R122 必过项 \"evaluators\" 那一档.
+- **`docs/faq.md`** (~7 KB, 9 条问答) — 需要 API key 吗? / 支持哪些框架? / 自己加 adapter? / 怎么集成进 langgraph 项目 (3 种方案)? / `chronos web` 端口被占用? / Score 列空着? / fork 会改原 run 吗? / evaluation 持久化在哪 (含 SQLite schema 引)? / chronos vs Langfuse/Phoenix/Helicone 对比表. R122 必过项 \"FAQ\" 那一档.
+- **`docs/decisions/index.md`** (~3.5 KB) — ADR 索引页. 列 R117 当前 30 个 ADR (ADR-000 → ADR-030), 每行含状态 (Accepted / Superseded by …). mkdocs `--strict` 要求 nav 指向的页存在. ADR 目录子页本身不进 top-level nav, 通过此索引一站访问.
+- **`.github/workflows/gh-pages.yml`** (~3 KB) — `astral-sh/setup-uv@v5` 装 mkdocs-material + pymdown-extensions → `mkdocs build --strict` (catches broken links / unused files) → `peaceiris/actions-gh-pages@v4` push 到 `gh-pages` 分支. 触发 push to main (paths 限 `docs/` + `mkdocs.yml`) + `workflow_dispatch`. **GitHub Pages settings 不开** — R120 才用户拍板 public, R117 只 build artifact 提前到位.
+- **`docs/faq.md` 一处 ADR 链订正** — `ADR-016-recorder-protocol.md` → `ADR-016-adapter-interface.md` (实际文件名). Python 全文档链扫描后 0 broken — 这是 mkdocs `--strict` 在 GHA 上会 catch 的同一类错误.
+
+### Added — R117 (POST `/runs/{id}/evaluations` server-side run 模式 — ADR-030 deferred item #3)
+
+- **API `POST /runs/{run_id}/evaluations` 加 mode 1 (server-side run)**. body 含 `{evaluator_name: str, run: true}` 时, 服务端从 `chronos.eval` registry 解析 evaluator → 调 `run_evaluator(name, run, nodes)` → `store.put_evaluation` UPSERT → 返回 canonical row. 错误语义对齐 CLI: `KeyError` (未注册 evaluator) → 404 + 完整 hint, evaluator-raised → 422 with detail. R115 原 mode 2 (storage-layer escape) 完整保留, mode selection 由 `body["run"] is True` 决定. ADR-030 D-115-3 deferred item #3 关闭.
+- **Tests**: `tests/unit/test_api_server.py` +3 测试 (`test_post_run_evaluation_run_mode_executes_builtin_evaluator` / `_run_mode_404_for_unknown_evaluator` / `_run_mode_upserts_idempotently`). 覆盖 happy path (built-in evaluator 跑出非空 score) + 404 error path + UPSERT idempotency (两次 POST 同 evaluator 后 GET count == 1).
+
+### Process — R117
+
+- Adapter zero-regression streak: **R52 → R117 = 66 rounds** (`src/chronos/adapters/` byte-untouched — R117 是 docs-heavy + 1 backend endpoint + 3 测试, 0 adapter touch).
+- Single-slot, single-commit. R116 deferred ADR-030 #3 (server-side POST) ✅ shipped; #2 (TreeView score badge) + #4 (RunList tooltip 相对时间) ⏭️ R118 接管 (R117 plan 第 7 条本就有 escape hatch \"如果挤压 mkdocs 工作预算 → 先 mkdocs\").
+- 链接完整性: R117 用 Python 脚本扫描所有 in-nav 文档的 in-repo `.md` 链接, 初次扫到 1 broken (ADR-016-recorder-protocol → adapter-interface), 已 patch. 修后 0 broken. 这是 `mkdocs --strict` 在 GHA 上会 catch 的同一类错误的本地预扫.
+- New progress doc `progress/2026-06-05-round-117.md` (~14 KB) 含 R107-R122 + ADR-029/030 轨道 self-check, plan vs reality, mkdocs nav 完整树, ADR-030 deferred items 状态表, R118 hand-off invariants, 距 R122 = 5 轮.
+- mkdocs 本地 `mkdocs build --strict` smoke test 因 cron container 网络限速 (pip install timeout) 未在本轮运行; 完全依赖 GHA 跑 build (workflow 推到 main 后自动触发), R118 first action 之一是 verify GHA build status — 如失败先修 build.
+
+### Test gate — R117
+
+- **748 passed / 9 skipped / 0 failed** (`uv run pytest -q`). +3 net over R115/R116 baseline (745) — 3 新增测试覆盖 ADR-030 #3 server-side POST mode.
+- 6 spikes GREEN (含 spike20 ADR-029 / spike21 ADR-030).
+- 前端无改动 — `npx tsc --noEmit` 状态保持 R115 baseline 干净, `npm run build` 同.
+- `uv run ruff check .` All checks passed; `uv run ruff format --check .` (changed files: `src/chronos/api/server.py` + `tests/unit/test_api_server.py`) 2 files already formatted.
+
 ### Documentation — R116 (Phase 6, README 中英双语 + Cost+Eval 集成 — R107-R122 track row 8 slice 1 of 3)
 
 - **`README.md` rewritten as English-only** (~19 KB). Top toggle `[English](./README.md) · [简体中文](./README.zh-CN.md)`. Pitch section gains two highlights: 💰 Cost & Token Tracking (ADR-029) and 🎯 Evaluation & Scoring (ADR-030). Feature matrix top inserts two new rows (Cost row marked R111 v0.9.0+ ✅ + Eval row marked R115 v0.9.0+ ✅). Quickstart expanded from 3 to 7 steps, with real `chronos runs list` ASCII table output (token=200/cost=8 ¢ + token=230/cost=11 ¢ from quickstart's builtin-minimal seed) followed by `chronos eval list-evaluators` + `chronos eval run` × 2 + `chronos compare … --eval output_length_chars`. New `## 💰 Cost & Token Tracking (ADR-029)` section enumerates 5 surfaces (`runs list` default / `runs show` node tree / `diff` + `compare` aggregates / Web UI / `--no-usage` opt-out). New `## 🎯 Evaluation & Scoring (ADR-030)` section with evaluator anatomy code block, CLI usage 5 lines, built-ins, entry-point extension, v1.0 out-of-scope list (LLM-judge / harness / leaderboard all v1.1+). Status section rewritten to R107-R122 roadmap. Repo tree adds `src/chronos/eval/` + `examples/builtin-minimal/` + `tests/spikes/spike20+spike21`.

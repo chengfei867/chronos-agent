@@ -207,6 +207,32 @@ chronos-agent/
 
 ---
 
+**截至 Round 117 结束 (2026-06-05 BJT ~01:30 cron slot ship + 06:00 cron slot close-out via `cron-slot-handoff-recovery` Option A2 verify-don't-redo, in 0-11 工作窗口, 单 slot 写完 + 单 slot land)** — R117 是 R107-R122 路线表 row 8 (R116-R118 文档与 Demo arc) 的第二刀, Phase 6 RC docs arc 主体. **核心交付** (8 新 + 3 改, 0 行 src/ 业务逻辑改, 仅 +API 端点新模式): (a) **`mkdocs.yml`** (~3.5 KB) — `theme: material` + palette light/dark toggle + features (navigation.tabs / navigation.indexes / content.code.copy / content.tabs.link / search.suggest), `markdown_extensions` 启 admonitions + pymdownx.superfences (含 mermaid `!!python/name` custom_fence) + tabbed + details + tasklist + keys, `extra.version.provider: mike` 留给 R120 多版本切换. nav 11 top-level (Home / Getting started / Concepts / CLI reference / Cost tracking / Evaluators / Adapters / Guides / Contracts / Decisions / FAQ; 13 实际叶子 `.md`, 全部 `Path.exists()` 扫过 0 missing). i18n 推 R118+ — D-117-1: mkdocs-static-i18n + R116 README 双语 stack 同 slot 上线复杂度超预算, R117 站点英文 only 锁 R122 必过项 \"文档站 6 节\" 行, 中文化 R118 / 否则 v1.1+ post-1.0; R116 README 双语已满足 \"中英双语\" 字面 (那行说 README, 不说文档站). (b) **`docs/index.md`** (~5 KB, mkdocs nav Home) — 项目卖点首屏 + Quickstart 摘要 + 链入 6 个 R122 必过页. (c) **`docs/concepts/index.md`** (~7 KB) — 五个 H2 (Record / Replay / Fork / Diff / Compare), 每节有典型 CLI 调用示例 + 链入 `cli-reference.md` 对应 verb, 加一节 \"How they fit together\" 作为 mental model, ADR-001/006/016/019/020 链接均验证存在. (d) **`docs/cost-tracking.md`** (~7 KB) — ADR-029 改写成 user-facing tutorial (五个 H2: CLI / Web UI / Demo / Disable / Math); CLI 段含粘贴的真实 `chronos runs list` token/cost ASCII 表 + 5 行 `runs show` cost-per-node tree; Math 段公式 `cost_usd = (input_tok × in_price + output_tok × out_price) / 1e6` 对应 ADR-029 §price-tables; 全文不直接 link ADR (R117 plan ✅), 只在结尾 See also 引用 ADR-029. (e) **`docs/evaluators.md`** (~7 KB) — ADR-030 改写成 user-facing tutorial (五个 H2: Why / Built-ins / CLI / Custom evaluator step-by-step / API / What's not in v1.0); Custom 段两条路径 (`register()` 内联 vs `chronos.evaluators` entry-point group, 含 pyproject.toml `[project.entry-points]` 片段); 内置 evaluator 表两行 (`output_length_chars` 数值 / `final_state_key_present` 布尔); LLM-judge 段明确写 \"v1.1+ post-1.0 backlog\" 对应 ADR-030 §53. (f) **`docs/faq.md`** (~7 KB, **9 条问答**) — 需要 API key 吗? / 支持哪些框架? / 自己加 adapter? / 在 langgraph 项目里怎么集成 (3 种方案)? / `chronos web` 端口被占用? / Score 列空着? / fork 会改原 run 吗? / evaluation 持久化在哪 (含 SQLite schema 引)? / chronos vs Langfuse/Phoenix/Helicone (横向对比表). (g) **`docs/decisions/index.md`** (~3.5 KB) — 30 个 ADR 一行一行 + 状态 (Accepted / Superseded by …), 解决 mkdocs `--strict` 不允许 nav 指向不存在文件 + ADR 目录有 30+ 文件不能每个进顶层 nav 的两难. (h) **`.github/workflows/gh-pages.yml`** (~3 KB) — 三 step: `astral-sh/setup-uv@v5` 装 mkdocs-material + pymdown-extensions → `mkdocs build --strict` → `peaceiris/actions-gh-pages@v4` push 到 `gh-pages` 分支. 触发 `push to main` (paths 限 `docs/` + `mkdocs.yml`) + `workflow_dispatch`. **GitHub Pages settings 不开** (D-117-3: R120 才用户拍板 public, gh-pages artifact 提前到位等开关). (i) **顺手 ADR-030 deferred item #3 (POST `/runs/{id}/evaluations` server-side run)** — `src/chronos/api/server.py` extends R115 storage-layer escape with mode 1 (`run: true` body) 从 `chronos.eval` registry resolve evaluator → server-side run → persist → return row. 3 new unit tests (built-in run / unknown evaluator 404 / UPSERT idempotency). KeyError → 404, evaluator-raised → 422, 与 CLI `chronos eval run` 错误语义对齐. **Deferred 推 R118**: #2 TreeView score badge (~30 行 TSX) / #4 RunList tooltip 相对时间 (~10 行) — D-117-2 单 slot 预算被 mkdocs 6 文件 + ADR 索引 + workflow 吃掉, 再做两 frontend 文件改动会 race close-out, 推 R118 顺手 (那一轮要打开 web UI 验证 demo evaluator, 同 slot 验证 #2/#4).
+
+- **Round: 117** (Phase 6 R116-R118 docs arc row 8 slice 2 of 3, 单 slot 写完 + 单 slot land via `cron-slot-handoff-recovery` Option A2). 0 hard blocker. New artefacts: `progress/2026-06-05-round-117.md` (~15 KB, plan vs reality + mkdocs nav 完整树 + 5 项 D-117 决策 + R118 hand-off invariants + R122 必过项 column update). New: `mkdocs.yml`, `docs/index.md`, `docs/concepts/index.md`, `docs/cost-tracking.md`, `docs/evaluators.md`, `docs/faq.md`, `docs/decisions/index.md`, `.github/workflows/gh-pages.yml`. Modified: `src/chronos/api/server.py` (POST /evaluations server-side run mode), `tests/unit/test_api_server.py` (+3 R117 unit tests), `CHANGELOG.md` (`[Unreleased] / Documentation — R117` + `Added — R117 (POST /evaluations server-side run)` + `Process — R117` + `Test gate — R117` 四块插在 R116 之上). `docs/CONTEXT.md` §5 (此段) + §6 (R118 plan 替换 R117 plan).
+- **R117 关键决策 (上墙)**:
+  - **D-117-1: i18n 推到 R118+, R117 文档站英文 only.** R116 README 已双语 (满足 R122 必过项 \"README 中英双语\" 字面). mkdocs-static-i18n + 6 新页 + i18n nav 翻倍同 slot 实现风险高. R117 站英文上线锁 R122 \"文档站 6 节\" 行, 中文化 R118 (examples arc) 顺手 / 否则 v1.1+ post-1.0.
+  - **D-117-2: ADR-030 deferred items 只 ship #3 (POST /evaluations server-side).** #2 TreeView score badge + #4 RunList tooltip 推 R118. 选 #3 是因为 backend 改动有 pytest 覆盖, 单 slot 内可锁质量; 前端 #2/#4 同 slot 跑 mkdocs 6 文件 + 前端 2 文件会 race close-out (R117 plan 第 7 条原本就有 escape hatch \"先 mkdocs\").
+  - **D-117-3: GitHub Pages 设置不开.** R117 plan 硬约束之一. workflow push gh-pages 分支建好 artifact, repo Settings → Pages 留给 R120 拍板 public 时一键开. R117 commit push main 后 GHA 自动跑一次 build + push, 验证 workflow 本身正确.
+  - **D-117-4: `mkdocs.yml` GHA 用 `astral-sh/setup-uv@v5` 装依赖, 不用 pip.** 与项目 `ci.yml` 工具链一致 (uv 是项目 canonical), CI cache 复用. workflow 内一行 `uv pip install --system` 取代 pip + venv 链路.
+  - **D-117-5: ADR 索引页 (`docs/decisions/index.md`) 一行一 ADR + 状态.** mkdocs `--strict` 不允许 nav 指向不存在的文件; ADR 目录 30+ 文件不能每个都进 top-level nav. 索引页内列全部 ADR + Accepted / Superseded 状态, nav 只挂这一个入口, 用户找当前 effective ADR 时避免 misread.
+  - **D-117-cron-A2: 2-slot ship via `cron-slot-handoff-recovery` Option A2.** 第一 slot (~01:30 BJT) 写完代码 + 测试 + 8 新 docs 文件 + progress doc 但 timed out before commit/push (3 modified + 8 untracked WIP). 06:00 follow-up slot 不重做不回退: pytest 748/9/0 byte-identical to handoff progress doc claim → 检查每 hunk/新文件归属 R117 (mkdocs.yml + 6 docs + workflow 与 R117 plan §1-6 1:1, server.py POST /evaluations + 3 测试与 R117 plan §7 deferred #3 1:1, CHANGELOG 块名匹配 R117 plan §12) → ruff check / mypy server.py 全过 → adapter 字节未触 → ship. 这是 R48-A 起的第 20 个 A2 close-out chain.
+- **R117 acceptance (R122 必过项更新)**:
+  - ✅ R122 必过项 \"文档站: GH Pages 上线, getting-started + cli-reference + concepts + evaluators + cost-tracking + FAQ\" — 6/6 路径全部上 nav 顶层, workflow push gh-pages 分支建好 artifact (Pages settings 不开等 R120)
+  - ✅ R122 必过项 \"Cost 可见\" — R111 ship + R116 README 双语段 + R117 `cost-tracking.md` 文档站页 三层冗余覆盖
+  - ✅ R122 必过项 \"Evaluation\" — R115 ship + R116 README 段 + R117 `evaluators.md` 文档站页 + R117 POST /evaluations server-side run mode
+  - ✅ 748 passed / 9 skipped / 0 failed (+3 R117 ADR-030 deferred #3 server-side run, R116 baseline 745 + 3 = 748)
+  - ✅ 6 spikes GREEN (含 spike20 ADR-029 + spike21 ADR-030)
+  - ✅ Adapter zero-regression streak: R52→R117 = **66** (`src/chronos/adapters/` byte-untouched)
+  - ✅ ruff check / mypy `src/chronos/api/server.py` 全过, pyproject.toml + uv.lock byte-untouched (无依赖漂移)
+  - ⚠️ Open polish 跨到 R118-R121: TreeView score badge (R118 顺手), RunList tooltip 相对时间 (R118 顺手), Demo GIF (R118 录, README 引用), 文档站中文 i18n (R118 / v1.1+), 6-surface live walkthrough (R119 E2E)
+- **距离 R122**: 5 轮 (R118 examples ≥3 demo / R119 E2E dogfood / R120 v1.0.0-rc1 cut / R121 RC buffer / R122 final acceptance).
+
+---
+
+<details>
+<summary><b>Historical: R116 close-out (Phase 6 row 8 slice 1: README 中英双语 + Cost+Eval feature 行 + Quickstart 7 步, 745/9, streak 65, 0 src/ 改动)</b></summary>
+
 **截至 Round 116 结束 (2026-06-05 BJT 10:05 cron slot, in 0-11 工作窗口, 单 slot 单 commit, docs-only)** — R116 是 R107-R122 路线表 row 8 (R116-R118 文档与 Demo arc) 的第一刀, Phase 6 RC docs arc 序章. **核心交付** (3 个文件, 0 行 src/ 改动): (a) **`README.md` 重写为纯英文版** (~19 KB) — 顶部加 `[English](./README.md) · [简体中文](./README.zh-CN.md)` 双向 toggle, 卖点段加两行 (💰 Cost & Token Tracking 指 ADR-029, 🎯 Evaluation & Scoring 指 ADR-030), Feature matrix 顶部 *新增* 两行 R111/R115 v0.9.0+ 标记 ✅, Quickstart 段从 3 步扩到 7 步 (步骤 3 paste 真实 `chronos runs list --db /tmp/chronos-r116-demo/chronos.db` 表 — token=200/cost=8 + token=230/cost=11 来自 quickstart 的 builtin-minimal 种子 200/230 token + 8/11 cent, 步骤 5 `chronos eval list-evaluators` + 两次 `chronos eval run`, 步骤 6 `chronos compare … --eval output_length_chars`), 新增 `## 💰 Cost & Token Tracking (ADR-029)` 章节列举 5 surface (runs list 默认 / runs show 节点树 / diff+compare 聚合 / Web UI / `--no-usage` 退出), 新增 `## 🎯 Evaluation & Scoring (ADR-030)` 章节 evaluator anatomy 代码块 + CLI 用法 5 行 + 内置 + entry-point 扩展点 + v1.0 out-of-scope 清单 (LLM-judge / harness / leaderboard 全 v1.1+), Status 段重写到 R107-R122 路线 (R107 GA / R108-R110 polish / R111 ADR-029 / R112-R114 P0 / R115 ADR-030 / R116 双语 / R117 站 / R118 demo / R119 dogfood / R120 RC1 / R121 buffer / R122 acceptance), 仓库结构图加 `src/chronos/eval/` + `examples/builtin-minimal/` + `tests/spikes/spike20+spike21`. (b) **新建 `README.zh-CN.md`** (~19 KB) — 完全镜像 EN 结构, 同样 7 步 Quickstart, 同样 Cost / Eval 章节, 同样 toggle, 沿用项目其它中文文档的口吻 (短句 + 半角标点). (c) **`docs/cli-reference.md` 加 4 节** — verb table 顶部新增 4 行 (compare 行更新加 "with `--eval` scoring" 注脚, 加 `eval run` / `eval list` / `eval list-evaluators` 三行, 顺 `compare` 行之下), verb 详解新增 4 节 (`### eval run` / `### eval list` / `### eval list-evaluators` / `### compare --eval`), 每节含语法 + 用途 + 内置 evaluator 列表 + Examples + Exit codes, 完全对齐 `chronos <verb> --help` docstring (R108 polish standard). 单 commit 摘 R115 的 D-115-3 deferred item #1 (cli-reference eval 段). **零代码改动** — adapter / store / api / cli/eval / frontend 全部未触, R52→R116 = **65** 轮 streak 保持.
 
 - **Round: 116** (Phase 6 R116-R118 docs arc row 8 slice 1 of 3, 单 slot 单 commit, docs-only). 0 hard blocker. New artefacts: `progress/2026-06-05-round-116.md` (~10 KB, 路线对齐自检 + plan vs reality + R122 必过项 update). New file: `README.zh-CN.md`. Modified: `README.md` (整段重写 EN-only + Quickstart 7 步 + Cost/Eval 章节), `docs/cli-reference.md` (verb table + 4 节 eval verb), `CHANGELOG.md` (`[Unreleased] / Documentation — R116` 块), `docs/CONTEXT.md` §5 (此段) + §6 (R117 mkdocs-material 文档站 plan 替换 R116 plan).
@@ -225,6 +251,8 @@ chronos-agent/
   - ✅ ruff check / ruff format check 全过
   - ⚠️ Open polish 跨到 R117-R121: TreeView score badge (R117 顺手), POST `/runs/{id}/evaluations` (R117 顺手), RunList tooltip (R117 顺手), Demo GIF (R118 终于补)
 - **距离 R122**: 6 轮 (R117 文档站 GH Pages / R118 examples ≥3 demo 跑过 evaluator / R119 E2E dogfood / R120 v1.0.0-rc1 cut / R121 RC buffer / R122 final acceptance).
+
+</details>
 
 ---
 
@@ -1524,6 +1552,89 @@ R73 是 R69→R72 4-round chain 的第一个真 disprover round, 也是 Phase 4 
 >
 > 🆕 **2026-05-26 R109 后用户决策**: 终点从 R120 延到 R122, 加 ADR-029 (Cost Visibility, R111) + ADR-030 (Evaluation/Scoring, R115)。
 >
+> **R117 ✅ 完成 (2026-06-05 BJT ~01:30 cron slot 写完 + 06:00 cron slot land via cron-slot-handoff-recovery Option A2, in 0-11 窗口)** — Phase 6 row 8 第二刀: `mkdocs.yml` (theme: material + nav 11 顶层 / 13 叶子, exclude_docs 排除 progress/research/dogfood) + 6 新 docs 页 (`index.md` Home / `concepts/index.md` 五大概念 / `cost-tracking.md` ADR-029 教程 / `evaluators.md` ADR-030 教程 / `faq.md` 9 条问答 / `decisions/index.md` ADR 索引) + GHA workflow (`.github/workflows/gh-pages.yml`, uv 装 mkdocs-material → `mkdocs build --strict` → `peaceiris/actions-gh-pages` push gh-pages 分支, **GitHub Pages settings 不开** R120 才用户拍板); 顺手 ADR-030 deferred #3 (POST `/runs/{id}/evaluations` server-side run mode + 3 unit tests). i18n 推 R118+ (R117 站英文 only). #2 TreeView score badge / #4 RunList tooltip 推 R118. 748/9/0 (+3 R117), streak R52→R117 = **66**. **下一轮 = R118: `examples/` ≥3 demo (langgraph-router + crewai-research-team + 第三 TBD), `chronos quickstart --demo <name>` 加载, 每个跑过 evaluator, 同时补录 demo GIF + ADR-030 deferred #2/#4** (Phase 6 路线表 row 8 第三刀 / 收口刀, R122 必过项之一, 距 R122 还剩 4 轮).
+
+---
+
+**Round 118 — Phase 6 row 8 third slice (收口刀): `examples/` ≥3 真实 demo 跑过 evaluator + Demo GIF + ADR-030 deferred #2/#4 (单 slot, 单 commit)**
+
+R118 是 R107-R122 路线表 row 8 (R116-R118 文档与 Demo arc) 的第三刀, 也是 docs/demo arc 的收口刀. R117 已把文档站 mkdocs-material 6 页 + GHA workflow 立起来, R116 已把 README 双语 + Cost+Eval feature 行写好, R115 已 ship Evaluation 全栈, R111 已 ship Cost. R118 把 quickstart `--demo <name>` 真实 demo 数量从 1 (`builtin-minimal`) 扩到 ≥3, 每个跑过 evaluator, 同时把 R116 推后的 demo GIF + R117 推后的 ADR-030 deferred #2 (TreeView score badge) + #4 (RunList tooltip 相对时间) 顺手收掉. 距 R122 还剩 4 轮 (R119 E2E / R120 RC1 / R121 buffer / R122 acceptance).
+
+### R118 必读 (按顺序)
+
+- `progress/2026-06-05-round-117.md` (R117 close-out, 上一轮) — R118 hand-off invariants 段 + R117 deferred 的 ADR-030 #2/#4 + i18n 推后状态. **第一动作 = pytest 接 baseline 748/9/0 + git fetch origin/main 验证 R117 commit 已落 (HEAD 应 = R117 land commit, 不能与 origin/main divergent).**
+- `examples/builtin-minimal/` (R109 写的第一 demo) + `src/chronos/cli/quickstart.py` (`--demo <name>` 加载逻辑) — R118 加 demo 必须照 builtin-minimal 的 manifest / fixture / replay-only 路径走, 不要发明新结构.
+- `docs/decisions/ADR-030-evaluation-scoring.md` §69 (re-using existing surfaces keeps the change minimal) — R118 写 TreeView score badge + RunList tooltip 时回顾这条原则, 不要扩张.
+- skill `chronos-dogfood-script-budget-trap` + `chronos-docs-screenshots` — R118 录 GIF + 对比 demo 截图时回顾这两条 budget 红线 (cron container 没 X server, 不能起 `chromium`; ASCII recording 替代真 GIF 是 R116 D-116-2 已论证过的工程妥协).
+
+### R118 必做 (单 slot, 单 commit)
+
+1. **新建 `examples/langgraph-router/`** (示范 LangGraph adapter):
+   - `envelopes.jsonl` — 一份预录的 LangGraph router run trace (多步 conditional edges, 至少 3 节点, 含 token/cost usage 数据).
+   - `manifest.json` — 镜像 `examples/builtin-minimal/manifest.json` 结构, 字段含 `name` / `description` / `recommended_evaluators` (e.g. `["output_length_chars", "final_state_key_present"]`).
+   - `README.md` — 一段说明 (∼200 字: demo 在做什么 / 怎么 quickstart 加载 / 期望看到的 evaluator 输出).
+2. **新建 `examples/crewai-research-team/`** (示范 CrewAI adapter):
+   - 结构镜像 langgraph-router. trace 至少 4 节点 (researcher → analyst → reporter), 含 token/cost.
+3. **新建第三 demo (`examples/anthropic-agent-tools/` 或类似)** — 示范 Anthropic Agents SDK adapter, 4-5 节点含 tool_use 节点. 锁 R122 必过项 \"≥3 真实 demo\".
+4. **`src/chronos/cli/quickstart.py` 扩 `--demo` registry**:
+   - 在 `_DEMOS` (or 等价 dict) 加 3 个新 entry (`langgraph-router` / `crewai-research-team` / `anthropic-agent-tools`), 每个映射到对应 `examples/<name>/` 目录.
+   - `--demo --list` 输出表格 (name + description + recommended evaluators).
+   - 每个 demo 的 Next-steps 输出含 `chronos eval run <run_id> --evaluator <推荐 evaluator>` 命令行 (锁 R122 \"每个跑过 evaluator\" 字面要求).
+5. **顺手 ADR-030 deferred items**:
+   - **#2 TreeView score badge** (`frontend/src/pages/TreeView.tsx`): RunInfo 面板右上角加 latest evaluation score 小 badge (数值 evaluator 显示 `{score:.1f}` / 布尔显示 ✓/✗). ~30 行 TSX. 需要 tsc + build 全过.
+   - **#4 RunList tooltip 增强** (`frontend/src/pages/RunList.tsx`): Score 列 tooltip 加 `created_at` 相对时间 (\"3 hours ago\"), 用现有 `dayjs` (or `date-fns` 任挑一, 项目已装哪个用哪个; 不新增依赖). ~10 行.
+6. **Demo GIF (R116 + R118 一起补)**:
+   - 录一份真实 quickstart → `chronos web` → record/replay/fork → eval run 的端到端 GIF (asciicast 转 SVG via `agg` 或 `termtosvg`, 因 cron container 没 X server 不能录 chromium).
+   - 嵌进 `README.md` + `README.zh-CN.md` 顶部 hero 段 + `docs/index.md` Home + `docs/getting-started.md`.
+   - **如果 cron container 没 `agg` 也没 `termtosvg`**: ASCII recording (fenced code block `<details>` 折叠, 长度 ≤80 行) 替代, R119 E2E 视情况补真 GIF / 否则 R121 RC buffer.
+7. **i18n 推到 R118 (R117 D-117-1 deferred)**: 至少把 `docs/getting-started.md` + `docs/faq.md` 双语化 (前缀 `.zh.md` 或 `docs.zh/` 子树二选一, mkdocs-static-i18n suffix 模式; 与 R116 README.zh-CN.md 风格一致). **如果 6+5 件挤压预算 → i18n 推 v1.1+** (R116 README 双语已满足 R122 必过项字面 \"中英双语\", 文档站中文化 nice-to-have).
+8. **测试 baseline**: ≥748 + R118 新增 (估计 ≥755: 新 demo 加载 unit tests ~5 行 + tooltip / badge tsc 不加 pytest). spike 全绿 (含 spike20 + spike21). adapter zero-regression streak R52→R118 = **67**. **`src/chronos/adapters/` 字节不动** — R118 是 examples/frontend/docs arc, adapter 代码不该有任何修改, 否则违 streak.
+9. **任何前端代码改动 → `npx tsc --noEmit` 必过, `npm run build` 必过**.
+10. **写 `progress/2026-06-XX-round-118.md`** (含 self-check \"仍在 R107-R122 + ADR-029/030 轨道\", 距 R122 = 4 轮; 含 plan vs reality; 含 R119 E2E hand-off invariants).
+11. `docs/CONTEXT.md` §5 加 R118 段; §6 用 R119 plan 替换本块 (R119 = E2E dogfood: 新 venv → quickstart → web UI → token/cost → 跑 eval, 列出遗留问题修掉).
+12. `CHANGELOG.md` `[Unreleased] / Added — R118 (examples ≥3 demo)` + `Documentation — R118 (Demo GIF + i18n)` + `Added — R118 (TreeView badge + RunList tooltip)` 块.
+
+### R118 硬约束
+
+- ❌ **不动 `src/chronos/adapters/`** — adapter zero-regression streak 70 是 R122 必过项, 距 R122 还剩 4 轮, 不能在 R118 砍断.
+- ❌ **不开始 R119 E2E dogfood arc** — 那是下一行 (one slice per slot).
+- ❌ **不录 chromium 视频** — cron container 没 X server, 不能起浏览器录屏 (skill `chronos-docs-screenshots` 已论证). 用 asciicast / termtosvg / 纯 ASCII fenced code 替代.
+- ❌ **不接管 R119 E2E walkthrough** — 那一轮才是 6-surface live walkthrough mandate (R114 deferred → R115 prologue 推 → R119 E2E 兜底).
+- ✅ Adapter 零回归 streak: R52→R118 = **67**.
+- ✅ R122 必过项 \"Demo: `examples/` ≥3 真实 demo, `--demo <name>` 加载, 每个跑过 evaluator\" 必过 — 不能少于 3.
+- ✅ ADR-030 deferred items #2 + #4 全部 ship (R117 已 ship #3, R118 收尾 #2/#4 后 ADR-030 全 8 个 acceptance line items 100% closed).
+
+### R118 deliverables
+
+- New: `examples/langgraph-router/` (envelopes.jsonl + manifest.json + README.md), `examples/crewai-research-team/` (同结构), `examples/anthropic-agent-tools/` (or 类似第三 demo)
+- Modified: `src/chronos/cli/quickstart.py` (`--demo` registry 扩到 ≥3), `frontend/src/pages/TreeView.tsx` (score badge), `frontend/src/pages/RunList.tsx` (tooltip 相对时间), `frontend/dist/*` (vite rebuild)
+- New (optional, 视 cron container 能力): `docs/assets/demo-quickstart.svg` (or `.gif`) — 真 demo recording
+- Modified (optional, 视预算): `docs/getting-started.md` + `docs/faq.md` 加 `.zh.md` 双语对应文件
+- Modified: `README.md` + `README.zh-CN.md` + `docs/index.md` (嵌入 demo GIF)
+- Modified: `CHANGELOG.md`, `docs/CONTEXT.md` §5/§6
+- New: `progress/2026-06-XX-round-118.md`
+
+### R118 gate checklist
+
+- [ ] `examples/` 目录下 ≥3 真实 demo (新加 langgraph-router + crewai-research-team + 第三; 加 R109 的 builtin-minimal = 4 个)
+- [ ] `chronos quickstart --demo <name>` 对 3 个新 demo 全部跑通 (本地 smoke)
+- [ ] 每个 demo 的 Next-steps 输出含 evaluator 命令行
+- [ ] `pytest -q --no-cov` 全过 (≥748 + R118 新增, 估计 ≥755)
+- [ ] `npx tsc --noEmit` 全过, `npm run build` 全过 (TreeView badge + RunList tooltip 改动后)
+- [ ] Adapter 目录字节未动 (streak → 67)
+- [ ] CHANGELOG R118 块写好
+- [ ] ADR-030 deferred items #2 + #4 全部 ship
+- [ ] Demo GIF / ASCII recording 嵌入 README + docs/index.md (即使 ASCII fallback 也 OK)
+
+### R119 plan preview (R118 写时填这里)
+
+- **R119**: E2E dogfood — 新 venv → `pip install -e .` → `chronos quickstart --demo langgraph-router` → `chronos web` → 浏览器走 record / replay / fork / diff / compare / eval / cost 全流程, 列遗留 P0/P1/P2 finding, **修 P0 同 slot 内**, P1/P2 推 R120 RC buffer 或 R121. 同时验证文档站 GHA workflow 在 main 上跑过一次绿灯, gh-pages 分支 artifact 可读 (本地 `git fetch origin gh-pages && git checkout origin/gh-pages -- .` smoke).
+
+---
+
+<details>
+<summary><b>Historical: R117 plan (Phase 6 row 8 文档站 GH Pages mkdocs-material) — DONE in R117 (mkdocs.yml + 6 新 docs 页 + gh-pages workflow + ADR-030 deferred #3 POST /evaluations server-side run, 748/9, streak 66)</b></summary>
+
 > **R116 ✅ 完成 (2026-06-05 BJT 10:05 cron slot, in 0-11 窗口, 单 slot 单 commit, docs-only)** — Phase 6 row 8 第一刀: `README.md` 重写为纯英文 + 顶部双语 toggle + Feature matrix 加 Cost (R111 ADR-029) / Evaluation (R115 ADR-030) 两行 + Quickstart 7 步 (含真实 `chronos runs list` token/cost 表 + `eval run` + `compare --eval`) + `## 💰 Cost & Token Tracking` + `## 🎯 Evaluation & Scoring` 章节; 新建 `README.zh-CN.md` 镜像; `docs/cli-reference.md` 加 `eval run` / `eval list` / `eval list-evaluators` / `compare --eval` 四节. 745/9 测试零回归 (0 src/ 改动), streak R52→R116 = 65. **下一轮 = R117: 文档站 GH Pages (mkdocs-material) + ADR-030 deferred items #2/#3 (TreeView score badge + POST `/runs/{id}/evaluations`) 顺手交付** (Phase 6 路线表 row 8 第二刀, R122 必过项之一).
 
 ---
@@ -1589,6 +1700,8 @@ R117 是 R107-R122 路线表 row 8 (R116-R118 文档与 Demo arc) 的第二刀, 
 ### R118 plan preview (R117 写时填这里)
 
 - **R118**: `examples/` ≥3 真实 demo (`examples/builtin-minimal/` 已有, 加 `examples/langgraph-router/` + `examples/crewai-research-team/` + 等), CLI `chronos quickstart --demo <name>` 加载, 每个跑过 evaluator. 同时录真 demo GIF (R116 + R118 一起补) 嵌进 README.
+
+</details>
 
 ---
 
