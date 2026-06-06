@@ -138,6 +138,11 @@ def quickstart_cmd(
         "--force",
         help="Overwrite an existing chronos.db at the target path.",
     ),
+    list_demos: bool = typer.Option(
+        False,
+        "--list",
+        help="List available demos with descriptions and recommended evaluators, then exit.",
+    ),
 ) -> None:
     """Bootstrap a fresh chronos.db with a built-in demo (zero-config on-ramp).
 
@@ -148,7 +153,8 @@ def quickstart_cmd(
     The ``builtin-minimal`` demo seeds a parent run (3 nodes:
     greet → draft → finalize) plus a child run forked at ``greet`` with
     ``tone=formal``, so the diff / fork-tree / replay views all have real data
-    to render.
+    to render. R118 ships three additional demos covering router /
+    multi-agent / tool-using-agent patterns — see ``--list``.
 
     Example::
 
@@ -156,13 +162,19 @@ def quickstart_cmd(
         chronos quickstart --db ./demo.db           # custom path
         chronos quickstart --force                  # overwrite existing DB
         chronos quickstart --demo builtin-minimal   # explicit demo selection
+        chronos quickstart --demo langgraph-router  # R118 router demo
+        chronos quickstart --list                   # enumerate available demos
 
     Exit codes:
-      0 — seeded successfully.
+      0 — seeded successfully (or listed demos).
       1 — target DB already has runs (pass --force or pick a fresh --db).
       2 — unknown --demo name, or shipped demo file is malformed.
     """
-    from chronos.cli.quickstart import quickstart_command
+    from chronos.cli.quickstart import list_demos_command, quickstart_command
+
+    if list_demos:
+        list_demos_command(console=console)
+        return
 
     quickstart_command(demo=demo, db=db, force=force, console=console)
 

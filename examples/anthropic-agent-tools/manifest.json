@@ -1,0 +1,10 @@
+{
+  "name": "anthropic-agent-tools",
+  "title": "Anthropic Agents — tool-using research agent (web_search + http_get, fork the citation flag)",
+  "description": "An agent-with-tools loop: plan → web_search (tool) → fetch_page (tool) → synthesize → finalize. The parent run produces a one-line answer; a fork at the synthesize node sets citation_required=true, producing an answer with an attached source URL. Demonstrates Chronos's handling of the 'tool' NodeKind and how a single boolean flag fork can change the *form* of the final output without changing its facts. Synthetic illustrative usage numbers (no real LLM calls or HTTP requests).",
+  "adapter": "anthropic_agents",
+  "recommended_evaluators": ["final_state_key_present", "output_length_chars"],
+  "final_state_key": "output",
+  "stats": {"runs": 2, "nodes": 10, "forks": 1},
+  "first_run_id": "cccccccc-cccc-4ccc-8ccc-ccccccccccc1"
+}

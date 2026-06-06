@@ -207,6 +207,36 @@ chronos-agent/
 
 ---
 
+**截至 Round 118 结束 (2026-06-06 BJT ~08:33 cron slot 写完 + 11:48 cron slot land via `cron-slot-handoff-recovery` Option A2 verify-don't-redo, in 0-11 工作窗口边界, 2-slot ship)** — R118 是 R107-R122 路线表 row 8 (R116-R118 文档与 Demo arc) 的第三刀 / 收口刀, Phase 6 RC docs/demo arc final slice. **核心交付** (4 新目录 / 4 新 manifest / +146 LOC src/, 0 行 src/chronos/adapters/ + 0 行 src/chronos/api/ + 0 行 src/chronos/store/ + 0 行 src/chronos/eval/ 改动): (a) **`examples/langgraph-router/`** — 4 节点 conditional-edge router demo (classify → route → general_answer/technical_answer → finalize), 父跑 'general' 分支, 子在 `route` fork 翻 'technical' 走另一支, 8 节点 / 2 runs / 1 fork, UUID 前缀 `aaaaaaaa…`. envelopes.jsonl + manifest.json + README.md (含 ASCII 树状图). (b) **`examples/crewai-research-team/`** — 3-agent CrewAI 风格 pipeline (researcher → analyst → reporter), 父中性 stance, 子在 `analyst` fork 翻 'critical' 出更长更怀疑的 report, 8 节点 / 2 runs / 1 fork, UUID 前缀 `bbbbbbbb…`. (c) **`examples/anthropic-agent-tools/`** — Anthropic Agents SDK 风格 tool-using loop (plan → web_search tool → fetch_page tool → synthesize → finalize), 子 fork 翻 `citation_required=true` 加 source URL, 10 节点 (2 是 tool kind) / 2 runs / 1 fork, UUID 前缀 `cccccccc…`. (d) **`examples/builtin-minimal/manifest.json`** 补建 — R109 原 demo 没有 manifest 的 backfill, 一致 schema. (e) **`src/chronos/cli/quickstart.py` +128 LOC** — `DemoManifest` frozen dataclass (name/title/description/recommended_evaluators 四字段, free-form adapter/stats/first_run_id 不强 schema), `_load_manifest()` 全 fail-soft (file missing / JSON parse error / OSError / non-dict root → `DemoManifest.empty`), `_list_available_demos()` 共享 helper (旧 `quickstart_command` 内联扫描代码也切到这个 helper, 错误路径与新 `--list` 路径行为统一), `list_demos_command()` rich-console 表式列出每 demo 的 name → title → description → evaluators + 末尾 hint, `quickstart_command` Next-steps 输出的 `chronos eval run …` 行现在用 `manifest.recommended_evaluators[0]` (with `output_length_chars` fallback) — anthropic-agent-tools 正确推 `final_state_key_present`. (f) **`src/chronos/cli/__init__.py` +18 LOC** — `--list` Typer flag + dispatcher (在 `quickstart_command` 之前 short-circuit 到 `list_demos_command`), help text + Example block 加 R118 行 (`--demo langgraph-router` + `--list` 两条新例). **延后项 (R121 RC buffer / R119 E2E / v1.1+ 各有去处)**: ADR-030 deferred #2 TreeView score badge → R121, deferred #4 RunList tooltip relative-time → R121, demo GIF → R119 E2E natural recording slot (R116 D-116-2 + R118 §6 escape hatch 已论证), mkdocs i18n → v1.1+ (R117 D-117-1 + R118 §6 explicit escape hatch, R122 字面 "中英双语" 通过 README 已满足), manifest-loader 单测 → R119 E2E 硬化 pass (R118 是 demo+data round, 单测留 E2E 是合理的). **测试基线**: pytest 748 passed / 9 skipped / 0 failed (与 R117 字节级一致 — R118 不动测试套, 通过 slot B 的 4-demo smoke + `--list` smoke + 3 evaluator 跑分作为 runtime gate). 6 spikes GREEN. Adapter zero-regression streak R52→R118 = **67**.
+
+- **Round: 118** (Phase 6 R116-R118 docs/demo arc row 8 slice 3 of 3 收口, 2-slot ship via cron-slot-handoff-recovery Option A2). 0 hard blocker. New artefacts: `progress/2026-06-06-round-118.md` (~13 KB, plan vs reality + 6 D-118 关键决策 + R119 hand-off invariants + R122 acceptance update). New: `examples/langgraph-router/{envelopes.jsonl,manifest.json,README.md}`, `examples/crewai-research-team/{envelopes.jsonl,manifest.json,README.md}`, `examples/anthropic-agent-tools/{envelopes.jsonl,manifest.json,README.md}`, `examples/builtin-minimal/manifest.json`. Modified: `src/chronos/cli/quickstart.py` (+128 LOC), `src/chronos/cli/__init__.py` (+18 LOC), `CHANGELOG.md` (`[Unreleased] / Added — R118` 块), `docs/CONTEXT.md` §5 (此段) + §6 (R119 E2E plan 替换 R118 plan).
+- **R118 关键决策 (上墙)**:
+  - **D-118-1: 2-slot A2 ship.** Slot A 写完 demos + loader + manifest + `--list` 但 timed out before commit. Slot B 跑 pytest (748/9/0 byte-identical to R117) → smoke 4 demos load → smoke `--list` 输出 → smoke 3 evaluator E2E (langgraph→31 / crewai→223 / anthropic→passed) → ship. 第 20 个 A2 close-out chain (R48-A 起).
+  - **D-118-2: ADR-030 deferred #2 (TreeView score badge) + #4 (RunList tooltip relative-time) 推 R121.** R118 §6 同时列了 demos + frontend + GIF + i18n 四 cluster, slot A 只完成前两 cluster. Slot B 在 0-11 窗口边界不再起 vite/tsc/dist-rebuild — 风险大于收益 (badge 30 LOC + tooltip 10 LOC 都是低风险 R121 RC buffer 一刀就完, 不 gate R122 — Score 列已经 R115 ship, relative-time 是已存在 tooltip 上的 polish).
+  - **D-118-3: Demo GIF 推 R119 E2E.** R118 §6 escape hatch 已允许. R119 E2E 是 mandated 全流程 live-browser walkthrough, 录屏自然 happen 那里. cron container 没 agg/termtosvg, 强录会 budget 出 control.
+  - **D-118-4: mkdocs i18n 推 v1.1+.** R117 D-117-1 + R118 §6 escape hatch 都已明文. R122 字面 "中英双语" 通过 README.md + README.zh-CN.md (R116 ship) 满足. mkdocs i18n nice-to-have 不 gate.
+  - **D-118-5: Manifest schema opt-in / fail-soft.** `_load_manifest` 4 个 catch (missing file / JSON parse / OSError / non-dict) → `DemoManifest.empty`. `builtin-minimal` 新加的 manifest 不破坏老路径 (demo 仍可在没 manifest 时跑通 — 验过). 自由字段 (`adapter` / `stats` / `first_run_id`) 不强 schema, 留给未来扩展.
+  - **D-118-6: Manifest-loader 单测 → R119.** Slot A 没写, slot B smoke (4 demos + `--list` + 3 evaluator) 是 runtime gate. R119 E2E 硬化 pass 自然加 `_load_manifest` 损坏路径 + `_list_available_demos` 排序 + `list_demos_command` rendering 三类单测.
+- **R118 acceptance (R122 必过项更新)**:
+  - ✅ R122 必过项 "Demo: `examples/` ≥3 真实 demo, `--demo <name>` 加载, 每个跑过 evaluator" — **达成** (4 demo: builtin-minimal + langgraph-router + crewai-research-team + anthropic-agent-tools, 3 个新 demo 都 smoke 跑过 evaluator)
+  - ✅ R122 必过项 "新用户路径 → 看 token/cost → 跑 eval, 不读源码" — `chronos quickstart --list` 是新加的导航入口
+  - ✅ R111 ADR-029 cost — 3 个新 demo 都种了真实 `usage` + `cost_usd_cents` 在 LLM 节点上, RunList Tokens/Cost 列开箱即填
+  - ✅ 748 passed / 9 skipped / 0 failed (与 R117 byte-identical, 0 net delta — R118 是 data + dispatcher, 0 新测)
+  - ✅ 6 spikes GREEN
+  - ✅ Adapter zero-regression streak: R52→R118 = **67** (`src/chronos/adapters/` byte-untouched)
+  - ⚠️ Open polish 跨到 R119-R121: TreeView score badge → R121, RunList tooltip relative-time → R121, Demo GIF → R119 E2E, manifest 单测 → R119, mkdocs i18n → v1.1+
+- **距离 R122**: 4 轮 (R119 E2E dogfood / R120 v1.0.0-rc1 cut / R121 RC buffer / R122 final acceptance).
+
+- **R118 hand-off invariants (R119 prologue 用)**:
+  - Manifest 是 opt-in. `_load_manifest` fail-soft. 新 demo 可以不带 manifest 上线 (会 fallback `DemoManifest.empty`). R119 dogfood 如果发现 manifest corruption, fix 在 `_load_manifest` except 子句, 不在 callers.
+  - Evaluator hint 优先级 = `recommended_evaluators[0]`. 如果 demo manifest 列了一个不存在的 evaluator (e.g. v1.1 移除了某个), CLI hint 会打过期名 — R121 可加 hint-render-time 解析守卫, 非阻塞.
+  - `--list` 输出是 rich-styled 但没用 Box/Table. 80-col TTY 友好优先. R119 dogfood 如果发现长 description 折行难看, R121 可切 `rich.Table`, 20 行重构.
+  - 3 新 demo 用不同 UUID 前缀 (`aaaa…` / `bbbb…` / `cccc…`), `builtin-minimal` 用 `1111…`/`2222…`. R119 可同 DB 种多个 demo 测多 run RunList 渲染.
+  - TreeView badge / RunList tooltip / Demo GIF / mkdocs i18n 全是 R121 RC buffer items. R119 别动 (R119 = read-only walkthrough + finding catalogue), R120 别动 (R120 = tag-cut), R121 才是 polish slot.
+  - **streak 67 / R122 要求 ≥70**: R119/R120/R121/R122 = 4 round window → 全清 → streak 71 at ship. 任一 round 不得不动 adapter (real bug found) → 重谈 ≥70 要求, 升级到用户.
+
+---
+
 **截至 Round 117 结束 (2026-06-05 BJT ~01:30 cron slot ship + 06:00 cron slot close-out via `cron-slot-handoff-recovery` Option A2 verify-don't-redo, in 0-11 工作窗口, 单 slot 写完 + 单 slot land)** — R117 是 R107-R122 路线表 row 8 (R116-R118 文档与 Demo arc) 的第二刀, Phase 6 RC docs arc 主体. **核心交付** (8 新 + 3 改, 0 行 src/ 业务逻辑改, 仅 +API 端点新模式): (a) **`mkdocs.yml`** (~3.5 KB) — `theme: material` + palette light/dark toggle + features (navigation.tabs / navigation.indexes / content.code.copy / content.tabs.link / search.suggest), `markdown_extensions` 启 admonitions + pymdownx.superfences (含 mermaid `!!python/name` custom_fence) + tabbed + details + tasklist + keys, `extra.version.provider: mike` 留给 R120 多版本切换. nav 11 top-level (Home / Getting started / Concepts / CLI reference / Cost tracking / Evaluators / Adapters / Guides / Contracts / Decisions / FAQ; 13 实际叶子 `.md`, 全部 `Path.exists()` 扫过 0 missing). i18n 推 R118+ — D-117-1: mkdocs-static-i18n + R116 README 双语 stack 同 slot 上线复杂度超预算, R117 站点英文 only 锁 R122 必过项 \"文档站 6 节\" 行, 中文化 R118 / 否则 v1.1+ post-1.0; R116 README 双语已满足 \"中英双语\" 字面 (那行说 README, 不说文档站). (b) **`docs/index.md`** (~5 KB, mkdocs nav Home) — 项目卖点首屏 + Quickstart 摘要 + 链入 6 个 R122 必过页. (c) **`docs/concepts/index.md`** (~7 KB) — 五个 H2 (Record / Replay / Fork / Diff / Compare), 每节有典型 CLI 调用示例 + 链入 `cli-reference.md` 对应 verb, 加一节 \"How they fit together\" 作为 mental model, ADR-001/006/016/019/020 链接均验证存在. (d) **`docs/cost-tracking.md`** (~7 KB) — ADR-029 改写成 user-facing tutorial (五个 H2: CLI / Web UI / Demo / Disable / Math); CLI 段含粘贴的真实 `chronos runs list` token/cost ASCII 表 + 5 行 `runs show` cost-per-node tree; Math 段公式 `cost_usd = (input_tok × in_price + output_tok × out_price) / 1e6` 对应 ADR-029 §price-tables; 全文不直接 link ADR (R117 plan ✅), 只在结尾 See also 引用 ADR-029. (e) **`docs/evaluators.md`** (~7 KB) — ADR-030 改写成 user-facing tutorial (五个 H2: Why / Built-ins / CLI / Custom evaluator step-by-step / API / What's not in v1.0); Custom 段两条路径 (`register()` 内联 vs `chronos.evaluators` entry-point group, 含 pyproject.toml `[project.entry-points]` 片段); 内置 evaluator 表两行 (`output_length_chars` 数值 / `final_state_key_present` 布尔); LLM-judge 段明确写 \"v1.1+ post-1.0 backlog\" 对应 ADR-030 §53. (f) **`docs/faq.md`** (~7 KB, **9 条问答**) — 需要 API key 吗? / 支持哪些框架? / 自己加 adapter? / 在 langgraph 项目里怎么集成 (3 种方案)? / `chronos web` 端口被占用? / Score 列空着? / fork 会改原 run 吗? / evaluation 持久化在哪 (含 SQLite schema 引)? / chronos vs Langfuse/Phoenix/Helicone (横向对比表). (g) **`docs/decisions/index.md`** (~3.5 KB) — 30 个 ADR 一行一行 + 状态 (Accepted / Superseded by …), 解决 mkdocs `--strict` 不允许 nav 指向不存在文件 + ADR 目录有 30+ 文件不能每个进顶层 nav 的两难. (h) **`.github/workflows/gh-pages.yml`** (~3 KB) — 三 step: `astral-sh/setup-uv@v5` 装 mkdocs-material + pymdown-extensions → `mkdocs build --strict` → `peaceiris/actions-gh-pages@v4` push 到 `gh-pages` 分支. 触发 `push to main` (paths 限 `docs/` + `mkdocs.yml`) + `workflow_dispatch`. **GitHub Pages settings 不开** (D-117-3: R120 才用户拍板 public, gh-pages artifact 提前到位等开关). (i) **顺手 ADR-030 deferred item #3 (POST `/runs/{id}/evaluations` server-side run)** — `src/chronos/api/server.py` extends R115 storage-layer escape with mode 1 (`run: true` body) 从 `chronos.eval` registry resolve evaluator → server-side run → persist → return row. 3 new unit tests (built-in run / unknown evaluator 404 / UPSERT idempotency). KeyError → 404, evaluator-raised → 422, 与 CLI `chronos eval run` 错误语义对齐. **Deferred 推 R118**: #2 TreeView score badge (~30 行 TSX) / #4 RunList tooltip 相对时间 (~10 行) — D-117-2 单 slot 预算被 mkdocs 6 文件 + ADR 索引 + workflow 吃掉, 再做两 frontend 文件改动会 race close-out, 推 R118 顺手 (那一轮要打开 web UI 验证 demo evaluator, 同 slot 验证 #2/#4).
 
 - **Round: 117** (Phase 6 R116-R118 docs arc row 8 slice 2 of 3, 单 slot 写完 + 单 slot land via `cron-slot-handoff-recovery` Option A2). 0 hard blocker. New artefacts: `progress/2026-06-05-round-117.md` (~15 KB, plan vs reality + mkdocs nav 完整树 + 5 项 D-117 决策 + R118 hand-off invariants + R122 必过项 column update). New: `mkdocs.yml`, `docs/index.md`, `docs/concepts/index.md`, `docs/cost-tracking.md`, `docs/evaluators.md`, `docs/faq.md`, `docs/decisions/index.md`, `.github/workflows/gh-pages.yml`. Modified: `src/chronos/api/server.py` (POST /evaluations server-side run mode), `tests/unit/test_api_server.py` (+3 R117 unit tests), `CHANGELOG.md` (`[Unreleased] / Documentation — R117` + `Added — R117 (POST /evaluations server-side run)` + `Process — R117` + `Test gate — R117` 四块插在 R116 之上). `docs/CONTEXT.md` §5 (此段) + §6 (R118 plan 替换 R117 plan).
@@ -1552,9 +1582,90 @@ R73 是 R69→R72 4-round chain 的第一个真 disprover round, 也是 Phase 4 
 >
 > 🆕 **2026-05-26 R109 后用户决策**: 终点从 R120 延到 R122, 加 ADR-029 (Cost Visibility, R111) + ADR-030 (Evaluation/Scoring, R115)。
 >
-> **R117 ✅ 完成 (2026-06-05 BJT ~01:30 cron slot 写完 + 06:00 cron slot land via cron-slot-handoff-recovery Option A2, in 0-11 窗口)** — Phase 6 row 8 第二刀: `mkdocs.yml` (theme: material + nav 11 顶层 / 13 叶子, exclude_docs 排除 progress/research/dogfood) + 6 新 docs 页 (`index.md` Home / `concepts/index.md` 五大概念 / `cost-tracking.md` ADR-029 教程 / `evaluators.md` ADR-030 教程 / `faq.md` 9 条问答 / `decisions/index.md` ADR 索引) + GHA workflow (`.github/workflows/gh-pages.yml`, uv 装 mkdocs-material → `mkdocs build --strict` → `peaceiris/actions-gh-pages` push gh-pages 分支, **GitHub Pages settings 不开** R120 才用户拍板); 顺手 ADR-030 deferred #3 (POST `/runs/{id}/evaluations` server-side run mode + 3 unit tests). i18n 推 R118+ (R117 站英文 only). #2 TreeView score badge / #4 RunList tooltip 推 R118. 748/9/0 (+3 R117), streak R52→R117 = **66**. **下一轮 = R118: `examples/` ≥3 demo (langgraph-router + crewai-research-team + 第三 TBD), `chronos quickstart --demo <name>` 加载, 每个跑过 evaluator, 同时补录 demo GIF + ADR-030 deferred #2/#4** (Phase 6 路线表 row 8 第三刀 / 收口刀, R122 必过项之一, 距 R122 还剩 4 轮).
+> **R118 ✅ 完成 (2026-06-06 BJT ~08:33 cron slot 写完 + 11:48 cron slot land via cron-slot-handoff-recovery Option A2 verify-don't-redo, in 0-11 窗口, 2-slot ship)** — Phase 6 row 8 第三刀 / 收口刀: `examples/langgraph-router/` (8 节点 conditional-edge router, UUID `aaaa…`) + `examples/crewai-research-team/` (8 节点 3-agent pipeline, UUID `bbbb…`) + `examples/anthropic-agent-tools/` (10 节点 tool-using loop, UUID `cccc…`) 三个新 demo (envelopes.jsonl + manifest.json + README.md 各一) + `examples/builtin-minimal/manifest.json` 补建; `cli/quickstart.py` 加 `DemoManifest` dataclass + `_load_manifest` (fail-soft) + `_list_available_demos` + `list_demos_command` + manifest-driven evaluator hint (`recommended_evaluators[0]` with `output_length_chars` fallback); `cli/__init__.py` 加 `--list` Typer flag. 4 demo 全 smoke 加载, 3 evaluator 跑分 GREEN (langgraph→31 / crewai→223 / anthropic→passed). 748/9/0 byte-identical to R117 (R118 是 data + dispatcher, 0 新测; 单测推 R119). ADR-030 deferred #2/#4 (TreeView badge / RunList tooltip 相对时间) 推 R121 RC buffer. Demo GIF 推 R119 E2E natural recording slot. mkdocs i18n 推 v1.1+. streak R52→R118 = **67**. 6 D-118 决策 + R119 hand-off invariants 见 `progress/2026-06-06-round-118.md`. **下一轮 = R119: E2E dogfood — 新 venv → quickstart → web UI → record/replay/fork/diff/compare/eval/cost 全流程 walkthrough, 列遗留 P0/P1/P2 finding, 修 P0 同 slot 内, P1/P2 推 R121, 同时验证 GHA gh-pages workflow 在 main 上跑过一次绿灯** (Phase 6 路线表 row 9 R119 唯一 slice, R122 必过项 "新用户路径走完不读源码" 的硬验证, 距 R122 还剩 3 轮).
 
 ---
+
+**Round 119 — Phase 6 row 9 唯一 slice: E2E dogfood — 新 venv → quickstart → web UI → 全流程 walkthrough + R121-defer P0 fixes (单 slot, 单 commit)**
+
+R119 是 R107-R122 路线表 row 9 (R119 E2E dogfood) 的唯一 slice, 距 R122 还剩 3 轮 (R120 v1.0.0-rc1 / R121 RC buffer / R122 final acceptance). R107-R118 已把 CLI Polish + Cost Visibility (ADR-029) + 前端 P0 + Evaluation (ADR-030) + README 双语 + 文档站 + ≥3 真实 demo 全部做完. R119 是 R122 验收前最后一次 "新用户视角" 全流程 walkthrough — 模拟一个零经验新用户的全栈体验, 列出所有遗留 P0/P1/P2, **修 P0 同 slot 内**, P1/P2 推 R121 RC buffer.
+
+### R119 必读 (按顺序)
+
+- `progress/2026-06-06-round-118.md` (R118 close-out, 上一轮) — R119 hand-off invariants 段 + R118 deferred items 清单 (TreeView badge / RunList tooltip / Demo GIF / manifest 单测 / mkdocs i18n). **第一动作 = pytest 接 baseline 748/9/0 + git fetch origin/main 验证 R118 commit 已落 (HEAD 应 = R118 land commit, 不能与 origin/main divergent).**
+- skill `dogfood:dogfood` (browser 流程标准化) + `dogfood:visual-review-loop` (前端改动后视觉验证) + `chronos-web-cron-port-leak` (`chronos web` 启停纪律) — R119 是 dogfood-heavy round, 这三个 skill 必读.
+- `docs/CONTEXT.md` §5 R107-R118 全部段 — review 一遍每轮 deliverables 现况, 才能在 dogfood 时知道哪些 surface "应该" 工作.
+- `docs/r120-acceptance.md` 全文 — 这是 R122 必过项的源头, R119 走 walkthrough 时直接对照打勾.
+- `examples/builtin-minimal/manifest.json` + `examples/{langgraph-router, crewai-research-team, anthropic-agent-tools}/manifest.json` — R118 ship 的 demo 集, R119 用 `--list` 看一遍, 然后挑两个跑 walkthrough.
+
+### R119 必做 (单 slot, 单 commit)
+
+1. **新 venv pseudo-walkthrough** (cron container 不一定有干净的 conda/pyenv, 用 `/tmp/r119-fresh-venv` 起一个新 venv 模拟): `python -m venv /tmp/r119-fresh-venv && /tmp/r119-fresh-venv/bin/pip install -e .` (或 from current source). 验 quickstart 出装即可用, 不需要 source-tree 知识.
+2. **`chronos quickstart --list` walkthrough**: 验证 4 demo 全部出现, name/title/description/evaluators 都打印. 截图 (rich console capture) 进 `docs/dogfood/r119-screenshots/01-list.txt` (text 格式, 不是图片, cron 没 X server).
+3. **`chronos quickstart --demo langgraph-router --db /tmp/r119-walkthrough.db`** + 验 Next-steps 输出 hint 给的 `chronos eval run` 命令真能跑.
+4. **`chronos web` 起后端**, 用 background terminal + 已有 PID-file long-term fix (R114). 注意端口纪律 (R114 patch 已防 leak, R119 仍要确认无 zombie).
+5. **5-surface live walkthrough** (cron container 用 browser tool, dogfood:dogfood 流程):
+   - Landing (`/`) — Onboarding Tour 在不在
+   - RunList — Tokens / Cost / Score 三列全在 (R111 + R115 联合验)
+   - RunDetail — NodeDetails token 显示, 节点 selection, replay 按钮
+   - Compare/Diff — ReactFlow 双 pane 渲染
+   - TreeView — 树状结构, 选中节点
+6. **走完 record/replay/fork/diff/compare/eval/cost 全流程**, 每步列出 finding (P0 阻塞 / P1 体验差 / P2 polish), cross-reference R107-R118 已修 finding 清单避免重复.
+7. **修 P0 同 slot 内** (任何阻塞 R122 验收的). 如果 0 P0 — 写一段 "本轮 0 新 P0, R122 验收 surface 全清" 即可, 这是 R122 验收预演的好兆头.
+8. **验 GHA `.github/workflows/gh-pages.yml` 在 main 上跑过一次绿灯** (R117 ship): `gh run list --workflow gh-pages.yml --limit 3` 或 等价方式. 如果没绿过 → 调到 R119 close-out 前修 (这是 R122 必过项 "文档站 GH Pages 上线" 的硬性 gate).
+9. **manifest-loader 单测** (R118 D-118-6 推过来): 加 `tests/unit/test_quickstart_manifest.py` 覆盖 `_load_manifest` 4 个失败路径 (missing / parse error / OSError / non-dict) + `_list_available_demos` 排序 + `list_demos_command` rendering smoke. ~6-10 测试, 估计 ≥755.
+10. **R118 deferred 不要做**: TreeView score badge (#2) + RunList tooltip relative-time (#4) + Demo GIF + mkdocs i18n 全部 R121 RC buffer 或 v1.1+, R119 不接管.
+11. **测试 baseline**: ≥748 + R119 manifest 单测 (估计 ≥755). spike 全绿 (含 spike20 + spike21). adapter zero-regression streak R52→R119 = **68**. **`src/chronos/adapters/` 字节不动** — adapter zero-regression 是 R122 硬 gate.
+12. **任何前端代码改动 → `npx tsc --noEmit` + `npm run build` 必过** (但 R119 应该是 dogfood + 单测 round, 不动 frontend 代码; 如果 dogfood 抓到前端 P0, 那就修而 R121 不再背).
+13. **写 `progress/2026-06-XX-round-119.md`** (含 self-check "仍在 R107-R122 + ADR-029/030 轨道", 距 R122 = 3 轮; 含 plan vs reality; 含 R119 walkthrough 完整 finding catalogue 引用 docs/dogfood; 含 R120 hand-off invariants).
+14. `docs/CONTEXT.md` §5 加 R119 段; §6 用 R120 plan 替换本块 (R120 = v1.0.0-rc1 cut: tag + Release Notes + 公开仓库等用户拍板).
+15. `CHANGELOG.md` `[Unreleased] / Tested — R119 (E2E dogfood walkthrough)` + `[Unreleased] / Added — R119 (manifest-loader unit tests)` 块.
+16. `docs/dogfood/2026-06-XX-round-119-e2e.md` — 完整 finding catalogue, finding 编号续 R113 F11 (R113 用 F7-F11), 即 R119 用 F12+ 起.
+
+### R119 硬约束
+
+- ❌ **不动 `src/chronos/adapters/`** — adapter zero-regression streak 70 是 R122 必过项, 距 R122 还剩 3 轮 (R120/R121/R122 = 3 round window 全清才到 71). R119 砍 streak 就只剩 2 round 重建空间.
+- ❌ **不开始 R120 RC1 cut** — 那是下一轮.
+- ❌ **不接管 R118 deferred frontend items** (TreeView badge / RunList tooltip) — 那是 R121 RC buffer.
+- ❌ **不录 chromium 视频** — cron container 没 X server (`chronos-docs-screenshots` skill 已论证).
+- ❌ **不切 public 仓库** — R120 才用户拍板.
+- ✅ Adapter 零回归 streak: R52→R119 = **68**.
+- ✅ R122 必过项 "新用户路径走完不读源码" 必过 — R119 是这条 gate 的最后一次预演, 必须 0 P0.
+- ✅ R122 必过项 "文档站 GH Pages 上线" — R119 必须确认 GHA workflow 在 main 跑过一次绿灯.
+- ✅ R118 deferred 单测 (D-118-6) ship — manifest-loader 损坏路径 + listing 排序 + rendering smoke.
+
+### R119 deliverables
+
+- New: `tests/unit/test_quickstart_manifest.py` (~6-10 测试)
+- New: `docs/dogfood/r119-screenshots/` (text/markdown 格式 console captures)
+- New: `docs/dogfood/2026-06-XX-round-119-e2e.md` (finding catalogue F12+)
+- New: `progress/2026-06-XX-round-119.md`
+- Modified: `CHANGELOG.md` `[Unreleased] / Tested — R119` + `[Unreleased] / Added — R119 (manifest unit tests)` 块
+- Modified: `docs/CONTEXT.md` §5 (R119 close 段) + §6 (R120 plan replace)
+- Conditional (only if R119 dogfood 抓到 P0): src/* 修复 + 对应单测
+
+### R119 gate checklist
+
+- [ ] `pytest -q --no-cov` 全过 (≥748 + R119 manifest 单测 ≥755)
+- [ ] 新 venv quickstart 走通 (`/tmp/r119-fresh-venv`)
+- [ ] `chronos quickstart --list` 显示 4 demo
+- [ ] 5 核心页 live walkthrough 全部 captured (text 格式)
+- [ ] record / replay / fork / diff / compare / eval / cost 7 surface walkthrough 完成
+- [ ] GHA gh-pages workflow 在 main 跑过 ≥1 次绿灯
+- [ ] 0 P0 finding (或 R119 close 内已修)
+- [ ] P1/P2 finding catalogue 写好, 推 R121 RC buffer
+- [ ] Adapter 目录字节未动 (streak → 68)
+- [ ] CHANGELOG R119 块写好
+- [ ] R118 deferred 单测 (D-118-6) ship
+
+### R120 plan preview (R119 写时填这里)
+
+- **R120**: v1.0.0-rc1 cut — `pyproject.toml` 升 1.0.0rc1, git tag, Release Notes (突出 R111 Cost Visibility + R115 Evaluation/Scoring + R118 ≥3 demo 三大差异化 feature), 公开仓库 toggle 仅在用户明确点头后切 (R120 plan 写时记下 "需用户拍板"). R121 RC buffer 修 R119/R120 暴露的 polish + ship R118 deferred items #2/#4. R122 final acceptance.
+
+---
+
+<details>
+<summary><b>Historical: R118 plan (Phase 6 row 8 third slice ≥3 demo + manifest-driven loader) — DONE in R118 (2-slot ship via cron-slot-handoff-recovery A2: 4 demos + manifest schema + `--list` mode + per-demo evaluator hint, 748/9/0 byte-identical to R117, 0 frontend deltas (推 R121), streak 67)</b></summary>
 
 **Round 118 — Phase 6 row 8 third slice (收口刀): `examples/` ≥3 真实 demo 跑过 evaluator + Demo GIF + ADR-030 deferred #2/#4 (单 slot, 单 commit)**
 
@@ -1629,6 +1740,8 @@ R118 是 R107-R122 路线表 row 8 (R116-R118 文档与 Demo arc) 的第三刀, 
 ### R119 plan preview (R118 写时填这里)
 
 - **R119**: E2E dogfood — 新 venv → `pip install -e .` → `chronos quickstart --demo langgraph-router` → `chronos web` → 浏览器走 record / replay / fork / diff / compare / eval / cost 全流程, 列遗留 P0/P1/P2 finding, **修 P0 同 slot 内**, P1/P2 推 R120 RC buffer 或 R121. 同时验证文档站 GHA workflow 在 main 上跑过一次绿灯, gh-pages 分支 artifact 可读 (本地 `git fetch origin gh-pages && git checkout origin/gh-pages -- .` smoke).
+
+</details>
 
 ---
 

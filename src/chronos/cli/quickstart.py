@@ -1,4 +1,4 @@
-"""`chronos quickstart` — seed a fresh chronos.db with a builtin demo (R109).
+"""`chronos quickstart` — seed a fresh chronos.db with a builtin demo (R109 / R118).
 
 The verb's contract:
 
@@ -7,8 +7,14 @@ The verb's contract:
   API keys, zero clock — every value is deterministic.
 * ``chronos quickstart --demo <name>`` reads ``examples/<name>/envelopes.jsonl``
   shipped in the repo / wheel.
+* ``chronos quickstart --list`` enumerates available demos with a one-line
+  description sourced from the per-demo ``manifest.json`` (R118; ADR-030
+  acceptance row "≥3 real demos under examples/ with quickstart loader").
 * Refuses to clobber a non-empty DB; pass ``--force`` to overwrite.
-* Prints next-step hints (`runs list`, `web`) so the new user knows where to go.
+* Prints next-step hints (``runs list``, ``web``, ``eval run``) so the new user
+  knows where to go. The ``eval run`` hint uses each demo's
+  ``recommended_evaluators[0]`` (R118) so users see the matching evaluator
+  without reading source.
 
 Demo file format (NOT the golden-trace contract — see
 ``examples/builtin-minimal/README.md``): JSONL where each line has exactly one
@@ -19,6 +25,12 @@ top-level key:
 * ``node``   — Node record (subset of ``chronos.core.models.Node``).
 * ``_fork``  — Fork edge linking two previously-declared runs.
 
+Each demo also ships a ``manifest.json`` with ``name``, ``title``,
+``description``, ``adapter``, ``recommended_evaluators`` (list, in priority
+order), ``final_state_key``, ``stats``, and ``first_run_id``. Missing /
+malformed manifests degrade gracefully — the verb still loads the envelopes
+and falls back to ``output_length_chars`` for the eval hint.
+
 Timestamps are NOT in the file — the loader assigns deterministic synthetic
 ones (epoch + 1-second-per-step) so the demo's ``started_at`` is reproducible
 across invocations and across machines.
@@ -27,6 +39,7 @@ across invocations and across machines.
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -39,6 +52,36 @@ from chronos.store.sqlite import SqliteStore
 
 # Demo runs use a fixed epoch so timestamps are reproducible.
 _DEMO_EPOCH = datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC)
+
+# Default fallback evaluator when a demo lacks a manifest or the manifest
+# omits ``recommended_evaluators``. Always works — every demo's final_state
+# carries an "output" key (per R118 envelope-authoring convention) so this
+# evaluator returns a meaningful numeric score.
+_DEFAULT_EVALUATOR = "output_length_chars"
+
+
+@dataclass(frozen=True)
+class DemoManifest:
+    """Parsed view of an ``examples/<name>/manifest.json`` file.
+
+    Free-form fields (``adapter``, ``stats``, ``first_run_id``) are kept as raw
+    JSON; the loader only enforces the small subset it consumes for hints and
+    listings, so older manifests without newer fields keep working.
+    """
+
+    name: str
+    title: str
+    description: str
+    recommended_evaluators: list[str]
+
+    @classmethod
+    def empty(cls, name: str) -> "DemoManifest":
+        return cls(
+            name=name,
+            title=name,
+            description="",
+            recommended_evaluators=[_DEFAULT_EVALUATOR],
+        )
 
 
 def _examples_root() -> Path:
@@ -53,6 +96,50 @@ def _examples_root() -> Path:
     here = Path(__file__).resolve()
     candidate = here.parents[3] / "examples"
     return candidate
+
+
+def _load_manifest(demo_dir: Path, name: str) -> DemoManifest:
+    """Parse ``demo_dir/manifest.json``; return ``DemoManifest.empty`` on miss.
+
+    Defensive: a corrupt or partial manifest never crashes ``quickstart`` —
+    the demo's envelopes.jsonl is the source of truth, the manifest is a
+    cosmetic / hint surface.
+    """
+    path = demo_dir / "manifest.json"
+    if not path.exists():
+        return DemoManifest.empty(name)
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return DemoManifest.empty(name)
+    if not isinstance(raw, dict):
+        return DemoManifest.empty(name)
+    evaluators_raw = raw.get("recommended_evaluators")
+    if isinstance(evaluators_raw, list) and all(isinstance(x, str) for x in evaluators_raw):
+        evaluators = list(evaluators_raw) or [_DEFAULT_EVALUATOR]
+    else:
+        evaluators = [_DEFAULT_EVALUATOR]
+    return DemoManifest(
+        name=str(raw.get("name") or name),
+        title=str(raw.get("title") or name),
+        description=str(raw.get("description") or ""),
+        recommended_evaluators=evaluators,
+    )
+
+
+def _list_available_demos(root: Path) -> list[tuple[str, DemoManifest]]:
+    """Return ``[(name, manifest), …]`` for every demo dir alphabetically.
+
+    A demo dir is any subdirectory containing an ``envelopes.jsonl``; manifest
+    is best-effort (empty manifest if missing/malformed).
+    """
+    out: list[tuple[str, DemoManifest]] = []
+    if not root.exists():
+        return out
+    for child in sorted(root.iterdir()):
+        if child.is_dir() and (child / "envelopes.jsonl").exists():
+            out.append((child.name, _load_manifest(child, child.name)))
+    return out
 
 
 def _load_envelopes(path: Path) -> list[dict[str, Any]]:
@@ -139,6 +226,38 @@ def _build_fork(payload: dict[str, Any], created_at: datetime) -> Fork:
     )
 
 
+def list_demos_command(*, console: Console) -> None:
+    """Implementation behind ``chronos quickstart --list`` (R118).
+
+    Emits a small table-like listing: ``name`` (bold) → ``title`` →
+    indented ``description``. No external table libs required — keeps the
+    output readable in plain TTYs and CI logs.
+    """
+    root = _examples_root()
+    demos = _list_available_demos(root)
+    if not demos:
+        console.print(f"[yellow]No demos found under {root}.[/]")
+        return
+    console.print(f"[bold]Available demos[/] ([dim]{len(demos)}[/]):")
+    console.print("")
+    for name, manifest in demos:
+        console.print(f"  • [bold cyan]{name}[/]")
+        if manifest.title and manifest.title != name:
+            console.print(f"    [dim]{manifest.title}[/]")
+        if manifest.description:
+            # Soft-wrap the description by clipping at 100 chars per line —
+            # rich.Console handles wrapping if console is wide enough; we
+            # just print a single chunk and let rich's overflow handle TTY.
+            console.print(f"    {manifest.description}")
+        if manifest.recommended_evaluators:
+            evals = ", ".join(manifest.recommended_evaluators)
+            console.print(f"    [dim]evaluators: {evals}[/]")
+        console.print("")
+    console.print(
+        "Load one with [cyan]chronos quickstart --demo <name>[/cyan]."
+    )
+
+
 def quickstart_command(
     *,
     demo: str,
@@ -159,15 +278,13 @@ def quickstart_command(
     envelopes_path = demo_dir / "envelopes.jsonl"
     if not envelopes_path.exists():
         # Enumerate available demos for the hint (alphabetical, only dirs with envelopes.jsonl).
-        root = _examples_root()
-        available: list[str] = []
-        if root.exists():
-            for child in sorted(root.iterdir()):
-                if child.is_dir() and (child / "envelopes.jsonl").exists():
-                    available.append(child.name)
+        available = [name for name, _ in _list_available_demos(_examples_root())]
         listing = ", ".join(available) if available else "<none>"
         console.print(f"[red]error:[/] unknown demo [bold]{demo}[/]. Available: {listing}.")
+        console.print("[dim]Hint: run [cyan]chronos quickstart --list[/cyan] for descriptions.[/]")
         raise typer.Exit(code=2)
+
+    manifest = _load_manifest(demo_dir, demo)
 
     # Refuse to clobber an existing non-empty DB.
     if target.exists() and not force:
@@ -252,7 +369,14 @@ def quickstart_command(
         # R115 / ADR-030: surface the evaluator path so a new user can score
         # the demo run without reading source. Anchors the R122 must-pass
         # "new-user path → run eval" gate.
+        # R118: the evaluator name comes from the demo's manifest
+        # (recommended_evaluators[0]), with a sane fallback.
+        evaluator_name = (
+            manifest.recommended_evaluators[0]
+            if manifest.recommended_evaluators
+            else _DEFAULT_EVALUATOR
+        )
         console.print(
-            f"  • [cyan]chronos eval run {first_id} --evaluator output_length_chars[/cyan] — score it"
+            f"  • [cyan]chronos eval run {first_id} --evaluator {evaluator_name}[/cyan] — score it"
         )
     console.print("  • [cyan]chronos web[/cyan]                    — explore in the browser")

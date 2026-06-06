@@ -1,0 +1,10 @@
+{
+  "name": "langgraph-router",
+  "title": "LangGraph Router (conditional-edge routing with fork)",
+  "description": "A 4-node conditional-routing graph: classify → route → (general_answer | technical_answer) → finalize. The parent run takes the 'general' branch; a fork at the classify node flips the category to 'technical', causing the same router to walk the 'technical_answer' branch instead. Demonstrates how Chronos captures branch-divergent fork-children and how `chronos diff` surfaces the resulting answer-style change. Synthetic illustrative usage numbers (no real LLM calls).",
+  "adapter": "langgraph",
+  "recommended_evaluators": ["output_length_chars"],
+  "final_state_key": "output",
+  "stats": {"runs": 2, "nodes": 8, "forks": 1},
+  "first_run_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1"
+}

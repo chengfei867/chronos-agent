@@ -1,0 +1,10 @@
+{
+  "name": "builtin-minimal",
+  "title": "Builtin Minimal (zero-dep greet → draft → finalize, with formal-tone fork)",
+  "description": "The default zero-dependency demo: a parent run (greet → draft → finalize, friendly tone) plus a child run forked at greet with tone=formal. Synthetic illustrative token/cost numbers on the LLM-kind 'draft' nodes (per ADR-029) so `runs list` shows populated columns out of the box. No real LLM calls.",
+  "adapter": "langgraph",
+  "recommended_evaluators": ["output_length_chars"],
+  "final_state_key": "output",
+  "stats": {"runs": 2, "nodes": 6, "forks": 1},
+  "first_run_id": "11111111-1111-4111-8111-111111111111"
+}

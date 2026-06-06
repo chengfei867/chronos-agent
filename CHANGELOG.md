@@ -4,6 +4,35 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added — R118 (Phase 6, `examples/` ≥3 真实 demo + manifest-driven loader — R107-R122 track row 8 slice 3 of 3 收口刀)
+
+- `examples/langgraph-router/` — 4-node conditional-edge router demo (classify → route → general_answer/technical_answer → finalize). Parent run answers a general question; fork at `route` flips category to technical and routes to the technical_answer branch instead. 8 nodes / 2 runs / 1 fork. UUID prefix `aaaaaaaa-…`. Includes `envelopes.jsonl`, `manifest.json`, `README.md` with ASCII tree-art of the graph shape.
+- `examples/crewai-research-team/` — 3-agent CrewAI-style research pipeline (researcher → analyst → reporter). Parent run produces a neutral report; fork at `analyst` flips stance to critical and produces a longer skeptical report instead. 8 nodes / 2 runs / 1 fork. UUID prefix `bbbbbbbb-…`.
+- `examples/anthropic-agent-tools/` — Anthropic Agents SDK-style tool-using loop (plan → web_search [tool] → fetch_page [tool] → synthesize → finalize). Fork at `synthesize` flips `citation_required=true` to add a source URL to the answer. 10 nodes (2 of `tool` kind) / 2 runs / 1 fork. UUID prefix `cccccccc-…`. Exercises the `tool` `NodeKind` end-to-end.
+- `examples/builtin-minimal/manifest.json` — backfill the original R109 quickstart demo with the same `DemoManifest` schema for `--list` consistency.
+- `chronos quickstart --list` — new dispatcher mode that lists all available demos with name → title → description → recommended evaluators. Backed by a new `_list_available_demos()` helper that the existing `--demo` error path also routes through, so an unknown demo name now produces consistent error output.
+- `DemoManifest` frozen dataclass + `_load_manifest()` fail-soft loader in `src/chronos/cli/quickstart.py`. Manifest schema: `name` / `title` / `description` / `recommended_evaluators` (free-form `adapter` / `stats` / `first_run_id` allowed without schema enforcement). Loader catches missing file, JSON parse error, OSError, and non-dict root → all fall back to `DemoManifest.empty(name)`. Old demos without a manifest still work unchanged.
+- `chronos quickstart --demo <name>` Next-steps output now uses `manifest.recommended_evaluators[0]` (with `output_length_chars` fallback) when printing the suggested `chronos eval run` line — `anthropic-agent-tools` correctly suggests `final_state_key_present` instead of the generic length evaluator.
+
+### Process — R118
+
+- 2-slot ship via `cron-slot-handoff-recovery` Option A2 verify-don't-redo (the 20th A2 close-out chain since R48-A): slot A wrote demos + loader + manifest + `--list` but timed out before commit; slot B re-ran pytest (byte-identical to R117), smoke-loaded all 4 demos via `chronos quickstart --demo`, smoke-ran `chronos quickstart --list`, and ran `chronos eval run` against each new demo (langgraph-router → 31, crewai-research-team → 223, anthropic-agent-tools → passed) before committing. Audited every diff hunk against R118 plan §5 1:1.
+- ADR-030 deferred items **#2 (TreeView score badge)** and **#4 (RunList tooltip relative-time)** explicitly deferred to R121 RC buffer (D-118-2). R122 acceptance not gated by either — Score column already ships per R115, relative-time is polish on an existing tooltip. Slot B chose not to spin up vite + tsc + dist-rebuild at the 0-11 window edge to preserve the A2 close-out's atomicity.
+- Demo GIF deferred to R119 E2E natural recording slot (D-118-3). R118 §6 escape hatch already permits ASCII fallback; cron container has no agg/termtosvg pre-installed; R119 E2E walkthrough provides the natural recording opportunity.
+- mkdocs i18n (`docs/getting-started.zh.md`, `docs/faq.zh.md`) deferred to v1.1+ (D-118-4). R117 D-117-1 + R118 §6 explicit escape hatch. R122 字面 "中英双语" is satisfied by the bilingual README.md + README.zh-CN.md (R116 ship); doc-station i18n is post-1.0.
+- Manifest-loader bespoke pytest deferred to R119 (D-118-6). The 4-demo + `--list` + 3-evaluator slot-B smoke is the runtime gate for this round; formal unit tests for `_load_manifest` corruption paths + `_list_available_demos` ordering + `list_demos_command` rendering belong to R119 E2E hardening pass naturally.
+- Adapter zero-regression streak: R52→R118 = **67** (`src/chronos/adapters/` byte-untouched).
+
+### Test gate — R118
+
+- `pytest -q --no-cov`: **748 passed / 9 skipped / 0 failed in 32.37s** — byte-identical to R117 baseline (R118 is data + dispatcher refactor, 0 net pytest delta this round; manifest-loader pytest will land in R119).
+- 6 spikes GREEN (spike14/15/16/19/20/21 all in suite; no `tests/spikes/` change this round).
+- Smoke: 4/4 demos seed cleanly via `chronos quickstart --demo <name> --db /tmp/r118-smoke/<name>.db` (each: 8-10 nodes, 2 runs, 1 fork, populated `cost_usd_cents` + `usage`).
+- Smoke: `chronos quickstart --list` prints all 4 demos with name/title/description/recommended-evaluators.
+- Smoke: 3/3 evaluator runs scored end-to-end against the new demos (`output_length_chars` for langgraph + crewai; `final_state_key_present` for anthropic).
+- `pyproject.toml` / `uv.lock` byte-untouched (no dep drift).
+- No frontend code changed → tsc/vite gates not run (deferred items #2/#4 stay in WIP backlog for R121).
+
 ### Documentation — R117 (Phase 6, mkdocs-material 文档站 — R107-R122 track row 8 slice 2 of 3)
 
 - **`mkdocs.yml`** (~3.5 KB, project root) — `theme: material` 主题 + light/dark palette toggle + 11 top-level nav 入口 (Home / Getting started / Concepts / CLI reference / Cost tracking / Evaluators / Adapters / Guides / Contracts / Decisions / FAQ). `markdown_extensions` 启 admonition + tables + footnotes + pymdownx (superfences/mermaid + details + tabbed + tasklist + highlight + keys + tilde + caret + inlinehilite + snippets). `extra.version.provider: mike` 留给 R120 多版本切换. site_url 指向 `https://chengfei867.github.io/chronos-agent/` (Pages settings 不开, 等 R120 用户拍板).
