@@ -112,10 +112,12 @@ def info() -> None:
     """
     console.print(f"[bold]chronos[/bold] {__version__}")
     console.print(
-        "Status: Phase 5 Arc D complete (v0.9.0 R100-R106, golden-trace data contract + capture driver + verify-golden CLI + CI gate), "
-        "Phase 6 RC kickoff (R107-R122 polish target: quickstart/doctor verbs, cost-visibility, evaluation scoring, frontend P0, onboarding tour, bilingual README, docs site), "
-        "adapter zero-regression streak R52->R110 = 58 rounds, "
-        "v0.9.0"
+        "Status: Phase 6 RC cut (v1.0.0-rc1 R120, full polish track R107-R122 — "
+        "quickstart/doctor/eval verbs ✓, ADR-029 cost visibility ✓, ADR-030 evaluation/scoring ✓, "
+        "frontend P0 cleanup ✓, onboarding tour ✓, bilingual README ✓, mkdocs-material docs site ✓, "
+        "examples/ ≥3 demos ✓, E2E dogfood ✓), "
+        "adapter zero-regression streak R52->R120 = 68 rounds, "
+        "v1.0.0-rc1"
     )
     console.print(
         "Commands: [green]runs list/show, forks show, diff, replay, fork plan, quickstart, doctor, web, verify-golden[/green] "

@@ -4,7 +4,43 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
-### Tested — R119 (Phase 6 row 9 唯一 slice — E2E dogfood walkthrough)
+## [1.0.0-rc1] — 2026-06-08 (Round 120 — Phase 6 row 10 唯一 slice — v1.0.0 Release Candidate 1 cut)
+
+### Added — R120 (Phase 6 row 10 — v1.0.0-rc1 cut)
+
+- `docs/release-notes/v1.0.0-rc1.md` — first formal Release Notes for the chronos-agent v1.0 line. Sections: Highlights (R107-R119 work itemised by ADR/track), New since 0.9.0 (CLI verb additions, ADR-029 cost visibility, ADR-030 evaluation/scoring, frontend P0 cleanup, onboarding tour, bilingual README, mkdocs-material docs site, examples ≥3, E2E dogfood), Known Limitations (deferred F13/F14/F15/F16/#2/#4 → R121 RC buffer, ci.yml extras-install fix landed in this RC, mkdocs i18n still deferred to v1.1+), Quickstart (5-minute path with `chronos quickstart` → `runs list` → `eval run` → `compare --eval`).
+- `progress/2026-06-08-round-120.md` — R120 close-out narrative + R121 hand-off invariants.
+- Annotated git tag `v1.0.0-rc1` on the R120 ship commit.
+
+### Changed — R120
+
+- `pyproject.toml`: `version = "0.9.0"` → `"1.0.0rc1"` (PEP 440 RC notation).
+- `src/chronos/__init__.py`: `__version__ = "0.9.0"` → `"1.0.0rc1"`.
+- `uv.lock`: chronos-agent self-pin synced to 1.0.0rc1 (manual edit; no dependency relock needed).
+- `src/chronos/cli/__init__.py` `info()` command: status line refreshed for v1.0.0-rc1 / R120 / R107-R122 polish track summary / adapter zero-regression streak R52→R120 = **68 rounds**.
+
+### Fixed — R120 (F17: ci.yml pytest had been silently failing on every push to main since R111)
+
+- `.github/workflows/ci.yml`: `Install dependencies` step changed from `uv sync --extra dev` → `uv sync --all-extras`. Tests under `tests/integration/`, `tests/spikes/`, and `tests/unit/test_api_server.py` / `test_cli_tree.py` import `langgraph`, `fastapi`, `autogen_agentchat`, `crewai`, and `claude-agent-sdk` at module level — `--extra dev` only pulled the test runner, not the adapter SDKs, so pytest collection bombed with `ModuleNotFoundError` on 7 modules in both Python 3.11 and 3.12 matrix legs. Local pytest stayed 769/9/0 green because the developer venv was always created with `--all-extras`. Same silent-failure pattern as F12 in R119 — workflow has been red on every R111/R112/R113/R114/R115/R116/R117/R118/R119 push without anyone noticing because no notification path existed. R120 dogfood (RC1 precondition smoke-audit) is the first round that actively pulled GHA conclusions for all 3 workflows on every recent main push. golden-verify.yml stayed green because it only exercises the golden-trace contract layer which has no adapter imports.
+- After this fix, ci.yml run #N triggered by R120 ship is the first green ci.yml run on main since at least 2026-05-27 (R111 land, e93797fe).
+
+### Process — R120
+
+- Single-slot single-commit ship (no A2 close-out chain needed). R119 dropped clean baseline 769/9/0 + adapters byte-untouched, so R120 only needed: F17 root-cause + 1-line fix → version bump (3 files) → CHANGELOG roll-over → release notes → progress doc → CONTEXT.md §5/§6 update → atomic commit + tag + push. Verified pytest baseline still 769/9/0 after edits (adapter byte-untouched, only metadata + ci.yml + cli/__init__.py info() literal changed).
+- **Public-repo toggle deferred to user decision per R117 R120-plan constraint** (CONTEXT.md line 1867). Repo stays PRIVATE through R120; war report flags this as a `chengfei867` settings-page action item, not an autonomous flip. R121 plan retains this gate.
+- Adapter zero-regression streak: R52→R120 = **68** (`src/chronos/adapters/` byte-untouched). Streak invariant survives the RC1 cut by construction — RC1 only touches metadata, CI workflow, CLI info() literal, CHANGELOG, release notes, progress doc, and CONTEXT.md.
+- R121 RC buffer plan: F13 (runs-list column wrapping), F14 (doctor extras-warn inline hint), F15, F16, R118 #2 (TreeView score badge), R118 #4 (RunList tooltip relative-time), demo GIF re-record opportunity, optional unified frontend+CLI walkthrough, mkdocs i18n still deferred to v1.1+.
+
+### Test gate — R120
+
+- pytest: **769 passed / 9 skipped / 0 failed** (byte-identical to R119 baseline). `.venv/bin/python -m pytest -q` 42.85s on the cron container.
+- mypy strict: clean on `src/chronos/` (continue-on-error in CI but locally green).
+- ruff lint + format: clean on the 5-file diff.
+- ci.yml: expected to flip ❌→✅ on the R120 ship push for the first time since 2026-05-27. Verification deferred to R121 first action (mirrors R120's verify-of-R119 pattern).
+- gh-pages.yml: expected to stay ✅ (no docs changes that fail mkdocs --strict).
+- golden-verify.yml: expected to stay ✅ (no contract-layer changes).
+
+### R107-R119
 
 - Fresh-venv (`/tmp/r119-fresh-venv`) install verified end-to-end with `pip install -e .`. New-user path captured as 8 CLI-station walkthrough evidence files in `docs/dogfood/r119-screenshots/{01..08}-*.txt`: `quickstart --list` (4 demos rendered), `quickstart --demo langgraph-router` (Next-steps hint with correct evaluator), `runs list` (Tokens=`364` + Cost ¢=`15` columns populated — R111 ADR-029 ship runtime-verified GREEN for the 4th time), `eval run` (score=`31`), `eval list`, `compare --eval`, `doctor` (6 ✅ / 5 ⚠️ extras-not-installed / 0 failures), `diff` (fork at `classify`, 2 changed / 2 added / 1 removed). 0 NEW P0 found; **F12 = silently-failing pre-existing P0 from R117 ship discovered in this slot** (see Fixed below).
 - R118 D-118-6 carry-over: `tests/unit/test_cli_quickstart_manifest.py` shipped. 18 functions / 21 parametrize cases covering `_load_manifest` happy path + 4 corruption modes (missing file, JSON parse error, OSError, non-dict root) + `_list_available_demos` sorting + `list_demos_command` rendering smoke. Test count delta: **748 → 769** (Δ=+21).

@@ -207,7 +207,59 @@ chronos-agent/
 
 ---
 
-**截至 Round 118 结束 (2026-06-06 BJT ~08:33 cron slot 写完 + 11:48 cron slot land via `cron-slot-handoff-recovery` Option A2 verify-don't-redo, in 0-11 工作窗口边界, 2-slot ship)** — R118 是 R107-R122 路线表 row 8 (R116-R118 文档与 Demo arc) 的第三刀 / 收口刀, Phase 6 RC docs/demo arc final slice. **核心交付** (4 新目录 / 4 新 manifest / +146 LOC src/, 0 行 src/chronos/adapters/ + 0 行 src/chronos/api/ + 0 行 src/chronos/store/ + 0 行 src/chronos/eval/ 改动): (a) **`examples/langgraph-router/`** — 4 节点 conditional-edge router demo (classify → route → general_answer/technical_answer → finalize), 父跑 'general' 分支, 子在 `route` fork 翻 'technical' 走另一支, 8 节点 / 2 runs / 1 fork, UUID 前缀 `aaaaaaaa…`. envelopes.jsonl + manifest.json + README.md (含 ASCII 树状图). (b) **`examples/crewai-research-team/`** — 3-agent CrewAI 风格 pipeline (researcher → analyst → reporter), 父中性 stance, 子在 `analyst` fork 翻 'critical' 出更长更怀疑的 report, 8 节点 / 2 runs / 1 fork, UUID 前缀 `bbbbbbbb…`. (c) **`examples/anthropic-agent-tools/`** — Anthropic Agents SDK 风格 tool-using loop (plan → web_search tool → fetch_page tool → synthesize → finalize), 子 fork 翻 `citation_required=true` 加 source URL, 10 节点 (2 是 tool kind) / 2 runs / 1 fork, UUID 前缀 `cccccccc…`. (d) **`examples/builtin-minimal/manifest.json`** 补建 — R109 原 demo 没有 manifest 的 backfill, 一致 schema. (e) **`src/chronos/cli/quickstart.py` +128 LOC** — `DemoManifest` frozen dataclass (name/title/description/recommended_evaluators 四字段, free-form adapter/stats/first_run_id 不强 schema), `_load_manifest()` 全 fail-soft (file missing / JSON parse error / OSError / non-dict root → `DemoManifest.empty`), `_list_available_demos()` 共享 helper (旧 `quickstart_command` 内联扫描代码也切到这个 helper, 错误路径与新 `--list` 路径行为统一), `list_demos_command()` rich-console 表式列出每 demo 的 name → title → description → evaluators + 末尾 hint, `quickstart_command` Next-steps 输出的 `chronos eval run …` 行现在用 `manifest.recommended_evaluators[0]` (with `output_length_chars` fallback) — anthropic-agent-tools 正确推 `final_state_key_present`. (f) **`src/chronos/cli/__init__.py` +18 LOC** — `--list` Typer flag + dispatcher (在 `quickstart_command` 之前 short-circuit 到 `list_demos_command`), help text + Example block 加 R118 行 (`--demo langgraph-router` + `--list` 两条新例). **延后项 (R121 RC buffer / R119 E2E / v1.1+ 各有去处)**: ADR-030 deferred #2 TreeView score badge → R121, deferred #4 RunList tooltip relative-time → R121, demo GIF → R119 E2E natural recording slot (R116 D-116-2 + R118 §6 escape hatch 已论证), mkdocs i18n → v1.1+ (R117 D-117-1 + R118 §6 explicit escape hatch, R122 字面 "中英双语" 通过 README 已满足), manifest-loader 单测 → R119 E2E 硬化 pass (R118 是 demo+data round, 单测留 E2E 是合理的). **测试基线**: pytest 748 passed / 9 skipped / 0 failed (与 R117 字节级一致 — R118 不动测试套, 通过 slot B 的 4-demo smoke + `--list` smoke + 3 evaluator 跑分作为 runtime gate). 6 spikes GREEN. Adapter zero-regression streak R52→R118 = **67**.
+**截至 Round 120 结束 (2026-06-08 BJT ~04:30 cron slot, 0-11 工作窗口内, 单 slot 单 commit ship)** — R120 是 R107-R122 路线表 row 10 的唯一 slice = **v1.0.0-rc1 cut**. **核心交付** (1 个新 release notes 文件 / 1 个新 progress doc / 4 个 metadata 文件 bump / 1 个 ci.yml 1-line fix / 1 个 CHANGELOG roll / 1 个 git annotated tag, 0 行 src/chronos/adapters/ 改动): (a) **`docs/release-notes/v1.0.0-rc1.md`** — 第一份正式 v1.0 line release notes (Highlights / What's new since 0.9.0 / Known limitations / Quickstart 5min / Acceptance status / Upgrade notes 六节); (b) **`pyproject.toml`** + **`src/chronos/__init__.py`** + **`uv.lock`** version 0.9.0 → 1.0.0rc1 (PEP 440 RC notation 三处同步); (c) **`src/chronos/cli/__init__.py` `info()`** — status 行刷为 v1.0.0-rc1 / R120 / R107-R122 全 ✓ checklist / streak R52→R120=68; (d) **`.github/workflows/ci.yml`** `Install dependencies` step `uv sync --extra dev` → `uv sync --all-extras` — **F17 silently-failing pre-existing P0** (R111 起 ci.yml pytest 在 main 上每次 push 都炸, 7 个 collection ImportError 因 `tests/` 在 module-level import langgraph/fastapi/autogen/crewai/claude-agent-sdk; 本地 `.venv` 创建时用 `--all-extras` 所以 769/9/0 一直绿欺骗了 R111-R119 9 轮 ship). 同 F12 silently-failing P0 模式, R120 dogfood (RC1 precondition smoke-audit) 是首轮 actively fetch 3 个 GHA workflow 的 conclusion 状态; (e) **`CHANGELOG.md`** — 将 [Unreleased] block (R107-R119 全部累积) 整体下移并改名为 [1.0.0-rc1] — 2026-06-08, 上方添新空 [Unreleased] block, R120-specific Added/Changed/Fixed/Process/Test gate 五块插在 [1.0.0-rc1] header 下. (f) **annotated git tag `v1.0.0-rc1`** on 本 ship commit. **延后项 (R121 RC buffer 全揽)**: F13 (runs-list column wrapping) / F14 (doctor extras-warn inline hint) / F15 / F16 / R118 #2 (TreeView score badge) / R118 #4 (RunList tooltip relative-time) / Demo GIF re-record opportunity / 可选 unified frontend+CLI walkthrough / mkdocs i18n 仍推 v1.1+. **延后项 (用户决策点)**: 公开仓库 toggle — R117 R120-plan constraint 明文不擅自切, R120 战报 surface 决策点; 仓库 R120 ship 后仍 PRIVATE, 需 `chengfei867` 在 GitHub settings 页手切 OR 在 chat 里跟 cron user 说 "切" 才切. **测试基线**: pytest 769 passed / 9 skipped / 0 failed (与 R119 字节级一致, R120 只动 metadata + ci.yml + CLI info() 字面值 + CHANGELOG + release notes + CONTEXT.md, 0 production logic 改动). 6 spikes GREEN. Adapter zero-regression streak R52→R120 = **68**.
+
+- **Round: 120** (Phase 6 row 10 = v1.0.0-rc1 cut, single-slot single-commit ship). 0 hard blocker. New artefacts: `progress/2026-06-08-round-120.md` (R120 close-out + plan vs reality + R121 hand-off invariants + R122 acceptance update), `docs/release-notes/v1.0.0-rc1.md` (~8.7 KB). Modified: `pyproject.toml` (version), `src/chronos/__init__.py` (__version__), `uv.lock` (chronos-agent self-pin), `src/chronos/cli/__init__.py` (info() 状态行), `.github/workflows/ci.yml` (`--extra dev` → `--all-extras` + 4 行 comment), `CHANGELOG.md` ([Unreleased] → [1.0.0-rc1] + 新空 [Unreleased] + R120 五块), `docs/CONTEXT.md` §5 (此段 + R119 段补完) + §6 (R121 RC buffer plan 替换 R120 plan). New tag: `v1.0.0-rc1` (annotated).
+- **R120 关键决策 (上墙)**:
+  - **D-120-1: F17 fix-in-slot 而非 document-as-known-limitation.** 1-line 改动 (`uv sync --extra dev` → `--all-extras`), 完全可逆, 风险极低. R119 invariant 2 ("ci.yml smoke audit on RC1 cut") 写到这就是为了今天 unblock; 推 R121 verify 反而拖住 R122. 验证策略: R120 ship 后 GHA 触发的 ci.yml run 会是 R111 起首次绿, R121 first action 复查 (mirror R120 自己的 verify-of-R119 模式).
+  - **D-120-2: 公开仓库 toggle 不擅自切.** R117 R120-plan constraint (CONTEXT.md 旧 line 1867) 写得很明确 "需用户点头". R120 战报 surface 决策点 ("repo 现在 PRIVATE, 你说切就切, settings 页 1 click"), 不动 GitHub API. R121/R122 plan 都保留这个 gate.
+  - **D-120-3: R120 单 slot 单 commit (无 A2 close-out 链).** R119 留下干净 baseline 769/9/0 + adapter byte-untouched + 5 个延后 item 全归档. R120 工作清单 = F17 1 行 + 3 处 version + 1 个 release notes + 1 个 progress + CHANGELOG roll + CONTEXT.md update + tag — 完全在单 slot 预算内. 不需要 cron-slot-handoff-recovery.
+  - **D-120-4: r120-acceptance.md 不重写, 用 progress 引用.** 文件名保留 (R109 D-109-X 已论证), 内容 R107-R119 均在做 → R120 ship 自带打勾, progress doc 引用即可.
+- **R120 acceptance (R122 必过项更新)**:
+  - ✅ R122 必过项 "v1.0.0-rc1 tag" — **达成** (annotated tag pushed to gh-proxy.com mirror)
+  - ✅ R122 必过项 "Release Notes (突出 Cost+Eval)" — **达成** (`docs/release-notes/v1.0.0-rc1.md`)
+  - ✅ R122 必过项 "ci.yml + gh-pages.yml + golden-verify.yml 三路绿" — **gh-pages.yml/golden-verify.yml 已绿, ci.yml R120 ship 后预期首次绿** (R121 verify)
+  - ✅ 769 passed / 9 skipped / 0 failed (与 R119 byte-identical, R120 不动测试套)
+  - ✅ 6 spikes GREEN
+  - ✅ Adapter zero-regression streak: R52→R120 = **68** (`src/chronos/adapters/` byte-untouched)
+  - ⚠️ 公开仓库 toggle — **挂用户决策**, R120 不动
+  - ⚠️ Open polish 跨到 R121-R122: TreeView badge / RunList tooltip / Demo GIF / mkdocs i18n / F13-F16
+- **距离 R122**: 2 轮 (R121 RC buffer / R122 final acceptance).
+- **R120 hand-off invariants (R121 prologue 用)**:
+  - **R121 first action: GHA ci.yml run 状态 verify** — 取 R120 ship 触发的 run, expect ✅. 如果是 ❌, 看是否新 collection error (扩展 `--all-extras` 没装的 extra?) 还是同 ImportError 漂移 (uv 缓存抖动?). 不要 silent ship 不验. 同 R120 verify-R119 模式.
+  - **R121 second action**: 列 R121 RC buffer 处理清单优先级: F13 / F14 / R118 #2 / R118 #4 (代码改) → F15 / F16 (评估) → demo GIF / 可选 walkthrough. 单 slot 内尽量多干, A2 close-out 链可接.
+  - **R121 不动 adapter** — streak 68 / R122 要求 ≥70: R121/R122 = 2 round window 全清 → streak 70 at R122 ship, 卡死边缘. 任一 round 触动 adapter (real bug) → 重谈与用户.
+  - **R121 不切 public** — gate 在用户拍板, 不在 cron.
+  - **R122 acceptance scope 缩小成 self-audit + final 战报** — 不加新 feature, 不写新 ADR; 验所有 R122 必过项 → ✅ 全部 → 战报 "✅ R122 验收候选, 请拍板" → 等用户回复.
+
+- **公开仓库 toggle (用户决策项, R120 出货时尚未触动)**:
+  - 当前: `chengfei867/chronos-agent` 仓库 PRIVATE.
+  - 切法 (用户操作, 非 cron): GitHub repo settings → Danger Zone → Change visibility → Public.
+  - 预期影响: GitHub Pages site 从 private (org plan 限) 变成可公开访问 (gh-pages branch 已就绪); v1.0.0-rc1 tag 公开可见; Release Notes markdown render 对外.
+  - cron 不擅自切; R121/R122 不切; 等用户在 chat 里说 "切" 或自己手切. 不阻塞 R122 验收 — R122 挂仅 "tag + Release Notes + 测试绿" 这 3 项, 公开是 nice-to-have.
+
+---
+
+**截至 Round 119 结束 (2026-06-07 BJT ~03:33 cron slot 写完 + 09:45 cron slot land via `cron-slot-handoff-recovery` Option A2 verify-don't-redo, in 0-11 工作窗口, 2-slot ship)** — R119 是 R107-R122 路线表 row 9 的唯一 slice = **E2E dogfood walkthrough**. **核心交付** (8 evidence 文件 / 1 finding catalogue / 1 progress doc / 1 个 GHA workflow F12 fix / 6 docs cross-link 修正 / +21 净测试): (a) **`/tmp/r119-fresh-venv` fresh-venv install** + 8 站 CLI walkthrough — `chronos quickstart --list` (4 demo 渲染) → `--demo langgraph-router` (Next-step hint 用对的 evaluator) → `runs list` (Tokens=`364` + Cost ¢=`15` 列填 — ADR-029 第 4 次 runtime verify GREEN) → `eval run` (score=`31`) → `eval list` → `compare --eval` → `doctor` (6 ✅ / 5 ⚠️ extras / 0 failures) → `diff` (fork at `classify`, 2 changed / 2 added / 1 removed). 0 NEW P0; (b) **8 CLI evidence 文件** 落 `docs/dogfood/r119-screenshots/{01..08}-*.txt` (text-format, cron container 无 X server); (c) **`tests/unit/test_cli_quickstart_manifest.py`** 18 functions / 21 parametrize cases, R118 D-118-6 carry-over, 测试 +21 (748 → 769); (d) **F12 fix** — `.github/workflows/gh-pages.yml` `pymdown-extensions==10.12` → `10.21.3` 修 Python 3.11 + pygments 2.20 + pymdownx<10.20 的 `HtmlFormatter` `filename=None` AttributeError; 同时改 `paths:` triggers 从 legacy `docs.yml` 文件名到实际 `gh-pages.yml`, R117 起 silent failure 修复 (workflow 之前只是 `workflow_dispatch` + 巧合 paths match); (e) **6 docs cross-link 修复**: `docs/adapters/anthropic_agents.md` 2 个 relative `../../src/...` → 绝对 GitHub URL (mkdocs strict 模式拒 docs root 之外路径), `docs/contracts/adapter-protocol.md` 1 处, `docs/decisions/ADR-029-cost-visibility.md` 3 个 ADR slug rename (`ADR-009-cli-usage-rendering` → `usage-extractor-hook`, `ADR-013-usage-schema` → `ADR-015-extractor-contract-v2`, `ADR-016-recorder-protocol` → `adapter-interface`), `docs/decisions/ADR-030-evaluation-scoring.md` 1 处 ADR slug rename. **测试基线**: 769 passed / 9 skipped / 0 failed (R118 748 + R119 +21). 6 spikes GREEN. **F12 即 R117 起 silently-failing P0** — gh-pages workflow 在 main 上每次 push (R117 land 2026-06-05 21:22 UTC + R118 land 2026-06-06 03:58 UTC) 都炸, 没人发现因为没 notification. R119 dogfood 是首轮主动跑 `mkdocs build --strict` local 把它逼出来. **R120 first action 必须 verify GHA gh-pages run #3 (R119 ship 触发) 绿** ← R120 已确认 ✅ (head_sha 8dcc434a 2026-06-07T17:10:43Z success). Adapter zero-regression streak R52→R119 = **68**.
+
+- **Round: 119** (Phase 6 row 9 = E2E dogfood, 2-slot A2 close-out 第 21 链). 0 hard blocker. New artefacts: `progress/2026-06-07-round-119.md`, `docs/dogfood/2026-06-07-round-119-e2e.md`, `docs/dogfood/r119-screenshots/{01..08}-*.txt`, `tests/unit/test_cli_quickstart_manifest.py`. Modified: `.github/workflows/gh-pages.yml` (F12 双修), `docs/adapters/anthropic_agents.md`, `docs/contracts/adapter-protocol.md`, `docs/decisions/ADR-029-cost-visibility.md`, `docs/decisions/ADR-030-evaluation-scoring.md`, `CHANGELOG.md` ([Unreleased] / Tested + Fixed + Added + Process — R119 四块), `docs/CONTEXT.md` §6 (R120 plan 替换 R119 plan; §5 R119 段在 R120 round 补充).
+- **R119 关键决策 (上墙, R120 写时整理)**:
+  - **D-119-1: F12 fix-in-slot.** R117/R118 silently-failing 已 2 轮, 不能再拖到 R120 RC1 cut. mkdocs --strict local 验证 GREEN 后即 push, R120 first action verify GHA run #3.
+  - **D-119-2: R118 #2/#4 还是 defer R121.** 一致与 R118 D-118-2 决策, R119 是 read-only walkthrough + finding catalogue, 不动前端代码.
+  - **D-119-3: 8-station CLI walkthrough 替代 live-browser walkthrough.** cron container 无 X server, 不能 run vite + headless chrome 录 5 页 PNG. CLI walkthrough 是 orthogonal evidence track (R113/R114 已 cover frontend 5 页), R122 acceptance 可 mix-and-match.
+  - **D-119-4: R118 D-118-6 carry-over manifest 单测 R119 完结.** 18 functions / 21 parametrize cases, 4 corruption modes 全 cover, +21 测试.
+- **R119 acceptance (R122 必过项更新)**:
+  - ✅ R122 必过项 "新用户路径不读源码" — **达成** (8-station CLI walkthrough evidence)
+  - ✅ R122 必过项 "测试 ≥710" — **达成** (769)
+  - ✅ R111 ADR-029 cost 第 4 次 runtime verify GREEN
+  - ✅ R115 ADR-030 evaluation 第 N 次 runtime verify GREEN (`eval run` score=31)
+  - ✅ Adapter zero-regression streak: R52→R119 = **68**
+  - ❌ F12 (silently-failing pre-existing P0 from R117 ship) — **R119 fix**, R120 verify GHA ✅
+  - ⚠️ Open polish 跨到 R120-R121: F13-F16 / R118 #2/#4 (R121), Demo GIF (R121), mkdocs i18n (v1.1+)
+
+---
+
+ (R116-R118 文档与 Demo arc) 的第三刀 / 收口刀, Phase 6 RC docs/demo arc final slice. **核心交付** (4 新目录 / 4 新 manifest / +146 LOC src/, 0 行 src/chronos/adapters/ + 0 行 src/chronos/api/ + 0 行 src/chronos/store/ + 0 行 src/chronos/eval/ 改动): (a) **`examples/langgraph-router/`** — 4 节点 conditional-edge router demo (classify → route → general_answer/technical_answer → finalize), 父跑 'general' 分支, 子在 `route` fork 翻 'technical' 走另一支, 8 节点 / 2 runs / 1 fork, UUID 前缀 `aaaaaaaa…`. envelopes.jsonl + manifest.json + README.md (含 ASCII 树状图). (b) **`examples/crewai-research-team/`** — 3-agent CrewAI 风格 pipeline (researcher → analyst → reporter), 父中性 stance, 子在 `analyst` fork 翻 'critical' 出更长更怀疑的 report, 8 节点 / 2 runs / 1 fork, UUID 前缀 `bbbbbbbb…`. (c) **`examples/anthropic-agent-tools/`** — Anthropic Agents SDK 风格 tool-using loop (plan → web_search tool → fetch_page tool → synthesize → finalize), 子 fork 翻 `citation_required=true` 加 source URL, 10 节点 (2 是 tool kind) / 2 runs / 1 fork, UUID 前缀 `cccccccc…`. (d) **`examples/builtin-minimal/manifest.json`** 补建 — R109 原 demo 没有 manifest 的 backfill, 一致 schema. (e) **`src/chronos/cli/quickstart.py` +128 LOC** — `DemoManifest` frozen dataclass (name/title/description/recommended_evaluators 四字段, free-form adapter/stats/first_run_id 不强 schema), `_load_manifest()` 全 fail-soft (file missing / JSON parse error / OSError / non-dict root → `DemoManifest.empty`), `_list_available_demos()` 共享 helper (旧 `quickstart_command` 内联扫描代码也切到这个 helper, 错误路径与新 `--list` 路径行为统一), `list_demos_command()` rich-console 表式列出每 demo 的 name → title → description → evaluators + 末尾 hint, `quickstart_command` Next-steps 输出的 `chronos eval run …` 行现在用 `manifest.recommended_evaluators[0]` (with `output_length_chars` fallback) — anthropic-agent-tools 正确推 `final_state_key_present`. (f) **`src/chronos/cli/__init__.py` +18 LOC** — `--list` Typer flag + dispatcher (在 `quickstart_command` 之前 short-circuit 到 `list_demos_command`), help text + Example block 加 R118 行 (`--demo langgraph-router` + `--list` 两条新例). **延后项 (R121 RC buffer / R119 E2E / v1.1+ 各有去处)**: ADR-030 deferred #2 TreeView score badge → R121, deferred #4 RunList tooltip relative-time → R121, demo GIF → R119 E2E natural recording slot (R116 D-116-2 + R118 §6 escape hatch 已论证), mkdocs i18n → v1.1+ (R117 D-117-1 + R118 §6 explicit escape hatch, R122 字面 "中英双语" 通过 README 已满足), manifest-loader 单测 → R119 E2E 硬化 pass (R118 是 demo+data round, 单测留 E2E 是合理的). **测试基线**: pytest 748 passed / 9 skipped / 0 failed (与 R117 字节级一致 — R118 不动测试套, 通过 slot B 的 4-demo smoke + `--list` smoke + 3 evaluator 跑分作为 runtime gate). 6 spikes GREEN. Adapter zero-regression streak R52→R118 = **67**.
 
 - **Round: 118** (Phase 6 R116-R118 docs/demo arc row 8 slice 3 of 3 收口, 2-slot ship via cron-slot-handoff-recovery Option A2). 0 hard blocker. New artefacts: `progress/2026-06-06-round-118.md` (~13 KB, plan vs reality + 6 D-118 关键决策 + R119 hand-off invariants + R122 acceptance update). New: `examples/langgraph-router/{envelopes.jsonl,manifest.json,README.md}`, `examples/crewai-research-team/{envelopes.jsonl,manifest.json,README.md}`, `examples/anthropic-agent-tools/{envelopes.jsonl,manifest.json,README.md}`, `examples/builtin-minimal/manifest.json`. Modified: `src/chronos/cli/quickstart.py` (+128 LOC), `src/chronos/cli/__init__.py` (+18 LOC), `CHANGELOG.md` (`[Unreleased] / Added — R118` 块), `docs/CONTEXT.md` §5 (此段) + §6 (R119 E2E plan 替换 R118 plan).
 - **R118 关键决策 (上墙)**:
@@ -1586,6 +1638,9 @@ R73 是 R69→R72 4-round chain 的第一个真 disprover round, 也是 Phase 4 
 
 ---
 
+<details>
+<summary>📜 Historical: R120 plan block (the R120 plan that was active before R120 closed; R120 close-out narrative is in §5 above and `progress/2026-06-08-round-120.md`)</summary>
+
 **Round 120 — Phase 6 row 10 唯一 slice: v1.0.0-rc1 cut + Release Notes + (conditional) public-repo toggle (单 slot, 单 commit)**
 
 R120 是 R107-R122 路线表 row 10 (R120 v1.0.0-rc1) 的唯一 slice, 距 R122 还剩 2 轮 (R121 RC buffer / R122 final acceptance). R107-R119 已把 CLI Polish + Cost Visibility (ADR-029) + 前端 P0 + Evaluation (ADR-030) + README 双语 + 文档站 + ≥3 真实 demo + E2E dogfood walkthrough 全部做完. R120 是把所有这些工作打包成 **v1.0.0-rc1** — 版本号 bump + git tag + Release Notes 写好 + 公开仓库 toggle (仅在用户明确点头后切, R120 plan 必须 surface 这个决策点而不是擅自切).
@@ -1651,6 +1706,82 @@ R120 是 R107-R122 路线表 row 10 (R120 v1.0.0-rc1) 的唯一 slice, 距 R122 
 ### R121 plan preview (R120 写时填这里)
 
 - **R121 RC buffer**: 收 R119/R120 暴露的 polish — F13 (runs-list column wrapping), F14 (doctor extras-warn inline actionable hint), F16 (real demo GIF via `agg`/`termtosvg`), R118 deferred #2 (TreeView score badge ~30 LOC TSX), R118 deferred #4 (RunList tooltip relative-time ~10 LOC TSX). 全部 R121 ship, 不接管 R120 cut 工作. R122 final acceptance round 自检 + 战报 "✅ R122 验收候选, 请拍板".
+
+</details>
+
+---
+
+**Round 121 — Phase 6 row 11 唯一 slice: RC buffer — F17 verify + R119/R120 deferred polish (单 slot 期望, 1-2 deferred items pick)**
+
+R121 是 R107-R122 路线表 row 11 (R121 RC buffer) 的唯一 slice, 距 R122 还剩 **1 轮** (R122 final acceptance). R107-R120 已把 CLI Polish + Cost Visibility (ADR-029) + 前端 P0 + Evaluation (ADR-030) + README 双语 + 文档站 + ≥3 真实 demo + E2E dogfood + v1.0.0-rc1 cut 全部做完. R121 是 R122 验收前**最后一次 polish 窗口** — 收 R107-R120 累积的 P1 deferred items, 不接管新方向, 不切技术栈, 不动 adapter, 不动 production 代码以外的边缘 polish.
+
+### R121 必读 (按顺序)
+
+- `progress/2026-06-08-round-120.md` (R120 close-out, 上一轮) — R121 hand-off invariants 段 (9 条) + R120 deferred items 清单 (F17 verify + F13/F14/F16 + R118 #2/#4) + 公开仓库 toggle 仍 pending. **第一动作 = GHA `ci.yml` run #N+1 验证** — 取 R120 ship 触发的 ci.yml run, expect `head_sha = R120 land commit` 且 `conclusion = success`. 这是 **R111 起首次绿** (silent failure 9 轮被 R120 D-120-1 修了). 不要 silent ship 不验.
+- `docs/release-notes/v1.0.0-rc1.md` Known Limitations section — R121 RC buffer 应该收的 polish item 在那里 itemize 过 (F13/F14/F16 + R118 #2/#4 + mkdocs i18n).
+- `docs/r120-acceptance.md` — R122 必过项打勾源, R121 自查 12/13 GREEN + 1 user-decision pending + 2 conditional GREEN (adapter streak ≥70 R121 自然满足, ci.yml R121 first-action 验).
+- skill `cron-slot-handoff-recovery` — R121 期望 1 slot, 但若 F17 verify RED → 2-slot diagnosis-then-fix 路径 (R119 F12 / R120 F17 都是 same pattern).
+
+### R121 必做 (单 slot 期望; 若 F17 RED 则 2-slot)
+
+1. **第一动作: GHA `ci.yml` run verification on R120 ship SHA** (R120 hand-off invariant #1) — `curl -sH "Authorization: Bearer $GITHUB_TOKEN" "https://api.github.com/repos/chengfei867/chronos-agent/actions/workflows/ci.yml/runs?per_page=5"`, 取 `head_sha = R120 ship commit` 的 run, expect `conclusion=success`. 如果还在 `in_progress`, wait 5-10 min 再 poll. 如果 ❌: 看是否新 collection error (extras 没装全?) 或 same ImportError drift (uv 缓存抖动). **R120 D-120-1 已 fix-in-slot, R121 first-action 是 verify 而不是 re-fix**, 同 R120 verify-of-R119 pattern.
+2. **3-workflow smoke audit**: gh-pages.yml (R119 fix verified GREEN at R120) / ci.yml (R120 fix verified GREEN at R121 — this round's gate) / golden-verify.yml (consistent GREEN 历史). 三个全 GREEN 才能 proceed deferred items.
+3. **Pick 1-2 deferred items** (按 ROI 优先级):
+   - **#2 R118 deferred TreeView score badge** (~30 LOC TSX, `apps/web/src/components/TreeView.tsx`, 在节点旁加 evaluator score badge, 如果当前节点关联的 run 有 evaluation result 就显示). 高 ROI: 直接强化 ADR-030 evaluation 可视化, R122 acceptance "前端 Score 列" 的补充. **优先**.
+   - **#4 R118 deferred RunList tooltip relative-time** (~10 LOC TSX, `apps/web/src/components/RunList.tsx`, 时间列 tooltip 显示 `2 hours ago` / `3 days ago` 而不是只 absolute timestamp). 中 ROI: 体验 polish, 不是 R122 必过项. **可选**.
+   - **F13 runs-list column wrapping** (~5 LOC, `src/chronos/cli/runs.py`, 用 rich Table 的 `overflow="fold"` / `no_wrap=False` 防止超长 input/output 撑爆终端). 低 ROI: 边缘 case, 用户实际 demo 不易触发.
+   - **F14 doctor extras-warn inline actionable hint** (~5 LOC, `src/chronos/cli/doctor.py`, extras missing 时 warning 行加 `→ run 'uv pip install chronos-agent[all]'` 这种行为提示). 中 ROI: doctor 命令 R110 必过项强化.
+   - **F16 demo GIF** — cron container 没 X server, 用 `agg` (asciinema 录屏 → SVG) 或 `termtosvg`. 优先级低: README 已有, 替换是 cosmetic.
+4. **Adapter 字节零动** — R52→R121 = **70**. **R122 必过项 ≥70 在 R121 自然满足!** `src/chronos/adapters/` 必须 byte-untouched. 任何 dogfood 抓到的 adapter P0 都要 escalate 而不是 patch.
+5. **公开仓库 toggle 仍 pending user** — R121 plan 不擅自切. 战报继续 surface 决策点, 用户在 chat 里说 "切" 才切 (或用户自己去 GitHub settings 页 1-click).
+6. **Test baseline ≥769** + R121 新加的 polish 测试 (TreeView badge / RunList tooltip 都需要 frontend smoke 测试; F13/F14 都需要 unit tests). 任何前端改动 → `npx tsc --noEmit` + `npm run build` 必过. 任何 CLI 改动 → 配套 unit tests.
+7. **不开始 R122 final acceptance** — R121 是 buffer round, 不是 self-check round. R122 自检留给 R122.
+8. **不接管新方向** — 任何 ADR-029/030 之外的 work 都属于 v1.1+ backlog, 写 ADR 才能动. R121 是收尾窗口, 不是新功能窗口.
+9. **写 `progress/2026-06-XX-round-121.md`** — 含 self-check ("仍在 R107-R122 + ADR-029/030 轨道, 距 R122 = 1 轮"), 含 plan vs reality, 含 F17 verify trace (head_sha 确认 + run conclusion 确认), 含 R122 hand-off invariants (R122 是 final acceptance round, 必读 r120-acceptance.md 全文 + 跑 acceptance 自检脚本 + 写 round-122-FINAL.md + 战报 "✅ R122 验收候选, 请拍板").
+10. `docs/CONTEXT.md` §5 加 R121 段; §6 用 R122 plan 替换本块 (R122 = final acceptance: 自检 + 战报).
+11. `CHANGELOG.md` `[Unreleased]` 块加 R121 polish entries (Added/Fixed 视 deliverable 而定).
+12. `git add -A && git commit && git push origin main` — 单 atomic commit.
+
+### R121 硬约束
+
+- ❌ **不动 `src/chronos/adapters/`** — adapter zero-regression streak R52→R121 = **70 = R122 必过项 ≥70 满足**, R121 砍 streak 直接砸 R122 必过项.
+- ❌ **不开始 R122 final acceptance** — 那是下一轮, R121 是 buffer.
+- ❌ **不切 public 仓库** — 仍 pending user 决策.
+- ❌ **不发 GitHub Release** — R122 acceptance after 才发.
+- ❌ **不接管新方向 / 新 ADR** — R121 是收尾窗口.
+- ✅ Adapter 零回归 streak: R52→R121 = **70** (R122 必过项 ≥70 satisfied).
+- ✅ R122 必过项 "ci.yml + gh-pages.yml + golden-verify.yml 三路绿" — R121 first-action 验 ci.yml R120 ship 后首绿.
+- ✅ R107-R120 deferred items 收 1-2 个就算 R121 ship 成功; 不需要全收, R122 可以 surface "remaining R121 deferred → v1.1+ backlog" 而不阻塞 acceptance.
+- ✅ 用户决策 surface 而不擅自切 (公开仓库).
+
+### R121 deliverables
+
+- New: `progress/2026-06-XX-round-121.md`
+- Modified: `CHANGELOG.md` `[Unreleased]` block (R121 entries)
+- Modified: `docs/CONTEXT.md` §5 (R121 close 段) + §6 (R122 final acceptance plan replace)
+- Conditional (取决于 picked deferred item):
+  - `apps/web/src/components/TreeView.tsx` (+~30 LOC) + smoke test if #2 picked
+  - `apps/web/src/components/RunList.tsx` (+~10 LOC) + smoke test if #4 picked
+  - `src/chronos/cli/runs.py` (+~5 LOC) + unit test if F13 picked
+  - `src/chronos/cli/doctor.py` (+~5 LOC) + unit test if F14 picked
+  - asset under `docs/` if F16 picked
+
+### R121 gate checklist
+
+- [ ] GHA `ci.yml` run on R120 ship SHA `conclusion=success` (R111 起首绿)
+- [ ] GHA `gh-pages.yml` 最近 main run `conclusion=success`
+- [ ] GHA `golden-verify.yml` 最近 main run `conclusion=success`
+- [ ] `pytest -q --no-cov` 全过 (≥769 + R121 新增测试)
+- [ ] 1-2 deferred items shipped (优先 #2 TreeView badge)
+- [ ] Adapter 目录字节未动 (streak → 70 ≥ R122 必过项 ≥70 ✅)
+- [ ] 任何前端改动 → `npx tsc --noEmit` + `npm run build` GREEN
+- [ ] CHANGELOG `[Unreleased]` 块 R121 entries 写好
+- [ ] 战报含 "公开仓库 toggle 仍 pending user, 默认保持 PRIVATE"
+- [ ] `progress/2026-06-XX-round-121.md` 写好 (含 self-check + F17 verify trace + R122 hand-off invariants)
+
+### R122 plan preview (R121 写时填这里)
+
+- **R122 final acceptance**: read-only round — 跑 `docs/r120-acceptance.md` 全部 必过项 自检 (按 R120 progress doc R122 必过项 update 表格逐项打勾), 写 `progress/2026-06-XX-round-122-FINAL.md` (final acceptance summary + 全 必过项 ✅/⚠️/❌ table + remaining deferred items → v1.1+ backlog 列出 + 公开仓库 toggle 决策点 final surface), 战报 "✅ R122 验收候选, 请拍板, post-acceptance 用户取消 cron". 不动 src/*, 不动 frontend/*, 不动 adapter, 不切 public, 不发 Release. R122 ship commit 是 **acceptance audit + final progress doc + CONTEXT §5 R122 close 段 + CHANGELOG `[Unreleased] / Acceptance — R122` 块** 而已. R122 之后用户决定: (a) 全过 → 发 GA Release page + close cron; (b) 有未过项 → R123-R127 buffer; (c) 硬卡点 → 列阻塞.
 
 ---
 

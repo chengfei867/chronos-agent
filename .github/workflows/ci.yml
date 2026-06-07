@@ -31,7 +31,11 @@ jobs:
         run: uv python install ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: uv sync --extra dev
+        # All optional extras required: tests/spikes/integration import
+        # langgraph, fastapi, autogen, crewai, claude-agent-sdk at module
+        # level. `--extra dev` alone caused collection ImportErrors —
+        # silently failing since R111. Fixed in R120 RC1 cut.
+        run: uv sync --all-extras
 
       - name: Ruff lint
         run: uv run ruff check .
