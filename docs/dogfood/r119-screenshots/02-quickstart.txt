@@ -1,0 +1,10 @@
+✓ seeded /tmp/r119-walkthrough.db with demo langgraph-router (2 runs, 8 nodes, 1
+fork).
+
+Next steps:
+  • chronos runs list              — see the seeded runs
+  • chronos runs show aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1   — inspect the 
+parent run
+  • chronos eval run aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1 --evaluator 
+output_length_chars — score it
+  • chronos web                    — explore in the browser

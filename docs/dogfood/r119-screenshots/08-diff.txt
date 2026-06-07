@@ -1,0 +1,15 @@
+B is forked from A @ node classify (fork aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaff01) —
+diffing downstream only. Use --full for full-run diff.
+Diff aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1 → aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2
+                              (downstream of fork)                              
+┏━━━━┳━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━┓
+┃    ┃ tag     ┃ node_name        ┃ a (step) ┃ b (step) ┃ details              ┃
+┡━━━━╇━━━━━━━━━╇━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━┩
+│ +  │ added   │ classify         │ —        │ 0        │                      │
+│ ~  │ changed │ route            │ 1        │ 1        │ ~category,next       │
+│ -  │ removed │ general_answer   │ 2        │ —        │                      │
+│ +  │ added   │ technical_answer │ —        │ 2        │                      │
+│ ~  │ changed │ finalize         │ 3        │ 3        │ ~answer,category,nex │
+│    │         │                  │          │          │ t,output             │
+└────┴─────────┴──────────────────┴──────────┴──────────┴──────────────────────┘
+summary: 0 equal  2 changed  2 added  1 removed

@@ -75,7 +75,7 @@ class DemoManifest:
     recommended_evaluators: list[str]
 
     @classmethod
-    def empty(cls, name: str) -> "DemoManifest":
+    def empty(cls, name: str) -> DemoManifest:
         return cls(
             name=name,
             title=name,
@@ -253,9 +253,7 @@ def list_demos_command(*, console: Console) -> None:
             evals = ", ".join(manifest.recommended_evaluators)
             console.print(f"    [dim]evaluators: {evals}[/]")
         console.print("")
-    console.print(
-        "Load one with [cyan]chronos quickstart --demo <name>[/cyan]."
-    )
+    console.print("Load one with [cyan]chronos quickstart --demo <name>[/cyan].")
 
 
 def quickstart_command(

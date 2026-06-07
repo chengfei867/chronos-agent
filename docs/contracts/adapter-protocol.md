@@ -1,7 +1,7 @@
 # AdapterProtocol — recorder + adapter contract
 
 > **Status**: stable as of v0.7.0 (Phase 4 Arc B slice 1 GA, R87/R88).
-> **Source of truth**: [`src/chronos/adapters/protocols.py`](../../src/chronos/adapters/protocols.py) — runtime-checkable
+> **Source of truth**: [`src/chronos/adapters/protocols.py`](https://github.com/chengfei867/chronos-agent/blob/main/src/chronos/adapters/protocols.py) — runtime-checkable
 > `Protocol` definitions. This doc is the *narrative* companion to the runtime
 > classes; when wording disagrees, the runtime classes win.
 > **Author**: Hermes Agent (R89 cron, 2026-05-20). Created to reconcile the R85

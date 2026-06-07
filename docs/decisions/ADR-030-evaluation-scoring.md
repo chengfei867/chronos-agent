@@ -117,7 +117,7 @@ Concrete acceptance:
 
 This slot adds one round to the Phase 6 RC plan. Combined with ADR-029 (also one round), the R107→R120 plan extends to **R107→R122**. R122 becomes the new RC1 / acceptance round. R120 acceptance contract is updated correspondingly (see r120-acceptance.md → r122-acceptance.md rename + content additions).
 
-[ADR-006]: ADR-006-diff-compare-semantics.md
+[ADR-006]: ADR-006-diff-alignment.md
 [ADR-024]: ADR-024-multi-pivot-compare.md
 [ADR-029]: ADR-029-cost-visibility.md
 [acceptance]: ../r120-acceptance.md

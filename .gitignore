@@ -95,6 +95,11 @@ dogfood.db-wal
 examples/chronos.db
 *.db-journal
 
+# mkdocs strict-build output (rendered locally for R119 E2E docs verification,
+# R122 acceptance row "文档站可读" — rebuilt by .github/workflows/gh-pages.yml
+# on every push to main; never commit local renders).
+site/
+
 # Frontend build output is intentionally committed so pip-installed users
 # get a working /app bundle without needing Node.js. See frontend/.gitignore
 # for the rationale. These lines MUST be last so they win over the earlier

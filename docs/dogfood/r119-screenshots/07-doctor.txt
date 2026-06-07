@@ -1,0 +1,22 @@
+chronos doctor — environment health check
+
+  ✅  Python version             3.11.2 (≥ 3.11 required)
+  ✅  chronos package            v0.9.0
+  ✅  SQLite library             3.40.1
+  ✅  DB schema                  0.2.0 (library expects 0.2.0)
+  ✅  DB contents                2 runs, 8 nodes, 1 forks at 
+/tmp/r119-walkthrough.db
+  ✅  Examples directory         4 demo(s): anthropic-agent-tools, 
+builtin-minimal, crewai-research-team, langgraph-router
+  ⚠️  Extra: [web]               not installed — browser viewer (`chronos web`)
+      Hint: `uv pip install 'chronos-agent'`
+  ⚠️  Extra: [langgraph]         not installed — LangGraph adapter
+      Hint: `uv pip install 'chronos-agent'`
+  ⚠️  Extra: [anthropic_agents]  not installed — Anthropic Agents SDK adapter
+      Hint: `uv pip install 'chronos-agent'`
+  ⚠️  Extra: [autogen]           not installed — AutoGen adapter
+      Hint: `uv pip install 'chronos-agent'`
+  ⚠️  Extra: [crewai]            not installed — CrewAI adapter
+      Hint: `uv pip install 'chronos-agent'`
+
+✓ no failures, 5 warning(s), 6 ok — warnings are non-fatal.

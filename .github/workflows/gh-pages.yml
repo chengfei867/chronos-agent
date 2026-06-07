@@ -18,12 +18,12 @@ on:
     paths:
       - "docs/**"
       - "mkdocs.yml"
-      - ".github/workflows/docs.yml"
+      - ".github/workflows/gh-pages.yml"
   pull_request:
     paths:
       - "docs/**"
       - "mkdocs.yml"
-      - ".github/workflows/docs.yml"
+      - ".github/workflows/gh-pages.yml"
   workflow_dispatch:
 
 permissions:
@@ -62,10 +62,16 @@ jobs:
           python -m pip install --upgrade pip
           # Pinned versions — material 9.x is the supported track for our
           # mkdocs.yml feature flags. Bump deliberately, never auto.
+          # R119: bumped pymdown-extensions 10.12 → 10.21.3 to fix a Python
+          # 3.11 + pygments 2.20 + pymdownx<10.20 crash where the
+          # HtmlFormatter received `filename=None` from
+          # pymdownx.highlight.Highlight.highlight() and pygments tried
+          # `html.escape(None)` → AttributeError. See R119 dogfood
+          # finding F12 (docs/dogfood/2026-06-07-round-119-e2e.md).
           pip install \
             "mkdocs==1.6.1" \
             "mkdocs-material==9.5.49" \
-            "pymdown-extensions==10.12" \
+            "pymdown-extensions==10.21.3" \
             "mike==2.1.3"
 
       - name: Build site (strict — fail on any warning)

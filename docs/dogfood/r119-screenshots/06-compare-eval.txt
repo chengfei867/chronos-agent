@@ -1,0 +1,30 @@
+Pivot: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1  (1 other run(s))
+        Compare pivot=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1 vs 1 other(s)        
+┏━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃       ┃                                  ┃ aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa ┃
+┃ step  ┃ node                             ┃ aa2                               ┃
+┡━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ +     │ + classify (before pivot)        │ + added                           │
+│ 1     │ route                            │ ≠ changed                         │
+│ 2     │ general_answer                   │ − removed                         │
+│ +     │ + technical_answer (after pivot  │ + added                           │
+│       │ step 2)                          │                                   │
+│ 3     │ finalize                         │ ≠ changed                         │
+└───────┴──────────────────────────────────┴───────────────────────────────────┘
+                            Summary (per other)                             
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━┳━━━━━━━━━┳━━━━━━━┳━━━━━━━━━┓
+┃ run                                  ┃ equal ┃ changed ┃ added ┃ removed ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━╇━━━━━━━━━╇━━━━━━━╇━━━━━━━━━┩
+│ aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2 │     0 │       2 │     2 │       1 │
+└──────────────────────────────────────┴───────┴─────────┴───────┴─────────┘
+                        Evaluation: output_length_chars                         
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━┓
+┃ run                                          ┃ score ┃ passed ┃ rationale    ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━┩
+│ aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2         │   147 │ —      │ len(final_st │
+│                                              │       │        │ ate['output' │
+│                                              │       │        │ ]) = 147     │
+│ aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1 (pivot) │    31 │ —      │ len(final_st │
+│                                              │       │        │ ate['output' │
+│                                              │       │        │ ]) = 31      │
+└──────────────────────────────────────────────┴───────┴────────┴──────────────┘

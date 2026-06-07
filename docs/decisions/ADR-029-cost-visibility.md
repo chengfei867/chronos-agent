@@ -106,8 +106,8 @@ Concrete acceptance:
 
 This slot extends the R107→R120 13-round Phase 6 RC plan by one round → R107→R121. The user has approved the extension in chat alongside the companion ADR-030 (which adds a second slot, taking the final terminus to R122).
 
-[ADR-009]: ADR-009-cli-usage-rendering.md
-[ADR-013]: ADR-013-usage-schema.md
-[ADR-016]: ADR-016-recorder-protocol.md
+[ADR-009]: ADR-009-usage-extractor-hook.md
+[ADR-013]: ADR-015-extractor-contract-v2.md
+[ADR-016]: ADR-016-adapter-interface.md
 [ADR-030]: ADR-030-evaluation-scoring.md
 [acceptance]: ../r120-acceptance.md

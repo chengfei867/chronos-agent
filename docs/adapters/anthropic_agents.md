@@ -93,7 +93,7 @@ codified at R89).
 | `ResultMessage`     | `end`          | `ResultMessage`                          |
 
 The dispatch table lives in
-[`recorder.py`](../../src/chronos/adapters/anthropic_agents/recorder.py)
+[`recorder.py`](https://github.com/chengfei867/chronos-agent/blob/main/src/chronos/adapters/anthropic_agents/recorder.py)
 as `_DEFAULT_KIND_MAP` (≈line 69) and the lookup happens in
 `_kind_for(msg)` via `type(msg).__name__`.
 
@@ -152,7 +152,7 @@ custom re-seed / Policy A / Policy B logic needed. See
 ## Live smoke + CI
 
 The opt-in live smoke harness lives at
-[`tests/live/test_anthropic_agents_smoke.py`](../../tests/live/test_anthropic_agents_smoke.py).
+[`tests/live/test_anthropic_agents_smoke.py`](https://github.com/chengfei867/chronos-agent/blob/main/tests/live/test_anthropic_agents_smoke.py).
 Run with:
 
 ```bash

@@ -1582,9 +1582,87 @@ R73 是 R69→R72 4-round chain 的第一个真 disprover round, 也是 Phase 4 
 >
 > 🆕 **2026-05-26 R109 后用户决策**: 终点从 R120 延到 R122, 加 ADR-029 (Cost Visibility, R111) + ADR-030 (Evaluation/Scoring, R115)。
 >
-> **R118 ✅ 完成 (2026-06-06 BJT ~08:33 cron slot 写完 + 11:48 cron slot land via cron-slot-handoff-recovery Option A2 verify-don't-redo, in 0-11 窗口, 2-slot ship)** — Phase 6 row 8 第三刀 / 收口刀: `examples/langgraph-router/` (8 节点 conditional-edge router, UUID `aaaa…`) + `examples/crewai-research-team/` (8 节点 3-agent pipeline, UUID `bbbb…`) + `examples/anthropic-agent-tools/` (10 节点 tool-using loop, UUID `cccc…`) 三个新 demo (envelopes.jsonl + manifest.json + README.md 各一) + `examples/builtin-minimal/manifest.json` 补建; `cli/quickstart.py` 加 `DemoManifest` dataclass + `_load_manifest` (fail-soft) + `_list_available_demos` + `list_demos_command` + manifest-driven evaluator hint (`recommended_evaluators[0]` with `output_length_chars` fallback); `cli/__init__.py` 加 `--list` Typer flag. 4 demo 全 smoke 加载, 3 evaluator 跑分 GREEN (langgraph→31 / crewai→223 / anthropic→passed). 748/9/0 byte-identical to R117 (R118 是 data + dispatcher, 0 新测; 单测推 R119). ADR-030 deferred #2/#4 (TreeView badge / RunList tooltip 相对时间) 推 R121 RC buffer. Demo GIF 推 R119 E2E natural recording slot. mkdocs i18n 推 v1.1+. streak R52→R118 = **67**. 6 D-118 决策 + R119 hand-off invariants 见 `progress/2026-06-06-round-118.md`. **下一轮 = R119: E2E dogfood — 新 venv → quickstart → web UI → record/replay/fork/diff/compare/eval/cost 全流程 walkthrough, 列遗留 P0/P1/P2 finding, 修 P0 同 slot 内, P1/P2 推 R121, 同时验证 GHA gh-pages workflow 在 main 上跑过一次绿灯** (Phase 6 路线表 row 9 R119 唯一 slice, R122 必过项 "新用户路径走完不读源码" 的硬验证, 距 R122 还剩 3 轮).
+> **R119 ✅ 完成 (2026-06-07 BJT 03:33 cron slot 写完 + 09:45 cron slot land via cron-slot-handoff-recovery Option A2 verify-don't-redo, 都在 0-11 窗口, 2-slot ship)** — Phase 6 row 9 唯一 slice / E2E dogfood walkthrough: 新 venv (`/tmp/r119-fresh-venv`) + 8-station CLI walkthrough captured into `docs/dogfood/r119-screenshots/{01..08}-*.txt` (198 lines, text-format console captures); 1 silently-failing pre-existing P0 (F12) discovered + fixed in slot A — gh-pages workflow had been failing on every push to main since R117 ship (2026-06-05 21:22 UTC + 2026-06-06 03:58 UTC), root cause: pymdown-extensions==10.12 incompatible with pygments 2.20 (released 2026-04 after the pin); slot A bumped to 10.21.3 + rewired 4 broken relative links in `docs/adapters/` and `docs/contracts/` + renamed 4 stale ADR cross-link slugs in ADR-029 (3) + ADR-030 (1) so `mkdocs build --strict` is now GREEN locally; **GHA gh-pages run #3 verification deferred to R120 first action** (this push triggers it). Slot A also shipped R118 D-118-6 carry-over: `tests/unit/test_cli_quickstart_manifest.py` with 18 functions / 21 parametrize cases covering `_load_manifest` happy + 4 corruption paths + `_list_available_demos` sort + `list_demos_command` rendering smoke. **769 passed / 9 skipped / 0 failed** (R118 baseline 748 + Δ+21 from manifest tests). Slot B verify-don't-redo: pytest GREEN, ruff auto-fixed 3 cosmetic warnings on R118-shipped code (`"DemoManifest"` self-reference under `from __future__ import annotations` + one multi-line `console.print` collapse), mypy clean, audited every diff hunk 1:1 against R119 plan §5. Live-browser 5-page walkthrough deliberately substituted with 8-station CLI walkthrough (D-119-3): R113/R114 already cover frontend P0 surface and no frontend code has changed since R114, so R119 adds the orthogonal CLI evidence. R118 deferred #2/#4 (TreeView badge / RunList tooltip relative-time) still on R121 RC buffer. F13 (runs-list column wrapping), F14 (doctor extras-warn inline hint), F16 (real demo GIF) all deferred to R121. mkdocs i18n still v1.1+. streak R52→R119 = **68**. 7 D-119 决策 + R120 hand-off invariants 见 `progress/2026-06-07-round-119.md` + `docs/dogfood/2026-06-07-round-119-e2e.md`. **下一轮 = R120: v1.0.0-rc1 cut — `pyproject.toml` 升 1.0.0rc1 + git tag + Release Notes (突出 R111 Cost + R115 Eval + R118 ≥3 demo) + 公开仓库 toggle 仅在用户明确点头后切. 第一动作必须先验证 GHA gh-pages run #3 (R119 push 触发的) 是否 green — 没绿不能 cut RC1, 因为 R122 必过项 \"文档站 GH Pages 上线\" 卡 RC1.** (Phase 6 路线表 row 10 R120 唯一 slice, R122 必过项 "v1.0.0-rc1 tag" 的硬验证, 距 R122 还剩 2 轮).
 
 ---
+
+**Round 120 — Phase 6 row 10 唯一 slice: v1.0.0-rc1 cut + Release Notes + (conditional) public-repo toggle (单 slot, 单 commit)**
+
+R120 是 R107-R122 路线表 row 10 (R120 v1.0.0-rc1) 的唯一 slice, 距 R122 还剩 2 轮 (R121 RC buffer / R122 final acceptance). R107-R119 已把 CLI Polish + Cost Visibility (ADR-029) + 前端 P0 + Evaluation (ADR-030) + README 双语 + 文档站 + ≥3 真实 demo + E2E dogfood walkthrough 全部做完. R120 是把所有这些工作打包成 **v1.0.0-rc1** — 版本号 bump + git tag + Release Notes 写好 + 公开仓库 toggle (仅在用户明确点头后切, R120 plan 必须 surface 这个决策点而不是擅自切).
+
+### R120 必读 (按顺序)
+
+- `progress/2026-06-07-round-119.md` (R119 close-out, 上一轮) — R120 hand-off invariants 段 + R119 deferred items 清单 (F13/F14/F15/F16 + R118 #2/#4) + GHA gh-pages run #3 verification 待办 + 0-new-P0 + 1-pre-existing-P0-fixed (F12). **第一动作 = 验证 GHA gh-pages run #3 (R119 push 触发的) 是否 green** — 用 GitHub API `https://api.github.com/repos/chengfei867/chronos-agent/actions/workflows/gh-pages.yml/runs?per_page=5` 看 head_sha = R119 land commit 的 run conclusion. 没绿不能 cut RC1.
+- `progress/2026-06-06-round-118.md` + 之前几轮的 progress doc — R120 Release Notes 要 cherry-pick 三大差异化 feature (R111 Cost + R115 Eval + R118 ≥3 demo + manifest-driven loader), 必须在 R107-R119 progress doc 里复盘亮点.
+- `docs/r120-acceptance.md` 全文 — R120 plan 写时直接对照 R122 必过项打勾, 看哪些已过 / 哪些 R121 / 哪些 R122 acceptance round 才验.
+- `docs/decisions/ADR-029-cost-visibility.md` + `ADR-030-evaluation-scoring.md` (Release Notes feature 行的源头).
+- skill `chronos-release-pattern` (8-step semver release 流程) — R120 是"半个" release (RC1 不是 GA), 但 8-step 大部分仍适用.
+
+### R120 必做 (单 slot, 单 commit)
+
+1. **GHA gh-pages run #3 verification (第一动作!)** — `curl -sH "Authorization: Bearer $GITHUB_TOKEN" "https://api.github.com/repos/chengfei867/chronos-agent/actions/workflows/gh-pages.yml/runs?per_page=5"`. R119 push 触发的 run (head_sha = R119 land commit) 必须 `conclusion=success`. 如果失败: 读 failure log, 诊断新症状 (F12 是已知唯一根因, 新 failure 说明有第二个 bug 当时被 F12 遮蔽了); R120 RC1 cut **不能 proceed** until docs CI is green on main, 因为 R122 必过项 "文档站 GH Pages 上线" 卡 RC1. **如果 run #3 还没跑完, wait 5-10 min 再 poll** 而不是直接 fail.
+2. **3 GHA workflow smoke audit** (R119 D-119-7 hand-off): `gh-pages.yml` ✓ run #3, `ci.yml` 上一次 main push 后的 conclusion, `golden-verify.yml` 同理. 三个全 green 才能 proceed.
+3. **`pyproject.toml` 版本升级**: `version = "0.9.0"` → `version = "1.0.0rc1"` (PEP 440 RC 格式; 注意是 `rc1` 不是 `-rc1`, Python wheel filename 用前者).
+4. **`CHANGELOG.md` `[Unreleased]` → `[1.0.0-rc1] - 2026-06-XX`**: 把所有 `[Unreleased]` 段 (R107-R119 累积) 提升为正式 release section, 顶部加日期 + 一段 release summary (3-5 行: chronos-agent 1.0.0-rc1 = AI agent "pdb + git" — record/replay/fork/diff 推理树 + token/cost 追踪 (ADR-029) + evaluator 打分 (ADR-030) + 4 个真实 demo (langgraph-router / crewai-research-team / anthropic-agent-tools / builtin-minimal) + 文档站 + 中英双语 README. RC1 = 候选 GA, R121 buffer + R122 acceptance after).
+5. **写 `docs/release-notes/v1.0.0-rc1.md`** (新文件): 三个 section — Highlights (3 大差异化 feature: Cost / Eval / Demo), New since 0.9.0 (R107-R119 cumulative), Known limitations (R121 RC buffer items: F13/F14/F16 + R118 #2/#4 + mkdocs i18n) + Quickstart 一段 (link to README.md / cli-reference / examples/).
+6. **Git tag**: `git tag -a v1.0.0-rc1 -m "v1.0.0-rc1: AI agent pdb+git — Cost (ADR-029) + Eval (ADR-030) + 4 demos. R107-R119 cumulative. RC1 candidate; R121 RC buffer + R122 final acceptance to follow."`. **不要 push tag 直到 commit + main push 都成功**, 否则 tag 指向不存在的 commit.
+7. **公开仓库 toggle 决策点 surface 给用户** — R120 plan 写到这里, **不要擅自切 private→public**. 在 progress doc + 战报里明确写 "需用户拍板是否将仓库切 public, 默认保持 private 直到 R122 acceptance after". 用户在 chat 里回复 "切" 才切; 不回复就保持 private. 切 public 不阻塞 R120 ship, 是 post-cut 的 toggle.
+8. **测试 baseline ≥769** — R120 是 cut round, **不应**有新测试 (除非 release-process script 自带的 smoke). 如果突然有测试加, 自查是不是误删了什么 R107-R119 ship.
+9. **Adapter 字节零动** — R52→R120 = **69**. R122 必过项 ≥70, 还差 1 (R121) 或 2 (R122) 轮就到. **R120 是 cut round, 不应该改任何 src/* 代码**.
+10. **写 `progress/2026-06-XX-round-120.md`** — 含 self-check, 含 plan vs reality, 含 v1.0.0-rc1 cut 步骤 trace, 含 R121 hand-off invariants (R119/R120 暴露的 polish + R118 deferred items #2/#4 + F13/F14/F16).
+11. `docs/CONTEXT.md` §5 加 R120 段; §6 用 R121 plan 替换本块.
+12. `git add -A && git commit && git push origin main` — 然后 `git push origin v1.0.0-rc1` (tag 单独 push).
+13. **GitHub Release 不要建** (R120 是 RC1 不是 GA; Release page 是 R122 acceptance after 才建; tag 已经在 GitHub 看得到, GitHub 自动列 tag 给 dependent project pin 即可).
+
+### R120 硬约束
+
+- ❌ **不动 `src/chronos/adapters/`** — adapter zero-regression streak ≥70 是 R122 必过项, R120 cut round 应该 byte-identical to R119.
+- ❌ **不切 public 仓库直到用户明确点头** — R120 plan surface 决策点, 不擅自切.
+- ❌ **不接管 R119 deferred items** (F13/F14/F16 + R118 #2/#4) — R121 RC buffer.
+- ❌ **不开始 R121 RC buffer work** — R120 是 cut round only.
+- ❌ **不发 GitHub Release** — R122 acceptance after 才发. Tag 已在 GitHub 列.
+- ✅ Adapter zero-regression streak: R52→R120 = **69**.
+- ✅ R122 必过项 "v1.0.0-rc1 tag" 必过 — 这就是 R120 的全部意义.
+- ✅ R122 必过项 "文档站 GH Pages 上线" 必过 — R120 第一动作 verify GHA gh-pages run #3 green.
+- ✅ 不向用户重复 ask permission for things already approved (R120 cut 已 R106 用户授权, 不要 ask "是否 cut"; 仅 ask 公开仓库 toggle).
+
+### R120 deliverables
+
+- New: `docs/release-notes/v1.0.0-rc1.md` (Highlights + New since 0.9.0 + Known limitations + Quickstart)
+- New: `progress/2026-06-XX-round-120.md`
+- Modified: `pyproject.toml` (`version = "1.0.0rc1"`)
+- Modified: `CHANGELOG.md` (`[Unreleased]` → `[1.0.0-rc1] - 2026-06-XX` + new empty `[Unreleased]` block at top for R121+ entries)
+- Modified: `docs/CONTEXT.md` §5 (R120 close 段) + §6 (R121 plan replace)
+- Git tag: `v1.0.0-rc1` (annotated)
+
+### R120 gate checklist
+
+- [ ] GHA `gh-pages.yml` run #3 (triggered by R119 push) `conclusion=success`
+- [ ] GHA `ci.yml` 最近 main run `conclusion=success`
+- [ ] GHA `golden-verify.yml` 最近 main run `conclusion=success`
+- [ ] `pytest -q --no-cov` 全过 (≥769)
+- [ ] `pyproject.toml` `version` = `"1.0.0rc1"`
+- [ ] `CHANGELOG.md` `[1.0.0-rc1]` section + new empty `[Unreleased]` block
+- [ ] `docs/release-notes/v1.0.0-rc1.md` 写好 (4 sections)
+- [ ] git tag `v1.0.0-rc1` annotated
+- [ ] 战报含 "公开仓库 toggle 等用户拍板, 默认保持 private"
+- [ ] Adapter 目录字节未动 (streak → 69)
+
+### R121 plan preview (R120 写时填这里)
+
+- **R121 RC buffer**: 收 R119/R120 暴露的 polish — F13 (runs-list column wrapping), F14 (doctor extras-warn inline actionable hint), F16 (real demo GIF via `agg`/`termtosvg`), R118 deferred #2 (TreeView score badge ~30 LOC TSX), R118 deferred #4 (RunList tooltip relative-time ~10 LOC TSX). 全部 R121 ship, 不接管 R120 cut 工作. R122 final acceptance round 自检 + 战报 "✅ R122 验收候选, 请拍板".
+
+---
+
+<details>
+<summary>📜 Historical: R118 close-out narrative (kept for traceability — R118 plan is in `progress/2026-06-06-round-118.md`)</summary>
+
+**R118 ✅ 完成 (2026-06-06 BJT ~08:33 cron slot 写完 + 11:48 cron slot land via cron-slot-handoff-recovery Option A2 verify-don't-redo, in 0-11 窗口, 2-slot ship)** — Phase 6 row 8 第三刀 / 收口刀: `examples/langgraph-router/` (8 节点 conditional-edge router, UUID `aaaa…`) + `examples/crewai-research-team/` (8 节点 3-agent pipeline, UUID `bbbb…`) + `examples/anthropic-agent-tools/` (10 节点 tool-using loop, UUID `cccc…`) 三个新 demo (envelopes.jsonl + manifest.json + README.md 各一) + `examples/builtin-minimal/manifest.json` 补建; `cli/quickstart.py` 加 `DemoManifest` dataclass + `_load_manifest` (fail-soft) + `_list_available_demos` + `list_demos_command` + manifest-driven evaluator hint (`recommended_evaluators[0]` with `output_length_chars` fallback); `cli/__init__.py` 加 `--list` Typer flag. 4 demo 全 smoke 加载, 3 evaluator 跑分 GREEN (langgraph→31 / crewai→223 / anthropic→passed). 748/9/0 byte-identical to R117. ADR-030 deferred #2/#4 推 R121 RC buffer. Demo GIF 推 R119 E2E natural recording slot. mkdocs i18n 推 v1.1+. streak R52→R118 = **67**.
+
+</details>
+
+<details>
+<summary>📜 Historical: R119 plan block (the R119 plan that was active before R119 closed; R119 close-out narrative is in §5 above and `progress/2026-06-07-round-119.md`)</summary>
 
 **Round 119 — Phase 6 row 9 唯一 slice: E2E dogfood — 新 venv → quickstart → web UI → 全流程 walkthrough + R121-defer P0 fixes (单 slot, 单 commit)**
 
@@ -1661,6 +1739,8 @@ R119 是 R107-R122 路线表 row 9 (R119 E2E dogfood) 的唯一 slice, 距 R122 
 ### R120 plan preview (R119 写时填这里)
 
 - **R120**: v1.0.0-rc1 cut — `pyproject.toml` 升 1.0.0rc1, git tag, Release Notes (突出 R111 Cost Visibility + R115 Evaluation/Scoring + R118 ≥3 demo 三大差异化 feature), 公开仓库 toggle 仅在用户明确点头后切 (R120 plan 写时记下 "需用户拍板"). R121 RC buffer 修 R119/R120 暴露的 polish + ship R118 deferred items #2/#4. R122 final acceptance.
+
+</details>
 
 ---
 
