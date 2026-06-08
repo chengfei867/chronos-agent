@@ -97,6 +97,7 @@ export default {
     nodeCount_other: "{{count}} nodes",
     forkCount: "{{count}} fork",
     forkCount_other: "{{count}} forks",
+    evalScore: "Eval score",
     edgeSequential: "Sequential",
     edgeFork: "Fork",
     emptyTree: "No nodes recorded for this run",

@@ -17,6 +17,7 @@ import type {
   Node,
   Fork,
   CompareResponse,
+  Evaluation,
 } from "./types";
 
 const BASE = ""; // same-origin
@@ -46,6 +47,17 @@ export async function fetchRun(
   runId: string,
 ): Promise<{ run: Run; nodes: Node[] }> {
   return getJSON<{ run: Run; nodes: Node[] }>(`/runs/${encodeURIComponent(runId)}`);
+}
+
+// R121: fetch evaluations for a single run so TreeView can render a Score
+// badge alongside the Run Info card. The backend route is the same one
+// RunList relies on indirectly via ``latest_evaluation`` on /runs.
+export async function fetchEvaluations(
+  runId: string,
+): Promise<{ evaluations: Evaluation[]; count: number }> {
+  return getJSON<{ evaluations: Evaluation[]; count: number }>(
+    `/runs/${encodeURIComponent(runId)}/evaluations`,
+  );
 }
 
 export async function fetchTree(

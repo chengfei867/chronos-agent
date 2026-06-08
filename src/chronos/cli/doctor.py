@@ -74,9 +74,27 @@ def _glyph(status: str) -> str:
     return {_OK: "[green]✅[/green]", _WARN: "[yellow]⚠️[/yellow]", _FAIL: "[red]❌[/red]"}[status]
 
 
-def _escape_label(text: str) -> str:
-    """Escape Rich markup brackets in a label so e.g. ``Extra: [web]`` renders literally."""
+def _escape_markup(text: str) -> str:
+    r"""Escape Rich markup ``[`` so e.g. ``Extra: [web]`` or hint
+    ``chronos-agent[web]`` renders literally instead of being parsed as
+    a (potentially unknown / silently-eaten) markup tag.
+
+    Used for both labels (``Extra: [web]``) and hints
+    (``\`uv pip install 'chronos-agent[web]'\```) — anywhere user-facing
+    text contains ``[`` that should be displayed verbatim. R121 F14 fix:
+    before this widening, hints were emitted into ``console.print`` raw,
+    so ``[web]`` / ``[langgraph]`` / etc. were silently consumed as
+    unknown markup tags and the install command rendered as
+    ``\`uv pip install 'chronos-agent'\``` — which is wrong (no extras
+    selected). Escaping ``[`` fixes the bug without changing the public
+    ``hint`` field on ``CheckRow``.
+    """
     return text.replace("[", r"\[")
+
+
+# Backwards-compatible alias — older tests / contributors may import the
+# narrower-named helper. ``_escape_label`` is the original name from R110.
+_escape_label = _escape_markup
 
 
 def _check_python_version() -> CheckRow:
@@ -287,13 +305,19 @@ def doctor_command(
     label_width = max(len(r.label) for r in rows) + 2
     for row in rows:
         glyph = _glyph(row.status)
-        label = _escape_label(row.label)
+        label = _escape_markup(row.label)
         # padding is computed on raw width, then markup-escaped output is appended,
         # so column alignment matches the un-escaped logical label width.
         pad = " " * max(0, label_width - len(row.label))
-        console.print(f"  {glyph}  [bold]{label}[/bold]{pad}{row.detail}")
+        # Escape ``[`` in detail + hint as well — without this, hints like
+        # ``\`uv pip install 'chronos-agent[web]'\``` had ``[web]`` consumed
+        # as unknown Rich markup (R121 F14). Detail strings are ours today,
+        # but defensive escape keeps future versions/paths from regressing.
+        detail = _escape_markup(row.detail)
+        console.print(f"  {glyph}  [bold]{label}[/bold]{pad}{detail}")
         if row.hint:
-            console.print(f"      [dim]Hint:[/dim] [dim]{row.hint}[/dim]")
+            hint = _escape_markup(row.hint)
+            console.print(f"      [dim]Hint:[/dim] [dim]{hint}[/dim]")
 
     # Summary.
     console.print("")

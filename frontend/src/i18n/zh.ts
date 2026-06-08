@@ -96,6 +96,7 @@ export default {
     forkThis: "从此分叉",
     nodeCount: "{{count}} 个节点",
     forkCount: "{{count}} 个分叉",
+    evalScore: "评估分数",
     edgeSequential: "顺序",
     edgeFork: "分叉",
     emptyTree: "这次运行没有记录任何节点",

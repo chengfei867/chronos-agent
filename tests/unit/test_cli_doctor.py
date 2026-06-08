@@ -227,3 +227,47 @@ def test_check_python_version_current_env_is_ok() -> None:
     row = _check_python_version()
     assert row.status == "ok"
     assert "≥ 3.11" in row.detail
+
+
+# ---------------------------------------------------------------------------
+# R121 F14: Rich-markup escape regression — hint text containing ``[extra]``
+# (e.g. ``chronos-agent[web]``) used to be silently consumed by the Rich
+# parser when ``console.print`` saw it as a markup tag, so the rendered
+# install-hint became ``\`uv pip install 'chronos-agent'\``` (extras eaten).
+# After the fix in ``doctor_command``, hints (and labels and detail) flow
+# through ``_escape_markup`` before being interpolated into the print
+# template — bracketed names render literally.
+# ---------------------------------------------------------------------------
+
+
+def test_doctor_render_preserves_extras_in_hint(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Rendered output must contain the literal ``[web]`` token in the
+    install hint when the ``web`` extra is missing — verifies F14 fix."""
+    import importlib
+
+    real_import = importlib.import_module
+
+    def fake_import(name: str, *args: object, **kwargs: object) -> object:
+        if name == "fastapi":
+            raise ImportError("simulated missing fastapi")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(importlib, "import_module", fake_import)
+
+    from chronos.store.sqlite import SqliteStore
+
+    db = tmp_path / "doctor.db"
+    SqliteStore.open(db).close()
+
+    console, buf = _capture_console()
+    doctor_command(db=db, console=console, examples_root=tmp_path / "no-examples")
+    out = buf.getvalue()
+
+    # Label must keep its bracketed extra name visible.
+    assert "Extra: [web]" in out
+    # Hint must keep the install command's ``[web]`` extra visible — this
+    # is the user-actionable string that the Rich parser used to eat.
+    assert "chronos-agent[web]" in out
+    # And the broken pre-fix string must NOT appear (extras stripped out).
+    assert "chronos-agent'" not in out  # would mean `[web]` got eaten
+

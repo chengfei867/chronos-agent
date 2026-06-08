@@ -4,6 +4,33 @@ All notable changes to Chronos Agent are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added — R121 (RC buffer, Phase 6 row 11)
+- TreeView page Run Info card 新增 evaluation score badge — Statistics row 末位加 evaluator 名 (紫色 Tag) + 最新评估的 score (整数或 4 位小数) 或 passed (✓ 绿 / ✗ 红); 包 Tooltip 显示 `${evaluator_name}: ${rationale}`. 完成 R118 deferred #2, 强化 R122 必过项「前端 Score 列」从 RunList Score 列单层冗余升到 RunList + TreeView 双层冗余 (R118 D-118-2 推到 R121 RC buffer 的 ADR-030 §69 路线交付).
+- `frontend/src/api.ts` 新增 `fetchEvaluations(runId): Promise<EvaluationResult[]>` client wrapper, 调 R115 ship 的 `GET /runs/{id}/evaluations` endpoint (R115 backend 已 `created_at ASC` 排序, "latest" = `evaluations.at(-1)`).
+- `frontend/src/i18n/en.ts` + `zh.ts` 新增 `tree.evalScore` key (英: "Eval score" / 中: "评估分数"), 一致 TreeView i18n bucket (treeShape / nodeCount / forkCount / etc.).
+
+### Fixed — R121 (RC buffer, Phase 6 row 11)
+- **F14**: `chronos doctor` 检 optional extras 缺失时, hint 中 `chronos-agent[web]` / `chronos-agent[langgraph]` 等 bracketed extra name 被 Rich Console 当 markup tag 静默吞掉 (输出变成 `chronos-agent'`), actionable hint 完全 broken. 修复: `_escape_label` 重命名为 `_escape_markup` (语义 generalised, label/detail/hint 共享同一个 markup escape 规则); `doctor_command` 渲染 loop 三处 (label / detail / hint) 全部走 `_escape_markup`. 旧名 `_escape_label = _escape_markup` 留 alias backwards-compatible. 修后 `Hint: \`uv pip install 'chronos-agent[web]'\`` 字面值原样显示, R110 doctor verb 的 actionable-hint 契约真正成立.
+- 新加 `tests/unit/test_cli_doctor.py::test_doctor_render_preserves_extras_in_hint` (44 LOC) 用 `monkeypatch` 拦截 `importlib.import_module("fastapi")` → `ImportError` 模拟 web extra 缺失, end-to-end 验证 hint 中的 `chronos-agent[web]` 字面值原样保留, 抓未来 `doctor_command` 重构带回的 markup-eating regression.
+
+### Process — R121
+- 第一动作: GHA 三路 verify on R120 ship SHA `5fa55b26` — `ci.yml` run_id=`27108590202` `success` ✅ (**R111 起首次绿**, R120 D-120-1 1-line `ci.yml` `uv sync --extra dev` → `--all-extras` fix 终结 9 轮 silent failure mode); `gh-pages.yml` 同 SHA `success` ✅ (continued green from R119 F12 fix); `golden-verify.yml` 同 SHA `success` ✅. 3-workflow GREEN baseline established at SHA `5fa55b26`.
+- 单 slot 单 commit ship (没用 cron-slot-handoff-recovery 链).
+- 0 行 `src/chronos/adapters/` 改动 → adapter zero-regression streak R52→R121 = **70**, R122 必过项 「streak ≥ 70」 在 R121 自然满足.
+- Frontend dist vite rebuild: `assets/index-d3JEOd4V.js` deleted, `assets/index-B0f7fjX1.js` added, `index.html` script src updated.
+- 公开仓库 toggle 仍 PRIVATE (用户决策点, R121 不擅自切, R122 final 仍 surface 决策点).
+
+### Test gate — R121
+- 770 passed / 9 skipped / 0 failed (R120 baseline 769 + 1 doctor F14 test).
+- 6 spikes GREEN (含 spike20 ADR-029 / spike21 ADR-030).
+- `npx tsc --noEmit` GREEN; `npm run build` GREEN.
+
+### Deferred to R122 / v1.1+ — R121
+- R118 deferred #4 (RunList tooltip relative-time, ~10 LOC TSX) → v1.1+ backlog.
+- F13 (runs-list column wrapping, 边缘 case) → v1.1+ backlog.
+- F15 / F16 (demo GIF re-record, README 已有, 替换 cosmetic) → v1.1+ backlog.
+- mkdocs i18n (R122 字面 "中英双语" 已通过 README + README.zh-CN.md 满足) → v1.1+ post-1.0.
+
 ## [1.0.0-rc1] — 2026-06-08 (Round 120 — Phase 6 row 10 唯一 slice — v1.0.0 Release Candidate 1 cut)
 
 ### Added — R120 (Phase 6 row 10 — v1.0.0-rc1 cut)

@@ -43,8 +43,8 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
-import { fetchTree, fetchRun } from "../api";
-import type { Run, Tree } from "../types";
+import { fetchTree, fetchRun, fetchEvaluations } from "../api";
+import type { Evaluation, Run, Tree } from "../types";
 import { treeToReactFlow, type LaneInfo } from "../layout";
 import ChronosNodeCard from "../components/nodes/ChronosNodeCard";
 import PlaceholderNode from "../components/nodes/PlaceholderNode";
@@ -64,11 +64,13 @@ const NODE_TYPES = {
 function InnerTree({
   tree,
   run,
+  evaluations,
   includeDescendants,
   onToggleDescendants,
 }: {
   tree: Tree;
   run: Run;
+  evaluations: Evaluation[];
   includeDescendants: boolean;
   onToggleDescendants: (v: boolean) => void;
 }) {
@@ -385,6 +387,48 @@ function InnerTree({
                     prefix={totalCost > 0 ? "$" : ""}
                   />
                 </Col>
+                {/* R121 ADR-030 polish: surface the latest evaluator's score
+                 * directly on the TreeView Run Info card so users see the
+                 * Evaluation outcome without going back to RunList. Hidden
+                 * when no evaluator has been run on this run. */}
+                {evaluations.length > 0 && (() => {
+                  const latest = evaluations[evaluations.length - 1];
+                  let scoreText = "–";
+                  let valueStyle: React.CSSProperties | undefined;
+                  if (latest.score != null) {
+                    scoreText =
+                      latest.score === Math.trunc(latest.score)
+                        ? String(Math.trunc(latest.score))
+                        : latest.score.toFixed(4);
+                  } else if (latest.passed != null) {
+                    scoreText = latest.passed ? "✓" : "✗";
+                    valueStyle = { color: latest.passed ? "#52c41a" : "#ff4d4f" };
+                  }
+                  const tip = latest.rationale
+                    ? `${latest.evaluator_name}: ${latest.rationale}`
+                    : latest.evaluator_name;
+                  return (
+                    <Col span={24}>
+                      <Tooltip title={tip}>
+                        <Statistic
+                          title={
+                            <span style={{ cursor: "help" }}>
+                              {t("tree.evalScore", { defaultValue: "Eval score" })}
+                              <Tag
+                                color="purple"
+                                style={{ marginLeft: 6, fontSize: 10 }}
+                              >
+                                {latest.evaluator_name}
+                              </Tag>
+                            </span>
+                          }
+                          value={scoreText}
+                          valueStyle={valueStyle}
+                        />
+                      </Tooltip>
+                    </Col>
+                  );
+                })()}
               </Row>
               <Alert
                 type="info"
@@ -491,6 +535,7 @@ export default function TreeView({ runId }: { runId: string }) {
   const { t } = useTranslation();
   const [run, setRun] = useState<Run | null>(null);
   const [tree, setTree] = useState<Tree | null>(null);
+  const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [includeDescendants, setIncludeDescendants] = useState(false);
 
@@ -499,6 +544,7 @@ export default function TreeView({ runId }: { runId: string }) {
     setError(null);
     setRun(null);
     setTree(null);
+    setEvaluations([]);
     Promise.all([fetchRun(runId), fetchTree(runId, includeDescendants)])
       .then(([runRes, treeRes]) => {
         if (cancelled) return;
@@ -507,6 +553,17 @@ export default function TreeView({ runId }: { runId: string }) {
       })
       .catch((e: Error) => {
         if (!cancelled) setError(e.message);
+      });
+    // R121: fetch evaluations independently — failure is non-fatal (older
+    // runs may pre-date ADR-030, or the evaluations table may be empty).
+    // Errors are swallowed so the tree still renders; the score badge just
+    // won't appear.
+    fetchEvaluations(runId)
+      .then((res) => {
+        if (!cancelled) setEvaluations(res.evaluations ?? []);
+      })
+      .catch(() => {
+        /* non-fatal, score badge stays hidden */
       });
     return () => {
       cancelled = true;
@@ -545,6 +602,7 @@ export default function TreeView({ runId }: { runId: string }) {
         <InnerTree
           tree={tree}
           run={run}
+          evaluations={evaluations}
           includeDescendants={includeDescendants}
           onToggleDescendants={setIncludeDescendants}
         />
