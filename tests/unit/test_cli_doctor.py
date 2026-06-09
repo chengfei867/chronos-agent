@@ -240,7 +240,9 @@ def test_check_python_version_current_env_is_ok() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_doctor_render_preserves_extras_in_hint(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_doctor_render_preserves_extras_in_hint(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     """Rendered output must contain the literal ``[web]`` token in the
     install hint when the ``web`` extra is missing — verifies F14 fix."""
     import importlib
@@ -270,4 +272,3 @@ def test_doctor_render_preserves_extras_in_hint(monkeypatch: pytest.MonkeyPatch,
     assert "chronos-agent[web]" in out
     # And the broken pre-fix string must NOT appear (extras stripped out).
     assert "chronos-agent'" not in out  # would mean `[web]` got eaten
-
