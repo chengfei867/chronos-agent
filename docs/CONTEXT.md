@@ -95,7 +95,7 @@
 - fetch 走 `gh-proxy.com` 或 `gh.llkk.cc` 均可
 - 认证 token 在 `/workspace/.hermes/.env`，**永远不要 commit .env**
 - commit message 末尾加 `Co-authored-by: Hermes Agent <agent@hermes.ai>`
-- 第一阶段直接在 main 写（单人项目无需 PR），**研发到 v0.1-alpha 后**引入 PR 流程
+- 项目仍采用单维护者 mainline 流程；release/tag 前必须先跑本地 gate 并在 push 后轮询 GitHub Actions 三路绿
 
 ### 3.3 LLM 使用
 - base_url: `https://oneapi-comate.baidu-int.com`
@@ -104,9 +104,8 @@
 - **不要调用其它任何付费 LLM API**
 
 ### 3.4 语言选择
-语言选型还在调研（见 `docs/decisions/ADR-001-language.md`，尚未撰写）。
-初步倾向：TypeScript（生态匹配 LangGraph/Vercel AI SDK）或 Python（生态匹配 AutoGen/CrewAI/大多数 agent 框架）。
-最终选型必须在第一阶段完成。**不要在没做 ADR 之前就开始写代码**。
+ADR-001 已 Accepted：项目采用 **Python-first core/CLI/adapters + TypeScript/React Web UI**。
+Python 覆盖 LangGraph / AutoGen / CrewAI / Anthropic Agents SDK 等主流 agent 框架；前端在 `frontend/` 中以 React + TypeScript 构建并随 wheel 打包。
 
 ### 3.5 Cron 元信息
 - 节奏：每 4 小时一次
@@ -140,7 +139,8 @@ chronos-agent/
 ├── progress/                      ← 每轮 cron 的总结日志
 │   ├── 2026-04-22-round-1.md      ← 第一轮 (调研启动)
 │   └── ...
-└── (code/src 目录待 ADR-001 决定语言后创建)
+├── src/chronos/                    ← Python core / adapters / CLI / API / eval / store
+└── frontend/                       ← TypeScript React Web UI (bundled into the wheel)
 ```
 
 ---

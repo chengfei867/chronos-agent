@@ -5,7 +5,7 @@
 
 [English](./README.md) · [简体中文](./README.zh-CN.md)
 
-**🤖 100% 由 AI 自主开发** — 本仓库的每一次提交、每一份设计文档、每一项架构决策, 全部由 AI Agent (Hermes Agent / Claude Opus) 自主完成。人类启动方只负责按下"开火"按钮。Phase 4 Arc A — *N 路 compare* 表面 (slice 1-5) 加 fork 家族树, 在 R56-R67 的全自动 cron slot 中端到端交付。Phase 6 RC (R107→R122) — 包含 ADR-029 成本可见 (R111) + ADR-030 评估打分 (R115) — 也在同一个 cron 循环里被同样地推进。
+**🤖 100% 由 AI 自主开发** — 本仓库的每一次提交、每一份设计文档、每一项架构决策, 全部由 AI Agent (Hermes Agent / Claude Opus) 自主完成。人类启动方只负责按下"开火"按钮。Phase 4 Arc A — *N 路 compare* 表面 (slice 1-5) 加 fork 家族树, 在 R56-R67 的全自动 cron slot 中端到端交付。Phase 6 RC (R107→R122) — 包含 ADR-029 成本可见 (R111)、ADR-030 评估打分 (R115)、文档/demo 打磨和终验 — 也在同一个 cron 循环里完成。
 
 [![CI](https://github.com/chengfei867/chronos-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/chengfei867/chronos-agent/actions/workflows/ci.yml)
 [![golden-verify](https://github.com/chengfei867/chronos-agent/actions/workflows/golden-verify.yml/badge.svg)](https://github.com/chengfei867/chronos-agent/actions/workflows/golden-verify.yml)
@@ -37,7 +37,7 @@
 | **LangGraph adapter**                                           | v0.2.0              | ✅ state-dict 范式 (基于 checkpointer 的 fork)                                       |
 | **AutoGen adapter**                                             | v0.4.0a2            | ✅ message-list 范式 + 每工具 `effects_map` ([ADR-020])                              |
 | **CrewAI adapter**                                              | v0.4.0              | ✅ event-bus 范式, 版本钉 `>=0.80,<2.0` ([ADR-021] / [ADR-022])                      |
-| **Anthropic Agents SDK adapter**                                | v0.7.0a1+           | 🚧 alpha — 仅 record ([ADR-026]); fork 在 slice 2                                    |
+| **Anthropic Agents SDK adapter**                                | v0.7.0              | ✅ record + 原生 `fork_session()` 支持 ([ADR-026])                                  |
 | **Linear adapter** (issue tracker 当 agent 输入)                | v0.8.0+             | ✅ 注入 + golden-trace 校验通过                                                      |
 | Web UI — TreeView + Run Info + 回放                             | v0.2.0              | ✅ AntD v6 + ReactFlow v12, zh/en 双语                                               |
 | 多 run 家族树 + 泳道布局                                        | v0.2.0              | ✅ R37.5                                                                             |
@@ -170,9 +170,9 @@ v1.0 *暂不做* (推迟到 v1.1+): LLM-as-judge evaluator, 数据集驱动的 e
 
 ## 当前状态
 
-**Phase 6 RC (R107 → R122)** 进行中。R107 切了 `v0.9.0` GA。R108-R110 把 CLI 表面打磨好 (rich `--help`, `chronos quickstart`, `chronos doctor`)。R111 全栈交付 ADR-029 成本可见。R112-R114 前端 P0 清扫收口。R115 全栈交付 ADR-030 评估打分。R116 (本轮) 交付双语 README + docs/demo arc 序章。R117-R118 接着是文档站 (GH Pages) + ≥3 demo 包。R119 端到端 dogfood; R120 切 `v1.0.0-rc1`; R121 RC buffer; R122 终验。
+**Phase 6 RC (R107 → R122)** 已完成。R107 切 `v0.9.0` GA; R108-R110 打磨 CLI (`--help`, `chronos quickstart`, `chronos doctor`); R111 交付 ADR-029 成本可见; R112-R114 收完前端 P0; R115 交付 ADR-030 评估打分; R116-R118 交付双语 README、文档站和 4 个可跑 demo; R119 做端到端 dogfood; R120 切 `v1.0.0-rc1`; R121 收 RC buffer; R122 完成终验，13/13 gate 全绿。下一步只剩用户拍板后的 GA cut (`v1.0.0`) 和可选公开仓库开关。
 
-**早期阶段**: Phase 4 Arc A — *N 路 compare* — 在 `v0.6.0` 落地。Phase 4 Arc B slice 1 — *Anthropic Agents SDK adapter (record-only)* — 在 `v0.7.0a1` alpha。Phase 5 — Linear adapter + golden-trace 校验 — 在 `v0.8.0` 落地。三个早期 adapter (LangGraph + AutoGen + CrewAI) 加上效果可见的 fork UX 持续零回归。
+**早期阶段**: Phase 4 Arc A — *N 路 compare* — 在 `v0.6.0` 落地。Phase 4 Arc B slice 1 — *Anthropic Agents SDK adapter + 原生 fork 支持* — 在 `v0.7.0` 落地。Phase 5 交付 Replay UI (`v0.8.0`) 和 golden-trace 校验 (`v0.9.0`)。一等 adapter (LangGraph + AutoGen + CrewAI + Anthropic Agents + Linear) 加上效果可见的 fork UX 持续零回归。
 
 详细里程碑见 [`docs/roadmap.md`](./docs/roadmap.md). 设计决策见 [`docs/decisions/`](./docs/decisions/). 每轮 cron 进展见 [`progress/`](./progress/).
 
@@ -209,8 +209,11 @@ chronos-agent/
 ├── frontend/                  ← Web UI (React + AntD v6 + ReactFlow v12, 打进 wheel)
 ├── examples/                  ← 可跑的 demo (不需要 API key)
 │   ├── builtin-minimal/       ← `chronos quickstart` 用的种子 (2 runs + 1 fork)
-│   ├── linear_pipeline.py     ← 5 节点图, record → fork → diff
-│   └── router_loop.py         ← 同上, 带循环的图
+│   ├── langgraph-router/      ← 带条件边和 fork 的 LangGraph demo
+│   ├── crewai-research-team/  ← CrewAI 风格多智能体研究流水线
+│   ├── anthropic-agent-tools/ ← Anthropic Agent 工具调用 demo
+│   ├── linear_pipeline.py     ← legacy record → fork → diff 脚本
+│   └── router_loop.py         ← legacy 带循环图脚本
 ├── scripts/
 │   ├── seed_demo.py           ← 10 秒种 demo 库 (5 runs, 三代 fork 链)
 │   └── dogfood/               ← 活的设计文档 dogfood 脚本 (按 slice 分)

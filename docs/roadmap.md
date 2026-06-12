@@ -147,7 +147,7 @@ the plan-artifact `fork plan emit → edit → fork plan exec` loop is the shipp
 - [x] AutoGen adapter (record-only, ADR-017 sync-wrap strategy, R33 — `src/chronos/adapters/autogen/`, 10 unit tests, structural `RecorderProtocol` conformance. Fork deferred to Phase 3 per ADR-017 §Decision.)
 - [ ] Multi-agent reasoning tree representation (concurrent lanes)
 - [x] Local HTTP API (`chronos.api.server`, R34-A — FastAPI `build_app(store)` factory with 6 endpoints: `GET /healthz`, `GET /runs`, `GET /runs/{id}`, `GET /runs/{id}/nodes`, `GET /runs/{id}/forks`, `GET /runs/{id}/tree` (neutral reasoning-tree shape with sequential + cross-run fork edges); 17 unit tests; `[project.optional-dependencies].web` group added. `chronos web` command in R34-B.)
-- [x] Web UI basics: reasoning tree viewer (ReactFlow), run list, diff viewer (R34-C — `frontend/` Vite + React 19 + TypeScript 5 + `@xyflow/react` v12 SPA; 108KB gzipped bundle committed under `frontend/dist/` via `.gitignore` whitelist so `uv pip install chronos-agent[web]` ships a working viewer with zero npm deps; `/app/*` StaticFiles mount on `build_app(store)` with 503-fallback when bundle missing; `CHRONOS_FRONTEND_DIST` env override; `types.ts` mirrors pydantic `model_dump(mode="json")` field-for-field; hash routing (`#/`, `#/runs/<id>`); `NodeDetails` drawer with tool_input/output + usage + error; landing page gains "🌲 Open Tree Viewer" CTA. Diff viewer still TODO — lists + tree ship, side-by-side run diff deferred to next round.)
+- [x] Web UI basics: reasoning tree viewer (ReactFlow), run list, and diff/compare entry points (R34-C baseline; later rounds added replay, N-run compare, matrix view, fork-tree visualization, cost/eval columns, onboarding tour, and score badges).
 - [x] Web UI polish pass: AntD 6 + Framer Motion + i18n (zh default/EN toggle) + help drawer + concept tooltips + 首次引导 Tour + "从头播放" step-playback feature (R36-D — `frontend/src/{main,App}.tsx` rewired with `ConfigProvider` + dark-first theme (`#0d1117` bg + `#58a6ff` accent); 9 new components under `frontend/src/components/` + 3 pages under `pages/` + `usePlayback` hook; AntD zhCN locale + `react-i18next` with `localStorage: chronos.lang` persistence; `HelpDrawer` + `ConceptTip` cover Run/Node/Fork/Adapter/Usage/Thread for non-technical readers; `OnboardingTour` (once per user, `localStorage: chronos.tour.seen.v1`) walks header controls; `ChronosNodeCard` kind-aware color accents (LLM/Tool/Fn/Router/Fork/End) with Lucide icons; `NodeDetails` split into 4 tabs (Identity/I-O/State/Cost) replacing wall-of-JSON; bundle now 1.39 MB raw / 452 KB gzipped (AntD + Framer Motion cost); `scripts/seed_demo.py` seeds 3 demo runs for one-command E2E. 375/375 backend tests green, tsc + vite build clean, E2E smoke verified.)
 - [x] `chronos web` command launches local server + opens browser (R34-B — `src/chronos/cli/web.py`, `web_command(host, port, db, no_browser)` with lazy uvicorn import, DI-injectable `run_server_fn` / `open_browser_fn` for testability, `threading.Timer(1.0)` delayed browser-open after uvicorn binds. Dark-themed `/` landing page in `server.py` (zero-JS, zero-build) linking to `/runs` / `/docs` / `/healthz`. 8 unit tests. Bilingual README + `docs/cli-reference.md` updated.)
 - [ ] Fork-batch capability for Sam's (persona) counterfactual research
@@ -204,7 +204,7 @@ the plan-artifact `fork plan emit → edit → fork plan exec` loop is the shipp
 
 ### 4.1 Depth — fork-tree semantics (priority: **ACTIVE** — Arc A pinned R57, slice 4 scoped R61)
 - [x] **Multi-run tree comparison (pivot-anchored N-run compare)** — select N runs with designated pivot, render merged report with lane alignment. Generalises the R39-A two-run compare to N runs. **Design doc: [n-run-compare][n-run-compare] (R57). Shipped: R58 core / R59 CLI+API / R60 dogfood+v0.5.0 release.**
-- [ ] **Multi-pivot (auto-centroid) compare — Arc A slice 4** — N-run compare without designated pivot; auto-select centroid by pairwise-distance argmin. Extends slice 1-3. **ADR: [ADR-024][ADR-024] (R61 Draft). Research: [r61-multi-pivot][r61-multi-pivot]. Shipped: R62 core / R63 CLI+API / R64 dogfood + v0.5.1 release.**
+- [x] **Multi-pivot (auto-centroid) compare — Arc A slice 4** — N-run compare without designated pivot; auto-select centroid by pairwise-distance argmin. Extends slice 1-3. **ADR: [ADR-024][ADR-024] (R61 Draft). Research: [r61-multi-pivot][r61-multi-pivot]. Shipped: R62 core / R63 CLI+API / R64 dogfood + v0.5.1 release.**
 - [x] **Pairwise matrix view — Arc A slice 5** — O(N²) all-pairs matrix view; uses distance matrix already computed by slice 4. **Shipped R65**: `chronos compare --matrix <ids>...` CLI + `GET /runs/compare/matrix` HTTP. No tag cut — bundled into v0.6.0 with Arc A item 2 CLI closeout.
 - [x] **Fork-tree visualization — Arc A item 2** — for a single run with descendants, render the full fork DAG. **Audit (R66) surfaced drift**: backend `/runs/{id}/tree?include_descendants=true` shipped R34-A, frontend `/app/#/runs/<id>` family-tree viewer shipped R34-C/R36-D/R37.5/R46-A/R48-B. **Closeout R67**: `chronos tree <run_id> [--descendants] [--json]` CLI + `scripts/dogfood_fork_tree.py` + tree-assembly extracted to `src/chronos/core/tree.py` for CLI-HTTP parity + ADR-025 Accepted + v0.6.0 released. **Design doc**: [fork-tree-viz][fork-tree-viz] (R66 retro). **ADR**: [ADR-025][ADR-025] (R66 Draft → R67 Accepted). **Audit**: [r66-fork-tree-viz-audit][r66-audit]. **Shipped R67, v0.6.0**.
 - [ ] **Semantic diff (LLM-as-judge)** — for divergent LLM outputs, let the user delegate "are these equivalent?" to a judge model. Adapter-agnostic. Needs an ADR for trust model.
@@ -213,7 +213,7 @@ the plan-artifact `fork plan emit → edit → fork plan exec` loop is the shipp
 
 ### 4.2 Ecosystem — broader surface (priority: **ACTIVE** — Arc B pinned R68, slice 1 scoped to Anthropic Agents SDK)
 - [x] **Third adapter: CrewAI** — shipped in v0.4.0 (R49-R55)
-- [ ] **Fourth adapter: Anthropic Agents SDK — Arc B slice 1** — `claude-agent-sdk` recorder + fork primitive + live-smoke + dogfood, bundled as v0.7.0. **Research**: [r68-arc-b-scope][r68-arc-b] (6-candidate survey, 9-axis table) + [r69-mcp-fork-lifecycle][r69-mcp] (source-inspection spike resolving 3 open questions). **Design**: [fourth-adapter-landscape][fourth-adapter]. **ADR**: [ADR-026][ADR-026] (R68 Draft → **R69 Accepted**). **Rollout**: R69 risks spike ✅ → **R70 core recorder/adapter scaffold ✅** (probe + 552 LOC recorder + 34 unit tests, optional extra `claude-agent-sdk>=0.1.80,<1.0`, class-name dispatch, 4-block content summariser, `fork()` stub raises `NotImplementedError("R73")`) → R71 live-smoke + dogfood script → R72 v0.7.0a1 → R73 fork (delegates to SDK-native `fork_session`) → R74 v0.7.0 GA. **Key R69 findings**: SDK ships first-class `fork_session()` (no custom re-seed needed); recorder seam = `ClaudeSDKClient.receive_response()` async iterator; pin `claude-agent-sdk>=0.1.80,<1.0`. Fallback clause remains dormant.
+- [x] **Fourth adapter: Anthropic Agents SDK — Arc B slice 1** — `claude-agent-sdk` recorder + native `fork_session()` fork primitive + live-smoke + dogfood, bundled as v0.7.0. **Research**: [r68-arc-b-scope][r68-arc-b] + [r69-mcp-fork-lifecycle][r69-mcp]. **Design**: [fourth-adapter-landscape][fourth-adapter]. **ADR**: [ADR-026][ADR-026] (R68 Draft → **R69 Accepted**). **Rollout**: R70 scaffold → R71/R72 live-smoke + alpha → R73 native fork → R74/v0.7.0 GA. **Key finding**: SDK ships first-class `fork_session()`; recorder seam is `ClaudeSDKClient.receive_response()`; pin `claude-agent-sdk>=0.1.80,<1.0`.
 - [ ] **Arc B slice 2 candidate** — Pydantic AI (low-risk, type-safe) or Letta (memory-first, ambitious). Decision at R74 retro; target v0.8.0.
 - [ ] **Vercel AI SDK adapter (TS)** — blocked by [ADR-001](decisions/ADR-001-language.md) Python pin. Revisit if external TS-native demand arrives.
 - [ ] **Generic OTel receiver** (Tier-2 catch-all for non-supported frameworks) — deferred to Arc B slice 3+.
@@ -229,9 +229,9 @@ the plan-artifact `fork plan emit → edit → fork plan exec` loop is the shipp
 
 ---
 
-## Phase 5 — Replay UI (Arc C ✅) + Golden-trace fixtures (Arc D 🚧 underway)
+## Phase 5 — Replay UI (Arc C ✅) + Golden-trace fixtures (Arc D ✅)
 
-**Status**: Two-arc phase. Arc C charter at R90 ([ADR-027][ADR-027-link]) ✅ shipped end-to-end as v0.8.0 GA at R98. Arc D charter at R99 ([ADR-028][ADR-028-link] Draft) 🚧 — promotes to Accepted at R100 after slice 1 spike 19 per R57 in-place rule.
+**Status**: Two-arc phase complete. Arc C charter at R90 ([ADR-027][ADR-027-link]) shipped end-to-end as v0.8.0 GA at R98. Arc D charter at R99 ([ADR-028][ADR-028-link]) shipped the golden-trace verifier arc and fed the v0.9.0 release line.
 
 ### First arc — Arc C: Replay UI / Time-Travel Debugger Frontend ✅ COMPLETE (R91-R98, v0.8.0 GA)
 
@@ -247,13 +247,13 @@ The hero feature: interactive step-through replay of any recorded run, with stat
 
 **Arc C outcome**: AC-1 ✅ keyboard parity (←/→/space/q); AC-2 ✅ state panel covers 4 first-class adapters; AC-3 ✅ fork-tree replay; AC-4 ✅ URL deep-links; AC-5 ✅ bundle 1467.24 kB JS / 476.96 kB gzip vs R36-D baseline 452 KB gzip = +25 KB gzip (under +50 KB budget); AC-6 stretch deferred. Adapter zero-regression streak preserved across all 6 slices (R52→R98 = 46 rounds at GA cut).
 
-### Second arc — Arc D: Cross-framework golden-trace test fixtures 🚧 UNDERWAY (R100-R102, v0.9.0 target)
+### Second arc — Arc D: Cross-framework golden-trace test fixtures ✅ COMPLETE (R100-R107, v0.9.0)
 
 Foundation arc — deterministic regression net between unit tests (mocked SDK) and `CHRONOS_LIVE=1` smoke (relay-dependent, not in CI). Promoted from ADR-027 §6 hot-backup status to ADR-028 second-arc primary at R99 after Arc C succeeded. Test-only feature; zero user-visible surface; designed to grow incrementally over multiple minor releases.
 
-- [ ] Slice 1 (R100, spike-first) — Spike 19 (3 invariants: round-trip, projection stability, sanitiser audit) + fixture layout commit + `docs/contracts/golden-trace-format.md` spec.
-- [ ] Slice 2 (R101) — First seed fixture pair: `langgraph/simple_chat/{envelopes.jsonl, expected_run.json, assertions.yaml}` + `scripts/capture/capture_langgraph.py` + `tests/fakes/langgraph/replay.py`.
-- [ ] Slice 3 (R102) — `chronos verify-golden` CLI verb (`src/chronos/cli/verify_golden.py`) + pytest shim (`tests/golden/test_langgraph_golden.py`) + v0.9.0 release-cut.
+- [x] Slice 1 (R100, spike-first) — Spike 19 (round-trip, projection stability, sanitiser audit) + fixture layout + `docs/contracts/golden-trace-format.md` spec.
+- [x] Slice 2 (R101/R102 close-out) — First seed fixture pair and capture/replay tooling for the LangGraph seed adapter.
+- [x] Slice 3 (R103-R107) — `chronos verify-golden` CLI verb, pytest/GHA integration, golden fixture verification, and v0.9.0 release-cut.
 
 **Arc D ACs (per ADR-028 §5)**: AC-1 `chronos verify-golden --adapter langgraph` exits 0; AC-2 `--record` mode produces idempotent fixtures; AC-3 sanitiser redacts known-secret patterns; AC-4 pytest shim adds ≤2 s; AC-5 baseline 648/9 → 649+/9; AC-6 adapter zero-regression streak R52→R102 = **50 rounds** target.
 

@@ -47,10 +47,9 @@ theme:
   icon:
     repo: fontawesome/brands/github
 
-# R117: do NOT publish to GitHub Pages yet. The gh-pages branch is built by
-# .github/workflows/gh-pages.yml on every push to main, but Settings → Pages
-# stays "None" until R120 RC1, when the user explicitly authorises the public
-# toggle. The build itself acts as a doc-site smoke test in the meantime.
+# The gh-pages branch is built by .github/workflows/gh-pages.yml on every push
+# to main. As of R122 final acceptance the docs site build is green; repository
+# visibility / Pages publication remains a user-controlled release toggle.
 
 plugins:
   - search

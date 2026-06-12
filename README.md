@@ -6,7 +6,7 @@
 
 [English](./README.md) · [简体中文](./README.zh-CN.md)
 
-**🤖 100% AI-generated** — every commit, design doc, and architectural decision in this repository is authored autonomously by an AI agent (Hermes Agent / Claude Opus). The human instigator only fired the starting pistol. Phase 4 Arc A — the *N-run compare* surface (slices 1-5) plus the fork-tree visualisation — was shipped end-to-end across rounds R56–R67 in fully autonomous cron slots. Phase 6 RC (R107→R122) — including ADR-029 Cost Visibility (R111) and ADR-030 Evaluation/Scoring (R115) — is being driven the same way under one cron loop.
+**🤖 100% AI-generated** — every commit, design doc, and architectural decision in this repository is authored autonomously by an AI agent (Hermes Agent / Claude Opus). The human instigator only fired the starting pistol. Phase 4 Arc A — the *N-run compare* surface (slices 1-5) plus the fork-tree visualisation — shipped end-to-end across rounds R56–R67 in fully autonomous cron slots. Phase 6 RC (R107→R122) — including ADR-029 Cost Visibility (R111), ADR-030 Evaluation/Scoring (R115), docs/demo polish, and final acceptance — completed the same way under one cron loop.
 
 [![CI](https://github.com/chengfei867/chronos-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/chengfei867/chronos-agent/actions/workflows/ci.yml)
 [![golden-verify](https://github.com/chengfei867/chronos-agent/actions/workflows/golden-verify.yml/badge.svg)](https://github.com/chengfei867/chronos-agent/actions/workflows/golden-verify.yml)
@@ -38,7 +38,7 @@
 | **LangGraph adapter**                                               | v0.2.0                | ✅ state-dict paradigm (checkpointer-backed fork)                                  |
 | **AutoGen adapter**                                                 | v0.4.0a2              | ✅ message-list paradigm + per-tool `effects_map` override ([ADR-020])             |
 | **CrewAI adapter**                                                  | v0.4.0                | ✅ event-bus paradigm, pin `>=0.80,<2.0` ([ADR-021] / [ADR-022])                   |
-| **Anthropic Agents SDK adapter**                                    | v0.7.0a1+             | 🚧 alpha — record-only ([ADR-026]); fork in slice 2                                |
+| **Anthropic Agents SDK adapter**                                    | v0.7.0                | ✅ record + native `fork_session()` support ([ADR-026])                            |
 | **Linear adapter** (issue tracker as agent input)                   | v0.8.0+               | ✅ ingestion + golden-trace verified                                               |
 | Web UI — TreeView + Run Info + playback                             | v0.2.0                | ✅ AntD v6 + ReactFlow v12, zh/en i18n                                             |
 | Multi-run family tree + lane layout                                 | v0.2.0                | ✅ R37.5                                                                           |
@@ -173,9 +173,9 @@ What's *out of scope* for v1.0 (deferred to v1.1+): LLM-as-judge evaluators, dat
 
 ## Status
 
-**Phase 6 RC (R107 → R122)** is in progress. R107 cut `v0.9.0` GA. R108-R110 polished the CLI surface (rich `--help`, `chronos quickstart`, `chronos doctor`). R111 shipped ADR-029 Cost Visibility full-stack. R112-R114 closed frontend P0 polish. R115 shipped ADR-030 Evaluation/Scoring full-stack. R116 (this round) ships bilingual READMEs + the docs/demo arc preface. R117-R118 follow with a docs site (GH Pages) and ≥3 demo packs. R119 is end-to-end dogfood; R120 cuts `v1.0.0-rc1`. R121 is RC buffer; R122 is final acceptance.
+**Phase 6 RC (R107 → R122)** is complete. R107 cut `v0.9.0` GA; R108-R110 polished the CLI surface (`--help`, `chronos quickstart`, `chronos doctor`); R111 shipped ADR-029 Cost Visibility; R112-R114 closed frontend P0 polish; R115 shipped ADR-030 Evaluation/Scoring; R116-R118 delivered bilingual READMEs, the docs site, and 4 runnable demo packs; R119 dogfooded the end-to-end path; R120 cut `v1.0.0-rc1`; R121 handled the RC buffer; R122 completed final acceptance with 13/13 gates green. The next step is a user-approved GA cut (`v1.0.0`) and optional public-repo toggle.
 
-**Earlier**: Phase 4 Arc A — *N-run compare* — shipped at `v0.6.0`. Phase 4 Arc B slice 1 — *Anthropic Agents SDK adapter (record-only)* — alpha at `v0.7.0a1`. Phase 5 — Linear adapter + golden-trace verification — at `v0.8.0`. Three earlier-phase adapters (LangGraph + AutoGen + CrewAI) and the effect-aware fork UX continue to ship unchanged.
+**Earlier**: Phase 4 Arc A — *N-run compare* — shipped at `v0.6.0`. Phase 4 Arc B slice 1 — *Anthropic Agents SDK adapter with native fork support* — shipped at `v0.7.0`. Phase 5 delivered Replay UI (`v0.8.0`) and golden-trace verification (`v0.9.0`). The first-class adapters (LangGraph + AutoGen + CrewAI + Anthropic Agents + Linear) and effect-aware fork UX continue to ship unchanged.
 
 Detailed milestones: [`docs/roadmap.md`](./docs/roadmap.md). Design decisions: [`docs/decisions/`](./docs/decisions/). Per-cron-cycle progress: [`progress/`](./progress/).
 
@@ -212,8 +212,11 @@ chronos-agent/
 ├── frontend/                  ← Web UI (React + AntD v6 + ReactFlow v12, bundled into the wheel)
 ├── examples/                  ← runnable demos (no API key required)
 │   ├── builtin-minimal/       ← `chronos quickstart` seed (2 runs + 1 fork)
-│   ├── linear_pipeline.py     ← record → fork → diff on a 5-node graph
-│   └── router_loop.py         ← same, on a graph with loops
+│   ├── langgraph-router/      ← conditional-edge LangGraph demo with fork
+│   ├── crewai-research-team/  ← CrewAI-style multi-agent research pipeline
+│   ├── anthropic-agent-tools/ ← Anthropic Agent tool-use demo
+│   ├── linear_pipeline.py     ← legacy record → fork → diff script
+│   └── router_loop.py         ← legacy graph-with-loops script
 ├── scripts/
 │   ├── seed_demo.py           ← 10-second demo DB (5 runs, 3-gen fork chain)
 │   └── dogfood/               ← living-design-doc dogfood scripts (per slice)
