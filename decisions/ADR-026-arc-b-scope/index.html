@@ -1,0 +1,2161 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Time-Travel Debugger for Multi-Agent AI Systems — record, replay, fork, diff, compare. With first-class token/cost tracking and pluggable evaluators.">
+      
+      
+        <meta name="author" content="Hermes Agent">
+      
+      
+        <link rel="canonical" href="https://chengfei867.github.io/chronos-agent/decisions/ADR-026-arc-b-scope/">
+      
+      
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.49">
+    
+    
+      
+        <title>ADR-026: Arc B Scope — Fourth Adapter is Anthropic Agents SDK (Accepted) - Chronos Agent</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.6f8fc17f.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#adr-026-arc-b-scope-fourth-adapter-is-anthropic-agents-sdk-accepted" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Chronos Agent" class="md-header__button md-logo" aria-label="Chronos Agent" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Chronos Agent
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              ADR-026: Arc B Scope — Fourth Adapter is Anthropic Agents SDK (Accepted)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/chengfei867/chronos-agent" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    chengfei867/chronos-agent
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+    
+  
+  Getting started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../concepts/" class="md-tabs__link">
+        
+  
+    
+  
+  Concepts
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../cli-reference/" class="md-tabs__link">
+        
+  
+    
+  
+  CLI reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../cost-tracking/" class="md-tabs__link">
+        
+  
+    
+  
+  Cost tracking
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../evaluators/" class="md-tabs__link">
+        
+  
+    
+  
+  Evaluators
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../adapters/anthropic_agents/" class="md-tabs__link">
+          
+  
+    
+  
+  Adapters
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guides/forking-safely/" class="md-tabs__link">
+          
+  
+    
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../contracts/golden-trace-format/" class="md-tabs__link">
+          
+  
+    
+  
+  Contracts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../" class="md-tabs__link">
+          
+  
+    
+  
+  Decisions (ADRs)
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../faq/" class="md-tabs__link">
+        
+  
+    
+  
+  FAQ
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Chronos Agent" class="md-nav__button md-logo" aria-label="Chronos Agent" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Chronos Agent
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/chengfei867/chronos-agent" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    chengfei867/chronos-agent
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Getting started
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Concepts
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli-reference/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    CLI reference
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cost-tracking/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Cost tracking
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../evaluators/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Evaluators
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Adapters
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            Adapters
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adapters/anthropic_agents/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Anthropic Agents SDK
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contracts/adapter-protocol/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Adapter protocol
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Guides
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            Guides
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/forking-safely/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Forking safely
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/side-effects/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Side effects
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Contracts
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            Contracts
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contracts/golden-trace-format/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Golden trace format
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    Decisions (ADRs)
+  </span>
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            Decisions (ADRs)
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    FAQ
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#context" class="md-nav__link">
+    <span class="md-ellipsis">
+      Context
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Context">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-commit-now-r68-rather-than-defer" class="md-nav__link">
+    <span class="md-ellipsis">
+      Why commit now (R68) rather than defer
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#whats-different-from-the-adr-023-snapshot" class="md-nav__link">
+    <span class="md-ellipsis">
+      What's different from the ADR-023 snapshot
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      Decision
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Decision">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-primary-binding" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Primary binding
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-interface-fit" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Interface fit
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-release-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Release strategy
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-fallback-clause-pre-authorised-swap" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. Fallback clause (pre-authorised swap)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-inter-method-contract-state_after-seed-coordinates-r75-amendment" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. Inter-method contract — state_after seed coordinates (R75 amendment)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Inter-method contract — state_after seed coordinates (R75 amendment)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#contract-binding-from-r75-onwards" class="md-nav__link">
+    <span class="md-ellipsis">
+      Contract (binding from R75 onwards)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-must-and-not-should" class="md-nav__link">
+    <span class="md-ellipsis">
+      Why "MUST" and not "SHOULD"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test-enforcement" class="md-nav__link">
+    <span class="md-ellipsis">
+      Test enforcement
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#out-of-scope-for-this-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      Out of scope for this contract
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#51-tool-round-trip-linkage-state_aftertool_use_id-r76-amendment-slice-3a" class="md-nav__link">
+    <span class="md-ellipsis">
+      5.1 Tool round-trip linkage — state_after.tool_use_id (R76 amendment, slice 3a)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5.1 Tool round-trip linkage — state_after.tool_use_id (R76 amendment, slice 3a)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#contract-binding-from-r76-onwards" class="md-nav__link">
+    <span class="md-ellipsis">
+      Contract (binding from R76 onwards)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test-enforcement_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Test enforcement
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#out-of-scope-for-51" class="md-nav__link">
+    <span class="md-ellipsis">
+      Out of scope for §5.1
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#511-multi-block-tool-linkage-state_aftertool_use_ids-r77-amendment-slice-3a-p1" class="md-nav__link">
+    <span class="md-ellipsis">
+      5.1.1 Multi-block tool linkage — state_after.tool_use_ids (R77 amendment, slice 3a-P1)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5.1.1 Multi-block tool linkage — state_after.tool_use_ids (R77 amendment, slice 3a-P1)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#contract-binding-from-r77-onwards" class="md-nav__link">
+    <span class="md-ellipsis">
+      Contract (binding from R77 onwards)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test-enforcement_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      Test enforcement
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consumer-pattern-slice-3-sql" class="md-nav__link">
+    <span class="md-ellipsis">
+      Consumer pattern (slice 3 SQL)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#out-of-scope-for-511" class="md-nav__link">
+    <span class="md-ellipsis">
+      Out of scope for §5.1.1
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#52-fork-with-tool-substitution-contract-r79-amendment-slice-3b" class="md-nav__link">
+    <span class="md-ellipsis">
+      5.2 Fork-with-tool-substitution contract (R79 amendment, slice 3b)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5.2 Fork-with-tool-substitution contract (R79 amendment, slice 3b)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      Contract
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stamp-on-child-nodes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Stamp on child Nodes
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validation-fail-fast-no-silent-drop" class="md-nav__link">
+    <span class="md-ellipsis">
+      Validation (fail-fast, no silent drop)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test-enforcement_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      Test enforcement
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consumer-sql-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      Consumer SQL pattern
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#out-of-scope-for-52" class="md-nav__link">
+    <span class="md-ellipsis">
+      Out of scope for §5.2
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#53-fork-with-tool-result-substitution-contract-r81-amendment-slice-3c" class="md-nav__link">
+    <span class="md-ellipsis">
+      5.3 Fork-with-tool-result-substitution contract (R81 amendment, slice 3c)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5.3 Fork-with-tool-result-substitution contract (R81 amendment, slice 3c)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#contract_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Contract
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validation-mirrors-52-runs-before-the-sdk-call" class="md-nav__link">
+    <span class="md-ellipsis">
+      Validation (mirrors §5.2; runs before the SDK call)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#child-side-stamp" class="md-nav__link">
+    <span class="md-ellipsis">
+      Child-side stamp
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#out-of-scope-slice-3c" class="md-nav__link">
+    <span class="md-ellipsis">
+      Out of scope (slice 3c)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sql-recipe-consumer-side-enumeration" class="md-nav__link">
+    <span class="md-ellipsis">
+      SQL recipe (consumer-side enumeration)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test-enforcement_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      Test enforcement
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-what-arc-b-slice-2-looks-like" class="md-nav__link">
+    <span class="md-ellipsis">
+      6. What Arc B slice 2+ looks like
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#acceptance-criteria-for-adr-026-accepted-promotion" class="md-nav__link">
+    <span class="md-ellipsis">
+      Acceptance criteria (for ADR-026 Accepted promotion)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Acceptance criteria (for ADR-026 Accepted promotion)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#in-place-promotion-marker" class="md-nav__link">
+    <span class="md-ellipsis">
+      In-place promotion marker
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#slice-3-closing-retro-r83" class="md-nav__link">
+    <span class="md-ellipsis">
+      Slice-3 closing retro (R83)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#open-questions-resolved-by-r69-risks-spike" class="md-nav__link">
+    <span class="md-ellipsis">
+      Open questions (resolved by R69 risks spike)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      Consequences
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Consequences">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#positive" class="md-nav__link">
+    <span class="md-ellipsis">
+      Positive
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#negative" class="md-nav__link">
+    <span class="md-ellipsis">
+      Negative
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#neutral" class="md-nav__link">
+    <span class="md-ellipsis">
+      Neutral
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      References
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="adr-026-arc-b-scope-fourth-adapter-is-anthropic-agents-sdk-accepted">ADR-026: Arc B Scope — Fourth Adapter is Anthropic Agents SDK (Accepted)<a class="headerlink" href="#adr-026-arc-b-scope-fourth-adapter-is-anthropic-agents-sdk-accepted" title="Permanent link">&para;</a></h1>
+<p><strong>Status</strong>: Accepted (R69, 2026-05-13 — promoted in-place from R68 Draft per R57 invariant; R75 amendment §5 codifies inter-method <code>state_after</code> contract)
+<strong>Date</strong>: 2026-05-13 (Drafted R68; Accepted R69)
+<strong>Deciders</strong>: chengfei867, Hermes Agent
+<strong>Supersedes</strong>: the preliminary Arc B candidate table in <a href="../ADR-023-phase-4-charter-skeleton/">ADR-023</a> §Arc B (R56 snapshot, superseded by R68 research)
+<strong>Depends on</strong>: <a href="../ADR-016-adapter-interface/">ADR-016</a> (adapter interface), <a href="../ADR-023-phase-4-charter-skeleton/">ADR-023</a> (Phase 4 charter, Arc B deferred until Arc A ships), <a href="../ADR-001-language/">ADR-001</a> (Python 3.11+ pin)
+<strong>Related</strong>: <a href="../ADR-017-autogen-adapter-sync-wrap/">ADR-017</a> (AutoGen sync-wrap), <a href="../ADR-021-crewai-adapter/">ADR-021</a> (CrewAI adapter), <a href="../ADR-022-crewai-version-pin-bump/">ADR-022</a> (CrewAI version pin bump)
+<strong>Feeds</strong>: <a href="../../design/fourth-adapter-landscape/">docs/design/fourth-adapter-landscape.md</a>, <a href="../../research/r68-arc-b-scope/">docs/research/r68-arc-b-scope.md</a>, <a href="../../research/r69-mcp-fork-lifecycle/">docs/research/r69-mcp-fork-lifecycle.md</a></p>
+<hr />
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
+<p>Arc A of Phase 4 shipped fully through v0.6.0 (slice 1-5 + item 2 fork-tree viz; see CONTEXT.md §5 R58-R67 history). Per <a href="../ADR-023-phase-4-charter-skeleton/">ADR-023</a> §Decision, Arc B (Ecosystem — fourth adapter + export surfaces) was explicitly deferred until Arc A shipped. That gate has now opened.</p>
+<p>R68 is a planning round (md-only, single-slot). Its job is to convert the ADR-023 Arc B charter sketch ("a fourth framework adapter, candidate table TBD") into a committable scope. The R68 research survey (<a href="../../research/r68-arc-b-scope/">docs/research/r68-arc-b-scope.md</a>) evaluated six candidates along nine axes; this ADR commits to a primary target and pre-authorises one fallback.</p>
+<h3 id="why-commit-now-r68-rather-than-defer">Why commit now (R68) rather than defer<a class="headerlink" href="#why-commit-now-r68-rather-than-defer" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Arc A is closed, Arc B is the ADR-023-blessed next active arc. Deferring means either idle cycles or bleeding into Arc C (plumbing, which has zero demand signal). ADR-023 §"Why Arc A over Arc B / Arc C" explicitly marks Arc C as demand-driven — it cannot be the next arc without external users showing up, and as of R68 there are zero.</li>
+<li>The R56→R57 lesson (charter skeleton → scope commit) applies here: a deferred decision is cheaper than a wrong one, but an <strong>over</strong>-deferred decision is a drift magnet. R68 is analogous to R57 (the moment Arc A was formally committed after R56's three-arcs framing).</li>
+<li><a href="../../research/r68-arc-b-scope/">R68 research</a> §2.1 finds <strong>Anthropic Agents SDK</strong> uniquely well-matched to Chronos's positioning (MCP-native shops, underserved by existing observability tools). The 2026-Q2 tailwind (MCP standardisation + Claude 3.7 Sonnet + MCP server ecosystem growth) is time-sensitive — delaying by a full quarter cedes ground to Langfuse/Phoenix.</li>
+</ol>
+<h3 id="whats-different-from-the-adr-023-snapshot">What's different from the ADR-023 snapshot<a class="headerlink" href="#whats-different-from-the-adr-023-snapshot" title="Permanent link">&para;</a></h3>
+<p>ADR-023 §Arc B table listed six candidates with "TBD" on event hooks and ADR-016 mapping difficulty. R68 research resolved:</p>
+<ul>
+<li><strong>OpenAI Swarm</strong> — declining relevance (OpenAI pivoted to Agents SDK). Reject.</li>
+<li><strong>OpenAI Assistants v2</strong> — proprietary, API-only, no real adapter surface. Reject.</li>
+<li><strong>Anthropic Agents SDK</strong> — rising fast, MCP-native, low-medium ADR-016 mapping difficulty. <strong>Promote to primary.</strong></li>
+<li><strong>Letta</strong> — ambitious but risky (server/client opacity). Defer to Arc B slice 2+.</li>
+<li><strong>LiveKit Agents</strong> — real-time voice niche. Defer indefinitely.</li>
+<li><strong>Generic OTel receiver</strong> — schema mismatch. Defer to Arc B slice 3+ as catch-all.</li>
+</ul>
+<p>Plus two newly-evaluated candidates not in ADR-023's original table:</p>
+<ul>
+<li><strong>OpenAI Agents SDK</strong> (Swarm successor, post-R56) — <strong>hot-backup</strong> if MCP fork-lifecycle turns out infeasible.</li>
+<li><strong>Pydantic AI</strong> — low-risk, narrow-scope. Candidate for Arc B slice 2.</li>
+</ul>
+<hr />
+<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
+<p><strong>Arc B slice 1 target: Anthropic Agents SDK (<code>claude-agent-sdk</code>).</strong> Five-round rollout R70-R74, bundled as v0.7.0. <strong>Pre-authorised fallback: OpenAI Agents SDK</strong> if the R69 risks spike exposes a blocker in MCP server fork-lifecycle (see §Fallback clause below).</p>
+<h3 id="1-primary-binding">1. Primary binding<a class="headerlink" href="#1-primary-binding" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Framework</strong>: Anthropic Agents SDK (<code>claude-agent-sdk-python</code>).</li>
+<li><strong>Adapter module</strong>: <code>src/chronos/adapters/anthropic_agents/</code> (sibling to <code>langgraph.py</code>, <code>autogen/</code>, <code>crewai/</code>).</li>
+<li><strong>Version pin</strong>: <code>claude-agent-sdk&gt;=0.1.80,&lt;1.0</code> (optional-dep in <code>pyproject.toml::[project.optional-dependencies].anthropic_agents</code>). R69 crystallised; floor chosen because <code>fork_session()</code> + <code>SessionStore</code> shipped well before 0.1.80; ceiling at next-major per <a href="../ADR-022-crewai-version-pin-bump/">ADR-022</a> precedent. See <a href="../../research/r69-mcp-fork-lifecycle/">r69</a> §3.</li>
+<li><strong>Event-capture pattern</strong>: Async iteration over the SDK's <code>Message</code> stream — either <code>query()</code> (stateless generator) or <code>ClaudeSDKClient.receive_response()</code> / <code>receive_messages()</code> (stateful client context-manager). No monkeypatch. Third verification of the "stream → log" pattern after LangGraph callbacks and CrewAI event bus. No ADR-016 revisions required.</li>
+<li><strong>Fork primitive</strong>: SDK-native <code>fork_session(session_id, up_to_message_id=...)</code> — a <strong>first-class transcript-level fork already shipped in 0.1.x</strong>. The adapter wraps it; no custom re-seed logic. MCP servers are per-CLI-subprocess (not per-session) so fork does not touch MCP state. See <a href="../../research/r69-mcp-fork-lifecycle/">r69</a> §1.</li>
+</ul>
+<h3 id="2-interface-fit">2. Interface fit<a class="headerlink" href="#2-interface-fit" title="Permanent link">&para;</a></h3>
+<p><a href="../ADR-016-adapter-interface/">ADR-016</a> <code>RecorderProtocol</code> and <code>AdapterProtocol</code> are unchanged. The new adapter implements:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">AnthropicAgentsRecorder</span><span class="p">:</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">store</span><span class="p">:</span> <span class="n">SqliteStore</span><span class="p">):</span> <span class="o">...</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">record</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">agent</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">thread_id</span><span class="p">,</span> <span class="n">task_description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ContextManager</span><span class="p">[</span><span class="n">RunRef</span><span class="p">]:</span> <span class="o">...</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">fork</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">agent</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">parent_run_id</span><span class="p">,</span> <span class="n">at_node_id</span><span class="p">,</span> <span class="n">overrides</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">child_thread_id</span><span class="p">,</span> <span class="n">reason</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">task_description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ContextManager</span><span class="p">[</span><span class="n">ForkRef</span><span class="p">]:</span> <span class="o">...</span>
+</span></code></pre></div>
+<p>Module-level <code>anthropic_agents_adapter: AdapterProtocol</code> per R32-B pattern (LangGraph and Linear precedent).</p>
+<p>Node schema (<a href="../ADR-003-sqlite-schema/">ADR-003</a>) and extractor contract (<a href="../ADR-015-extractor-contract-v2/">ADR-015</a>) require <strong>zero</strong> revisions — see <a href="../../design/fourth-adapter-landscape/">design</a> §5-§6. This is a pure-additive adapter; the "adapter-interface stability" claim post-ADR-016 holds for the fourth adapter, strengthening the R27 multi-framework risks doc's "the contract survives a fourth framework" empirical hypothesis.</p>
+<h3 id="3-release-strategy">3. Release strategy<a class="headerlink" href="#3-release-strategy" title="Permanent link">&para;</a></h3>
+<p>Five-round rollout (R70-R74), bundled as v0.7.0. Mirrors the CrewAI v0.4.0 cadence (R49-R55) but compressed:</p>
+<ul>
+<li><strong>R70</strong> — recorder core + duck-typed conformance tests.</li>
+<li><strong>R71</strong> — live-smoke (<code>tests/live/test_anthropic_agents_smoke.py</code>) with triple-skipif (<code>CHRONOS_LIVE</code> + <code>ANTHROPIC_AUTH_TOKEN</code> + SDK import guard).</li>
+<li><strong>R72</strong> — dogfood script + v0.7.0a1 alpha tag.</li>
+<li><strong>R73</strong> — fork primitive + fork live-smoke.</li>
+<li><strong>R74</strong> — v0.7.0 release cut per <code>chronos-release-pattern</code> skill (14th application).</li>
+</ul>
+<h3 id="4-fallback-clause-pre-authorised-swap">4. Fallback clause (pre-authorised swap)<a class="headerlink" href="#4-fallback-clause-pre-authorised-swap" title="Permanent link">&para;</a></h3>
+<p>If R69 risks spike concludes that MCP server state cannot be rewound cleanly during fork (Risk R1 in <a href="../../design/fourth-adapter-landscape/">design</a> §8), the R70-R74 rollout substitutes <strong>OpenAI Agents SDK</strong> for Anthropic Agents SDK with <strong>no additional ADR required</strong>. The rollout phases are identical, just swap framework name + SDK package + event-stream shape. This pre-authorisation prevents a round-level re-planning detour if the blocker materialises.</p>
+<p>Criteria for invoking the fallback (must meet ALL):</p>
+<ol>
+<li>R69 risks spike confirms no feasible Policy B (session re-seed) for MCP server lifecycle during fork.</li>
+<li>Policy A (fresh server on fork) is judged by R69 agent to materially degrade the Chronos value prop for MCP-heavy agents (e.g., forks lose &gt;30% of useful state).</li>
+<li>OpenAI Agents SDK <code>TracingProcessor</code> API is still stable at R69 (<code>openai-agents&gt;=X.Y</code> is shippable).</li>
+</ol>
+<p>If any criterion fails, stick with primary (Anthropic Agents SDK) and document the MCP limitation in the v0.7.0 release notes.</p>
+<h3 id="5-inter-method-contract-state_after-seed-coordinates-r75-amendment">5. Inter-method contract — <code>state_after</code> seed coordinates (R75 amendment)<a class="headerlink" href="#5-inter-method-contract-state_after-seed-coordinates-r75-amendment" title="Permanent link">&para;</a></h3>
+<p>The Anthropic Agents adapter's <code>record()</code> and <code>fork()</code> are joined by an
+<strong>implicit contract</strong> on the shape of <code>Node.state_after</code>. R74 implemented
+<code>fork()</code> against a contract that R70's <code>record()</code> happened to honour;
+this amendment makes the contract <strong>explicit</strong> so future refactors of
+either method cannot silently break the other.</p>
+<h4 id="contract-binding-from-r75-onwards">Contract (binding from R75 onwards)<a class="headerlink" href="#contract-binding-from-r75-onwards" title="Permanent link">&para;</a></h4>
+<p>When <code>AnthropicAgentsRecorder.record()</code> consumes an <code>AssistantMessage</code>
+or <code>ResultMessage</code> from the SDK message stream, it <strong>MUST</strong> stamp the
+following keys onto the resulting <code>Node.state_after</code> dict whenever the
+upstream message exposes them as non-None attributes:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Source</th>
+<th>Used by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>uuid</code></td>
+<td><code>msg.uuid</code></td>
+<td><code>fork()</code> as <code>up_to_message_id</code> anchor</td>
+</tr>
+<tr>
+<td><code>session_id</code></td>
+<td><code>msg.session_id</code></td>
+<td><code>fork()</code> as parent SDK session anchor</td>
+</tr>
+<tr>
+<td><code>stop_reason</code></td>
+<td><code>msg.stop_reason</code></td>
+<td>observability only (no fork dependency)</td>
+</tr>
+<tr>
+<td><code>total_cost_usd</code></td>
+<td><code>msg.total_cost_usd</code></td>
+<td>observability only</td>
+</tr>
+<tr>
+<td><code>duration_ms</code></td>
+<td><code>msg.duration_ms</code></td>
+<td>observability only</td>
+</tr>
+</tbody>
+</table>
+<p>Of these, <strong><code>uuid</code> and <code>session_id</code> are the fork-critical pair</strong>. If
+either is missing on the anchor node passed to <code>fork()</code>, the adapter
+raises <code>AdapterError("no SDK session_id …")</code> / <code>("no SDK message uuid
+…")</code>. <code>record()</code> MUST NOT silently drop them when the SDK exposes them.</p>
+<h4 id="why-must-and-not-should">Why "MUST" and not "SHOULD"<a class="headerlink" href="#why-must-and-not-should" title="Permanent link">&para;</a></h4>
+<p>R74 P0 probe disproved an R71 assumption that <code>fork_session()</code> required
+internal-API hooks; the actual integration was trivial because R70's
+<code>record()</code> had already (incidentally) captured the right seed
+coordinates. That was a happy accident. Codifying this now turns the
+accident into a contract — the next round that touches <code>record()</code> will
+see this section and not regress the field set.</p>
+<h4 id="test-enforcement">Test enforcement<a class="headerlink" href="#test-enforcement" title="Permanent link">&para;</a></h4>
+<p>Two unit tests in <code>tests/unit/test_adapter_anthropic_agents.py</code> enforce
+this contract independently of the fork tests:</p>
+<ul>
+<li><code>test_record_state_after_carries_seed_coordinates_for_assistant</code> — an
+  <code>AssistantMessage</code> with <code>uuid</code> + <code>session_id</code> populated on the SDK
+  side must produce a <code>Node</code> with both keys in <code>state_after</code>.</li>
+<li><code>test_record_state_after_carries_seed_coordinates_for_result</code> — same
+  assertion for <code>ResultMessage</code>.</li>
+</ul>
+<p>If a future refactor narrows the loop on lines 304-308 of <code>recorder.py</code>
+(e.g., removes <code>session_id</code> from the metadata-stamping list), these
+tests fail loudly <strong>before</strong> the fork integration tests do — preserving
+the R74 invariant: "no release-gating contract left untested between
+methods of the same module."</p>
+<h4 id="out-of-scope-for-this-contract">Out of scope for this contract<a class="headerlink" href="#out-of-scope-for-this-contract" title="Permanent link">&para;</a></h4>
+<ul>
+<li><code>UserMessage</code> / <code>SystemMessage</code> are explicitly <strong>NOT</strong> required to
+  carry <code>uuid</code> + <code>session_id</code> (the SDK does not stamp them on those
+  message classes pre-<code>AssistantMessage</code>); <code>fork()</code> correctly rejects
+  attempting to anchor on such nodes (<code>test_fork_rejects_anchor_without_session_id</code>).</li>
+<li>The remaining three observability-only keys (<code>stop_reason</code>,
+  <code>total_cost_usd</code>, <code>duration_ms</code>) are not part of the fork contract;
+  they MAY be removed without ADR amendment if a future SDK version
+  drops them upstream.</li>
+</ul>
+<h3 id="51-tool-round-trip-linkage-state_aftertool_use_id-r76-amendment-slice-3a">5.1 Tool round-trip linkage — <code>state_after.tool_use_id</code> (R76 amendment, slice 3a)<a class="headerlink" href="#51-tool-round-trip-linkage-state_aftertool_use_id-r76-amendment-slice-3a" title="Permanent link">&para;</a></h3>
+<p>Slice 3 of the Arc B v0.7.0 cut needs cross-Node SQL queries answering
+"which assistant tool-use Node generated this tool-result Node?". The
+underlying SDK already gives us the linkage: <code>ToolUseBlock.id</code> on the
+<code>AssistantMessage</code> side, <code>ToolResultBlock.tool_use_id</code> on the matching
+<code>UserMessage</code> side, byte-identical by SDK contract.</p>
+<p>R76 surfaces that linkage onto <code>Node.state_after['tool_use_id']</code>
+<strong>symmetrically on both sides</strong>. This is a public contract pin (not a
+schema change — <code>state_after</code> is a JSON bag — but a binding promise the
+recorder will not silently drop).</p>
+<h4 id="contract-binding-from-r76-onwards">Contract (binding from R76 onwards)<a class="headerlink" href="#contract-binding-from-r76-onwards" title="Permanent link">&para;</a></h4>
+<p>For every <code>Node</code> recorded by <code>AnthropicAgentsRecorder</code>:</p>
+<ul>
+<li>If the <code>Node</code> is an <code>AssistantMessage</code> whose <code>content</code> carries
+  <strong>exactly one</strong> <code>ToolUseBlock</code>, then <code>state_after['tool_use_id']</code> MUST
+  equal that <code>ToolUseBlock.id</code> (a non-empty string), provided the SDK
+  populates <code>id</code> (defended with <code>isinstance(..., str) and id</code>).</li>
+<li>If the <code>Node</code> is a <code>UserMessage</code> whose <code>content</code> carries <strong>exactly
+  one</strong> <code>ToolResultBlock</code>, then <code>state_after['tool_use_id']</code> MUST equal
+  that <code>ToolResultBlock.tool_use_id</code> under the same guard.</li>
+<li>A pair of linked Nodes (one tool-use, one tool-result) MUST yield
+  byte-identical values for <code>state_after['tool_use_id']</code> — this is the
+  JOIN key for slice-3 queries.</li>
+<li>A <code>UserMessage</code> carrying an <strong>orphan</strong> <code>ToolResultBlock</code> (no preceding
+  <code>AssistantMessage(ToolUseBlock)</code> with matching id, e.g. a resumed /
+  forked session entry) MUST NOT cause <code>record()</code> to fail; the result
+  Node still surfaces <code>state_after['tool_use_id']</code> and downstream
+  consumers detect the orphan via empty JOIN result. Asymmetric
+  tolerance: missing anchor is observability loss, not a record()
+  failure.</li>
+</ul>
+<h4 id="test-enforcement_1">Test enforcement<a class="headerlink" href="#test-enforcement_1" title="Permanent link">&para;</a></h4>
+<p>Three unit tests in <code>tests/unit/test_adapter_anthropic_agents.py</code> §6.2
+pin this contract:</p>
+<ul>
+<li><code>test_record_tool_use_block_persists_id</code> — use side</li>
+<li><code>test_record_tool_result_block_links_to_use</code> — both sides + JOIN equality</li>
+<li><code>test_unmatched_tool_result_does_not_break_record</code> — orphan tolerance</li>
+</ul>
+<p>Any future change to the <code>state_after</code> stamping logic that breaks these
+tests is an ADR-026 §5.1 contract violation and requires either a new
+amendment or an explicit ADR superseding §5.1.</p>
+<h4 id="out-of-scope-for-51">Out of scope for §5.1<a class="headerlink" href="#out-of-scope-for-51" title="Permanent link">&para;</a></h4>
+<ul>
+<li>Multi-block messages (&gt;1 <code>ToolUseBlock</code> or &gt;1 <code>ToolResultBlock</code> in a
+  single message) do NOT receive a top-level singular <code>tool_use_id</code> —
+  resolved by §5.1.1 below (R77, slice 3a-P1) which surfaces an ordered
+  <code>tool_use_ids</code> (plural) list instead. Singular and plural fields are
+  mutually exclusive per Node.</li>
+<li>No new column / no sidecar / no Node graph edge — the JSON-bag
+  approach is sufficient for slice-3 SQL queries
+  (<code>state_after-&gt;&gt;'tool_use_id'</code>).</li>
+</ul>
+<h3 id="511-multi-block-tool-linkage-state_aftertool_use_ids-r77-amendment-slice-3a-p1">5.1.1 Multi-block tool linkage — <code>state_after.tool_use_ids</code> (R77 amendment, slice 3a-P1)<a class="headerlink" href="#511-multi-block-tool-linkage-state_aftertool_use_ids-r77-amendment-slice-3a-p1" title="Permanent link">&para;</a></h3>
+<p>§5.1 covers the 1:1 single-block case. R77 extends the contract to
+multi-block messages — an <code>AssistantMessage</code> carrying &gt;1 <code>ToolUseBlock</code>
+(batched parallel tool dispatch) or a <code>UserMessage</code> carrying &gt;1
+<code>ToolResultBlock</code> (paired results). The SDK preserves block order, so
+the linkage is unambiguous: <code>use[i] ↔ result[i]</code> by index across the
+two messages.</p>
+<h4 id="contract-binding-from-r77-onwards">Contract (binding from R77 onwards)<a class="headerlink" href="#contract-binding-from-r77-onwards" title="Permanent link">&para;</a></h4>
+<p>For every <code>Node</code> recorded by <code>AnthropicAgentsRecorder</code>:</p>
+<ul>
+<li>If the <code>Node</code> is an <code>AssistantMessage</code> whose <code>content</code> carries
+  <strong>more than one</strong> <code>ToolUseBlock</code>, then <code>state_after['tool_use_ids']</code>
+  MUST be a list of <code>ToolUseBlock.id</code> values <strong>in source block order</strong>
+  (NOT sorted, NOT deduplicated), filtered by the same defensive guard
+  (<code>isinstance(..., str) and id</code>) used in §5.1. If all ids are filtered
+  out, the key is omitted (parallels §5.1's missing-anchor tolerance).</li>
+<li>If the <code>Node</code> is a <code>UserMessage</code> whose <code>content</code> carries <strong>more than
+  one</strong> <code>ToolResultBlock</code>, then <code>state_after['tool_use_ids']</code> MUST be a
+  list of <code>ToolResultBlock.tool_use_id</code> values in source block order
+  under the same guard.</li>
+<li>A pair of linked Nodes (one multi-tool-use, one multi-tool-result)
+  MUST yield byte-identical <code>state_after['tool_use_ids']</code> lists — this
+  is the JOIN keyset for slice-3 queries expanding 1:N via
+  <code>json_each(state_after-&gt;&gt;'tool_use_ids')</code>.</li>
+<li><strong>Mutual exclusivity (binding):</strong> singular <code>state_after['tool_use_id']</code>
+  (§5.1) and plural <code>state_after['tool_use_ids']</code> (§5.1.1) MUST NEVER
+  coexist on the same Node. <code>len == 1 → singular only</code>;
+  <code>len &gt; 1 → plural only</code>. This guarantees consumers can branch
+  unambiguously and SQL <code>COALESCE</code> patterns work without de-dup.</li>
+</ul>
+<h4 id="test-enforcement_2">Test enforcement<a class="headerlink" href="#test-enforcement_2" title="Permanent link">&para;</a></h4>
+<p>Three unit tests in <code>tests/unit/test_adapter_anthropic_agents.py</code>
+§6.2.1 pin this contract:</p>
+<ul>
+<li><code>test_record_multi_tool_use_block_persists_ids</code> — use side, plural
+  set, singular absent</li>
+<li><code>test_record_multi_tool_result_block_persists_ids</code> — both sides plural</li>
+<li>byte-identical JOIN keyset</li>
+<li><code>test_record_mixed_count_keeps_singular_and_plural_separate</code> — stream
+  mixing single-block and multi-block messages keeps the two contracts
+  cleanly separate per Node (regression guard against future collapse)</li>
+</ul>
+<h4 id="consumer-pattern-slice-3-sql">Consumer pattern (slice 3 SQL)<a class="headerlink" href="#consumer-pattern-slice-3-sql" title="Permanent link">&para;</a></h4>
+<p>Linked-Node JOIN expands cleanly with <code>json_each</code> regardless of
+block-count cardinality:</p>
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1">-- Pair single-block use with single-block result</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="k">SELECT</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">use_node</span><span class="p">,</span><span class="w"> </span><span class="n">r</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">result_node</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="k">FROM</span><span class="w"> </span><span class="n">nodes</span><span class="w"> </span><span class="n">u</span><span class="w"> </span><span class="k">JOIN</span><span class="w"> </span><span class="n">nodes</span><span class="w"> </span><span class="n">r</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="k">ON</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">state_after</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;tool_use_id&#39;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">r</span><span class="p">.</span><span class="n">state_after</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;tool_use_id&#39;</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="k">WHERE</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">state_after</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;tool_use_id&#39;</span><span class="w"> </span><span class="k">IS</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">;</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="c1">-- Pair multi-block use[i] with multi-block result[i]</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="k">SELECT</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">use_node</span><span class="p">,</span><span class="w"> </span><span class="n">r</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">result_node</span><span class="p">,</span><span class="w"> </span><span class="n">ju</span><span class="p">.</span><span class="n">value</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">tu_id</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="k">FROM</span><span class="w"> </span><span class="n">nodes</span><span class="w"> </span><span class="n">u</span><span class="p">,</span><span class="w"> </span><span class="n">json_each</span><span class="p">(</span><span class="n">u</span><span class="p">.</span><span class="n">state_after</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;tool_use_ids&#39;</span><span class="p">)</span><span class="w"> </span><span class="n">ju</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="k">JOIN</span><span class="w"> </span><span class="n">nodes</span><span class="w"> </span><span class="n">r</span><span class="p">,</span><span class="w"> </span><span class="n">json_each</span><span class="p">(</span><span class="n">r</span><span class="p">.</span><span class="n">state_after</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;tool_use_ids&#39;</span><span class="p">)</span><span class="w"> </span><span class="n">jr</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">  </span><span class="k">ON</span><span class="w"> </span><span class="n">ju</span><span class="p">.</span><span class="n">value</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">jr</span><span class="p">.</span><span class="n">value</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">ju</span><span class="p">.</span><span class="k">key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">jr</span><span class="p">.</span><span class="k">key</span><span class="w">  </span><span class="c1">-- index-aligned pair</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="k">WHERE</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">node_name</span><span class="w"> </span><span class="k">LIKE</span><span class="w"> </span><span class="s1">&#39;AssistantMessage%&#39;</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">r</span><span class="p">.</span><span class="n">node_name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;UserMessage&#39;</span><span class="p">;</span>
+</span></code></pre></div>
+<h4 id="out-of-scope-for-511">Out of scope for §5.1.1<a class="headerlink" href="#out-of-scope-for-511" title="Permanent link">&para;</a></h4>
+<ul>
+<li>Asymmetric block counts (e.g. 3 ToolUseBlocks but 2 ToolResultBlocks
+  in the next UserMessage) — the per-Node contract still holds (each
+  side carries its own ordered list); cross-message asymmetry is
+  surfaced as a JOIN gap, same as the §5.1 orphan case. No special
+  handling at recorder level.</li>
+<li>Cross-turn batching (one Assistant batched-use spanning multiple
+  subsequent UserMessage results) — not observed in current SDK
+  traffic; reserved for a future slice if it materialises.</li>
+</ul>
+<h3 id="52-fork-with-tool-substitution-contract-r79-amendment-slice-3b">5.2 Fork-with-tool-substitution contract (R79 amendment, slice 3b)<a class="headerlink" href="#52-fork-with-tool-substitution-contract-r79-amendment-slice-3b" title="Permanent link">&para;</a></h3>
+<p><strong>Status: Implemented (R80).</strong> Sibling §5.3 (R81 amendment, slice 3c) extends this contract to result-side substitution.</p>
+<p>Slice 3a (R76 §5.1 + R77 §5.1.1) gave us <em>anchors</em> for the tool-use ↔
+tool-result round-trip. Slice 3b is what those anchors are <em>for</em>:
+fork a recorded run at a specific node and <strong>rewrite the tool input</strong>
+that the child branch will see, before the agent reasons again.</p>
+<p>This is the load-bearing user story for "agent time-travel debugger" —
+the user spotted a bad tool call mid-run, wants to rewind, change the
+input, and watch how downstream reasoning diverges. Without §5.2 the
+fork primitive can only re-issue an <em>unedited</em> transcript (R74).</p>
+<h4 id="contract">Contract<a class="headerlink" href="#contract" title="Permanent link">&para;</a></h4>
+<p><code>AnthropicAgentsRecorder.fork()</code> gains one optional keyword argument:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">fork</span><span class="p">(</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="bp">self</span><span class="p">,</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="n">runtime</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="o">*</span><span class="p">,</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">parent_run_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="n">at_node_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="n">overrides</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="n">tool_input_overrides</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>  <span class="c1"># NEW</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    <span class="n">child_thread_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>    <span class="n">reason</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>    <span class="n">task_description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>    <span class="n">tags</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">ForkRef</span><span class="p">]:</span>
+</span></code></pre></div>
+<p><code>tool_input_overrides</code> is a mapping <code>tool_use_id → new_input_dict</code>:</p>
+<ul>
+<li><strong>Key</strong>: a <code>tool_use_id</code> string. MUST already exist in the parent run's
+  use-side keyset (i.e. some <code>AssistantMessage*</code> Node in <code>parent_run_id</code>
+  declares it via <code>state_after['tool_use_id']</code> (R76 §5.1) or as an
+  element of <code>state_after['tool_use_ids']</code> (R77 §5.1.1)).</li>
+<li><strong>Value</strong>: a JSON-serialisable dict to substitute as the
+  <code>ToolUseBlock.input</code> payload in the child branch when that block is
+  re-emitted.</li>
+</ul>
+<p>Both singular (1:1) and plural (1:N) §5.1 / §5.1.1 anchors are valid
+keys — slice 3b is per-id granular, NOT per-Node. Replacing a single
+element of a multi-block <code>tool_use_ids</code> list while leaving siblings
+verbatim is supported and is the primary debugging workflow.</p>
+<p><code>tool_input_overrides=None</code> (default) and <code>tool_input_overrides={}</code>
+(empty mapping) are both <strong>identity</strong> forks — semantically equivalent
+to R74 fork() with no §5.2 surface. This keeps R74 callers source-stable.</p>
+<h4 id="stamp-on-child-nodes">Stamp on child Nodes<a class="headerlink" href="#stamp-on-child-nodes" title="Permanent link">&para;</a></h4>
+<p>When the child branch's first AssistantMessage Node carrying an
+overridden <code>ToolUseBlock</code> is recorded:</p>
+<ul>
+<li><code>state_after['tool_use_id']</code> (or matching list element of
+  <code>state_after['tool_use_ids']</code>) — <strong>unchanged</strong> from parent. The
+  binding contract for the JOIN anchor is preserved across the fork.</li>
+<li><code>state_after['tool_input']</code> — <strong>new</strong>, set to the substituted input
+  dict. Absent on Nodes that did NOT have their input rewritten (so
+  consumers can <code>WHERE state_after-&gt;&gt;'tool_input' IS NOT NULL</code> to
+  enumerate substituted calls in a child run).</li>
+</ul>
+<p>For multi-block messages where only some <code>tool_use_ids</code> were
+overridden, <code>state_after['tool_input']</code> is a list aligned by index
+with <code>tool_use_ids</code>, with <code>null</code> entries for verbatim blocks.</p>
+<h4 id="validation-fail-fast-no-silent-drop">Validation (fail-fast, no silent drop)<a class="headerlink" href="#validation-fail-fast-no-silent-drop" title="Permanent link">&para;</a></h4>
+<p><code>fork()</code> MUST raise <code>AdapterError</code> <em>before</em> delegating to
+<code>claude_agent_sdk.fork_session()</code> if any key in <code>tool_input_overrides</code>:</p>
+<ol>
+<li>Is not a string, or</li>
+<li>Does not appear in the union of tool-use ids declared by any
+   <code>AssistantMessage*</code> Node in <code>parent_run_id</code>'s use-side keyset
+   (<code>_ids_from_state_after</code> over <code>_is_use_side</code> Nodes — same shape as
+   <code>chronos.queries.tool_linkage._ids_from_state_after</code>), or</li>
+<li>Refers to a <code>tool_use_id</code> that is <em>orphan on the use side</em> (i.e.
+   appears in <code>chronos.queries.tool_linkage.unmatched_tool_uses(store,
+   parent_run_id)</code> — the use side has no matching result yet so
+   replaying past it is a category error). Slice 3b pre-condition:
+   the use→result round-trip must have <em>closed</em> in the parent run.</li>
+</ol>
+<p>Validation 3 is the load-bearing slice-3a→slice-3b coupling: R78's
+<code>unmatched_tool_uses</code> helper exists <em>for this check</em>. Consumers who
+want to fork mid-tool-call must wait for the result Node first or use
+a different primitive.</p>
+<p>The substituted <code>value</code> payload is validated for JSON-serialisability
+only (no schema match against the original tool's input shape — that
+is the agent's / tool server's responsibility).</p>
+<h4 id="test-enforcement_3">Test enforcement<a class="headerlink" href="#test-enforcement_3" title="Permanent link">&para;</a></h4>
+<p>R79 lands four <code>pytest.mark.xfail(strict=True, reason="slice 3b — R80")</code>
+tests in <code>tests/unit/test_anthropic_agents_fork_tool_override.py</code>:</p>
+<ol>
+<li><code>test_fork_without_overrides_is_identity</code> — <code>tool_input_overrides=
+   None</code> and <code>={}</code> produce a child run byte-identical to R74 fork().</li>
+<li><code>test_fork_with_override_changes_downstream_input</code> — given a
+   recorded parent with one <code>ToolUseBlock</code> keyed by <code>tool_use_id="t1"</code>,
+   <code>fork(..., tool_input_overrides={"t1": {"x": 99}})</code> produces a
+   child run whose first AssistantMessage Node has
+   <code>state_after['tool_input'] == {"x": 99}</code> and unchanged
+   <code>state_after['tool_use_id'] == "t1"</code>.</li>
+<li><code>test_fork_with_override_of_unknown_id_raises</code> — overriding a
+   <code>tool_use_id</code> absent from the parent's use-side keyset raises
+   <code>AdapterError</code> <em>before</em> the SDK call.</li>
+<li><code>test_fork_with_override_of_orphan_use_id_raises</code> — overriding a
+   <code>tool_use_id</code> returned by <code>unmatched_tool_uses(store, parent_run_id)</code>
+   raises <code>AdapterError</code> (slice-3a→3b coupling pre-condition).</li>
+</ol>
+<p>Strict-xfail makes R80 implementation a forcing function: when the
+implementation lands, every test flips to passing → strict-xfail
+fires → R80 round agent removes the markers as part of the same
+commit.</p>
+<p>R79 may optionally land a no-op pass-through in <code>recorder.py</code> — accept
+the kwarg, raise <code>NotImplementedError("R80: §5.2 slice 3b not yet
+implemented")</code> when non-empty — so the tests fail with
+<code>NotImplementedError</code> rather than <code>TypeError: unexpected keyword
+argument</code>, narrowing R80's diff to a single function body.</p>
+<h4 id="consumer-sql-pattern">Consumer SQL pattern<a class="headerlink" href="#consumer-sql-pattern" title="Permanent link">&para;</a></h4>
+<p>Once R80 ships, a consumer (dashboard / CLI / dogfood script) can
+enumerate substituted tool calls in a child run with:</p>
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">SELECT</span><span class="w"> </span><span class="n">n</span><span class="p">.</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">.</span><span class="n">step_index</span><span class="p">,</span><span class="w"> </span><span class="n">json_extract</span><span class="p">(</span><span class="n">n</span><span class="p">.</span><span class="n">state_after</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;$.tool_use_id&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">tu_id</span><span class="p">,</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">       </span><span class="n">json_extract</span><span class="p">(</span><span class="n">n</span><span class="p">.</span><span class="n">state_after</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;$.tool_input&#39;</span><span class="p">)</span><span class="w">  </span><span class="k">AS</span><span class="w"> </span><span class="n">new_input</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="k">FROM</span><span class="w"> </span><span class="n">nodes</span><span class="w"> </span><span class="n">n</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="k">WHERE</span><span class="w"> </span><span class="n">n</span><span class="p">.</span><span class="n">run_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">:</span><span class="n">child_run_id</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">json_extract</span><span class="p">(</span><span class="n">n</span><span class="p">.</span><span class="n">state_after</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;$.tool_input&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">IS</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">n</span><span class="p">.</span><span class="n">step_index</span><span class="p">;</span>
+</span></code></pre></div>
+<p>Plural form for multi-block child Nodes:</p>
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">SELECT</span><span class="w"> </span><span class="n">n</span><span class="p">.</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">.</span><span class="n">step_index</span><span class="p">,</span><span class="w"> </span><span class="n">je</span><span class="p">.</span><span class="n">value</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">tu_id</span><span class="p">,</span><span class="w"> </span><span class="n">ji</span><span class="p">.</span><span class="n">value</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">new_input</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="k">FROM</span><span class="w"> </span><span class="n">nodes</span><span class="w"> </span><span class="n">n</span><span class="p">,</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">     </span><span class="n">json_each</span><span class="p">(</span><span class="n">n</span><span class="p">.</span><span class="n">state_after</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;$.tool_use_ids&#39;</span><span class="p">)</span><span class="w"> </span><span class="n">je</span><span class="p">,</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">     </span><span class="n">json_each</span><span class="p">(</span><span class="n">n</span><span class="p">.</span><span class="n">state_after</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;$.tool_input&#39;</span><span class="p">)</span><span class="w">   </span><span class="n">ji</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="k">WHERE</span><span class="w"> </span><span class="n">n</span><span class="p">.</span><span class="n">run_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">:</span><span class="n">child_run_id</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">je</span><span class="p">.</span><span class="k">key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ji</span><span class="p">.</span><span class="k">key</span><span class="w">             </span><span class="c1">-- index-aligned per §5.1.1</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">ji</span><span class="p">.</span><span class="n">value</span><span class="w"> </span><span class="k">IS</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">n</span><span class="p">.</span><span class="n">step_index</span><span class="p">,</span><span class="w"> </span><span class="n">je</span><span class="p">.</span><span class="k">key</span><span class="p">;</span>
+</span></code></pre></div>
+<h4 id="out-of-scope-for-52">Out of scope for §5.2<a class="headerlink" href="#out-of-scope-for-52" title="Permanent link">&para;</a></h4>
+<ul>
+<li>Substituting <code>ToolResultBlock.content</code> (i.e. faking a tool's
+  <em>output</em> without invoking the real tool). Reserved for slice 3c +
+  ADR-026 §5.3 (MCP passthrough scoping). §5.2 only edits <em>inputs</em>;
+  the agent and tool server still execute normally.</li>
+<li>Multi-step substitutions across more than one Node in the same fork
+  call — supported (the mapping is keyset-wide), but consumers should
+  prefer one fork-per-edit for cleaner debugging trees.</li>
+<li>HTTP / CLI surface — <code>tool_input_overrides</code> lands on the recorder
+  Python API only in R80. CLI wiring is a separate slice (3d?).</li>
+<li><code>chronos.queries.tool_linkage</code> promotion to a public API. Slice 3b
+  uses it internally for validation; the package stays internal until
+  a dedicated ADR formalises consumer-facing query helpers.</li>
+</ul>
+<h3 id="53-fork-with-tool-result-substitution-contract-r81-amendment-slice-3c">5.3 Fork-with-tool-result-substitution contract (R81 amendment, slice 3c)<a class="headerlink" href="#53-fork-with-tool-result-substitution-contract-r81-amendment-slice-3c" title="Permanent link">&para;</a></h3>
+<p><strong>Status: Implemented (R82).</strong></p>
+<p>Slice 3b (R80 §5.2) gave the user time-travel power on the <strong>input</strong> half
+of the tool round-trip: rewrite what the agent <em>asks</em> the tool. Slice 3c
+is the symmetric mirror on the <strong>output</strong> half: rewrite what the agent
+<em>gets back</em> from the tool, without re-invoking the real tool. This is
+the second load-bearing user story for the time-travel debugger — "the
+real tool is non-deterministic / expensive / no longer reachable; replay
+the agent's reasoning under a hypothetical tool result."</p>
+<p>§5.2 and §5.3 are sibling-extensions, not supersessions: a single
+<code>fork()</code> call MAY carry both <code>tool_input_overrides</code> and
+<code>tool_result_overrides</code> simultaneously (orthogonal keyspaces — use-side
+vs result-side). The two override mappings touch disjoint Node sides and
+disjoint <code>state_after</code> keys.</p>
+<h4 id="contract_1">Contract<a class="headerlink" href="#contract_1" title="Permanent link">&para;</a></h4>
+<p><code>AnthropicAgentsRecorder.fork()</code> gains one further optional keyword:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">fork</span><span class="p">(</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    <span class="bp">self</span><span class="p">,</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>    <span class="n">runtime</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="o">*</span><span class="p">,</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    <span class="n">parent_run_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>    <span class="n">at_node_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>    <span class="n">child_thread_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>    <span class="n">task_description</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>    <span class="n">tool_input_overrides</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>  <span class="c1"># §5.2</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>    <span class="n">tool_result_overrides</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>            <span class="c1"># §5.3 NEW</span>
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">ForkRef</span><span class="p">]:</span> <span class="o">...</span>
+</span></code></pre></div>
+<ul>
+<li><strong>Key</strong>: <code>tool_use_id</code> (the same JOIN anchor §5.1 / §5.1.1 stamp on
+  both sides). The mapping selects <em>which</em> tool round-trip to rewrite
+  the result for; the value supplies the substitute payload.</li>
+<li><strong>Value</strong>: an arbitrary JSON-serialisable Python object — typically
+  a <code>str</code> (Anthropic's most common <code>ToolResultBlock.content</code> shape) or
+  a list of content blocks (<code>[{"type": "text", "text": "..."}]</code>). The
+  recorder does not interpret the value beyond persistence; downstream
+  the SDK / agent code surfaces it verbatim.</li>
+<li><strong>Identity semantics</strong>: <code>None</code> and <code>{}</code> are both pure no-ops —
+  byte-identical to a §5.2-only / R74-only fork. Empty mapping does
+  <em>not</em> trigger any new code path; it short-circuits at the same <code>is
+  None</code>-style guard the R80 §5.2 implementation uses for its own
+  overrides (see <code>recorder.py:867</code>, <code>self._fork_overrides = ... or
+  None</code>).</li>
+</ul>
+<h4 id="validation-mirrors-52-runs-before-the-sdk-call">Validation (mirrors §5.2; runs <em>before</em> the SDK call)<a class="headerlink" href="#validation-mirrors-52-runs-before-the-sdk-call" title="Permanent link">&para;</a></h4>
+<p>When <code>tool_result_overrides</code> is non-empty, the recorder validates each
+key fail-fast. Errors are raised synchronously as <code>AdapterError</code>
+(consistent with §5.2 #1-#3) and the SDK fork is never invoked.</p>
+<ol>
+<li><strong>Key-type</strong>: key must be <code>str</code>. Non-<code>str</code> → <code>AdapterError</code> quoting
+   <code>type(key).__name__</code>.</li>
+<li><strong>Result-side keyset membership</strong>: key must appear in the union of
+   tool-use ids declared by <em>result-side</em> Nodes in <code>parent_run_id</code> —
+   i.e. <code>_is_result_side(n)</code> Nodes (UserMessage carrying ToolResultBlock
+   per §5.1 singular form, or any element of §5.1.1 plural
+   <code>state_after['tool_use_ids']</code>). An id present <em>only</em> on use-side
+   (orphan use, no matching result yet) is rejected here as "not in
+   result-side keyset" — slice-3a→3c coupling pre-condition (round-trip
+   must close in parent run).</li>
+<li><strong>No double-substitution</strong>: a key MUST NOT also appear in
+   <code>tool_input_overrides</code> — overriding both the input and the result
+   for the same <code>tool_use_id</code> is contradictory (rewriting the input
+   implies the agent re-asks the tool with new input, but rewriting the
+   result implies the tool was never re-invoked). <code>AdapterError</code> quoting
+   the conflicting id.</li>
+</ol>
+<p>Note the asymmetry vs §5.2: §5.2 validates against the <em>use-side</em>
+keyset (where <code>ToolUseBlock.id</code> was declared) and rejects orphan use-ids
+that haven't received a matching result; §5.3 validates against the
+<em>result-side</em> keyset (where <code>ToolResultBlock.tool_use_id</code> was declared).
+A round-trip that closed in the parent passes both; a half-open
+round-trip is rejected on whichever side the user tried to rewrite.</p>
+<h4 id="child-side-stamp">Child-side stamp<a class="headerlink" href="#child-side-stamp" title="Permanent link">&para;</a></h4>
+<p>When a child run's translated Node carries a <code>ToolResultBlock</code> whose
+<code>tool_use_id</code> matches an override key, the recorder writes the
+substitute content into <code>state_after</code>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">state_after</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>    <span class="s2">&quot;tool_use_id&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;unchanged JOIN anchor&gt;&quot;</span><span class="p">,</span>  <span class="c1"># §5.1 — preserved verbatim</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>    <span class="s2">&quot;tool_result_content&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">override</span> <span class="n">value</span><span class="o">&gt;</span><span class="p">,</span>   <span class="c1"># §5.3 NEW</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>    <span class="c1"># ... any other §5 keys (tool_use_ids plural form per §5.1.1) ...</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="p">}</span>
+</span></code></pre></div>
+<p>For multi-block result Nodes (§5.1.1 plural form), the stamp follows
+§5.2's index-aligned shape: <code>state_after['tool_result_contents']</code> is
+an ordered list whose <code>i</code>-th entry is either the original
+<code>ToolResultBlock.content</code> (no override matched id <code>i</code>) or the override
+value (override matched). Mutually exclusive with the singular form,
+same <code>len==1 → singular only / len&gt;1 → plural only</code> rule as §5.1.1.</p>
+<p>JOIN anchors <code>tool_use_id</code> (singular) and <code>tool_use_ids</code> (plural) are
+preserved byte-for-byte — slice-3 SQL recipes still work; only the
+<em>payload</em> fields are overridden.</p>
+<h4 id="out-of-scope-slice-3c">Out of scope (slice 3c)<a class="headerlink" href="#out-of-scope-slice-3c" title="Permanent link">&para;</a></h4>
+<ul>
+<li>HTTP / CLI surface — <code>tool_result_overrides</code> lands on the recorder
+  Python API only in R82. CLI wiring is a later slice.</li>
+<li>Multi-step result substitutions across nested forks (overriding a
+  tool result whose effect propagates through <em>another</em> fork). Each
+  fork in a chain carries its own independent <code>tool_result_overrides</code>;
+  no transitive bookkeeping.</li>
+<li>MCP passthrough scoping — <code>tool_result_overrides</code> applies uniformly
+  regardless of whether the originating tool was a built-in or an MCP
+  server tool. MCP-aware filtering is reserved for a future slice if
+  it surfaces a real need.</li>
+<li>Streaming / partial substitution — the override value replaces the
+  <em>entire</em> <code>ToolResultBlock.content</code> payload at translation time; we do
+  not rewrite individual content blocks within a multi-block result.</li>
+</ul>
+<h4 id="sql-recipe-consumer-side-enumeration">SQL recipe (consumer-side enumeration)<a class="headerlink" href="#sql-recipe-consumer-side-enumeration" title="Permanent link">&para;</a></h4>
+<p>To list every result-substituted call in a child run:</p>
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">SELECT</span><span class="w"> </span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">kind</span><span class="p">,</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">       </span><span class="n">json_extract</span><span class="p">(</span><span class="n">state_after</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;$.tool_use_id&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">tu_id</span><span class="p">,</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">       </span><span class="n">json_extract</span><span class="p">(</span><span class="n">state_after</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;$.tool_result_content&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">new_content</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="k">FROM</span><span class="w"> </span><span class="n">nodes</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="k">WHERE</span><span class="w"> </span><span class="n">run_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">?</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">json_extract</span><span class="p">(</span><span class="n">state_after</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;$.tool_result_content&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">IS</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">;</span>
+</span></code></pre></div>
+<p>Multi-block (§5.1.1 plural) consumers swap to <code>json_each</code> over
+<code>tool_result_contents</code>. Both forms are documented alongside §5.1.1's
+existing recipe.</p>
+<h4 id="test-enforcement_4">Test enforcement<a class="headerlink" href="#test-enforcement_4" title="Permanent link">&para;</a></h4>
+<p>R81 ships a four-test scaffold (<code>tests/unit/test_anthropic_agents_fork_tool_result_override.py</code>):</p>
+<ol>
+<li><code>test_fork_without_result_overrides_is_identity</code> — <code>None</code> and <code>{}</code>
+   produce a child run byte-identical to R74 / R80 fork(). <strong>EXPECTED
+   PASS</strong> on R81 (no-op pass-through).</li>
+<li><code>test_fork_with_result_override_changes_downstream_result</code> —
+   overriding a single <code>tool_use_id</code> rewrites
+   <code>state_after['tool_result_content']</code> on the child Node while
+   preserving <code>state_after['tool_use_id']</code>. <strong>xfail strict (R82)</strong>.</li>
+<li><code>test_fork_with_result_override_of_unknown_id_raises</code> — overriding
+   an id absent from the parent's <em>result-side</em> keyset raises
+   <code>AdapterError</code> <em>before</em> the SDK call (validation #2). <strong>xfail strict
+   (R82)</strong>.</li>
+<li><code>test_fork_with_result_override_collides_with_input_override_raises</code>
+   — same id in both <code>tool_input_overrides</code> and <code>tool_result_overrides</code>
+   raises <code>AdapterError</code> (validation #3). <strong>xfail strict (R82)</strong>.</li>
+</ol>
+<p>Strict-xfail makes R82 a forcing function: when the implementation
+lands, all three xfail tests flip to passing → strict-xfail trips →
+R82 commit removes the markers in the same diff. Same forcing-function
+discipline as R76→R77 §5.1.1, R79→R80 §5.2.</p>
+<h3 id="6-what-arc-b-slice-2-looks-like">6. What Arc B slice 2+ looks like<a class="headerlink" href="#6-what-arc-b-slice-2-looks-like" title="Permanent link">&para;</a></h3>
+<p>After v0.7.0 ships:</p>
+<ul>
+<li><strong>Arc B slice 2 (v0.8.0)</strong>: One of Pydantic AI or Letta. Decision at R74 retro.</li>
+<li><strong>Arc B slice 3+ (TBD)</strong>: Generic OTel receiver, Jupyter integration, Parquet export. Demand-driven; may slip into Arc C cohort.</li>
+</ul>
+<p>None of these bind this ADR. ADR-026 only commits Arc B slice 1.</p>
+<hr />
+<h2 id="acceptance-criteria-for-adr-026-accepted-promotion">Acceptance criteria (for ADR-026 Accepted promotion)<a class="headerlink" href="#acceptance-criteria-for-adr-026-accepted-promotion" title="Permanent link">&para;</a></h2>
+<p>Per <a href="../ADR-016-adapter-interface/">ADR-016</a> R1-R4 gates (applied here for the fourth adapter):</p>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> <strong>AC-1</strong> — Adapter implements <code>RecorderProtocol</code> and <code>AdapterProtocol</code>; conformance tests green. <em>Closed R71 (initial impl) + R74 (real-fork wiring) + R76/R77 + R80 + R82 (override variants). Conformance suite at <code>tests/unit/test_adapter_anthropic_agents.py</code> + R76/R77/R80/R82 sibling files; 631/7/0/0 baseline at R83.</em></li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> <strong>AC-2</strong> — Live-smoke records one multi-turn conversation with ≥1 MCP tool; verify node kinds + usage extraction. <em>Closed in R85 (v0.7.0 GA-gate): <code>scripts/dogfood/arc_b_slice_3_mcp.py</code> + <code>tests/live/test_anthropic_agents_mcp_smoke.py</code> drive the real OneAPI relay (<code>Claude Sonnet 4.6</code>) end-to-end with an in-process SDK MCP server (<code>create_sdk_mcp_server</code>, no Node.js subprocess required). Verified invariants: run.status=COMPLETED, AssistantMessage(ToolUseBlock) recorded with <code>state_after['tool_use_id']</code>, UserMessage(ToolResultBlock) recorded with matching <code>tool_use_id</code> (R76 ADR-026 §5.1 linkage contract), and final TextBlock contains the tool result. </em><em>Note</em><em>: ToolUseBlock/ToolResultBlock currently surface as <code>kind=NodeKind.LLM</code> (kind comes from message type, not block type) — the <code>NodeKind.TOOL</code> entry in the recorder block-dispatch table is unused for these and </em><em>was reconciled docs-only at R89</em><em> via <a href="../../contracts/adapter-protocol/#envelope-determines-kind-r85-contract-finding-codified-at-r89"><code>docs/contracts/adapter-protocol.md</code></a>: the envelope-determines-kind rule is now the documented cross-adapter contract, the dead <code>ToolUseBlock</code>/<code>ToolResultBlock</code> map entries are documented as defensive forward-compat fallbacks, and <code>docs/adapters/anthropic_agents.md</code>'s mapping table was fixed (<code>UserMessage</code> was incorrectly listed as <code>kind=fn</code> / <code>name=user</code>; corrected to <code>kind=llm</code> / <code>name=UserMessage</code>).</em></li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> <strong>AC-3</strong> — Fork primitive re-invokes agent from <code>at_node_id</code> with <code>overrides</code>; live-smoke green. <em>Closed in R87 (v0.7.0 GA-gate): real-relay override-fork live-smoke turned green this round. The R86-shipped dogfood <code>scripts/dogfood/arc_b_slice_3_fork_override.py</code> + pytest wrapper <code>tests/live/test_anthropic_agents_fork_override_smoke.py</code> ran end-to-end against the OneAPI relay (<code>Claude Sonnet 4.6</code>) and exited 0 with the <code>AC-3 release-gate INVARIANTS GREEN</code> marker. Concrete evidence: parent <code>run_id=e60c8692-4a30-440d-8333-23e09e93f366</code> recorded <code>parent_tu_id=toolu_bdrk_01NRJ958p1qAFNtSfNEuLXBU</code> for operands 4127+8956=13083; <code>recorder.fork(parent, anchor, tool_input_overrides={parent_tu_id: {a: 100, b: 200}})</code> returned <code>child_run_id=206b9e0a-ce8a-4853-ab1b-5e451aced6f5</code> and <code>fork_id=7b6d2b9c-6b1e-4cd0-b48d-88ac663202c9</code>; child run completed with a fresh SDK-minted <code>child_tu_id=toolu_bdrk_01JFteNbHxtsitAd8yXosj3E</code> (≠ parent's, INV-5 asserted positively), matching <code>ToolUseBlock</code> ↔ <code>ToolResultBlock</code> linkage on that fresh id (R76 ADR-026 §5.1 contract holds across fork), and the child's final <code>TextBlock</code> contained the override-sum <code>300</code> (proving the <code>{a:100, b:200}</code> override surfaced user-side via <code>resume=child_sid</code> continuation per R86 contract finding). pytest live wrapper <code>tests/live/test_anthropic_agents_fork_override_smoke.py</code> <code>1 passed in 54.08s</code> with <code>CHRONOS_LIVE=1</code>. The R86 contract pre-finding (immediately below) is therefore promoted from "pre-finding" to "finding" — observed against the real relay, exactly as predicted from source-inspection.</em> <code>tool_input_overrides</code> validates the parent <code>tool_use_id</code> is a matched use-side key, then delegates verbatim to <code>claude_agent_sdk.fork_session(session_id, up_to_message_id=uuid)</code>. The SDK fork is a pure JSONL rewrite of the parent transcript up to fork point — it does NOT splice the override into the child transcript. The override surfaces user-side via the continuation prompt under <code>resume=child_sid</code>. The child's ToolUseBlock therefore carries a <em>fresh</em> SDK-minted <code>tu_id</code>, NOT the parent's; consequently <code>state_after['tool_input']</code> is NOT stamped on the child's AssistantMessage node (the recorder stamps only on id-match). This is symmetric to R64's "Identity fork ≠ byte-identical trace" finding for LangGraph and is documented at the dogfood module-doc + asserted positively as INV-5. The R80 fake-SDK unit tests assert the stamp because the fixture echoes the parent tu_id verbatim — that is a fixture artifact of the offline test path, NOT a real-relay contract. (When the live-smoke does land, this paragraph will be promoted from "pre-finding" to "finding".)*</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> <strong>AC-4</strong> — Dogfood script exits 0 with runtime assertions on recorded structure (per R64 dogfood-as-release-gate invariant). <em>Closed: <code>arc_b_slice_1_smoke.py</code> (R71), <code>arc_b_slice_2_fork.py</code> (R74), <code>dogfood_fork_tool_override.py</code> (R80), <code>dogfood_fork_tool_result_override.py</code> (R82). All four exit 0 under fake-SDK and runtime-assert recorded node structure.</em></li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> <strong>AC-5</strong> — Existing adapter matrix (LangGraph/AutoGen/CrewAI) does not regress: all tests green, zero code change to <code>langgraph.py</code>/<code>autogen/</code>/<code>crewai/</code>. <em>Closed: 31-round zero-regression streak R52→R82 confirmed at R83 (631 passed / 7 skipped / 0 xfail / 0 failed); <code>git log --oneline src/chronos/adapters/langgraph.py src/chronos/adapters/autogen/ src/chronos/adapters/crewai/</code> shows no commits since R51.</em></li>
+</ul>
+<p><strong>Alpha-gate verdict (R83)</strong>: AC-1, AC-4, AC-5 fully closed for v0.7.0a2. AC-2, AC-3 partially closed — sufficient for an alpha release (alpha = "feature-complete behind real backend, smoke + dogfood exists, full live-integration TBD"). Full tick on AC-2/AC-3 is the gating criterion for v0.7.0 GA, not for v0.7.0a2.</p>
+<p><strong>GA-gate update (R85)</strong>: AC-2 promoted partial→full. The MCP live-smoke gap was unblocked by switching from "out-of-process MCP server via Node.js subprocess" to <code>claude_agent_sdk.create_sdk_mcp_server</code> (in-process Python tool, zero subprocess). Outstanding GA-gate work: AC-3 partial → full (real-relay override-fork live-smoke).</p>
+<p><strong>GA-gate verdict (R87, GREEN — v0.7.0 GA cut)</strong>: AC-3 promoted partial→full. With AC-1, AC-2, AC-4, AC-5 already at <code>[x]</code>, all five Arc B slice 1 release gates are now closed. Real-relay override-fork live-smoke observed green this round (see AC-3 evidence above); the R86 SDK-masked relay-error envelope was a transient OneAPI relay flake, not a structural blocker, and the dogfood degradation classifier hardening from R86 (<code>scripts/dogfood/_degradation.py</code> + <code>tests/unit/test_dogfood_degradation.py</code>) means future flakes won't be mis-classified as hard regressions. <strong>R87 honors the R86 honesty rule</strong>: AC-3 was flipped <code>[x]</code> only after the live-smoke marker was actually observed in this round's output — no pre-emptive flips, no aspirational release blocks. The <code>chronos-release-pattern</code> skill's "disprover-first" rule applied here too: the cheap R85 MCP probe (re-running today's relay state, $0.05) was used as the gating disprover before committing budget to the more expensive R86 fork-override re-run ($0.14); both passed → green path. v0.7.0 GA cut proceeds in this same round per the <code>chronos-release-pattern</code> 8-step sequence.</p>
+<h3 id="in-place-promotion-marker">In-place promotion marker<a class="headerlink" href="#in-place-promotion-marker" title="Permanent link">&para;</a></h3>
+<p>Per the R57 "in-place ADR promotion" invariant, this ADR's Draft→Accepted flip happens by editing the status field of this same file (no new file, no branching). <strong>Scope flip happened in R69</strong> — i.e. the Arc B scope selection (Anthropic Agents SDK as slice 1) is now settled. AC-1..AC-5 are <strong>release-time gates</strong> tracked separately; <strong>R83 alpha cut (v0.7.0a2)</strong> ticks AC-1, AC-4, AC-5 fully and AC-2, AC-3 partially per the verdict above. The remaining partial-tick conversion to full is a v0.7.0 GA gate, not an ADR status flip.</p>
+<h3 id="slice-3-closing-retro-r83">Slice-3 closing retro (R83)<a class="headerlink" href="#slice-3-closing-retro-r83" title="Permanent link">&para;</a></h3>
+<p>Slice 3 of Arc B (override-fork variants) shipped across R75→R82 in three sub-slices:</p>
+<ul>
+<li><strong>3a — fork-with-empty-overrides (R75 + R76→R77)</strong>: established the override-pipeline contract; R76 introduced strict-xfail forcing function and R77 closed it with the actual override-replay path. <em>Lesson</em>: strict-xfail-as-todo (per <code>strict-xfail-forcing-function</code> skill) prevents stub adapters from drifting silently — the failing test is the contract.</li>
+<li><strong>3b — tool-call override (R79→R80)</strong>: replace a <code>ToolUseBlock</code> at fork point with a different <code>tool_name</code> / <code>input</code> payload. R79 strict-xfail, R80 implementation + dogfood (<code>dogfood_fork_tool_override.py</code>). <em>Lesson</em>: the fake-SDK stub patterns (<code>_StubBlock</code>, <code>_StubMessage</code>, <code>_aiter</code>) are now duplicated in 3 unit-test files (<code>test_adapter_anthropic_agents.py</code>, <code>test_anthropic_agents_fork_tool_override.py</code>, <code>test_anthropic_agents_fork_tool_result_override.py</code>) — extracting a <code>tests/fixtures/anthropic_agents_stubs.py</code> module is <strong>deferred to R84</strong> (Option B in R83 plan); not a blocker for v0.7.0a2.</li>
+<li><strong>3c — tool-result override (R81→R82)</strong>: replace a <code>ToolResultBlock</code> at fork point with a different result payload (success vs. error injection). R81 strict-xfail, R82 implementation + dogfood (<code>dogfood_fork_tool_result_override.py</code>). <em>Lesson</em>: tool-input override (R80) and tool-result override (R82) live in <strong>parallel</strong> state on the recorder (<code>_fork_overrides</code> for tool inputs, <code>_fork_result_overrides</code> for tool results) rather than a single unified helper — slice-3 design opted for explicit dual fields over a discriminated-union helper to keep the <code>_translate(msg)</code> switch explicit per block kind. R83 audit confirms this stayed parallel and didn't accidentally couple the two override paths.</li>
+</ul>
+<p><strong>Slice-3 invariants</strong> (added to CONTEXT.md long-term):</p>
+<ol>
+<li><em>Override pipeline is closed under tool-input and tool-result block kinds</em>: the adapter's <code>fork(at_node_id, tool_input_overrides=..., tool_result_overrides=...)</code> accepts two parallel keyword-only mappings keyed by <code>tool_use_id</code>; both replay through <code>claude_agent_sdk.fork_session(...)</code> with the rewritten transcript JSONL. The legacy <code>overrides=...</code> kwarg is preserved as free-form <code>Fork.edited_fields</code> metadata only — does not drive replay.</li>
+<li><em>Strict-xfail forcing function validated 3x in slice 3</em> (R76→R77, R79→R80, R81→R82): write the failing test first with <code>pytest.mark.xfail(strict=True)</code>; the next round implements until xfail flips to pass, then removes the marker. This is now a stable pattern alongside TDD-red/green.</li>
+<li><em>Fake-SDK stubs are sufficient for unit + dogfood; real-SDK live-smoke is a GA-only gate</em>: alpha releases ship with fake-SDK coverage, GA requires real-relay + MCP-tool + override-fork live-smoke. AC-2 / AC-3 partial-tick captures this split.</li>
+</ol>
+<hr />
+<h2 id="open-questions-resolved-by-r69-risks-spike">Open questions (resolved by R69 risks spike)<a class="headerlink" href="#open-questions-resolved-by-r69-risks-spike" title="Permanent link">&para;</a></h2>
+<p>All three blocker-class questions resolved by source-inspection spike of <code>anthropics/claude-agent-sdk-python</code> (commit at v0.1.81 on PyPI, R69). Full notes: <a href="../../research/r69-mcp-fork-lifecycle/">docs/research/r69-mcp-fork-lifecycle.md</a>.</p>
+<ol>
+<li>
+<p><strong>MCP server fork-lifecycle policy</strong> (was: A fresh-server vs B session-reseed).
+   <strong>Resolved</strong>: <em>neither</em>. The SDK ships <code>fork_session(session_id, up_to_message_id=...)</code> in <code>_internal/session_mutations.py</code> — a pure transcript-JSONL rewrite that assigns new UUIDs and truncates history at the requested message. <strong>MCP servers have zero coupling to fork</strong> (grep <code>"mcp"</code> in <code>session_mutations.py</code> → 0 hits); MCP servers are per-CLI-subprocess and reconnect stateless on session resume. The chronos-agent adapter therefore <strong>delegates to the SDK primitive</strong> — no custom Policy A / Policy B / re-seed logic needed. §4 fallback clause remains dormant but unactivated.</p>
+</li>
+<li>
+<p><strong>Recorder entry point</strong> (was: <code>agent.iter(...)</code> vs <code>agent.stream(...)</code>).
+   <strong>Resolved</strong>: both names were speculative and <strong>do not exist</strong> in the SDK. Actual primitives:</p>
+</li>
+<li><code>query(prompt, options) -&gt; AsyncIterator[Message]</code> — stateless fire-and-forget.</li>
+<li><code>ClaudeSDKClient</code> (stateful async context manager) + <code>await client.query(prompt)</code> + <code>async for msg in client.receive_response(): ...</code> — multi-turn pattern used for both recording and fork-resume.</li>
+<li>
+<p>Message union: <code>UserMessage | AssistantMessage | SystemMessage | ResultMessage</code>; content blocks: <code>TextBlock | ToolUseBlock | ToolResultBlock | ThinkingBlock</code>.
+   Recorder seam = wrap the <code>receive_response()</code> async iterator (parallel to the CrewAI event bus and LangGraph callback patterns). See <a href="../../research/r69-mcp-fork-lifecycle/">r69</a> §2.</p>
+</li>
+<li>
+<p><strong>Version pin</strong> (was: <code>claude-agent-sdk&gt;=X.Y,&lt;Z.0</code>).
+   <strong>Resolved</strong>: <code>claude-agent-sdk&gt;=0.1.80,&lt;1.0</code> declared as extra in <code>pyproject.toml::[project.optional-dependencies].anthropic_agents</code>. PyPI latest = 0.1.81 (83 releases in the 0.1.x line; still alpha/pre-1.0). Python requirement <code>&gt;=3.10</code> (compatible with our 3.11+ floor per <a href="../ADR-001-language/">ADR-001</a>); MIT licensed. Ceiling at next-major rather than next-minor because the SDK is still rapidly iterating and 0.x minor bumps have been additive in practice (e.g. <code>fork_session</code> shipped mid-0.1.x). Revisit ceiling at R74 retro if 0.2 releases before then. See <a href="../../research/r69-mcp-fork-lifecycle/">r69</a> §3.</p>
+</li>
+</ol>
+<p><strong>R71 live-smoke prerequisite</strong> (new finding, not a blocker): the SDK spawns a bundled Node.js <code>claude-code</code> CLI as subprocess (see <code>README.md:10-20</code>). Live-smoke tests need Node available on the runner; override path via <code>ClaudeAgentOptions(cli_path=...)</code>. R71's skipif matrix mirrors the existing <code>HAS_CREWAI</code> pattern.</p>
+<p>Deferred to R74 retro (no block on v0.7.0):</p>
+<ol>
+<li>Arc B slice 2 target (Pydantic AI vs Letta).</li>
+<li>Whether to promote <a href="../ADR-023-phase-4-charter-skeleton/">ADR-023</a> Arc B candidate table into a dedicated <code>docs/research/adapter-4-survey.md</code> artifact (currently superseded by R68 research doc).</li>
+</ol>
+<hr />
+<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
+<h3 id="positive">Positive<a class="headerlink" href="#positive" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Fourth adapter broadens user cohort to MCP-native Claude shops (the 2026-H2 fastest-growing segment per the research doc).</li>
+<li>Validates ADR-016 contract across a fourth framework (strong "interface-stability" evidence).</li>
+<li>Enables U3 cross-framework diff story (LangGraph run vs Anthropic Agents run in the same compare view) — no new code, just dogfood confirmation.</li>
+<li>Pre-authorised fallback clause prevents round-level detour if primary blocks.</li>
+</ul>
+<h3 id="negative">Negative<a class="headerlink" href="#negative" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Commits five rounds (R70-R74) to one framework. If Anthropic Agents SDK loses momentum mid-Arc, we've already shipped by R74 — sunk cost is manageable (one minor release cycle).</li>
+<li>Adds <code>claude-agent-sdk</code> as a new optional dependency; expands the optional-dep live-test skipif matrix.</li>
+<li>Delays Arc B slice 2 (Pydantic AI / Letta) by ~5-6 weeks at current cron cadence.</li>
+</ul>
+<h3 id="neutral">Neutral<a class="headerlink" href="#neutral" title="Permanent link">&para;</a></h3>
+<ul>
+<li>No changes to Web UI, node schema, extractor contract, CLI, or HTTP API surface. Pure-additive adapter.</li>
+<li>No changes to existing three adapters — they remain zero-regression through R74 (adapter streak R52→R74 target = 22 rounds zero code change; current at R67 = 16 rounds).</li>
+</ul>
+<hr />
+<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../ADR-023-phase-4-charter-skeleton/">ADR-023</a> — Phase 4 charter (supersedes Arc B candidate table)</li>
+<li><a href="../ADR-016-adapter-interface/">ADR-016</a> — Adapter interface</li>
+<li><a href="../ADR-017-autogen-adapter-sync-wrap/">ADR-017</a> — AutoGen sync-wrap (adapter pattern precedent)</li>
+<li><a href="../ADR-021-crewai-adapter/">ADR-021</a> — CrewAI adapter (adapter pattern precedent)</li>
+<li><a href="../ADR-022-crewai-version-pin-bump/">ADR-022</a> — CrewAI version pin bump (pin policy precedent)</li>
+<li><a href="../../research/r68-arc-b-scope/">research</a> — <code>docs/research/r68-arc-b-scope.md</code></li>
+<li><a href="../../research/r69-mcp-fork-lifecycle/">r69</a> — <code>docs/research/r69-mcp-fork-lifecycle.md</code></li>
+<li><a href="../../design/fourth-adapter-landscape/">design</a> — <code>docs/design/fourth-adapter-landscape.md</code></li>
+</ul>
+<hr />
+<p><em>Authored R68 (2026-05-13 CST, planning round); promoted to Accepted in R69 after source-inspection spike closed all 3 blocker-class open questions. Arc B slice 1 scope now frozen: Anthropic Agents SDK + SDK-native <code>fork_session</code> + <code>ClaudeSDKClient.receive_response()</code> recorder seam + <code>claude-agent-sdk&gt;=0.1.80,&lt;1.0</code> pin. Release gates AC-1..AC-5 tick in R70-R74. Fallback clause (§4) remains dormant — no trigger activated.</em></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 chengfei867 — content generated 100% by Hermes Agent / Claude Opus
+    </div>
+  
+  
+</div>
+      
+        <div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/chengfei867/chronos-agent" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.top", "navigation.indexes", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.88dd0f4e.min.js"></script>
+      
+    
+  </body>
+</html>

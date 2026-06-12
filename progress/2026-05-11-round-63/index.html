@@ -1,0 +1,1398 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Time-Travel Debugger for Multi-Agent AI Systems — record, replay, fork, diff, compare. With first-class token/cost tracking and pluggable evaluators.">
+      
+      
+        <meta name="author" content="Hermes Agent">
+      
+      
+        <link rel="canonical" href="https://chengfei867.github.io/chronos-agent/progress/2026-05-11-round-63/">
+      
+      
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.49">
+    
+    
+      
+        <title>Round 63 — 2026-05-11 (CST ~06:05, inside 0–11 window) - Chronos Agent</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.6f8fc17f.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#round-63-2026-05-11-cst-0605-inside-011-window" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Chronos Agent" class="md-header__button md-logo" aria-label="Chronos Agent" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Chronos Agent
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Round 63 — 2026-05-11 (CST ~06:05, inside 0–11 window)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/chengfei867/chronos-agent" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    chengfei867/chronos-agent
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+    
+  
+  Getting started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../concepts/" class="md-tabs__link">
+        
+  
+    
+  
+  Concepts
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../cli-reference/" class="md-tabs__link">
+        
+  
+    
+  
+  CLI reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../cost-tracking/" class="md-tabs__link">
+        
+  
+    
+  
+  Cost tracking
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../evaluators/" class="md-tabs__link">
+        
+  
+    
+  
+  Evaluators
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../adapters/anthropic_agents/" class="md-tabs__link">
+          
+  
+    
+  
+  Adapters
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guides/forking-safely/" class="md-tabs__link">
+          
+  
+    
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../contracts/golden-trace-format/" class="md-tabs__link">
+          
+  
+    
+  
+  Contracts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../decisions/" class="md-tabs__link">
+          
+  
+    
+  
+  Decisions (ADRs)
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../faq/" class="md-tabs__link">
+        
+  
+    
+  
+  FAQ
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Chronos Agent" class="md-nav__button md-logo" aria-label="Chronos Agent" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Chronos Agent
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/chengfei867/chronos-agent" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    chengfei867/chronos-agent
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Getting started
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Concepts
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli-reference/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    CLI reference
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cost-tracking/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Cost tracking
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../evaluators/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Evaluators
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Adapters
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            Adapters
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adapters/anthropic_agents/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Anthropic Agents SDK
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contracts/adapter-protocol/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Adapter protocol
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Guides
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            Guides
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/forking-safely/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Forking safely
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/side-effects/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Side effects
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Contracts
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            Contracts
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contracts/golden-trace-format/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Golden trace format
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../decisions/" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    Decisions (ADRs)
+  </span>
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            Decisions (ADRs)
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    FAQ
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#tldr" class="md-nav__link">
+    <span class="md-ellipsis">
+      TL;DR
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-i-did" class="md-nav__link">
+    <span class="md-ellipsis">
+      What I Did
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What I Did">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#0-slot-handoff-diagnostic-sop-step-0" class="md-nav__link">
+    <span class="md-ellipsis">
+      0. Slot-handoff diagnostic (SOP step 0)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#1-read-in-sop-steps-13" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Read-in (SOP steps 1–3)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-inspection-of-inherited-wip" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Inspection of inherited WIP
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-fix-for-the-one-failing-test-slot-2-actual-work-begins-here" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Fix for the one failing test (slot-2 actual work begins here)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-added-p3-api-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. Added P3 API tests
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-gates-sop-step-4d" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. Gates (SOP step 4d)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-documentation-close-out" class="md-nav__link">
+    <span class="md-ellipsis">
+      6. Documentation + close-out
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#deviation-from-context-6" class="md-nav__link">
+    <span class="md-ellipsis">
+      Deviation from CONTEXT §6
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#r63-key-discoveries-for-5-wall" class="md-nav__link">
+    <span class="md-ellipsis">
+      R63 Key Discoveries (for §5 wall)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#r63-produced-artifacts" class="md-nav__link">
+    <span class="md-ellipsis">
+      R63 Produced Artifacts
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-round-r64-todo" class="md-nav__link">
+    <span class="md-ellipsis">
+      Next Round (R64) TODO
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Next Round (R64) TODO">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#option-a-first-choice-90120-min-dogfood-script-v051-release-cut" class="md-nav__link">
+    <span class="md-ellipsis">
+      Option A (first choice, 90–120 min): Dogfood script + v0.5.1 release cut
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-b-alternate-60-min-adr-025-metric_version-governance" class="md-nav__link">
+    <span class="md-ellipsis">
+      Option B (alternate, 60 min): ADR-025 metric_version governance
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-c-alternate-60-min-package-refactor-corediffpy-corediff-package-move-auto_pivotpy-inside" class="md-nav__link">
+    <span class="md-ellipsis">
+      Option C (alternate, 60 min): Package refactor — core/diff.py → core/diff/ package + move auto_pivot.py inside
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recommended-option-a" class="md-nav__link">
+    <span class="md-ellipsis">
+      Recommended: Option A
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#r64-non-goals-hard-red-lines" class="md-nav__link">
+    <span class="md-ellipsis">
+      R64 Non-goals (hard red lines)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#work-estimate" class="md-nav__link">
+    <span class="md-ellipsis">
+      Work estimate
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#invariants-updated-or-surfaced-in-r63-candidate-skill-additions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Invariants updated or surfaced in R63 (candidate skill additions)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#git-github" class="md-nav__link">
+    <span class="md-ellipsis">
+      Git / GitHub
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="round-63-2026-05-11-cst-0605-inside-011-window">Round 63 — 2026-05-11 (CST ~06:05, inside 0–11 window)<a class="headerlink" href="#round-63-2026-05-11-cst-0605-inside-011-window" title="Permanent link">&para;</a></h1>
+<p><strong>Phase</strong>: 4 (Arc A — Depth, slice 4 <strong>surface execution</strong>)</p>
+<p><strong>Theme</strong>: Land the CLI + HTTP wrappers for R62's <code>auto_pivot_compare()</code> pure core per ADR-024. Ship <code>chronos compare --auto-pivot</code> and <code>GET /runs/compare/auto</code> as additive-only extensions over the R58/R59 frozen <code>merge_pivot_reports</code> / <code>/runs/compare/n</code> contracts.</p>
+<p><strong>Archetype</strong>: <strong>Option A2 close-out</strong> (sixth time; <code>cron-slot-handoff-recovery</code> skill). The previous cron slot shipped ~556 LOC of R63 Option A scaffolding (CLI <code>_run_auto_pivot</code> branch + <code>/runs/compare/auto</code> endpoint + 8 CLI tests) with gates nearly green (1 pre-existing-in-this-slot test fail on matrix truncation), but didn't commit and didn't add the P3 API tests CONTEXT §6 called for. R63 slot-2 audits the inherited tree, fixes the failing CLI test, adds 5 API tests, runs gates, writes CHANGELOG + progress doc + CONTEXT refresh, commits, pushes.</p>
+<hr />
+<h2 id="tldr">TL;DR<a class="headerlink" href="#tldr" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Inherited from slot-1</strong>: <code>src/chronos/cli/compare.py</code> (+140 LOC <code>--auto-pivot</code> / <code>--show-matrix</code>), <code>src/chronos/cli/__init__.py</code> (+25 LOC flag registration), <code>src/chronos/api/server.py</code> (+110 LOC <code>GET /runs/compare/auto</code>), <code>tests/unit/test_cli_compare.py</code> (+281 LOC, 9 new tests). Uncommitted, 1 failing test.</li>
+<li><strong>This slot</strong>: fixed the failing matrix-truncation test by moving the trailer note out of the rich Table title (title was being ellipsis-truncated at 80-col default), added 5 new <code>/runs/compare/auto</code> API tests (happy / N=2-matches-<code>/runs/compare</code> / 404 / 400-dup / 400-fewer-than-2), ran full gates, wrote CHANGELOG <code>[Unreleased]</code> R63 block, wrote this progress doc, refreshed CONTEXT.md §5/§6, committed, pushed.</li>
+<li><strong>Full suite</strong>: <strong>548 passed / 3 skipped / 0 failed / 94% coverage</strong> (+14 from R62 baseline 534).</li>
+<li><strong>No adapter / store / ADR / core API change</strong> — R63 is a pure-wrapper slice against the R62 frozen core. CrewAI adapter <strong>R52→R63 = 十二</strong>轮零代码改动 (hit R63 target exactly).</li>
+</ul>
+<hr />
+<h2 id="what-i-did">What I Did<a class="headerlink" href="#what-i-did" title="Permanent link">&para;</a></h2>
+<h3 id="0-slot-handoff-diagnostic-sop-step-0">0. Slot-handoff diagnostic (SOP step 0)<a class="headerlink" href="#0-slot-handoff-diagnostic-sop-step-0" title="Permanent link">&para;</a></h3>
+<p>Per <code>cron-slot-handoff-recovery</code> skill, ran the 60-second diagnostic:</p>
+<ol>
+<li><code>TZ='Asia/Shanghai' date +%H</code> → <code>06</code> → inside 0–11 window.</li>
+<li><code>git fetch</code> via gh-proxy + <code>git update-ref origin/main FETCH_HEAD</code>: origin/main = HEAD = <code>5ab4985</code> (R62). R48-B stale-ref trap confirmed for the fifth time — local cache said "2 commits ahead" but origin actually had R61 + R62 already; this slot started with origin already at R62.</li>
+<li><code>git status</code>: 4 files modified, 0 files new — unambiguously inherited WIP matching R63 Option A per CONTEXT §6.</li>
+<li><code>git diff --stat HEAD</code>: 556 insertions, 0 deletions — implementation + tests but no CHANGELOG / progress doc / commit.</li>
+<li>Categorised as <strong>Option A2 (R48-A/R51/R52/R53/R59 shape, sixth time)</strong>: inherited code already tests-green except for one pre-existing-in-slot-1 failure. No policy violations (no ADR drift, no contract change, additive-only), no danger-zone dynamic strings (i18n / CSS / route params untouched).</li>
+</ol>
+<h3 id="1-read-in-sop-steps-13">1. Read-in (SOP steps 1–3)<a class="headerlink" href="#1-read-in-sop-steps-13" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>docs/CONTEXT.md</code> §5 (Round 62 shipped pure core) + §6 (R63 Option A surface impl recommended, 90–120 min estimate, five-P plan).</li>
+<li><code>docs/progress/2026-05-10-round-62.md</code> — R62 shipped <code>auto_pivot.py</code> with <code>AutoPivotReport.to_dict()</code> already included (P5 in R63 plan was "optional" but R62 pre-built it; this slot's inherited WIP correctly consumes it).</li>
+<li><code>docs/decisions/ADR-024-multi-pivot-compare.md</code> — §Interface: CLI should accept <code>--auto-pivot</code>, HTTP should be <code>GET /runs/compare/auto</code>, JSON should include <code>centroid_run_id</code> + <code>distance_matrix</code> + <code>metric_version</code> as <strong>additive siblings</strong> of the existing <code>MergedPivotAlignment.to_dict()</code> shape. Inherited code matches.</li>
+<li><code>docs/roadmap.md</code> §4.1 — Arc A slice 4 surface line is still <code>[ ]</code>; this round ticks it.</li>
+</ul>
+<h3 id="2-inspection-of-inherited-wip">2. Inspection of inherited WIP<a class="headerlink" href="#2-inspection-of-inherited-wip" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>src/chronos/cli/compare.py</code> — inherited adds <code>_render_distance_matrix()</code> helper + <code>_run_auto_pivot()</code> branch + two new kwargs (<code>auto_pivot</code>, <code>show_matrix</code>) on <code>compare_command()</code>. Flag mutex with positional-pivot mode is implemented correctly: when <code>--auto-pivot</code> is set, the first positional is <strong>not</strong> treated as the designated pivot, it's just the first candidate. JSON path emits <code>report.to_dict()</code> directly (so the response is the additive superset ADR-024 §Interface specifies).</li>
+<li><code>src/chronos/cli/__init__.py</code> — registers the <code>--auto-pivot</code> and <code>--show-matrix</code> Typer options on the existing <code>@app.command("compare")</code> signature. No separate sub-command — the spec deliberately kept it as a flag on <code>chronos compare</code> to avoid two parallel command trees.</li>
+<li><code>src/chronos/api/server.py</code> — new <code>GET /runs/compare/auto</code> endpoint registered <strong>before</strong> <code>/runs/{run_id}</code> (same registration-order constraint as <code>/runs/compare</code> and <code>/runs/compare/n</code>). Validation is symmetric with <code>/runs/compare/n</code> (400 on dup / &lt;2, 404 on missing run). Response carefully assembles <code>auto_pivot</code> as a top-level sibling, with every existing <code>/runs/compare/n</code> key preserved (additive-only) so clients speaking the N-run shape still parse without changes.</li>
+<li><code>tests/unit/test_cli_compare.py</code> — 9 new tests covering happy N=3, JSON shape, canonical matrix orientation, default truncation (FAILING), <code>--show-matrix</code> full render, flag composition, 4 validation errors (dup / missing / mutex / &lt;2), <code>--show-matrix</code> without <code>--auto-pivot</code> silent no-op.</li>
+</ul>
+<h3 id="3-fix-for-the-one-failing-test-slot-2-actual-work-begins-here">3. Fix for the one failing test (slot-2 actual work begins here)<a class="headerlink" href="#3-fix-for-the-one-failing-test-slot-2-actual-work-begins-here" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>FAILED tests/unit/test_cli_compare.py::test_compare_auto_pivot_default_matrix_is_truncated
+</span></code></pre></div>
+<p><strong>Root cause</strong>: the truncation-hint suffix <code>(showing 3 of 6 — pass --show-matrix for full)</code> was embedded <strong>inside the <code>Table(title=...)</code> argument</strong> in <code>_render_distance_matrix</code>. <code>CliRunner()</code> with no env override uses a ~80-col terminal; rich truncates long table titles with an ellipsis rather than wrapping. Result: the full title <code>"Pairwise distance matrix (metric v1) (showing 3 of 6 — pass --show-matrix for full)"</code> got rendered as <code>"Pairwise distance matrix (metric v1)..."</code> — so the assertion <code>assert "showing 3 of 6" in out</code> legitimately failed.</p>
+<p><strong>Fix</strong> (<code>src/chronos/cli/compare.py</code> <code>_render_distance_matrix</code>):</p>
+<ul>
+<li>Moved the trailer out of <code>Table(title=...)</code>.</li>
+<li>Table title is now just <code>"Pairwise distance matrix (metric v{version})"</code>.</li>
+<li>When truncated, emit the trailer as a separate <code>console.print(f"[dim](showing 3 of {total_pairs} pairs — pass --show-matrix for full)[/]")</code> line <strong>after</strong> the table. Rich doesn't truncate this at 80 cols — the body wraps or dim-styled text flows naturally.</li>
+<li>Added an inline comment referencing R63 so a future maintainer understands why the hint isn't in the title.</li>
+</ul>
+<p><strong>Secondary benefit</strong>: the trailer is now accessible to users as a real output line, not a truncation-prone title suffix — same UX even at 120+ cols.</p>
+<h3 id="4-added-p3-api-tests">4. Added P3 API tests<a class="headerlink" href="#4-added-p3-api-tests" title="Permanent link">&para;</a></h3>
+<p><code>tests/unit/test_api_server.py</code> gains 5 tests (~125 LOC). <strong>Fixture discipline</strong>: reused <code>compare_n_scenario</code> + <code>compare_n_client</code> — NOT piggybacking in the R59-principle sense, because we don't mutate the existing fixture shape, we merely exercise a different endpoint (<code>/runs/compare/auto</code> instead of <code>/runs/compare/n</code>) on the same 3-run DB (pivot + twin + variant). <code>build_app(store)</code> registers every endpoint, so the existing client works as-is.</p>
+<p>The five tests:</p>
+<ol>
+<li><strong><code>test_compare_auto_happy_path_returns_centroid_and_merged</code></strong> — response has top-level <code>auto_pivot</code> sub-object with <code>centroid_run_id</code> ∈ {input ids}, <code>metric_version == 1</code>, <code>input_run_ids</code> preserves order, <code>distance_matrix</code> has <code>C(3,2) = 3</code> entries with canonical <code>a &lt; b</code> <code>"a|b"</code> keys and <code>0 ≤ d ≤ 1</code>. Also asserts the additive-superset property: <code>pivot_id</code> / <code>other_ids</code> / <code>runs</code> / <code>trees</code> / <code>diffs</code> all still present in exactly the <code>/runs/compare/n</code> shape.</li>
+<li><strong><code>test_compare_auto_n2_matches_compare_2run_summary</code></strong> — <strong>fourth layer of the R58 N=2 cross-layer frozen-contract guard</strong>. At N=2 the centroid is the lexicographically smallest id (tie-break rule), so we issue <code>/runs/compare?a=min(ids)&amp;b=max(ids)</code> and assert the summary row from both endpoints is byte-equal on <code>equal/changed/added/removed</code>. This extends the existing guard matrix:</li>
+<li>Layer 1 (pure): <code>test_auto_pivot.py::test_n2_matches_merge_pivot_reports</code></li>
+<li>Layer 2 (CLI): <code>test_cli_compare.py::test_compare_auto_pivot_n2_matches_compare_2run_json</code></li>
+<li>Layer 3 (HTTP-compare-n): <code>test_api_server.py::test_compare_n_n2_matches_compare_2run_summary</code></li>
+<li>Layer 4 (HTTP-auto, <strong>new this round</strong>): the test above</li>
+<li><strong><code>test_compare_auto_404_when_a_run_is_missing</code></strong> — missing run surfaces as 404 with <code>"not found"</code> in the detail.</li>
+<li><strong><code>test_compare_auto_400_when_duplicate_ids</code></strong> — duplicate in the <code>ids=</code> querystring yields 400 with <code>"duplicate"</code> in the detail.</li>
+<li><strong><code>test_compare_auto_400_when_fewer_than_two_ids</code></strong> — single-id input yields 400 with <code>"at least 2"</code> in the detail.</li>
+</ol>
+<h3 id="5-gates-sop-step-4d">5. Gates (SOP step 4d)<a class="headerlink" href="#5-gates-sop-step-4d" title="Permanent link">&para;</a></h3>
+<p>After the fix + new tests + <code>ruff format</code> sweep of the three modified files (CLI compare / test_cli_compare / test_api_server — pure whitespace drift from mechanical insertions):</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>pytest -q:                548 passed, 3 skipped, 0 failed, 94% coverage
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>mypy src/:                Success: no issues found in 31 source files
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>ruff check src tests scripts:   All checks passed
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>ruff format --check src tests:  83 files already formatted
+</span></code></pre></div>
+<p><strong>Count reconciliation</strong>: R62 baseline was 534. R63 Option A target per CONTEXT §6 was "~547 pass (+13)": 8-10 CLI + 5 API. Actual: +14 (9 CLI + 5 API). Slot-1 inherited CLI tests included a <code>--show-matrix</code>-without-<code>--auto-pivot</code> silent-no-op test that wasn't in the CONTEXT sketch, bringing CLI to 9 instead of 8.</p>
+<p><strong>Coverage on new-in-R63 code</strong>: <code>auto_pivot.py</code> unchanged at 100%; <code>cli/compare.py</code> covered lines expanded by the <code>--auto-pivot</code> tests; <code>api/server.py</code> covered lines expanded by the 5 new API tests. Overall coverage tick up 93% → 94% (the diff is small but the target stays in band).</p>
+<h3 id="6-documentation-close-out">6. Documentation + close-out<a class="headerlink" href="#6-documentation-close-out" title="Permanent link">&para;</a></h3>
+<p>Wrote CHANGELOG <code>[Unreleased]</code> R63 block (Added + Fixed sub-sections per Keep-a-Changelog convention, detailed per-file summary, explicit reference to R58/R62 frozen contracts, gate line). Wrote this progress doc. Refreshed CONTEXT.md §5 (Round 63 current state, R62 material demoted to "Round: 62" tail) + §6 (R64 next-TODO: dogfood + v0.5.1 release per "Arc slice = core + surface + proof = 1 bundle = 1 minor version" invariant).</p>
+<hr />
+<h2 id="deviation-from-context-6">Deviation from CONTEXT §6<a class="headerlink" href="#deviation-from-context-6" title="Permanent link">&para;</a></h2>
+<p><strong>None of strategic import.</strong> CONTEXT §6 predicted "~547 pass (+13)". Actual is 548 (+14). One extra CLI test (<code>--show-matrix</code>-without-<code>--auto-pivot</code> silent-no-op) was added by slot-1 without explicit CONTEXT §6 mention — it's a useful behavior-pin (otherwise a future refactor could accidentally error out at that call site), so it stays.</p>
+<p><strong>The slot-1 → slot-2 split itself is the sixth A2 inheritance</strong> (R48-A → R51 → R52 → R53 → R59 → R63). The pattern is now robust enough that R64 CONTEXT §6 should explicitly budget one cron slot per (code, tests, close-out) triple for any Arc slice surface/impl round. Filed as an invariant refinement below.</p>
+<hr />
+<h2 id="r63-key-discoveries-for-5-wall">R63 Key Discoveries (for §5 wall)<a class="headerlink" href="#r63-key-discoveries-for-5-wall" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Rich Table title ≠ safe place for truncation hints (R63 new)</strong>. <code>Table(title=...)</code> gets ellipsis-truncated at narrow terminal widths; long titles lose their suffix silently. Rule: put <strong>metadata</strong> (metric version, counts) in the title; put <strong>user-action hints</strong> (<code>pass --show-matrix for full</code>) on a separate <code>console.print()</code> line. General lesson: anything that carries actionable next-steps for the user should not be rendered as decoration on another widget. ← <strong>new</strong></li>
+<li><strong>A2 inheritance now six-in-a-row (R63 new, sixth verification)</strong>: R48-A → R51 → R52 → R53 → R59 → R63. Every "land ADR + scaffold + tests" slot in the post-R47 era has produced a slot-1 / slot-2 split. The pattern is a structural constant, not a budget-fitting problem. R64+ should pre-budget two slots for any Arc-slice impl round, three slots if it also cuts a release. ← <strong>refinement of R59 five-in-a-row</strong></li>
+<li><strong>"Different endpoint on same DB ≠ fixture piggyback" (R63 refinement of R59)</strong>. The R59 "new fixture new scenario" rule was about not mutating a fixture to accommodate a new behavior. Reusing a fixture <strong>unchanged</strong> to exercise a parallel endpoint against the same DB does not violate the rule. Confirmed with <code>/runs/compare/auto</code> tests sharing <code>compare_n_scenario</code> + <code>compare_n_client</code> verbatim. ← <strong>refinement</strong></li>
+<li><strong>Fourth layer of N=2 cross-layer guard (R63 new, R60 "bundle = 1 minor version" pattern ripening)</strong>. The R58 N=2-equals-legacy guard now has four attestations: pure (R58) / CLI (R59) / HTTP-compare-n (R59) / HTTP-auto (R63). Every layer asserts the same numeric equivalence with slightly different plumbing. This is now a regression firewall: any attempt to optimize <code>merge_pivot_reports</code> or <code>auto_pivot_compare</code> that silently changes the summary numbers trips four tests simultaneously. Promote to "frozen-contract N=2 quadruple guard" in CONTEXT invariants. ← <strong>new</strong></li>
+<li><strong>Pre-existing-this-slot test failure is still your problem (R63 new)</strong>. Slot-1 left the matrix-truncation test failing. Even though slot-1 wrote the test, the "pre-existing" framing doesn't apply (R62 didn't ship with that test). The R62 click-8.3 case was different: <em>that</em> failure was in untouched HEAD. For inherited-WIP failures the correct framing is "this round's test" and the fix must land in this round's commit. Do NOT write a "pre-existing" disclaimer for failures you inherited from a slot-1 you can't directly attribute. ← <strong>new</strong></li>
+</ul>
+<hr />
+<h2 id="r63-produced-artifacts">R63 Produced Artifacts<a class="headerlink" href="#r63-produced-artifacts" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>src/chronos/cli/compare.py</code> — <strong>inherited</strong> ~140 LOC <code>_render_distance_matrix</code> + <code>_run_auto_pivot</code> branch; <strong>this slot</strong> 1-function change moving truncation trailer out of Table title.</li>
+<li><code>src/chronos/cli/__init__.py</code> — <strong>inherited</strong> +25 LOC Typer flag registration.</li>
+<li><code>src/chronos/api/server.py</code> — <strong>inherited</strong> +110 LOC <code>GET /runs/compare/auto</code> endpoint.</li>
+<li><code>tests/unit/test_cli_compare.py</code> — <strong>inherited</strong> +281 LOC / 9 tests.</li>
+<li><code>tests/unit/test_api_server.py</code> — <strong>new this slot</strong> +125 LOC / 5 tests.</li>
+<li><code>CHANGELOG.md</code> — <strong>new this slot</strong> <code>[Unreleased]</code> R63 Added + Fixed sub-block.</li>
+<li><code>docs/progress/2026-05-11-round-63.md</code> — <strong>new this slot</strong> (this file).</li>
+<li><code>docs/CONTEXT.md</code> §5 + §6 — <strong>new this slot</strong> refresh.</li>
+</ul>
+<p>No adapter / store schema / ADR / <code>core/auto_pivot.py</code> (frozen R62) / <code>core/diff.py</code> (frozen R58) / <code>ForkPlan</code> / <code>Extractor</code> change.</p>
+<hr />
+<h2 id="next-round-r64-todo">Next Round (R64) TODO<a class="headerlink" href="#next-round-r64-todo" title="Permanent link">&para;</a></h2>
+<p>Per <strong>"Arc slice = core + surface + proof = 1 bundle = 1 minor version"</strong> invariant (R60 codified): slice 4's core (R62) + surface (R63) are now shipped. R64 completes the bundle with dogfood + v0.5.1 release cut.</p>
+<h3 id="option-a-first-choice-90120-min-dogfood-script-v051-release-cut">Option A (first choice, 90–120 min): Dogfood script + v0.5.1 release cut<a class="headerlink" href="#option-a-first-choice-90120-min-dogfood-script-v051-release-cut" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>P0</strong> <code>scripts/dogfood_auto_pivot.py</code> — 4-run sweep using a fresh SQLite DB: pivot + twin + variant-early-exit + variant-extra-round (mirrors <code>dogfood_compare_n.py</code> shape). Exercises <code>chronos compare --auto-pivot</code> (text mode) + <code>/runs/compare/auto</code> (JSON via <code>chronos web</code> subprocess or <code>TestClient</code>). Captures centroid selection, distance matrix, merged alignment summary, and prints a human-readable report. Output artifact paths follow the R60 convention <code>/tmp/chronos_r64_dogfood_*</code>.</li>
+<li><strong>P1</strong> Release cut per <code>chronos-release-pattern</code> skill (full 8 steps + R60 pre-gate greps):</li>
+<li><code>pyproject.toml::version 0.5.0 → 0.5.1</code></li>
+<li><code>src/chronos/__init__.py::__version__ "0.5.0" → "0.5.1"</code></li>
+<li><code>src/chronos/cli/__init__.py::info_command</code> status line: append <code>, R63 auto-pivot CLI+HTTP, R64 dogfood+release, v0.5.1</code></li>
+<li><code>CHANGELOG.md [Unreleased] → [0.5.1] — 2026-05-11 (R62+R63+R64)</code></li>
+<li>Pre-gate greps: <code>grep -nr "phase [0-9]" tests/</code>, <code>grep -nr "v0.5.0" tests/</code> (expect misses on status-line pinned strings)</li>
+<li>Gates (pytest / mypy / ruff / format / dogfood evidence capture)</li>
+<li><code>git commit</code> + <code>git tag -a v0.5.1</code></li>
+<li><code>git push origin main &amp;&amp; git push origin v0.5.1</code> via gh-proxy + GH release API</li>
+<li>
+<p><strong>P2</strong> CONTEXT.md <code>Release strategy</code> entry for v0.5.1.</p>
+</li>
+<li>
+<p>Gate target: <strong>548 pass</strong> (unchanged — dogfood isn't pytest). <code>mypy src/</code> 31 files 0 error. Adapter zero change → R52→R64 = <strong>十三</strong>轮零代码改.</p>
+</li>
+</ul>
+<h3 id="option-b-alternate-60-min-adr-025-metric_version-governance">Option B (alternate, 60 min): ADR-025 metric_version governance<a class="headerlink" href="#option-b-alternate-60-min-adr-025-metric_version-governance" title="Permanent link">&para;</a></h3>
+<p>For <code>metric_version=1</code> — define <code>v2</code> trigger conditions, migration policy, <code>--metric-version</code> CLI flag reservation. Demand-driven; activates when Arc A item 3 (semantic diff) or item 5 (determinism) needs multi-metric coexistence. R63 didn't surface a forcing function yet, so this is deferred unless R64 agent has spare time after Option A.</p>
+<h3 id="option-c-alternate-60-min-package-refactor-corediffpy-corediff-package-move-auto_pivotpy-inside">Option C (alternate, 60 min): Package refactor — <code>core/diff.py</code> → <code>core/diff/</code> package + move <code>auto_pivot.py</code> inside<a class="headerlink" href="#option-c-alternate-60-min-package-refactor-corediffpy-corediff-package-move-auto_pivotpy-inside" title="Permanent link">&para;</a></h3>
+<p>Only worthwhile if R65+ plans add ≥2 more modules to the <code>diff</code> family (semantic diff, determinism diff, etc.). At N=1 (just <code>auto_pivot.py</code>) the sibling-module layout is net simpler. Defer until a second forcing function lands.</p>
+<h3 id="recommended-option-a">Recommended: Option A<a class="headerlink" href="#recommended-option-a" title="Permanent link">&para;</a></h3>
+<p><strong>Rationale</strong>: R60 established that Arc slice = core + surface + proof = 1 bundle = 1 minor version. R62 was core, R63 is surface, R64 = proof + release cut = v0.5.1. Skipping to Option B or C would leave v0.5.1 uncut and violate the invariant.</p>
+<h3 id="r64-non-goals-hard-red-lines">R64 Non-goals (hard red lines)<a class="headerlink" href="#r64-non-goals-hard-red-lines" title="Permanent link">&para;</a></h3>
+<ul>
+<li>❌ Adapter changes (target: 13-round zero-change streak)</li>
+<li>❌ <code>core/auto_pivot.py</code> API changes (frozen R62)</li>
+<li>❌ <code>merge_pivot_reports</code>, <code>compare_command</code>, <code>/runs/compare</code>, <code>/runs/compare/n</code>, <code>/runs/compare/auto</code> signature changes (all R58-R63 frozen)</li>
+<li>❌ Main net / real money / public repo toggle</li>
+<li>❌ Metric v2 work (needs ADR-025 first, not in R64 scope unless Option B is explicitly chosen)</li>
+<li>❌ Package refactor (Option C) unless two forcing functions</li>
+</ul>
+<h3 id="work-estimate">Work estimate<a class="headerlink" href="#work-estimate" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Option A: 90–120 min. Single slot feasible, but per the R63 "A2 six-in-a-row" finding, budget for 2 slots if the dogfood script writing + release pattern run together.</li>
+<li>Option B: 60 min (ADR only).</li>
+<li>Option C: 60 min (pure refactor).</li>
+</ul>
+<hr />
+<h2 id="invariants-updated-or-surfaced-in-r63-candidate-skill-additions">Invariants updated or surfaced in R63 (candidate skill additions)<a class="headerlink" href="#invariants-updated-or-surfaced-in-r63-candidate-skill-additions" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Rich Table title never for actionable hints</strong> — candidate <code>creative/rich-rendering</code> skill section.</li>
+<li><strong>A2 inheritance six-in-a-row as structural constant</strong> — upgrade <code>cron-slot-handoff-recovery</code> skill's "case: inherited uncommitted WIP" with explicit slot-budgeting guidance for Arc-slice impl rounds.</li>
+<li><strong>Frozen-contract N=2 quadruple guard</strong> — upgrade <code>chronos-release-pattern</code> skill pre-gate greps with a "for any multi-layer N-value contract, verify the N=1/N=2 degenerate equivalence across all consumer layers" step.</li>
+<li><strong>"Different endpoint, same DB, unchanged fixture" is fine</strong> — refines R59 "new fixture new scenario" to clarify the test is <em>mutation</em>, not <em>reuse</em>.</li>
+<li><strong>Pre-existing-this-slot framing doesn't apply to slot-1 → slot-2 A2 handoff</strong> — inherited failures are this round's failures; no disclaimer banner in the commit body.</li>
+</ul>
+<p>These remain candidates until R64-R66 re-verify; promote to CONTEXT invariants only after the third occurrence.</p>
+<hr />
+<h2 id="git-github">Git / GitHub<a class="headerlink" href="#git-github" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Single logical commit <code>R63: Arc A slice 4 surface — chronos compare --auto-pivot CLI + /runs/compare/auto HTTP</code>.</li>
+<li>Co-authored-by: Hermes Agent <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#97;&#103;&#101;&#110;&#116;&#64;&#104;&#101;&#114;&#109;&#101;&#115;&#46;&#97;&#105;">&#97;&#103;&#101;&#110;&#116;&#64;&#104;&#101;&#114;&#109;&#101;&#115;&#46;&#97;&#105;</a>.</li>
+<li>Pushed via <code>https://chengfei867:${GITHUB_TOKEN}@gh-proxy.com/github.com/chengfei867/chronos-agent.git</code> — no deviation from the gh-proxy-only push rule.</li>
+<li><strong>No tag cut</strong> — v0.5.1 deferred to R64 per §6.</li>
+</ul>
+<hr />
+<p><em>Round 63 done. v0.5.1 pending one round (R64 = dogfood + release). CrewAI adapter </em><em>R52 → R63 = 十二轮</em><em>零代码改动; the streak is the longest in project history.</em></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 chengfei867 — content generated 100% by Hermes Agent / Claude Opus
+    </div>
+  
+  
+</div>
+      
+        <div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/chengfei867/chronos-agent" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.top", "navigation.indexes", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.88dd0f4e.min.js"></script>
+      
+    
+  </body>
+</html>

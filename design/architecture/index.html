@@ -1,0 +1,1700 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Time-Travel Debugger for Multi-Agent AI Systems — record, replay, fork, diff, compare. With first-class token/cost tracking and pluggable evaluators.">
+      
+      
+        <meta name="author" content="Hermes Agent">
+      
+      
+        <link rel="canonical" href="https://chengfei867.github.io/chronos-agent/design/architecture/">
+      
+      
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.49">
+    
+    
+      
+        <title>Architecture Design - Chronos Agent</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.6f8fc17f.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#architecture-design" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Chronos Agent" class="md-header__button md-logo" aria-label="Chronos Agent" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Chronos Agent
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Architecture Design
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/chengfei867/chronos-agent" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    chengfei867/chronos-agent
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+    
+  
+  Getting started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../concepts/" class="md-tabs__link">
+        
+  
+    
+  
+  Concepts
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../cli-reference/" class="md-tabs__link">
+        
+  
+    
+  
+  CLI reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../cost-tracking/" class="md-tabs__link">
+        
+  
+    
+  
+  Cost tracking
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../evaluators/" class="md-tabs__link">
+        
+  
+    
+  
+  Evaluators
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../adapters/anthropic_agents/" class="md-tabs__link">
+          
+  
+    
+  
+  Adapters
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guides/forking-safely/" class="md-tabs__link">
+          
+  
+    
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../contracts/golden-trace-format/" class="md-tabs__link">
+          
+  
+    
+  
+  Contracts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../decisions/" class="md-tabs__link">
+          
+  
+    
+  
+  Decisions (ADRs)
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../faq/" class="md-tabs__link">
+        
+  
+    
+  
+  FAQ
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Chronos Agent" class="md-nav__button md-logo" aria-label="Chronos Agent" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Chronos Agent
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/chengfei867/chronos-agent" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    chengfei867/chronos-agent
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Getting started
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Concepts
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli-reference/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    CLI reference
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cost-tracking/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Cost tracking
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../evaluators/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Evaluators
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Adapters
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            Adapters
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adapters/anthropic_agents/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Anthropic Agents SDK
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contracts/adapter-protocol/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Adapter protocol
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Guides
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            Guides
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/forking-safely/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Forking safely
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/side-effects/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Side effects
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Contracts
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            Contracts
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contracts/golden-trace-format/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Golden trace format
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../decisions/" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    Decisions (ADRs)
+  </span>
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            Decisions (ADRs)
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    FAQ
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#design-philosophy" class="md-nav__link">
+    <span class="md-ellipsis">
+      Design Philosophy
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#system-overview-level-0" class="md-nav__link">
+    <span class="md-ellipsis">
+      System Overview (Level-0)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#layered-architecture-level-1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Layered Architecture (Level-1)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-model-canonical" class="md-nav__link">
+    <span class="md-ellipsis">
+      Data Model (Canonical)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Data Model (Canonical)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#core-entities" class="md-nav__link">
+    <span class="md-ellipsis">
+      Core entities
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#node-kind-variants" class="md-nav__link">
+    <span class="md-ellipsis">
+      Node kind variants
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reasoning-tree-reconstruction" class="md-nav__link">
+    <span class="md-ellipsis">
+      Reasoning tree reconstruction
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#component-deep-dives" class="md-nav__link">
+    <span class="md-ellipsis">
+      Component Deep Dives
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Component Deep Dives">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#c1-framework-adapter-per-framework" class="md-nav__link">
+    <span class="md-ellipsis">
+      C1. Framework Adapter (per-framework)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c2-ingest-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      C2. Ingest Pipeline
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c3-trace-store-sqlite" class="md-nav__link">
+    <span class="md-ellipsis">
+      C3. Trace Store (SQLite)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c4-tree-builder" class="md-nav__link">
+    <span class="md-ellipsis">
+      C4. Tree Builder
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c5-diff-engine" class="md-nav__link">
+    <span class="md-ellipsis">
+      C5. Diff Engine
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c6-fork-orchestrator" class="md-nav__link">
+    <span class="md-ellipsis">
+      C6. Fork Orchestrator
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c7-cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      C7. CLI
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c8-local-http-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      C8. Local HTTP API
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c9-web-ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      C9. Web UI
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sequence-diagrams" class="md-nav__link">
+    <span class="md-ellipsis">
+      Sequence Diagrams
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Sequence Diagrams">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#s1-recording-a-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      S1. Recording a run
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#s2-forking-a-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      S2. Forking a run
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#s3-diffing-two-runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      S3. Diffing two runs
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#deployment-topologies" class="md-nav__link">
+    <span class="md-ellipsis">
+      Deployment Topologies
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Deployment Topologies">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#t1-local-only-v01-default" class="md-nav__link">
+    <span class="md-ellipsis">
+      T1. Local-only (v0.1 default)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t2-local-lan-sharing-v02-nice-to-have" class="md-nav__link">
+    <span class="md-ellipsis">
+      T2. Local + LAN sharing (v0.2 nice-to-have)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t3-cloud-hosted-v10-possible-future" class="md-nav__link">
+    <span class="md-ellipsis">
+      T3. Cloud-hosted (v1.0+ possible future)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#security-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      Security Model
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extension-points-designed-for-future" class="md-nav__link">
+    <span class="md-ellipsis">
+      Extension Points (designed-for-future)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#open-architecture-questions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Open Architecture Questions
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="architecture-design">Architecture Design<a class="headerlink" href="#architecture-design" title="Permanent link">&para;</a></h1>
+<p><strong>Last updated</strong>: 2026-04-22 (Round 1)
+<strong>Status</strong>: Initial architecture — subject to revision after Phase 1 PoC</p>
+<hr />
+<h2 id="design-philosophy">Design Philosophy<a class="headerlink" href="#design-philosophy" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Local-first</strong> — everything runs on the user's machine; no required cloud</li>
+<li><strong>Framework-agnostic core</strong> — adapters isolate framework specifics</li>
+<li><strong>Schema-first</strong> — canonical event format is the contract</li>
+<li><strong>Standards-compatible</strong> — build on OpenTelemetry GenAI semconv and MCP</li>
+<li><strong>Progressive disclosure</strong> — CLI before Web UI; SQLite before distributed storage; one framework before many</li>
+</ol>
+<hr />
+<h2 id="system-overview-level-0">System Overview (Level-0)<a class="headerlink" href="#system-overview-level-0" title="Permanent link">&para;</a></h2>
+<pre class="mermaid"><code>flowchart LR
+    Agent["User's Agent Program&lt;br/&gt;(any framework)"] --&gt;|runtime hooks| Adapter["Framework Adapter"]
+    Adapter --&gt;|canonical events| Core["Chronos Core&lt;br/&gt;(trace store + fork engine)"]
+    Core --&gt; SQLite[("SQLite&lt;br/&gt;trace DB")]
+    Core &lt;--&gt;|query/mutate| CLI["Chronos CLI"]
+    Core &lt;--&gt;|query/mutate| Web["Web UI&lt;br/&gt;(local)"]
+    CLI --&gt; User["User / AI Dev"]
+    Web --&gt; User</code></pre>
+<hr />
+<h2 id="layered-architecture-level-1">Layered Architecture (Level-1)<a class="headerlink" href="#layered-architecture-level-1" title="Permanent link">&para;</a></h2>
+<pre class="mermaid"><code>flowchart TB
+    subgraph L1["Layer 1: Agent Code"]
+        Agent["User agent code&lt;br/&gt;(LangGraph / AutoGen / custom)"]
+    end
+
+    subgraph L2["Layer 2: Instrumentation"]
+        Hook["Framework Adapter&lt;br/&gt;- capture LLM calls&lt;br/&gt;- capture tool calls&lt;br/&gt;- capture state snapshots"]
+        OTel["OTel GenAI&lt;br/&gt;(opt-in generic)"]
+    end
+
+    subgraph L3["Layer 3: Core Services"]
+        Ingest["Ingest Pipeline&lt;br/&gt;(normalize to canonical)"]
+        Store["Trace Store&lt;br/&gt;(SQLite)"]
+        Tree["Tree Builder&lt;br/&gt;(reconstruct reasoning tree)"]
+        Diff["Diff Engine&lt;br/&gt;(structural + semantic)"]
+        Fork["Fork Orchestrator&lt;br/&gt;(replay + re-execute)"]
+    end
+
+    subgraph L4["Layer 4: Interfaces"]
+        CLI["CLI&lt;br/&gt;(record / list / inspect / diff / fork)"]
+        API["Local HTTP API&lt;br/&gt;(JSON-RPC or REST)"]
+        WebUI["Web UI&lt;br/&gt;(tree viewer / diff viewer)"]
+    end
+
+    subgraph L5["Layer 5: Users"]
+        Human["Human developer"]
+        AI["AI agent&lt;br/&gt;(dogfood)"]
+    end
+
+    Agent --&gt; Hook
+    Agent -.OTel.-&gt; OTel
+    Hook --&gt; Ingest
+    OTel --&gt; Ingest
+    Ingest --&gt; Store
+    Store --&gt; Tree
+    Tree --&gt; Diff
+    Tree --&gt; Fork
+    Fork --&gt;|re-execute| Agent
+
+    Store --&gt; API
+    Tree --&gt; API
+    Diff --&gt; API
+    Fork --&gt; API
+
+    API --&gt; CLI
+    API --&gt; WebUI
+    CLI --&gt; Human
+    CLI --&gt; AI
+    WebUI --&gt; Human</code></pre>
+<hr />
+<h2 id="data-model-canonical">Data Model (Canonical)<a class="headerlink" href="#data-model-canonical" title="Permanent link">&para;</a></h2>
+<h3 id="core-entities">Core entities<a class="headerlink" href="#core-entities" title="Permanent link">&para;</a></h3>
+<pre class="mermaid"><code>erDiagram
+    RUN ||--o{ NODE : contains
+    RUN {
+        string run_id PK
+        string name
+        timestamp started_at
+        timestamp ended_at
+        string framework
+        string agent_signature
+        json metadata
+        string status
+        float cost_usd
+        int total_tokens
+    }
+    NODE ||--o{ NODE : parents
+    NODE {
+        string node_id PK
+        string run_id FK
+        string parent_node_id FK
+        int step_index
+        string kind "llm_call|tool_call|agent_state|error|branch"
+        timestamp ts
+        int duration_ms
+        json payload
+        json usage
+        string fingerprint "SHA256 of payload"
+    }
+    RUN ||--o{ FORK : branched_by
+    FORK {
+        string fork_id PK
+        string source_run_id FK
+        string source_node_id FK
+        string forked_run_id FK
+        json edits
+        string strategy "stable|explore"
+        timestamp created_at
+    }
+    RUN ||--o{ TAG : tagged_by
+    TAG {
+        string run_id FK
+        string tag
+    }</code></pre>
+<h3 id="node-kind-variants">Node <code>kind</code> variants<a class="headerlink" href="#node-kind-variants" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th><code>kind</code></th>
+<th><code>payload</code> schema</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>llm_call</code></td>
+<td><code>{model, system, messages[], tools[], temperature, seed, response_message, finish_reason}</code></td>
+</tr>
+<tr>
+<td><code>tool_call</code></td>
+<td><code>{tool_name, args, result, error?}</code></td>
+</tr>
+<tr>
+<td><code>agent_state</code></td>
+<td><code>{framework, state_blob (serialized), schema_version}</code></td>
+</tr>
+<tr>
+<td><code>error</code></td>
+<td><code>{exception_type, message, traceback}</code></td>
+</tr>
+<tr>
+<td><code>branch</code></td>
+<td><code>{condition, chosen, alternatives[]}</code> (for explicit agent decisions)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="reasoning-tree-reconstruction">Reasoning tree reconstruction<a class="headerlink" href="#reasoning-tree-reconstruction" title="Permanent link">&para;</a></h3>
+<p>Given rows in <code>NODE</code>:
+- Build DAG from <code>parent_node_id</code>
+- Multi-agent: multiple roots under the same <code>run_id</code> = parallel actors
+- Sub-tree = sub-agent call</p>
+<hr />
+<h2 id="component-deep-dives">Component Deep Dives<a class="headerlink" href="#component-deep-dives" title="Permanent link">&para;</a></h2>
+<h3 id="c1-framework-adapter-per-framework">C1. Framework Adapter (per-framework)<a class="headerlink" href="#c1-framework-adapter-per-framework" title="Permanent link">&para;</a></h3>
+<p><strong>Responsibilities</strong>:
+- Subscribe to framework events (callbacks / middleware)
+- Capture LLM call I/O, tool call I/O, agent state checkpoints
+- Emit canonical events to Core Ingest</p>
+<p><strong>Interface</strong> (per adapter, language-agnostic):
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>start_recording(run_name, metadata) → run_id
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>emit_event(run_id, event: CanonicalEvent)
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>end_recording(run_id, status)
+</span></code></pre></div></p>
+<p><strong>Spot the variation per framework</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Framework</th>
+<th>Hook mechanism</th>
+<th>State capture API</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LangGraph</td>
+<td><code>with_config(callbacks=[ChronosCallback()])</code></td>
+<td><code>graph.get_state(config)</code> via checkpointer</td>
+</tr>
+<tr>
+<td>AutoGen</td>
+<td><code>@agent.event_handler</code></td>
+<td>custom message_history serialization</td>
+</tr>
+<tr>
+<td>Generic OTel</td>
+<td>OTel GenAI receiver</td>
+<td>none (R1+R2+R4 only, no R3)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="c2-ingest-pipeline">C2. Ingest Pipeline<a class="headerlink" href="#c2-ingest-pipeline" title="Permanent link">&para;</a></h3>
+<p><strong>Pipeline</strong>:
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>raw_event → validate schema → normalize (tokens, cost) → dedupe by fingerprint → persist to SQLite
+</span></code></pre></div></p>
+<p>Fingerprint allows dedup across identical retries and stable references across forks.</p>
+<h3 id="c3-trace-store-sqlite">C3. Trace Store (SQLite)<a class="headerlink" href="#c3-trace-store-sqlite" title="Permanent link">&para;</a></h3>
+<p><strong>Schema</strong> (simplified):
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">runs</span><span class="w"> </span><span class="p">(</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="n">run_id</span><span class="w">        </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="n">name</span><span class="w">          </span><span class="nb">TEXT</span><span class="p">,</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="n">started_at</span><span class="w">    </span><span class="nb">INTEGER</span><span class="p">,</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="n">ended_at</span><span class="w">      </span><span class="nb">INTEGER</span><span class="p">,</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span><span class="n">framework</span><span class="w">     </span><span class="nb">TEXT</span><span class="p">,</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span><span class="n">status</span><span class="w">        </span><span class="nb">TEXT</span><span class="p">,</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span><span class="n">cost_usd</span><span class="w">      </span><span class="nb">REAL</span><span class="p">,</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">  </span><span class="n">total_tokens</span><span class="w">  </span><span class="nb">INTEGER</span><span class="p">,</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">  </span><span class="n">metadata</span><span class="w">      </span><span class="n">JSON</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="p">);</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">nodes</span><span class="w"> </span><span class="p">(</span>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">  </span><span class="n">node_id</span><span class="w">          </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">  </span><span class="n">run_id</span><span class="w">           </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">REFERENCES</span><span class="w"> </span><span class="n">runs</span><span class="p">(</span><span class="n">run_id</span><span class="p">),</span>
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="w">  </span><span class="n">parent_node_id</span><span class="w">   </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">REFERENCES</span><span class="w"> </span><span class="n">nodes</span><span class="p">(</span><span class="n">node_id</span><span class="p">),</span>
+</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="w">  </span><span class="n">step_index</span><span class="w">       </span><span class="nb">INTEGER</span><span class="p">,</span>
+</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="w">  </span><span class="n">kind</span><span class="w">             </span><span class="nb">TEXT</span><span class="p">,</span>
+</span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="w">  </span><span class="n">ts</span><span class="w">               </span><span class="nb">INTEGER</span><span class="p">,</span>
+</span><span id="__span-2-20"><a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="w">  </span><span class="n">duration_ms</span><span class="w">      </span><span class="nb">INTEGER</span><span class="p">,</span>
+</span><span id="__span-2-21"><a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="w">  </span><span class="n">payload</span><span class="w">          </span><span class="n">JSON</span><span class="p">,</span>
+</span><span id="__span-2-22"><a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a><span class="w">  </span><span class="k">usage</span><span class="w">            </span><span class="n">JSON</span><span class="p">,</span>
+</span><span id="__span-2-23"><a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a><span class="w">  </span><span class="n">fingerprint</span><span class="w">      </span><span class="nb">TEXT</span>
+</span><span id="__span-2-24"><a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a><span class="p">);</span>
+</span><span id="__span-2-25"><a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a>
+</span><span id="__span-2-26"><a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">nodes_run</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">nodes</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span><span class="w"> </span><span class="n">step_index</span><span class="p">);</span>
+</span><span id="__span-2-27"><a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">nodes_parent</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">nodes</span><span class="p">(</span><span class="n">parent_node_id</span><span class="p">);</span>
+</span><span id="__span-2-28"><a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">nodes_fingerprint</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">nodes</span><span class="p">(</span><span class="n">fingerprint</span><span class="p">);</span>
+</span><span id="__span-2-29"><a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a>
+</span><span id="__span-2-30"><a id="__codelineno-2-30" name="__codelineno-2-30" href="#__codelineno-2-30"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">forks</span><span class="w"> </span><span class="p">(</span>
+</span><span id="__span-2-31"><a id="__codelineno-2-31" name="__codelineno-2-31" href="#__codelineno-2-31"></a><span class="w">  </span><span class="n">fork_id</span><span class="w">         </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
+</span><span id="__span-2-32"><a id="__codelineno-2-32" name="__codelineno-2-32" href="#__codelineno-2-32"></a><span class="w">  </span><span class="n">source_run_id</span><span class="w">   </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">REFERENCES</span><span class="w"> </span><span class="n">runs</span><span class="p">(</span><span class="n">run_id</span><span class="p">),</span>
+</span><span id="__span-2-33"><a id="__codelineno-2-33" name="__codelineno-2-33" href="#__codelineno-2-33"></a><span class="w">  </span><span class="n">source_node_id</span><span class="w">  </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">REFERENCES</span><span class="w"> </span><span class="n">nodes</span><span class="p">(</span><span class="n">node_id</span><span class="p">),</span>
+</span><span id="__span-2-34"><a id="__codelineno-2-34" name="__codelineno-2-34" href="#__codelineno-2-34"></a><span class="w">  </span><span class="n">forked_run_id</span><span class="w">   </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">REFERENCES</span><span class="w"> </span><span class="n">runs</span><span class="p">(</span><span class="n">run_id</span><span class="p">),</span>
+</span><span id="__span-2-35"><a id="__codelineno-2-35" name="__codelineno-2-35" href="#__codelineno-2-35"></a><span class="w">  </span><span class="n">edits</span><span class="w">           </span><span class="n">JSON</span><span class="p">,</span>
+</span><span id="__span-2-36"><a id="__codelineno-2-36" name="__codelineno-2-36" href="#__codelineno-2-36"></a><span class="w">  </span><span class="n">strategy</span><span class="w">        </span><span class="nb">TEXT</span><span class="p">,</span>
+</span><span id="__span-2-37"><a id="__codelineno-2-37" name="__codelineno-2-37" href="#__codelineno-2-37"></a><span class="w">  </span><span class="n">created_at</span><span class="w">      </span><span class="nb">INTEGER</span>
+</span><span id="__span-2-38"><a id="__codelineno-2-38" name="__codelineno-2-38" href="#__codelineno-2-38"></a><span class="p">);</span>
+</span><span id="__span-2-39"><a id="__codelineno-2-39" name="__codelineno-2-39" href="#__codelineno-2-39"></a>
+</span><span id="__span-2-40"><a id="__codelineno-2-40" name="__codelineno-2-40" href="#__codelineno-2-40"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">tags</span><span class="w"> </span><span class="p">(</span>
+</span><span id="__span-2-41"><a id="__codelineno-2-41" name="__codelineno-2-41" href="#__codelineno-2-41"></a><span class="w">  </span><span class="n">run_id</span><span class="w">   </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">REFERENCES</span><span class="w"> </span><span class="n">runs</span><span class="p">(</span><span class="n">run_id</span><span class="p">),</span>
+</span><span id="__span-2-42"><a id="__codelineno-2-42" name="__codelineno-2-42" href="#__codelineno-2-42"></a><span class="w">  </span><span class="n">tag</span><span class="w">      </span><span class="nb">TEXT</span><span class="p">,</span>
+</span><span id="__span-2-43"><a id="__codelineno-2-43" name="__codelineno-2-43" href="#__codelineno-2-43"></a><span class="w">  </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span><span class="w"> </span><span class="n">tag</span><span class="p">)</span>
+</span><span id="__span-2-44"><a id="__codelineno-2-44" name="__codelineno-2-44" href="#__codelineno-2-44"></a><span class="p">);</span>
+</span></code></pre></div></p>
+<h3 id="c4-tree-builder">C4. Tree Builder<a class="headerlink" href="#c4-tree-builder" title="Permanent link">&para;</a></h3>
+<p>In-memory reconstruction of reasoning tree from flat rows. Cached per-run with invalidation on mutation.</p>
+<h3 id="c5-diff-engine">C5. Diff Engine<a class="headerlink" href="#c5-diff-engine" title="Permanent link">&para;</a></h3>
+<p><strong>Two levels of diff</strong>:</p>
+<ol>
+<li><strong>Structural</strong>: compare node-by-node using fingerprint equality, position alignment, type match</li>
+<li><strong>Semantic</strong>: for text payloads (prompts, responses), use:</li>
+<li>Text diff (word-level)</li>
+<li>Optional: LLM-as-judge for intent-level diff ("are these two responses saying the same thing?")</li>
+</ol>
+<p><strong>Alignment algorithm</strong> (when trees diverge in shape):
+- Anchor on shared ancestry up to fork point
+- After fork, align by step_index within same agent lane
+- Unmatched nodes marked as "only in A" / "only in B"</p>
+<h3 id="c6-fork-orchestrator">C6. Fork Orchestrator<a class="headerlink" href="#c6-fork-orchestrator" title="Permanent link">&para;</a></h3>
+<p><strong>Algorithm</strong>:
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>fork(source_run, source_node, edits, strategy):
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>  new_run_id = generate_id()
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>  copy nodes from source_run up to source_node (with new run_id, preserving step_index)
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>  apply edits to source_node&#39;s payload → emit as first new node
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>  replay_context = restore agent state at source_node&#39;s parent
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>  re-execute agent from source_node using replay_context
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    for each step:
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>      if strategy == &#39;stable&#39;: use seed, pinned model, temp=0
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>      if strategy == &#39;explore&#39;: use user-default LLM params
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    emit new events → Ingest
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>  mark fork row
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>  return new_run_id
+</span></code></pre></div></p>
+<p><strong>Side-effect handling</strong> (see feasibility doc R-T for details):
+- Default: tools with <code>side_effect_level &gt;= "effectful"</code> return cached result from source_run
+- Override: <code>--re-execute-tools=&lt;list&gt;</code> to force re-execution
+- Future: sandboxed re-execution via E2B/Modal</p>
+<h3 id="c7-cli">C7. CLI<a class="headerlink" href="#c7-cli" title="Permanent link">&para;</a></h3>
+<p>Entry point for most interactions. Commands map to API calls over Local HTTP API or direct in-process if running bundled.</p>
+<h3 id="c8-local-http-api">C8. Local HTTP API<a class="headerlink" href="#c8-local-http-api" title="Permanent link">&para;</a></h3>
+<p>Decouples CLI/Web UI from core. JSON-RPC over HTTP:
+- <code>chronos.run.list</code>
+- <code>chronos.run.get</code>
+- <code>chronos.run.tree</code>
+- <code>chronos.diff.compute</code>
+- <code>chronos.fork.create</code>
+- <code>chronos.fork.status</code> (for streaming progress)</p>
+<p>Local by default (bind 127.0.0.1:<port>), not exposed externally.</p>
+<h3 id="c9-web-ui">C9. Web UI<a class="headerlink" href="#c9-web-ui" title="Permanent link">&para;</a></h3>
+<p>Rendered as local static bundle, talks to API at localhost. Uses ReactFlow / Cytoscape.js for tree rendering. Deferred to v0.2+ — CLI first.</p>
+<hr />
+<h2 id="sequence-diagrams">Sequence Diagrams<a class="headerlink" href="#sequence-diagrams" title="Permanent link">&para;</a></h2>
+<h3 id="s1-recording-a-run">S1. Recording a run<a class="headerlink" href="#s1-recording-a-run" title="Permanent link">&para;</a></h3>
+<pre class="mermaid"><code>sequenceDiagram
+    participant User
+    participant CLI as chronos CLI
+    participant Agent as User Agent
+    participant Adapter as Framework Adapter
+    participant Core as Chronos Core
+    participant DB as SQLite
+
+    User-&gt;&gt;CLI: chronos record -- python agent.py
+    CLI-&gt;&gt;Agent: exec child process, inject adapter
+    Agent-&gt;&gt;Adapter: import + register hooks
+    Adapter-&gt;&gt;Core: start_recording() → run_id
+
+    loop for each agent step
+        Agent-&gt;&gt;Adapter: LLM call / tool call
+        Adapter-&gt;&gt;Core: emit_event(llm_call, payload)
+        Core-&gt;&gt;DB: INSERT node
+    end
+
+    Agent-&gt;&gt;Adapter: end
+    Adapter-&gt;&gt;Core: end_recording()
+    Core-&gt;&gt;DB: UPDATE run status
+    Core--&gt;&gt;CLI: run_id, summary
+    CLI--&gt;&gt;User: print summary</code></pre>
+<h3 id="s2-forking-a-run">S2. Forking a run<a class="headerlink" href="#s2-forking-a-run" title="Permanent link">&para;</a></h3>
+<pre class="mermaid"><code>sequenceDiagram
+    participant User
+    participant CLI as chronos CLI
+    participant Core as Chronos Core
+    participant DB as SQLite
+    participant Agent as Agent (re-exec)
+
+    User-&gt;&gt;CLI: chronos fork &lt;run&gt; --at &lt;node&gt; --set-prompt X
+    CLI-&gt;&gt;Core: fork_request(run, node, edits)
+    Core-&gt;&gt;DB: SELECT nodes up to &lt;node&gt;
+    DB--&gt;&gt;Core: nodes[]
+    Core-&gt;&gt;DB: INSERT new run + cloned nodes
+    Core-&gt;&gt;Agent: restore state, re-exec from &lt;node&gt; with edits
+
+    loop for each new step
+        Agent-&gt;&gt;Core: emit_event
+        Core-&gt;&gt;DB: INSERT node
+    end
+
+    Core--&gt;&gt;CLI: forked run_id, summary
+    CLI-&gt;&gt;User: print summary + suggest diff</code></pre>
+<h3 id="s3-diffing-two-runs">S3. Diffing two runs<a class="headerlink" href="#s3-diffing-two-runs" title="Permanent link">&para;</a></h3>
+<pre class="mermaid"><code>sequenceDiagram
+    participant User
+    participant CLI
+    participant Core
+    participant DB
+
+    User-&gt;&gt;CLI: chronos diff run_A run_B
+    CLI-&gt;&gt;Core: diff_compute(A, B)
+    Core-&gt;&gt;DB: load trees for A and B
+    Core-&gt;&gt;Core: align trees, compute structural diff
+    Core-&gt;&gt;Core: optionally LLM-semantic diff for divergent nodes
+    Core--&gt;&gt;CLI: diff result (json)
+    CLI--&gt;&gt;User: render pretty diff</code></pre>
+<hr />
+<h2 id="deployment-topologies">Deployment Topologies<a class="headerlink" href="#deployment-topologies" title="Permanent link">&para;</a></h2>
+<h3 id="t1-local-only-v01-default">T1. Local-only (v0.1 default)<a class="headerlink" href="#t1-local-only-v01-default" title="Permanent link">&para;</a></h3>
+<p>Everything runs on one machine. SQLite file in <code>~/.chronos/</code>. CLI invokes bundled core.</p>
+<h3 id="t2-local-lan-sharing-v02-nice-to-have">T2. Local + LAN sharing (v0.2 nice-to-have)<a class="headerlink" href="#t2-local-lan-sharing-v02-nice-to-have" title="Permanent link">&para;</a></h3>
+<p>CLI can bind API to LAN port; teammates can view each other's traces read-only.</p>
+<h3 id="t3-cloud-hosted-v10-possible-future">T3. Cloud-hosted (v1.0+ possible future)<a class="headerlink" href="#t3-cloud-hosted-v10-possible-future" title="Permanent link">&para;</a></h3>
+<p>Optional trace upload to hosted chronos cloud. Out of scope for Phase 0–3.</p>
+<hr />
+<h2 id="security-model">Security Model<a class="headerlink" href="#security-model" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Trace DB is <strong>local-only by default</strong>; filesystem permissions protect it</li>
+<li>LLM API keys are <strong>never stored by chronos</strong>; user provides via environment as always</li>
+<li><strong>Redaction hooks</strong> — users can register regex / function to scrub PII before storage</li>
+<li>Fork re-execution uses user's own API keys</li>
+<li>No network calls from chronos core except to user-configured LLM provider during fork re-execution</li>
+</ul>
+<hr />
+<h2 id="extension-points-designed-for-future">Extension Points (designed-for-future)<a class="headerlink" href="#extension-points-designed-for-future" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Custom diff plugins</strong> — users can register domain-specific diff functions (e.g., "for my RAG app, diff retrieved docs by semantic similarity not text")</li>
+<li><strong>Custom adapters</strong> — adapter interface is public; any framework can be added</li>
+<li><strong>Trace exporters</strong> — Parquet, OTLP, JSON Lines</li>
+<li><strong>Pre-fork hooks</strong> — user code runs before fork (to mutate sandbox env, etc.)</li>
+</ol>
+<hr />
+<h2 id="open-architecture-questions">Open Architecture Questions<a class="headerlink" href="#open-architecture-questions" title="Permanent link">&para;</a></h2>
+<ol class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Should the core be a library (embedded in CLI) or a daemon (shared across CLI / Web)?</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Should we ship a single binary (Go/Rust build) or a package (Python/TS install)?</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> How to handle very long-running agents (&gt;1h) — streaming ingest vs. batch?</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Web UI framework: Next.js (heavy but popular) vs. Vite+React (light) vs. Svelte?</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Should diff UI support 3-way diff (base, A, B) like git mergetool?</li>
+</ol>
+<hr />
+<p><em>Document owner: Hermes Agent. Major architecture changes require an ADR.</em></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 chengfei867 — content generated 100% by Hermes Agent / Claude Opus
+    </div>
+  
+  
+</div>
+      
+        <div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/chengfei867/chronos-agent" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.top", "navigation.indexes", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.88dd0f4e.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,1703 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Time-Travel Debugger for Multi-Agent AI Systems — record, replay, fork, diff, compare. With first-class token/cost tracking and pluggable evaluators.">
+      
+      
+        <meta name="author" content="Hermes Agent">
+      
+      
+        <link rel="canonical" href="https://chengfei867.github.io/chronos-agent/decisions/ADR-015-extractor-contract-v2/">
+      
+      
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.49">
+    
+    
+      
+        <title>ADR-015: Extractor Contract v2 — Framework-Agnostic Consolidation - Chronos Agent</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.6f8fc17f.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#adr-015-extractor-contract-v2-framework-agnostic-consolidation" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Chronos Agent" class="md-header__button md-logo" aria-label="Chronos Agent" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Chronos Agent
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              ADR-015: Extractor Contract v2 — Framework-Agnostic Consolidation
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/chengfei867/chronos-agent" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    chengfei867/chronos-agent
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+    
+  
+  Getting started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../concepts/" class="md-tabs__link">
+        
+  
+    
+  
+  Concepts
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../cli-reference/" class="md-tabs__link">
+        
+  
+    
+  
+  CLI reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../cost-tracking/" class="md-tabs__link">
+        
+  
+    
+  
+  Cost tracking
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../evaluators/" class="md-tabs__link">
+        
+  
+    
+  
+  Evaluators
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../adapters/anthropic_agents/" class="md-tabs__link">
+          
+  
+    
+  
+  Adapters
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guides/forking-safely/" class="md-tabs__link">
+          
+  
+    
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../contracts/golden-trace-format/" class="md-tabs__link">
+          
+  
+    
+  
+  Contracts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../" class="md-tabs__link">
+          
+  
+    
+  
+  Decisions (ADRs)
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../faq/" class="md-tabs__link">
+        
+  
+    
+  
+  FAQ
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Chronos Agent" class="md-nav__button md-logo" aria-label="Chronos Agent" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Chronos Agent
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/chengfei867/chronos-agent" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    chengfei867/chronos-agent
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Getting started
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Concepts
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli-reference/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    CLI reference
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cost-tracking/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Cost tracking
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../evaluators/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Evaluators
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Adapters
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            Adapters
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adapters/anthropic_agents/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Anthropic Agents SDK
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contracts/adapter-protocol/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Adapter protocol
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Guides
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            Guides
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/forking-safely/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Forking safely
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/side-effects/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Side effects
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Contracts
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            Contracts
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contracts/golden-trace-format/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Golden trace format
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    Decisions (ADRs)
+  </span>
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            Decisions (ADRs)
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    FAQ
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#context" class="md-nav__link">
+    <span class="md-ellipsis">
+      Context
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Context">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-now-not-at-r26" class="md-nav__link">
+    <span class="md-ellipsis">
+      Why now, not at R26
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-this-adr-is-not" class="md-nav__link">
+    <span class="md-ellipsis">
+      What this ADR is not
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      Decision
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Decision">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#layer-1-data-shape-framework-agnostic-invariant" class="md-nav__link">
+    <span class="md-ellipsis">
+      Layer 1 — Data shape (framework-agnostic, invariant)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#layer-2-protocol-lifecycle-framework-agnostic-invariant" class="md-nav__link">
+    <span class="md-ellipsis">
+      Layer 2 — Protocol &amp; lifecycle (framework-agnostic, invariant)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#layer-3-serialization-boundary-framework-agnostic-invariant" class="md-nav__link">
+    <span class="md-ellipsis">
+      Layer 3 — Serialization boundary (framework-agnostic, invariant)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#layer-4-multi-call-per-node-accumulation-framework-specific-shape-invariant-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      Layer 4 — Multi-call-per-node accumulation (framework-specific SHAPE, invariant POLICY)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#layer-5-convenience-extractors-model-specific-field-mapping-framework-specific-implementations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Layer 5 — Convenience extractors &amp; model-specific field mapping (framework-specific IMPLEMENTATIONS)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#framework-portability-matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      Framework portability matrix
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      Consequences
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Consequences">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#positive" class="md-nav__link">
+    <span class="md-ellipsis">
+      Positive
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#negative" class="md-nav__link">
+    <span class="md-ellipsis">
+      Negative
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#neutral" class="md-nav__link">
+    <span class="md-ellipsis">
+      Neutral
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#alternatives-considered" class="md-nav__link">
+    <span class="md-ellipsis">
+      Alternatives Considered
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Alternatives Considered">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-leave-the-contract-implicit-rely-on-adr-009010011012-the-langgraph-code-as-the-spec" class="md-nav__link">
+    <span class="md-ellipsis">
+      (A) Leave the contract implicit, rely on ADR-009/010/011/012 + the LangGraph code as the spec
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b-collapse-adr-009010011012-into-this-one-and-delete-them" class="md-nav__link">
+    <span class="md-ellipsis">
+      (B) Collapse ADR-009/010/011/012 into this one and delete them
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c-push-layers-4-5-into-framework-specific-adrs-one-per-adapter" class="md-nav__link">
+    <span class="md-ellipsis">
+      (C) Push Layers 4-5 into framework-specific ADRs (one per adapter)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#d-define-usagecontext-as-a-protocol-instead-of-a-frozen-dataclass-so-each-adapter-can-add-framework-specific-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      (D) Define UsageContext as a Protocol instead of a frozen dataclass, so each adapter can add framework-specific fields
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementation-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Implementation Notes
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verification-gates" class="md-nav__link">
+    <span class="md-ellipsis">
+      Verification Gates
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-2-entry-impact" class="md-nav__link">
+    <span class="md-ellipsis">
+      Phase 2 entry impact
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="adr-015-extractor-contract-v2-framework-agnostic-consolidation">ADR-015: Extractor Contract v2 — Framework-Agnostic Consolidation<a class="headerlink" href="#adr-015-extractor-contract-v2-framework-agnostic-consolidation" title="Permanent link">&para;</a></h1>
+<ul>
+<li><strong>Status:</strong> Accepted</li>
+<li><strong>Date:</strong> 2026-04-23</li>
+<li><strong>Round:</strong> R25</li>
+<li><strong>Consolidates:</strong> ADR-009 (hook), ADR-010 (native extractors),
+  ADR-011 (serialization boundary), ADR-012 (multi-LLM-per-node)</li>
+<li><strong>Related:</strong> ADR-014 (Phase 2 entry criteria, R2), ADR-003 (schema)</li>
+<li><strong>Supersedes:</strong> — (ADR-009/010/011/012 remain historical record; this ADR
+  is the single source of truth for future adapter authors)</li>
+</ul>
+<hr />
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
+<p>Four ADRs have shaped the <code>UsageExtractor</code> contract by evolution:</p>
+<table>
+<thead>
+<tr>
+<th>ADR</th>
+<th>Round</th>
+<th>Contribution</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ADR-009</td>
+<td>R12</td>
+<td>Introduced the hook, the <code>UsageContext</code> / <code>UsageResult</code> dataclasses, and the "extractor may never abort a recording" invariant.</td>
+</tr>
+<tr>
+<td>ADR-010</td>
+<td>R15</td>
+<td>Added <code>anthropic_usage_extractor</code> / <code>openai_usage_extractor</code> siblings and pinned cache-token / reasoning-token field mapping.</td>
+</tr>
+<tr>
+<td>ADR-011</td>
+<td>R17</td>
+<td>Added recursive pydantic→dict coercion at the serialization boundary; forced extractors to be dict-shape-aware via <code>_msg_field</code>.</td>
+</tr>
+<tr>
+<td>ADR-012</td>
+<td>R18</td>
+<td>Activated <code>pre_values</code>: extractors now sum usage across <strong>all new AIMessages</strong> between pre- and post-snapshot, not just the last one.</td>
+</tr>
+</tbody>
+</table>
+<p>ADR-014 R2 (R24) called this out as the #2 Phase-2 entry blocker: the
+contract is real and works, but it is implicit — scattered across four
+ADRs, three convenience extractor implementations, and <code>langgraph_usage.py</code>
+docstrings. An AutoGen adapter author in R26+ would have to reverse-
+engineer the contract from the LangGraph implementation, which is exactly
+the drift ADR-014 warns about: <strong>"the second implementation becomes the
+de-facto spec and drift compounds."</strong></p>
+<p>This ADR consolidates the four predecessors into one contract, generalizes
+the vocabulary from LangGraph-specific to framework-agnostic, and calls
+out the parts AutoGen adapters are expected to re-use as-is versus the
+parts they are expected to specialize.</p>
+<h3 id="why-now-not-at-r26">Why now, not at R26<a class="headerlink" href="#why-now-not-at-r26" title="Permanent link">&para;</a></h3>
+<p>Writing the adapter interface (R1, planned R26) against a drifted extractor
+contract would bake that drift into the interface. The order is forced:
+extractor contract v2 first (this ADR), adapter interface ADR second
+(R26), then implementation.</p>
+<h3 id="what-this-adr-is-not">What this ADR is <em>not</em><a class="headerlink" href="#what-this-adr-is-not" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Not a code change. The three existing extractors already implement
+  everything below. ADR-015 is <em>documentation debt paydown</em>, nothing else.</li>
+<li>Not an AutoGen adapter design. That's ADR-TBD in R26, which will <em>cite</em>
+  this ADR for the extractor-shaped portion of the interface.</li>
+<li>Not a pricing / cost-table proposal. Pricing remains user turf
+  (ADR-009 §Decision #4 stays in force).</li>
+</ul>
+<hr />
+<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
+<p>The <code>UsageExtractor</code> contract consists of <strong>five layers</strong>. Layers 1-3 are
+framework-agnostic and every future adapter MUST honor them verbatim.
+Layers 4-5 are framework-specific: each adapter provides its own concrete
+realization.</p>
+<h3 id="layer-1-data-shape-framework-agnostic-invariant">Layer 1 — Data shape (framework-agnostic, invariant)<a class="headerlink" href="#layer-1-data-shape-framework-agnostic-invariant" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">UsageContext</span><span class="p">:</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">node_name</span><span class="p">:</span> <span class="nb">str</span>                     <span class="c1"># identifier of the node being recorded</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">pre_snapshot</span><span class="p">:</span>  <span class="n">Any</span>                 <span class="c1"># adapter-native pre-execution state object</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">post_snapshot</span><span class="p">:</span> <span class="n">Any</span>                 <span class="c1"># adapter-native post-execution state object</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">pre_values</span><span class="p">:</span>    <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>      <span class="c1"># coerced (Layer 3) pre-state as JSON-safe dict</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">post_values</span><span class="p">:</span>   <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>      <span class="c1"># coerced (Layer 3) post-state as JSON-safe dict</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">task</span><span class="p">:</span>          <span class="n">Any</span>                 <span class="c1"># adapter-native task / step handle (best-effort)</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="k">class</span><span class="w"> </span><span class="nc">UsageResult</span><span class="p">:</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    <span class="n">prompt_tokens</span><span class="p">:</span>     <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    <span class="n">completion_tokens</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>    <span class="n">reasoning_tokens</span><span class="p">:</span>  <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>    <span class="n">cost_usd_cents</span><span class="p">:</span>    <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>    <span class="n">model_name</span><span class="p">:</span>        <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</span></code></pre></div>
+<p><strong>Invariants:</strong></p>
+<ul>
+<li>Both classes are <code>frozen=True</code> dataclasses. Extractors get read-only input
+  and return a pure value — zero side effects are permitted on the types.</li>
+<li><code>pre_values</code> / <code>post_values</code> are ALWAYS JSON-safe dicts (Layer 3
+  guarantee). Extractors MUST NOT assume object-shape on these fields.</li>
+<li><code>pre_snapshot</code> / <code>post_snapshot</code> are the adapter's native objects
+  (LangGraph <code>StateSnapshot</code>, AutoGen <code>GroupChatManager</code> state, CrewAI
+  <code>CrewState</code>, …). Extractors that need framework-specific metadata
+  read from these; extractors that only need token usage do not.</li>
+<li><code>task</code> is optional — some frameworks may pass <code>None</code>. Extractors MUST
+  tolerate this.</li>
+</ul>
+<h3 id="layer-2-protocol-lifecycle-framework-agnostic-invariant">Layer 2 — Protocol &amp; lifecycle (framework-agnostic, invariant)<a class="headerlink" href="#layer-2-protocol-lifecycle-framework-agnostic-invariant" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">UsageExtractor</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">UsageContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">UsageResult</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+</span></code></pre></div>
+<p><strong>Lifecycle invariants (every adapter MUST honor):</strong></p>
+<ol>
+<li><strong>Optional kwarg.</strong> The extractor is passed to the recorder constructor
+   (e.g., <code>LangGraphRecorder(..., usage_extractor=...)</code>). Default <code>None</code>
+   means "do not call any extractor; leave <code>Node.usage</code> = <code>None</code>."
+   <strong>Fully backwards compatible</strong> is an adapter-level promise.</li>
+<li><strong>One call per recorded node.</strong> Called exactly once per <code>Node</code> the
+   adapter is about to append — never zero times (would lose LLM nodes),
+   never twice (would double-count).</li>
+<li><strong>Called AFTER state coercion, BEFORE node append.</strong> This ordering is
+   non-negotiable: coercion guarantees Layer 3, and being pre-append lets
+   the extractor's return value populate <code>Node.usage</code> / <code>Node.model_name</code>
+   / <code>Node.cost_usd_cents</code> in the same transaction.</li>
+<li><strong><code>None</code> return = non-LLM node.</strong> Leaves <code>Node.usage = None</code>,
+   <code>Node.cost_usd_cents = None</code>. Expected for routers, tools, state-only
+   nodes. The recorder MUST NOT treat <code>None</code> as an error.</li>
+<li><strong>Raised exception = warning + skip.</strong> The recorder MUST catch all
+   exceptions, log one warning record at <code>WARNING</code> level to the logger
+   <code>chronos.adapters.&lt;adapter_name&gt;.usage</code> with <code>exc_info=True</code>, and
+   continue recording the node with <code>usage = None</code>. <strong>A buggy extractor
+   must NEVER abort a recording.</strong> This is the single most important
+   invariant in the entire contract.</li>
+<li><strong>Field mapping.</strong> The recorder MUST map returned fields exactly:</li>
+<li><code>prompt_tokens</code> + <code>completion_tokens</code> + <code>reasoning_tokens</code>
+     → <code>Node.usage = Usage(...)</code></li>
+<li><code>cost_usd_cents</code> → <code>Node.cost_usd_cents</code></li>
+<li><code>model_name</code> → <code>Node.model_name</code></li>
+</ol>
+<p>Any field left at its default (0 / <code>None</code>) is written as-is. The
+   recorder does NOT synthesize values (e.g., does NOT compute cost
+   from tokens — pricing is user turf).</p>
+<h3 id="layer-3-serialization-boundary-framework-agnostic-invariant">Layer 3 — Serialization boundary (framework-agnostic, invariant)<a class="headerlink" href="#layer-3-serialization-boundary-framework-agnostic-invariant" title="Permanent link">&para;</a></h3>
+<p>Before an extractor is called, the adapter MUST coerce its native state
+values to a JSON-safe shape. ADR-011's <code>_jsonable</code> algorithm is the
+reference implementation; any adapter MUST produce output
+<strong>observationally equivalent</strong> to:</p>
+<ol>
+<li>Primitives (<code>None</code>, <code>str</code>, <code>int</code>, <code>float</code>, <code>bool</code>) pass through.</li>
+<li>Objects with <code>.model_dump()</code> (pydantic v1/v2, LangChain <code>BaseMessage</code>,
+   AutoGen <code>Message</code>, …) are dumped, then recursed.</li>
+<li>Generic objects with <code>__dict__</code> fall back to <code>dict(obj.__dict__)</code>,
+   then recursed.</li>
+<li>Containers (<code>dict</code> / <code>list</code> / <code>tuple</code> / <code>set</code> / <code>frozenset</code>) are
+   recursed element-wise (tuples/sets become lists).</li>
+<li>Exotic objects (datetime, UUID, Enum, bytes, …) surviving steps 2-4
+   fall back to <code>repr(obj)</code> — <strong>never raise</strong>. Recording completeness
+   beats type round-tripping.</li>
+</ol>
+<p><strong>Why this is framework-agnostic:</strong> every adapter's storage layer
+(ADR-003's SQLite <code>state_after_json</code>) demands JSON-serializability. The
+coercion rule has nothing to do with LangGraph; it's an invariant of the
+adapter→store boundary. Putting it in the extractor contract (rather
+than letting each adapter reinvent it) removes one class of drift.</p>
+<p><strong>Extractor-author consequence:</strong> extractors MUST read message fields
+through a dict/object-bimodal helper (reference: <code>_msg_field</code> in
+<code>chronos.adapters.langgraph_usage</code>). Writing <code>getattr(msg, "x", None)</code>
+alone is insufficient — it will silently return <code>None</code> on the
+dict-shaped inputs that Layer 3 produces.</p>
+<h3 id="layer-4-multi-call-per-node-accumulation-framework-specific-shape-invariant-policy">Layer 4 — Multi-call-per-node accumulation (framework-specific SHAPE, invariant POLICY)<a class="headerlink" href="#layer-4-multi-call-per-node-accumulation-framework-specific-shape-invariant-policy" title="Permanent link">&para;</a></h3>
+<p><strong>Policy (invariant):</strong> when one super-step of the graph makes N≥1 LLM
+calls between pre- and post-snapshot, the extractor MUST sum usage
+across ALL N calls. "Last message wins" is forbidden — it silently
+undercounts swarm / react_agent / evaluator-loop patterns by 30-70 %
+(ADR-012 §Context).</p>
+<p><strong>Shape (framework-specific):</strong> how the extractor <em>finds</em> the N calls
+depends on the framework. For LangGraph:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">delta_msgs</span> <span class="o">=</span> <span class="n">post_values</span><span class="p">[</span><span class="s2">&quot;messages&quot;</span><span class="p">][</span><span class="nb">len</span><span class="p">(</span><span class="n">pre_values</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;messages&quot;</span><span class="p">,</span> <span class="p">[])):]</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="k">for</span> <span class="n">msg</span> <span class="ow">in</span> <span class="n">delta_msgs</span><span class="p">:</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="k">if</span> <span class="n">_msg_is_ai</span><span class="p">(</span><span class="n">msg</span><span class="p">):</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>        <span class="n">accumulate</span><span class="p">(</span><span class="n">_msg_field</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="s2">&quot;usage_metadata&quot;</span><span class="p">))</span>
+</span></code></pre></div>
+<p>For AutoGen (future R26), the analog would walk whatever list the
+manager appends to — likely <code>post_values["chat_messages"]</code> sliced
+against pre. For CrewAI, <code>post_values["tasks_output"]</code>. The slicing
+policy is invariant; the field name is not.</p>
+<p><strong>Invariant restated, framework-free:</strong> <code>delta = post_stream − pre_stream</code>,
+where <code>pre_stream</code> is possibly empty (first super-step). Extractors
+MUST treat missing-pre as empty-pre.</p>
+<h3 id="layer-5-convenience-extractors-model-specific-field-mapping-framework-specific-implementations">Layer 5 — Convenience extractors &amp; model-specific field mapping (framework-specific IMPLEMENTATIONS)<a class="headerlink" href="#layer-5-convenience-extractors-model-specific-field-mapping-framework-specific-implementations" title="Permanent link">&para;</a></h3>
+<p>Each adapter SHOULD ship convenience extractors for its common LLM
+backends, following these naming and mapping conventions:</p>
+<p><strong>Naming:</strong> <code>&lt;provider&gt;_usage_extractor</code> — e.g.,
+<code>anthropic_usage_extractor</code>, <code>openai_usage_extractor</code>. A generic fallback
+named <code>&lt;framework&gt;_native_usage_extractor</code> (e.g.,
+<code>aimessage_usage_extractor</code> for LangChain's standardised
+<code>usage_metadata</code>) covers the provider-agnostic path when one exists.</p>
+<p><strong>Field mapping (provider-invariant, see ADR-010 for LangGraph):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Source field</th>
+<th>Maps to</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Anthropic</strong></td>
+<td><code>usage.input_tokens</code></td>
+<td><code>prompt_tokens</code></td>
+<td>base</td>
+</tr>
+<tr>
+<td></td>
+<td><code>usage.output_tokens</code></td>
+<td><code>completion_tokens</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td></td>
+<td><code>usage.cache_creation_input_tokens</code></td>
+<td><code>prompt_tokens</code> (+=)</td>
+<td>cost surcharge = user concern</td>
+</tr>
+<tr>
+<td></td>
+<td><code>usage.cache_read_input_tokens</code></td>
+<td><code>prompt_tokens</code> (+=)</td>
+<td>cost discount = user concern</td>
+</tr>
+<tr>
+<td></td>
+<td><em>(none)</em></td>
+<td><code>reasoning_tokens = 0</code></td>
+<td>extended thinking not in basic usage block</td>
+</tr>
+<tr>
+<td><strong>OpenAI</strong></td>
+<td><code>usage.prompt_tokens</code></td>
+<td><code>prompt_tokens</code></td>
+<td>already includes cached</td>
+</tr>
+<tr>
+<td></td>
+<td><code>usage.completion_tokens</code></td>
+<td><code>completion_tokens</code></td>
+<td>already includes reasoning</td>
+</tr>
+<tr>
+<td></td>
+<td><code>usage.completion_tokens_details.reasoning_tokens</code></td>
+<td><code>reasoning_tokens</code></td>
+<td>o1/o3; NOT subtracted from completion</td>
+</tr>
+<tr>
+<td><strong>LangChain std</strong></td>
+<td><code>AIMessage.usage_metadata.input_tokens</code></td>
+<td><code>prompt_tokens</code></td>
+<td>LC 0.3+</td>
+</tr>
+<tr>
+<td></td>
+<td><code>AIMessage.usage_metadata.output_tokens</code></td>
+<td><code>completion_tokens</code></td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Duck typing is mandatory.</strong> Extractors MUST NOT <code>import anthropic</code>
+or <code>import openai</code> — users without those packages still need the
+extractors. Read by field name; tolerate missing fields via
+<code>int(value or 0)</code>.</p>
+<p><strong><code>cost_usd_cents</code> default = <code>None</code>.</strong> Convenience extractors MUST NOT
+compute cost. Users compose pricing as a post-processing wrapper.</p>
+<p><strong>Composed multi-provider fallback (documented pattern):</strong></p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">mixed</span><span class="p">(</span><span class="n">ctx</span><span class="p">):</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="k">return</span> <span class="p">(</span><span class="n">anthropic_usage_extractor</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>            <span class="ow">or</span> <span class="n">openai_usage_extractor</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>            <span class="ow">or</span> <span class="n">aimessage_usage_extractor</span><span class="p">(</span><span class="n">ctx</span><span class="p">))</span>
+</span></code></pre></div>
+<p>This one-liner is the ONLY supported way to combine extractors. Chronos
+does NOT ship an auto-cascading "smart" extractor — that would hide
+double-counting bugs when a message carries both metadata shapes.</p>
+<hr />
+<h2 id="framework-portability-matrix">Framework portability matrix<a class="headerlink" href="#framework-portability-matrix" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>LangGraph (shipped)</th>
+<th>AutoGen (R26+)</th>
+<th>CrewAI (TBD)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>1 — data shape</strong></td>
+<td><code>UsageContext</code> / <code>UsageResult</code> verbatim</td>
+<td>verbatim</td>
+<td>verbatim</td>
+</tr>
+<tr>
+<td><strong>2 — lifecycle</strong></td>
+<td>verbatim (see <code>LangGraphRecorder._extract_usage</code>)</td>
+<td>verbatim</td>
+<td>verbatim</td>
+</tr>
+<tr>
+<td><strong>3 — coercion</strong></td>
+<td><code>_jsonable</code> in <code>langgraph.py</code></td>
+<td>adapter owns its <code>_jsonable</code> (same algorithm)</td>
+<td>ditto</td>
+</tr>
+<tr>
+<td><strong>4 — delta policy</strong></td>
+<td>invariant</td>
+<td>invariant</td>
+<td>invariant</td>
+</tr>
+<tr>
+<td><strong>4 — delta SHAPE</strong></td>
+<td><code>post_values["messages"]</code> diff</td>
+<td><code>post_values["chat_messages"]</code> diff (or equivalent)</td>
+<td><code>post_values["tasks_output"]</code> diff (or equivalent)</td>
+</tr>
+<tr>
+<td><strong>5 — convenience extractors</strong></td>
+<td><code>anthropic</code> / <code>openai</code> / <code>aimessage</code></td>
+<td>new module <code>autogen_usage.py</code> with mirror names</td>
+<td><code>crewai_usage.py</code> ditto</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Cross-adapter reuse of provider extractors:</strong> the Anthropic / OpenAI
+field mappings in Layer 5 are <em>provider-specific</em>, not
+framework-specific. A future AutoGen adapter SHOULD import the field-
+mapping logic (not the whole extractor — the message-walking loop differs)
+from a shared module. We will refactor when the second adapter lands;
+until then, code duplication is acceptable (ADR-010 rationale stands).</p>
+<hr />
+<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
+<h3 id="positive">Positive<a class="headerlink" href="#positive" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Single source of truth.</strong> Future AutoGen / CrewAI adapter authors
+  read one ADR, not four. R2 (ADR-014) is unblocked.</li>
+<li><strong>No code change.</strong> ADR-015 only codifies what already exists. Zero
+  risk of regression, zero test churn.</li>
+<li><strong>Adapter-author checklist.</strong> Layers 1-3 are invariants → new
+  adapter's CI can test them directly via a shared <code>UsageContext</code>
+  fixture. Layers 4-5 are framework-specific → each adapter writes
+  its own tests.</li>
+<li><strong>ADR-014 R2 ✅.</strong> Phase 2 entry scorecard moves from 0/4 to 1/4
+  required (assuming R26 tackles R1 next).</li>
+<li><strong>Discoverable.</strong> <code>docs/decisions/ADR-015-extractor-contract-v2.md</code>
+  is where someone searching "how do I write a new adapter?" lands.
+  ADR-009 / 010 / 011 / 012 now bear "Consolidated into ADR-015"
+  breadcrumbs (cross-linking round, same commit).</li>
+</ul>
+<h3 id="negative">Negative<a class="headerlink" href="#negative" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>One more ADR to maintain.</strong> Mitigated: predecessors become
+  historical; future edits go to ADR-015 only.</li>
+<li><strong>Risk of spec-code drift.</strong> If the LangGraph extractor implementation
+  changes but ADR-015 doesn't, the next adapter author reads the wrong
+  contract. Mitigated: dogfood rounds test the contract; any contract
+  change is itself an ADR.</li>
+</ul>
+<h3 id="neutral">Neutral<a class="headerlink" href="#neutral" title="Permanent link">&para;</a></h3>
+<ul>
+<li>No version bump (R25 is a documentation round, same pattern as R24).
+  CHANGELOG <code>[Unreleased]</code> accumulates R24 + R25 until next feature
+  substance lands.</li>
+</ul>
+<hr />
+<h2 id="alternatives-considered">Alternatives Considered<a class="headerlink" href="#alternatives-considered" title="Permanent link">&para;</a></h2>
+<h3 id="a-leave-the-contract-implicit-rely-on-adr-009010011012-the-langgraph-code-as-the-spec">(A) Leave the contract implicit, rely on ADR-009/010/011/012 + the LangGraph code as the spec<a class="headerlink" href="#a-leave-the-contract-implicit-rely-on-adr-009010011012-the-langgraph-code-as-the-spec" title="Permanent link">&para;</a></h3>
+<p>Rejected. ADR-014 R2 explicitly flags this as a Phase-2 blocker: "the
+second implementation becomes the de-facto spec and drift compounds."
+Doing the AutoGen adapter first and then writing this ADR retroactively
+would lock in whatever drift happened during that adapter's
+development.</p>
+<h3 id="b-collapse-adr-009010011012-into-this-one-and-delete-them">(B) Collapse ADR-009/010/011/012 into this one and delete them<a class="headerlink" href="#b-collapse-adr-009010011012-into-this-one-and-delete-them" title="Permanent link">&para;</a></h3>
+<p>Rejected. The predecessor ADRs document the <strong>decision context</strong> —
+why cache tokens fold into <code>prompt_tokens</code>, why R18 forced the delta
+rule, why pydantic coercion happens at the adapter boundary. Losing
+that history makes future "why did we decide this?" questions harder
+to answer. Cross-link breadcrumbs preserve both reachability and
+history.</p>
+<h3 id="c-push-layers-4-5-into-framework-specific-adrs-one-per-adapter">(C) Push Layers 4-5 into framework-specific ADRs (one per adapter)<a class="headerlink" href="#c-push-layers-4-5-into-framework-specific-adrs-one-per-adapter" title="Permanent link">&para;</a></h3>
+<p>Rejected. The <em>policy</em> in Layer 4 (delta semantics) and the <em>shape</em> of
+Layer 5 (naming, duck typing, <code>cost_usd_cents = None</code>) are
+framework-agnostic. Only the concrete field names vary. Splitting would
+create N copies of the same policy prose.</p>
+<h3 id="d-define-usagecontext-as-a-protocol-instead-of-a-frozen-dataclass-so-each-adapter-can-add-framework-specific-fields">(D) Define <code>UsageContext</code> as a <code>Protocol</code> instead of a frozen dataclass, so each adapter can add framework-specific fields<a class="headerlink" href="#d-define-usagecontext-as-a-protocol-instead-of-a-frozen-dataclass-so-each-adapter-can-add-framework-specific-fields" title="Permanent link">&para;</a></h3>
+<p>Rejected (for now). Simpler to keep <code>UsageContext</code> a single concrete
+dataclass across all adapters — extractors that need framework-
+specific metadata reach into <code>pre_snapshot</code> / <code>post_snapshot</code> (both
+typed <code>Any</code>). If a future adapter <em>really</em> needs typed per-adapter
+fields (e.g., AutoGen-specific <code>turn_id</code>), we revisit in the adapter's
+own ADR; the Protocol migration is mechanical.</p>
+<hr />
+<h2 id="implementation-notes">Implementation Notes<a class="headerlink" href="#implementation-notes" title="Permanent link">&para;</a></h2>
+<p><strong>No code changes in R25.</strong> The ADR is the deliverable. What already
+exists is already compliant:</p>
+<ul>
+<li><code>src/chronos/adapters/langgraph_usage.py</code> — Layers 1, 2, 5 shipped.</li>
+<li><code>src/chronos/adapters/langgraph.py::_jsonable</code> — Layer 3 shipped.</li>
+<li>Layer 4 delta rule — R18 refactor in the three convenience extractors.</li>
+<li>All 264 tests green as of R24 HEAD (<code>5a8e844</code>).</li>
+</ul>
+<p><strong>Cross-link work (this commit):</strong></p>
+<ul>
+<li>ADR-009 gets "<strong>Consolidated into:</strong> ADR-015" line.</li>
+<li>ADR-010 ditto.</li>
+<li>ADR-011 ditto.</li>
+<li>ADR-012 ditto.</li>
+</ul>
+<p><strong>Where new adapters start reading in R26+:</strong></p>
+<ol>
+<li>ADR-005 (adapter interface — to be written in R26 per R1).</li>
+<li>ADR-015 (this ADR).</li>
+<li><code>src/chronos/adapters/langgraph_usage.py</code> as the reference
+   implementation.</li>
+</ol>
+<hr />
+<h2 id="verification-gates">Verification Gates<a class="headerlink" href="#verification-gates" title="Permanent link">&para;</a></h2>
+<p>Because R25 is documentation-only, verification is lighter than a code
+round:</p>
+<ul>
+<li><strong>ruff/format/mypy/pytest</strong> all stay green (264/264).</li>
+<li><code>grep -rn "UsageExtractor\|UsageContext\|UsageResult" docs/decisions/</code>
+  shows all five ADRs (009, 010, 011, 012, 015) as the authoritative
+  cluster; no stale docs elsewhere.</li>
+<li>ADR-009 / 010 / 011 / 012 each carry a "Consolidated into ADR-015"
+  breadcrumb (verified by grep).</li>
+<li><code>docs/CONTEXT.md</code> §5 references ADR-015 as the extractor contract
+  citation (instead of pointing at 009/010/011/012 individually).</li>
+</ul>
+<hr />
+<h2 id="phase-2-entry-impact">Phase 2 entry impact<a class="headerlink" href="#phase-2-entry-impact" title="Permanent link">&para;</a></h2>
+<p><strong>Before R25:</strong> R1 ❌, R2 ❌, R3 ❌, R4 ❌ (0/4 required)
+<strong>After R25:</strong>  R1 ❌, R2 ✅, R3 ❌, R4 ❌ (1/4 required)</p>
+<p>R26 candidate: <strong>R1 — adapter interface ADR</strong>. With Layer 1-3 of this
+ADR as invariant foundation, R1 can cite ADR-015 rather than rederive
+the extractor surface.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 chengfei867 — content generated 100% by Hermes Agent / Claude Opus
+    </div>
+  
+  
+</div>
+      
+        <div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/chengfei867/chronos-agent" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.top", "navigation.indexes", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.88dd0f4e.min.js"></script>
+      
+    
+  </body>
+</html>

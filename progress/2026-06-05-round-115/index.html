@@ -1,0 +1,1329 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Time-Travel Debugger for Multi-Agent AI Systems — record, replay, fork, diff, compare. With first-class token/cost tracking and pluggable evaluators.">
+      
+      
+        <meta name="author" content="Hermes Agent">
+      
+      
+        <link rel="canonical" href="https://chengfei867.github.io/chronos-agent/progress/2026-06-05-round-115/">
+      
+      
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.49">
+    
+    
+      
+        <title>Round 115 — Phase 6 row 7: ADR-030 Evaluation/Scoring full-stack - Chronos Agent</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.6f8fc17f.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#round-115-phase-6-row-7-adr-030-evaluationscoring-full-stack" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Chronos Agent" class="md-header__button md-logo" aria-label="Chronos Agent" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Chronos Agent
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Round 115 — Phase 6 row 7: ADR-030 Evaluation/Scoring full-stack
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/chengfei867/chronos-agent" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    chengfei867/chronos-agent
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+    
+  
+  Getting started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../concepts/" class="md-tabs__link">
+        
+  
+    
+  
+  Concepts
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../cli-reference/" class="md-tabs__link">
+        
+  
+    
+  
+  CLI reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../cost-tracking/" class="md-tabs__link">
+        
+  
+    
+  
+  Cost tracking
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../evaluators/" class="md-tabs__link">
+        
+  
+    
+  
+  Evaluators
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../adapters/anthropic_agents/" class="md-tabs__link">
+          
+  
+    
+  
+  Adapters
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guides/forking-safely/" class="md-tabs__link">
+          
+  
+    
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../contracts/golden-trace-format/" class="md-tabs__link">
+          
+  
+    
+  
+  Contracts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../decisions/" class="md-tabs__link">
+          
+  
+    
+  
+  Decisions (ADRs)
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../faq/" class="md-tabs__link">
+        
+  
+    
+  
+  FAQ
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Chronos Agent" class="md-nav__button md-logo" aria-label="Chronos Agent" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Chronos Agent
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/chengfei867/chronos-agent" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    chengfei867/chronos-agent
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Getting started
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Concepts
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli-reference/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    CLI reference
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cost-tracking/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Cost tracking
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../evaluators/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Evaluators
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Adapters
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            Adapters
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adapters/anthropic_agents/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Anthropic Agents SDK
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contracts/adapter-protocol/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Adapter protocol
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Guides
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            Guides
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/forking-safely/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Forking safely
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/side-effects/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Side effects
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Contracts
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            Contracts
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contracts/golden-trace-format/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Golden trace format
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../decisions/" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    Decisions (ADRs)
+  </span>
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            Decisions (ADRs)
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    FAQ
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#plan-vs-reality" class="md-nav__link">
+    <span class="md-ellipsis">
+      Plan vs. reality
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inherited-wip-triage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Inherited WIP triage
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adr-030-acceptance-scorecard" class="md-nav__link">
+    <span class="md-ellipsis">
+      ADR-030 acceptance scorecard
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#r116-hand-off-invariants" class="md-nav__link">
+    <span class="md-ellipsis">
+      R116 hand-off invariants
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decisions-d-115-x" class="md-nav__link">
+    <span class="md-ellipsis">
+      Decisions (D-115-x)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#files-changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      Files changed
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#test-gate" class="md-nav__link">
+    <span class="md-ellipsis">
+      Test gate
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-recovery-addendum-bjt-065x-third-a2-cycle-on-r115" class="md-nav__link">
+    <span class="md-ellipsis">
+      §11 Recovery addendum (BJT 06:5x — third A2 cycle on R115)
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="round-115-phase-6-row-7-adr-030-evaluationscoring-full-stack">Round 115 — Phase 6 row 7: ADR-030 Evaluation/Scoring full-stack<a class="headerlink" href="#round-115-phase-6-row-7-adr-030-evaluationscoring-full-stack" title="Permanent link">&para;</a></h1>
+<p><strong>Date</strong>: 2026-06-05 (BJT, in working window 03:xx)
+<strong>Track</strong>: Phase 6 RC, R107-R122 roadmap row 7 (ADR-030 Evaluation/Scoring single-round)
+<strong>Slot kind</strong>: A2 close-out (19th consecutive in project chain) — inherited 12 modified + 8 untracked files from a prior in-window cron slot, completed via the <code>cron-slot-handoff-recovery</code> skill rule 10 (which explicitly cites this R115 WIP as its reference case).
+<strong>Self-check — still on R107-R122 + ADR-029/030 track?</strong> ✅ Yes. ADR-030 is row 7 of the §5 R122 roadmap, mandated by user 2026-05-26 in the R109 close-out. R115 ships exactly what ADR-030 §22-89 spec — no scope expansion, no new ADR, no new technology direction.</p>
+<hr />
+<h2 id="plan-vs-reality">Plan vs. reality<a class="headerlink" href="#plan-vs-reality" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>§6 R115 plan item</th>
+<th>Reality</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. Read ADR-030, ADR-029, R111, R114 progress, dogfood skill</td>
+<td>✅ Read ADR-030 full text. ADR-029 + R111 + R114 reviewed previously (current cron chain — context preserved via §5 close-out blocks). dogfood skill load deferred — prologue dropped per item 2.</td>
+</tr>
+<tr>
+<td>2. Prologue: 6-surface live walkthrough, F8 + F11 polish</td>
+<td>❌ Skipped per §6 plan's own escape hatch ("if prologue squeezes ADR-030 budget, drop it"). The inherited WIP already consumed most of the slot budget before this run started; prologue would have left ADR-030 unfinished. Prologue items moved to <strong>R119 E2E dogfood</strong> (which already owns the 6-surface walkthrough mandate). Plan deviation logged here, not a path drift.</td>
+</tr>
+<tr>
+<td>3. ADR-030 implementation (schema / Evaluator / CLI / API / frontend)</td>
+<td>✅ All sub-items shipped. Inherited WIP from prior slot was already feature-complete — needed only one bug fix in <code>_seed</code> (sort by <code>started_at</code> not <code>created_at</code>) to unlock the test suite. See "Inherited WIP triage" below.</td>
+</tr>
+<tr>
+<td>4. Spike 21</td>
+<td>✅ <code>tests/spikes/spike21_eval_compare_pipeline.py</code>, 3 GREEN sub-tests. Modeled on spike20 (R111) — no LLM calls, fixture-driven.</td>
+</tr>
+<tr>
+<td>5. Tests ≥697 + R115 new (target ≥710)</td>
+<td>✅ <strong>745 passed / 9 skipped / 0 failed</strong>. +48 net over R114 baseline.</td>
+</tr>
+<tr>
+<td>6. Frontend <code>tsc --noEmit</code> + <code>npm run build</code> clean</td>
+<td>✅ Both clean. Build 10.28 s. One expected chunk-size warning unchanged from R114.</td>
+</tr>
+<tr>
+<td>7. Progress doc</td>
+<td>✅ This file.</td>
+</tr>
+<tr>
+<td>8. CONTEXT.md §5 + §6 update</td>
+<td>✅ §5 R115 close paragraph + §6 R116 plan replacement.</td>
+</tr>
+<tr>
+<td>9. CHANGELOG.md <code>[Unreleased] / Added — R115</code></td>
+<td>✅ Six sub-blocks (Added / Fixed / Documentation / Process / Test gate) prepended above R114.</td>
+</tr>
+<tr>
+<td>10. Quickstart demo integrates eval</td>
+<td>✅ <code>chronos quickstart</code> Next-steps hint adds a third bullet: ready-to-paste <code>chronos eval run &lt;id&gt; --evaluator output_length_chars</code>. R122 must-pass "new-user path → run eval, no source-reading" gate satisfied.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="inherited-wip-triage">Inherited WIP triage<a class="headerlink" href="#inherited-wip-triage" title="Permanent link">&para;</a></h2>
+<p>The previous cron slot (which timed out before commit) left:</p>
+<ul>
+<li><strong>12 modified files</strong> — <code>frontend/dist/index.html</code>, <code>frontend/dist/assets/index-BsXkWQEO.js</code> (deleted, replaced by index-d3JEOd4V.js), <code>frontend/src/pages/RunList.tsx</code>, <code>frontend/src/types.ts</code>, <code>src/chronos/api/server.py</code>, <code>src/chronos/cli/__init__.py</code>, <code>src/chronos/cli/compare.py</code>, <code>src/chronos/core/models.py</code>, <code>src/chronos/store/sqlite.py</code>, <code>tests/integration/test_sqlite_e2e.py</code>, <code>tests/unit/test_api_server.py</code>, <code>tests/unit/test_models.py</code>.</li>
+<li><strong>8 untracked files</strong> — <code>frontend/dist/assets/index-d3JEOd4V.js</code>, <code>src/chronos/cli/eval.py</code>, <code>src/chronos/eval/__init__.py</code>, <code>src/chronos/store/migrations/002_evaluations.sql</code>, <code>tests/integration/test_evaluations_store.py</code>, <code>tests/spikes/spike21_eval_compare_pipeline.py</code>, <code>tests/unit/test_cli_eval.py</code>, <code>tests/unit/test_eval.py</code>.</li>
+</ul>
+<p>Triage decision: <strong>bug-fix-first commit ordering</strong> (per <code>cron-slot-handoff-recovery</code> skill rule 10 + <code>dogfood</code> skill bug ordering). Rather than mass-rewrite or revert, ran the test suite to find the failure surface and fix the root cause.</p>
+<p><strong>Root cause found</strong>: <code>tests/unit/test_cli_eval.py::_seed</code> sorted seeded runs by <code>r.created_at</code> to disambiguate parent vs. child after <code>SqliteStore.list_runs()</code>. The Pydantic <code>Run</code> model exposes <code>started_at</code> / <code>ended_at</code> only — never <code>created_at</code>. The lambda raised <code>AttributeError</code>, which short-circuited 8 of the 13 eval CLI tests.</p>
+<p><strong>Fix</strong>: One-line patch to sort by <code>started_at</code> instead. Verified via <code>pytest tests/unit/test_cli_eval.py</code> (13 GREEN), then full suite (745 GREEN). Spike21 was already passing — the bug was confined to the test helper. The skill rule 10 reference holds: this is the R115 WIP it warned about.</p>
+<hr />
+<h2 id="adr-030-acceptance-scorecard">ADR-030 acceptance scorecard<a class="headerlink" href="#adr-030-acceptance-scorecard" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>ADR-030 §section</th>
+<th>Required</th>
+<th>Shipped</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>§28-40 Schema</td>
+<td><code>evaluations</code> table with <code>id</code> / <code>run_id</code> (FK) / <code>evaluator_name</code> / <code>score</code> / <code>passed</code> / <code>rationale</code> / <code>metadata</code> JSON / <code>created_at</code>, unique idx <code>(run_id, evaluator_name)</code></td>
+<td>✅ <code>src/chronos/store/migrations/002_evaluations.sql</code> (additive)</td>
+</tr>
+<tr>
+<td>§28-40 Schema</td>
+<td>Pydantic <code>Evaluation</code> in <code>core/models.py</code></td>
+<td>✅ <code>src/chronos/core/models.py</code> (<code>Evaluation</code> + <code>EvaluationResult</code>)</td>
+</tr>
+<tr>
+<td>§42-54 Evaluator API</td>
+<td><code>(run, nodes) -&gt; EvaluationResult</code> callable shape</td>
+<td>✅ Type alias <code>Evaluator</code> in <code>chronos.eval</code></td>
+</tr>
+<tr>
+<td>§42-54 Evaluator API</td>
+<td>Programmatic <code>register()</code> + <code>chronos.evaluators</code> entry-point group</td>
+<td>✅ <code>register()</code> + <code>load_entry_points()</code> (best-effort, plugin-safe)</td>
+</tr>
+<tr>
+<td>§50-52 Built-ins</td>
+<td><code>output_length_chars</code> numeric + <code>final_state_key_present</code> boolean</td>
+<td>✅ Both registered at import time</td>
+</tr>
+<tr>
+<td>§53 LLM-judge out of scope</td>
+<td>Don't ship</td>
+<td>✅ Not implemented</td>
+</tr>
+<tr>
+<td>§57-63 CLI</td>
+<td><code>chronos eval run &lt;id&gt; --evaluator …</code> (multi <code>--evaluator</code>)</td>
+<td>✅ <code>src/chronos/cli/eval.py::run</code></td>
+</tr>
+<tr>
+<td>§57-63 CLI</td>
+<td><code>chronos eval list &lt;id&gt;</code></td>
+<td>✅ <code>src/chronos/cli/eval.py::list</code> (also <code>list-evaluators</code> for the registry surface)</td>
+</tr>
+<tr>
+<td>§57-63 CLI</td>
+<td><code>chronos compare --eval &lt;name&gt;</code> (sortable column)</td>
+<td>✅ <code>src/chronos/cli/compare.py</code> flag + <code>_render_eval_scores</code></td>
+</tr>
+<tr>
+<td>§57-63 CLI</td>
+<td><code>cli-reference.md</code> updated</td>
+<td>⚠️ Deferred to R116 README round (the cli-reference.md sweep is part of the docs/demo arc; the verbs themselves carry inline <code>--help</code> examples now)</td>
+</tr>
+<tr>
+<td>§65-69 Frontend</td>
+<td>RunList Score column (sortable, dim if absent)</td>
+<td>✅ Auto-hidden when no run has a <code>latest_evaluation</code> (matches R111 ergonomic)</td>
+</tr>
+<tr>
+<td>§65-69 Frontend</td>
+<td>TreeView fork-tree score badge</td>
+<td>⚠️ Deferred — RunList Score column is the gating frontend item; the TreeView badge is a "minor" addition per ADR-030 §69 ("re-using the existing surfaces keeps the change minimal"). Carries to R119 dogfood as a polish item if needed.</td>
+</tr>
+<tr>
+<td>§71-74 API</td>
+<td><code>GET /runs/{id}/evaluations</code></td>
+<td>✅ <code>src/chronos/api/server.py::get_run_evaluations</code></td>
+</tr>
+<tr>
+<td>§71-74 API</td>
+<td><code>POST /runs/{id}/evaluations</code></td>
+<td>⚠️ Not shipped — power-user surface that ADR notes as "the CLI is the recommended path". Deferred to R121 RC buffer if a user case appears; not gating R122.</td>
+</tr>
+<tr>
+<td>§76-82 Tests</td>
+<td>Migration test, registry semantics, CLI smoke, compare-eval</td>
+<td>✅ All four covered (<code>test_evaluations_store.py</code>, <code>test_eval.py</code>, <code>test_cli_eval.py</code>, spike21).</td>
+</tr>
+<tr>
+<td>§76-82 Tests</td>
+<td>Spike <code>spike21_eval_compare_pipeline.py</code></td>
+<td>✅ Three GREEN sub-tests</td>
+</tr>
+<tr>
+<td>§84-89 Docs</td>
+<td>README "🎯 Evaluation" + <code>evaluators.md</code> doc page</td>
+<td>⚠️ Deferred to R116 (README round) and R117 (doc site) — those rounds own the docs arc, and writing the README copy this slot would race against the bilingual rewrite plan. ADR-030 acceptance items in <code>r120-acceptance.md</code> (renamed-stable to <code>r120-acceptance.md</code>) split this between R115 (engine) and R116-R117 (docs).</td>
+</tr>
+</tbody>
+</table>
+<p><strong>ADR-030 acceptance summary</strong>: 13 of 18 line items ship in R115 verbatim. 4 deferred items (cli-reference text, TreeView badge, POST endpoint, README/docs page) are explicitly downstream-row work — none gate the R122 must-pass list. The R115 gate is "engine works end-to-end" and that's GREEN.</p>
+<hr />
+<h2 id="r116-hand-off-invariants">R116 hand-off invariants<a class="headerlink" href="#r116-hand-off-invariants" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Repo state</strong>: clean local on <code>main</code>, all R115 work in one commit, pushed to <code>gh-proxy.com</code> mirror.</li>
+<li><strong>Test baseline for R116 to inherit</strong>: 745 / 9 / 0. Must hold or grow; do not regress.</li>
+<li><strong>Spike floor</strong>: 6 spikes (6 GREEN). Spike21 must stay GREEN through R116-R122.</li>
+<li><strong>Adapter streak</strong>: R52 → R115 = 64. R116 (README + bilingual) is doc-only and must not touch <code>src/chronos/adapters/</code> (any <code>git diff --stat src/chronos/adapters/</code> output kills the streak).</li>
+<li><strong>R116 first action</strong>: read <code>progress/2026-06-05-round-115.md</code> + the §6 R116 plan + ADR-029 §README block + ADR-030 §README block. The README must surface BOTH "💰 Cost &amp; Token Tracking" (R111) AND "🎯 Evaluation &amp; Scoring" (R115) feature rows. The 5-minute quickstart walkthrough must include the eval verb (the quickstart Next-steps now prints the command, so the README can quote it).</li>
+<li><strong>Open polish carried to R116-R119</strong>: cli-reference.md eval/eval-list-evaluators sections, README "🎯 Evaluation" block, frontend TreeView badge, POST <code>/runs/{id}/evaluations</code> (only if a real user case emerges).</li>
+<li><strong>R122 distance</strong>: 7 rounds remaining (R116, R117, R118 docs/demo arc; R119 E2E dogfood; R120 v1.0.0-rc1 cut; R121 RC buffer; R122 final acceptance).</li>
+</ul>
+<hr />
+<h2 id="decisions-d-115-x">Decisions (D-115-x)<a class="headerlink" href="#decisions-d-115-x" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>D-115-1 (bug-fix-first ordering)</strong>: Fixed the <code>_seed</code> AttributeError in the test helper before reviewing or rewriting any of the 12+8 inherited WIP files. This is the discipline the <code>cron-slot-handoff-recovery</code> skill rule 10 calls out, and it paid off — the inherited code was correct end-to-end; only the test harness blocked the gate.</li>
+<li><strong>D-115-2 (skip prologue)</strong>: F8 + F11 + 6-surface walkthrough deferred to R119 E2E dogfood. ADR-030 acceptance is R115's only gate; prologue items are visual polish that compete for slot budget. R119 already owns the live-browser walkthrough.</li>
+<li><strong>D-115-3 (defer cli-reference.md eval section to R116)</strong>: The R116 plan opens with a documentation pass (README bilingual + cli-reference refresh + Cost+Eval feature rows). Folding the eval text into R115 would race against the same edit; better to land it as part of the R116 docs arc.</li>
+<li><strong>D-115-4 (defer TreeView score badge)</strong>: ADR-030 §69 calls out "re-using existing surfaces keeps the change minimal." The RunList Score column is the gating frontend item; the TreeView badge is post-MVP polish that doesn't unblock any R122 must-pass.</li>
+<li><strong>D-115-5 (defer POST <code>/runs/{id}/evaluations</code>)</strong>: Power-user API surface. ADR-030 §74 frames CLI as the "recommended path." No user case has emerged; defer to R121 RC buffer or v1.1.</li>
+</ul>
+<hr />
+<h2 id="files-changed">Files changed<a class="headerlink" href="#files-changed" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>New</strong>: <code>src/chronos/eval/__init__.py</code> (~270 LOC), <code>src/chronos/cli/eval.py</code> (~270 LOC), <code>src/chronos/store/migrations/002_evaluations.sql</code> (~25 LOC), <code>tests/spikes/spike21_eval_compare_pipeline.py</code> (~120 LOC), <code>tests/unit/test_eval.py</code> (~24 tests), <code>tests/unit/test_cli_eval.py</code> (~13 tests, helper bug fixed), <code>tests/integration/test_evaluations_store.py</code> (ON CONFLICT upsert).</li>
+<li><strong>Modified</strong>: <code>src/chronos/cli/__init__.py</code> (eval Typer sub-app), <code>src/chronos/cli/compare.py</code> (<code>--eval</code> flag + <code>_render_eval_scores</code> + <code>annotate_with_evaluation</code>), <code>src/chronos/core/models.py</code> (<code>Evaluation</code> + <code>EvaluationResult</code>), <code>src/chronos/store/sqlite.py</code> (<code>put_evaluation</code> + <code>get_evaluations_for_run</code> + migration runner), <code>src/chronos/api/server.py</code> (<code>GET /runs/{id}/evaluations</code> + <code>latest_evaluation</code> embedded on list), <code>src/chronos/cli/quickstart.py</code> (eval Next-step hint), <code>frontend/src/pages/RunList.tsx</code> (Score column), <code>frontend/src/types.ts</code> (Evaluation type + RunSummary.latest_evaluation), <code>tests/integration/test_sqlite_e2e.py</code> + <code>tests/unit/test_api_server.py</code> + <code>tests/unit/test_models.py</code> (ripple), <code>frontend/dist/*</code> (regenerated bundle).</li>
+<li><strong>Documentation</strong>: <code>CHANGELOG.md</code> (R115 block), <code>docs/CONTEXT.md</code> (§5 R115 close + §6 R116 plan), <code>docs/progress/2026-06-05-round-115.md</code> (this file).</li>
+</ul>
+<hr />
+<h2 id="test-gate">Test gate<a class="headerlink" href="#test-gate" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>pytest -q --no-cov</code>: <strong>745 passed / 9 skipped / 0 failed</strong>.</li>
+<li>Spikes (<code>tests/spikes/</code>): 6/6 GREEN.</li>
+<li>Frontend <code>npx tsc --noEmit</code>: clean.</li>
+<li>Frontend <code>npm run build</code>: clean (10.28 s).</li>
+<li>Adapter zero-regression streak: R52 → R115 = <strong>64</strong> (<code>src/chronos/adapters/</code> byte-identical to R114).</li>
+<li>A2 close-out chain length: <strong>19</strong>.</li>
+</ul>
+<hr />
+<h2 id="11-recovery-addendum-bjt-065x-third-a2-cycle-on-r115">§11 Recovery addendum (BJT 06:5x — third A2 cycle on R115)<a class="headerlink" href="#11-recovery-addendum-bjt-065x-third-a2-cycle-on-r115" title="Permanent link">&para;</a></h2>
+<p>This is the <strong>third</strong> cron slot to handle R115 (initial implementation slot capped → first A2 close-out wrote progress doc + CONTEXT/CHANGELOG → this slot pre-commit gate sweep + commit + push). The slot opened with the same inherited tree the prior A2 left (12 modified + 8 untracked, progress doc complete, gates claimed green).</p>
+<p><strong>Verify-don't-redo discipline (per <code>cron-slot-handoff-recovery</code> skill rule 10 refinement)</strong>: ran <code>pytest -q --no-cov</code> first (1 tool call) → 745/9/0 confirms the prior slot's claim byte-identical. Then ran the rest of the gate sweep (<code>ruff check</code>, <code>ruff format --check</code>, <code>mypy src</code>) which surfaced 8 ruff issues + 1 mypy unused-ignore + 4 ruff-format files needing reformat — all incidental drift the prior A2 hadn't run before declaring green.</p>
+<p><strong>Pre-commit fixes applied</strong> (~10 minutes, kept inside the same R115 logical commit since none change behavior):</p>
+<ul>
+<li><code>ruff --fix --unsafe-fixes</code>: auto-resolved 4 RUF100 unused-noqa + 1 I001 unsorted-imports + 1 SIM108 ternary expression (6 of 8). All in <code>src/chronos/api/server.py</code>, <code>src/chronos/cli/eval.py</code>, <code>src/chronos/store/sqlite.py</code> — strictly stylistic.</li>
+<li>2 SIM115 <code>open()</code> without context manager in <code>tests/spikes/spike21_eval_compare_pipeline.py</code> (Console-file-pattern) — hand-fixed by wrapping <code>Console(file=open(sink, ...))</code> as <code>with sink.open(...) as fp: console = Console(file=fp); ...</code> and re-indenting the call body. Two occurrences (test_compare_eval_json_carries_scores + test_compare_eval_unknown_evaluator), patched both.</li>
+<li>1 mypy <code>[unused-ignore]</code> in <code>src/chronos/eval/__init__.py:246</code> on the <code>entry_points().get("chronos.evaluators", [])</code> defensive branch — fixed by widening to <code># type: ignore[union-attr,attr-defined,unused-ignore]</code> so mypy accepts the line on both Python 3.11 (which doesn't need the ignore) and importlib_metadata &lt;5 (which does, hypothetically).</li>
+<li><code>ruff format src tests</code> reformatted 4 files: <code>src/chronos/cli/web.py</code> (R114 incidental — single-line collapse of multi-line f-string), <code>tests/integration/test_evaluations_store.py</code>, <code>tests/unit/test_cli_eval.py</code>, <code>tests/unit/test_cli_web.py</code> (R114 + R115 inherited drift). All purely cosmetic — no logic change.</li>
+</ul>
+<p><strong>Final post-fix gate sweep</strong> (re-run, all green):
+- <code>pytest -q --no-cov</code>: 745 passed / 9 skipped / 0 failed (33.43s)
+- <code>ruff check src tests</code>: All checks passed
+- <code>ruff format --check src tests</code>: 123 files unchanged
+- <code>mypy src</code>: Success: no issues found in 46 source files
+- Frontend <code>npx tsc --noEmit</code>: clean; <code>npm run build</code>: clean (10.59s)</p>
+<p><strong>Adapter dir invariant</strong>: <code>git diff --stat src/chronos/adapters/</code> → empty. R52 → R115 = 64 streak verified, not just claimed.</p>
+<p><strong>Skill confirmation, no patch needed</strong>: this slot validates the rule-10 refinement (R115 lesson) — <code>pytest</code> first as bug-detection ground truth was correct (745/0 confirmed prior slot's claim accurate, no fabricated greens). The lesson generalizes: even when an A2 progress doc claims gates green, <em>re-run the full gate sweep</em> (ruff, ruff-format, mypy, frontend tsc/build) before committing. Pre-existing drift is common across cron-slot handoffs — the prior A2 may have run only <code>pytest</code> and stopped. The full sweep is ~3 tool calls and catches the drift before it ships.</p>
+<p><strong>Commit shape</strong>: single commit (post-fixup) covering all R115 work — bug-fix (<code>_seed</code> sort key), engine implementation (eval module + CLI + API + frontend), schema migration, tests + spike, doc updates (progress doc + CONTEXT + CHANGELOG), pre-commit gate fixes (ruff/format/mypy). Two-commit ordering (rule 10 bug-fix-first) was already collapsed by the prior A2 slot — this slot inherits one logical R115 unit and ships it.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 chengfei867 — content generated 100% by Hermes Agent / Claude Opus
+    </div>
+  
+  
+</div>
+      
+        <div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/chengfei867/chronos-agent" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.top", "navigation.indexes", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.88dd0f4e.min.js"></script>
+      
+    
+  </body>
+</html>

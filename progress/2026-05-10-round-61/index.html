@@ -1,0 +1,1370 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Time-Travel Debugger for Multi-Agent AI Systems — record, replay, fork, diff, compare. With first-class token/cost tracking and pluggable evaluators.">
+      
+      
+        <meta name="author" content="Hermes Agent">
+      
+      
+        <link rel="canonical" href="https://chengfei867.github.io/chronos-agent/progress/2026-05-10-round-61/">
+      
+      
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.49">
+    
+    
+      
+        <title>Round 61 — 2026-05-10 (CST ~08:30, inside 0–11 window) - Chronos Agent</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.6f8fc17f.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#round-61-2026-05-10-cst-0830-inside-011-window" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Chronos Agent" class="md-header__button md-logo" aria-label="Chronos Agent" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Chronos Agent
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Round 61 — 2026-05-10 (CST ~08:30, inside 0–11 window)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/chengfei867/chronos-agent" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    chengfei867/chronos-agent
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+    
+  
+  Getting started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../concepts/" class="md-tabs__link">
+        
+  
+    
+  
+  Concepts
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../cli-reference/" class="md-tabs__link">
+        
+  
+    
+  
+  CLI reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../cost-tracking/" class="md-tabs__link">
+        
+  
+    
+  
+  Cost tracking
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../evaluators/" class="md-tabs__link">
+        
+  
+    
+  
+  Evaluators
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../adapters/anthropic_agents/" class="md-tabs__link">
+          
+  
+    
+  
+  Adapters
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guides/forking-safely/" class="md-tabs__link">
+          
+  
+    
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../contracts/golden-trace-format/" class="md-tabs__link">
+          
+  
+    
+  
+  Contracts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../decisions/" class="md-tabs__link">
+          
+  
+    
+  
+  Decisions (ADRs)
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../faq/" class="md-tabs__link">
+        
+  
+    
+  
+  FAQ
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Chronos Agent" class="md-nav__button md-logo" aria-label="Chronos Agent" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Chronos Agent
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/chengfei867/chronos-agent" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    chengfei867/chronos-agent
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Getting started
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Concepts
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli-reference/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    CLI reference
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cost-tracking/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Cost tracking
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../evaluators/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Evaluators
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Adapters
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            Adapters
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adapters/anthropic_agents/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Anthropic Agents SDK
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contracts/adapter-protocol/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Adapter protocol
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Guides
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            Guides
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/forking-safely/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Forking safely
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/side-effects/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Side effects
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Contracts
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            Contracts
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contracts/golden-trace-format/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Golden trace format
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../decisions/" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    Decisions (ADRs)
+  </span>
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            Decisions (ADRs)
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    FAQ
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#0-entry-snapshot" class="md-nav__link">
+    <span class="md-ellipsis">
+      §0 Entry snapshot
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-what-i-did-this-round" class="md-nav__link">
+    <span class="md-ellipsis">
+      §1 What I did this round
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="§1 What I did this round">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#11-adr-024-draft-multi-pivot-compare" class="md-nav__link">
+    <span class="md-ellipsis">
+      §1.1 ADR-024 Draft — Multi-pivot compare
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12-research-survey-r61-multi-pivot-alignmentmd" class="md-nav__link">
+    <span class="md-ellipsis">
+      §1.2 Research survey — r61-multi-pivot-alignment.md
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#13-roadmap-refresh-41-depth-slices-itemized" class="md-nav__link">
+    <span class="md-ellipsis">
+      §1.3 Roadmap refresh — §4.1 Depth slices itemized
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-why-this-shape-decisions-on-the-record" class="md-nav__link">
+    <span class="md-ellipsis">
+      §2 Why this shape (decisions on the record)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="§2 Why this shape (decisions on the record)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-why-option-c-over-a-b-d-e" class="md-nav__link">
+    <span class="md-ellipsis">
+      §2.1 Why Option C over A, B, D, E
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-why-naming-drift-correction-matters" class="md-nav__link">
+    <span class="md-ellipsis">
+      §2.2 Why naming-drift correction matters
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-why-metric_version-as-a-field" class="md-nav__link">
+    <span class="md-ellipsis">
+      §2.3 Why metric_version as a field
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-gates" class="md-nav__link">
+    <span class="md-ellipsis">
+      §3 Gates
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-files-touched" class="md-nav__link">
+    <span class="md-ellipsis">
+      §4 Files touched
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-broken-link-sweep" class="md-nav__link">
+    <span class="md-ellipsis">
+      §5 Broken-link sweep
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-key-findings-for-contextmd-5-promotion" class="md-nav__link">
+    <span class="md-ellipsis">
+      §6 Key findings (for CONTEXT.md §5 promotion)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-next-round-r62-todo" class="md-nav__link">
+    <span class="md-ellipsis">
+      §7 Next round (R62 TODO)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="§7 Next round (R62 TODO)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#option-a-recommended-90120-min-arc-a-slice-4-impl-core-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      Option A (recommended, 90–120 min): Arc A slice 4 impl — core + tests
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-b-backup-6090-min-arc-a-slice-4-cli-api-wrappers-if-r62-shipped-core-already" class="md-nav__link">
+    <span class="md-ellipsis">
+      Option B (backup, 60–90 min): Arc A slice 4 CLI + API wrappers (if R62 shipped core already)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-c-backup-45-min-adr-024-retro-arc-a-post-slice-1-3-retro" class="md-nav__link">
+    <span class="md-ellipsis">
+      Option C (backup, 45 min): ADR-024 retro / Arc A post-slice-1-3 retro
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recommended-r62" class="md-nav__link">
+    <span class="md-ellipsis">
+      Recommended R62
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#r62-non-goals-hard-red-lines" class="md-nav__link">
+    <span class="md-ellipsis">
+      R62 non-goals (hard red lines)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-cron-slot-discipline-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      §8 Cron slot discipline check
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="round-61-2026-05-10-cst-0830-inside-011-window">Round 61 — 2026-05-10 (CST ~08:30, inside 0–11 window)<a class="headerlink" href="#round-61-2026-05-10-cst-0830-inside-011-window" title="Permanent link">&para;</a></h1>
+<p><strong>Phase</strong>: 4 (Arc A — Depth, slice 4 planning)
+<strong>Cron slot</strong>: single slot, post-v0.5.0 release
+<strong>Status</strong>: ✅ Planning slice complete. ADR-024 Draft + research survey + roadmap update shipped. Zero <code>src/</code> changes.</p>
+<hr />
+<h2 id="0-entry-snapshot">§0 Entry snapshot<a class="headerlink" href="#0-entry-snapshot" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Entry at 08:32 CST, inside 0-11 window. No blockers.</li>
+<li>Local main was 1 commit ahead per <code>git status</code>, but <code>git ls-remote origin main</code> showed <code>686c8a1</code> = local HEAD: stale remote-tracking ref (R48-B trap hit for the third time this phase — <code>git fetch</code> + <code>ls-remote origin &lt;branch&gt;</code> disagreement). Skipped forced push; remote was already synced from R60 slot-2.</li>
+<li>Baseline gates from R60: 507 pass / 3 skip / 0 fail / 94% cov / mypy 30 files 0 error / ruff src+tests+scripts 0 error / ruff format 81 files 0 drift. Re-ran <code>ruff check src tests scripts</code> only: still <code>All checks passed!</code>. Skipped full pytest since R61 is md-only (CONTEXT.md §6 Option A spec: no <code>src/</code> edits).</li>
+<li>Latest tag: v0.5.0 (R60, 2026-05-10 ~02:18 CST, bundles R58+R59+R60).</li>
+</ul>
+<h2 id="1-what-i-did-this-round">§1 What I did this round<a class="headerlink" href="#1-what-i-did-this-round" title="Permanent link">&para;</a></h2>
+<p>R61 executes CONTEXT.md §6 <strong>Option A — Phase 4 Arc A slice 4 kickoff (multi-pivot compare planning)</strong>. md-only round following R57 phase-kickoff archetype. Three artifacts:</p>
+<h3 id="11-adr-024-draft-multi-pivot-compare">§1.1 ADR-024 Draft — Multi-pivot compare<a class="headerlink" href="#11-adr-024-draft-multi-pivot-compare" title="Permanent link">&para;</a></h3>
+<p><code>docs/decisions/ADR-024-multi-pivot-compare.md</code> (new, ~270 lines).</p>
+<ul>
+<li><strong>Status</strong>: Draft (Arc A slice 4 framing).</li>
+<li><strong>Scope</strong>: N-run compare when no designated pivot exists. Three realistic scenarios motivate it (variant sweep with no baseline, post-hoc comparison of independent sessions, ensemble/consensus view). v0.5.0's <code>merge_pivot_reports()</code> requires a pivot; if the user doesn't have one, they must either arbitrarily pick, run compare N times rotating pivot, or fall back to individual run views. Arc A slice 4 closes this gap.</li>
+<li><strong>Options considered</strong>: A = pairwise O(N²) matrix, B = virtual pivot via MSA/LCS, C = auto-centroid star schema, D = hybrid A+C, E = defer.</li>
+<li><strong>Decision</strong>: <strong>Option C (auto-centroid) as slice 4 default</strong>. Compute pairwise distances (counting metric, normalized to [0, 1]), pick <code>argmin</code> over runs of mean distance, call <code>merge_pivot_reports(pivot=centroid, others)</code>. Deterministic tie-break by lexicographic run_id. Option A deferred as <strong>slice 5</strong>, gated on slice 4 dogfood. Option B (MSA) explicitly rejected — ghost-run UX, empty-skeleton degenerate case, new-algorithm burden outweigh theoretical appeal. Option E (defer) rejected — R61 is a post-release planning slot with no competing urgency.</li>
+<li><strong>Distance metric</strong> (<code>metric_version = 1</code>): <code>d(a, b) = disagreeing_positions / max(1, total_positions)</code> where positions come from ADR-006 diff verdicts. Cheap, bounded [0, 1], version-tagged for future refinement (ADR-025 candidate).</li>
+<li><strong>Consequences called out</strong>: CLI flag surface decision deferred to R62 impl (likely <code>chronos compare --pivot=auto</code> with first positional arg optional); HTTP gets <code>?pivot=auto</code> query param; test matrix grows ~8-12 tests; distance-metric version becomes public contract needing its own discipline.</li>
+<li><strong>Naming-drift correction on the record</strong>: CONTEXT.md §6 at R61 entry labeled this work "Arc B kickoff (Breadth: multi-pivot compare)", conflicting with ADR-023's <code>Arc B = Ecosystem (fourth adapter)</code>. ADR-024 reclaims the correct label: <strong>this is Arc A continuation (slice 4), not a pivot to Arc B</strong>. ADR-023's Arc B (Ecosystem) remains deferred and unchanged.</li>
+</ul>
+<h3 id="12-research-survey-r61-multi-pivot-alignmentmd">§1.2 Research survey — <code>r61-multi-pivot-alignment.md</code><a class="headerlink" href="#12-research-survey-r61-multi-pivot-alignmentmd" title="Permanent link">&para;</a></h3>
+<p><code>docs/research/r61-multi-pivot-alignment.md</code> (new, ~220 lines).</p>
+<ul>
+<li>Companion to ADR-024. Full algorithmic trade-off analysis.</li>
+<li>Five candidate algorithms surveyed:</li>
+<li>Pairwise O(N²) matrix (§3.1) → slice 5 gate.</li>
+<li>Virtual pivot via LCS / progressive MSA (§3.2) → rejected; cites MUSCLE (Edgar 2004), MAFFT (Katoh &amp; Standley 2013), <code>diff3</code> as prior art for future reconsideration.</li>
+<li>Star schema / centroid (§3.3) → <strong>chosen</strong>; detailed failure-mode walk-through including "outlier-as-centroid" (verified non-failure via arithmetic) and N=2 degenerate case (confirmed contract-compatibility hook).</li>
+<li>Bespoke N-way DP (§3.4) → discarded (O(L^N) exponential; classical MSA abandoned this 30+ years ago).</li>
+<li>Graph-based consensus / Partial-Order Alignment (§3.5, Lee et al. 2002) → flagged as future exploration when ADR-006's linear alignment becomes insufficient (e.g., comparing fork-DAGs rather than linear runs). Not R61 scope.</li>
+<li>Comparative summary table (§4) with 9 axes including compute complexity, display scalability, primitive reuse, new-algorithm needs, N=2 behaviour, empty-consensus failure mode, ghost-run UX, determinism, test burden.</li>
+<li>§6 open questions for R62+ implementation round — 7 concrete questions the impl agent will face (CLI surface, HTTP surface, tie-break ordering, metric boundary tests, fixture reuse discipline per R59 "new fixture new scenario", dogfood script <code>dogfood_compare_auto.py</code>, CHANGELOG impact / version number).</li>
+</ul>
+<h3 id="13-roadmap-refresh-41-depth-slices-itemized">§1.3 Roadmap refresh — §4.1 Depth slices itemized<a class="headerlink" href="#13-roadmap-refresh-41-depth-slices-itemized" title="Permanent link">&para;</a></h3>
+<p><code>docs/roadmap.md</code> §4.1 bullet list restructured:</p>
+<ul>
+<li><strong>v0.5.0-shipped work</strong> (pivot-anchored N-run compare) marked <code>[x]</code> with R58-R60 lineage. Previously was <code>[ ]</code> describing "impl plan R58-R61".</li>
+<li><strong>Slice 4 (multi-pivot auto-centroid)</strong> added as new <code>[ ]</code> item with ADR-024 + research-doc refdef links, impl target R62/R63/R64+.</li>
+<li><strong>Slice 5 (pairwise matrix view)</strong> added as new <code>[ ]</code> item gated on slice 4 dogfood.</li>
+<li><strong>Fork-tree DAG viz</strong> comment updated from "Arc A second slice" to "Arc A second major theme" (since "slice" now disambiguated by numbering).</li>
+<li>Added refdefs <code>[ADR-024]</code> and <code>[r61-multi-pivot]</code> to bottom-of-phase-3 refdef block (matches existing convention).</li>
+<li>Last-updated line: <code>2026-04-22 (Round 1 — post-research)</code> → <code>2026-05-10 (Round 61 — Arc A slice 4 scoped via ADR-024 Draft)</code>. Embarrassingly stale (40 rounds behind); fixed now as side-effect of touching §4.1.</li>
+</ul>
+<h2 id="2-why-this-shape-decisions-on-the-record">§2 Why this shape (decisions on the record)<a class="headerlink" href="#2-why-this-shape-decisions-on-the-record" title="Permanent link">&para;</a></h2>
+<h3 id="21-why-option-c-over-a-b-d-e">§2.1 Why Option C over A, B, D, E<a class="headerlink" href="#21-why-option-c-over-a-b-d-e" title="Permanent link">&para;</a></h3>
+<p>Full analysis in ADR-024 §Decision. Condensed rationale:</p>
+<ul>
+<li><strong>C vs. A</strong>: matrix view is clean but <code>O(N²)</code> display doesn't scale past N≈10 and gives no ensemble-level single view; auto-centroid produces one principled merged view reusing v0.5.0 primitive verbatim.</li>
+<li><strong>C vs. B</strong>: virtual pivot (MSA) produces ghost runs (UX alien), has catastrophic empty-skeleton failure on variant sweeps (common), and introduces heuristic alignment as a new algorithm project. Centroid sidesteps all three.</li>
+<li><strong>C vs. D (hybrid)</strong>: D is "A + C shipped together". D's compute cost is same as A alone (distance matrix shared). The distinction is purely "ship both views now vs. ship centroid, gate matrix on evidence". R61 elects to ship evidence-gated matrix — if slice-4 dogfood shows cells the centroid hides, slice 5 ships; otherwise we save UI complexity we don't need.</li>
+<li><strong>C vs. E (defer)</strong>: post-release planning is the highest-energy moment. Deferring loses momentum. Research doc + ADR is slot-sized work even without code.</li>
+</ul>
+<h3 id="22-why-naming-drift-correction-matters">§2.2 Why naming-drift correction matters<a class="headerlink" href="#22-why-naming-drift-correction-matters" title="Permanent link">&para;</a></h3>
+<p>CONTEXT.md §6 at R61 entry described this as "Arc B kickoff", but ADR-023's Arc taxonomy defines Arc B = Ecosystem (fourth adapter). ADR-024 explicitly rebinds this work as <strong>Arc A slice 4</strong> (continuation of Depth) to avoid two conflicting "Arc B" referents.</p>
+<p>This matters because:
+- Future rounds reading "Arc B" in progress docs would expect ecosystem work, not Depth extension.
+- ADR-023's Arc B framing (adapter #4, evaluation table) must stay intact for when it does eventually reopen.
+- The <code>CONTEXT.md §6 → ADR</code> round-trip uncovered a terminology drift pattern worth naming: <strong>"Arc label drift = CONTEXT.md §6 is lossy transmission to future agent; ADR is the canonical binding."</strong> When §6 terminology conflicts with ADR terminology, ADR wins and CONTEXT gets updated. This round formalises that precedence.</p>
+<h3 id="23-why-metric_version-as-a-field">§2.3 Why <code>metric_version</code> as a field<a class="headerlink" href="#23-why-metric_version-as-a-field" title="Permanent link">&para;</a></h3>
+<p>Distance metric (§3.3 in research doc) is a public contract: it affects which run is picked as centroid, which affects the rendered report. Refining the metric (kind-weighted? token-weighted? semantic?) should be an ADR-gated change. <code>metric_version</code> on every report makes the dependency explicit. Version = 1 from day one; ADR-025 candidate is "refine metric to v2" if/when dogfood shows v1 bias.</p>
+<h2 id="3-gates">§3 Gates<a class="headerlink" href="#3-gates" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>ruff check src tests scripts</code>: <strong>All checks passed!</strong> (verified once at start; no <code>src/</code> touches this round so no re-run needed).</li>
+<li>pytest: <strong>not re-run</strong> — R61 is md-only, R60 baseline (507/3/0 94% cov) carries.</li>
+<li>mypy: <strong>not re-run</strong> — R60 baseline carries (30 files 0 error).</li>
+<li>ruff format: <strong>not re-run</strong> — R60 baseline carries (81 files 0 drift).</li>
+<li>Broken-link sweep: see §5 below.</li>
+</ul>
+<h2 id="4-files-touched">§4 Files touched<a class="headerlink" href="#4-files-touched" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>docs/decisions/ADR-024-multi-pivot-compare.md</code> (<strong>new</strong>, ~270 lines).</li>
+<li><code>docs/research/r61-multi-pivot-alignment.md</code> (<strong>new</strong>, ~220 lines).</li>
+<li><code>docs/roadmap.md</code> (last-updated + §4.1 restructure + 2 new refdefs).</li>
+<li><code>docs/progress/2026-05-10-round-61.md</code> (this doc).</li>
+<li><code>docs/CONTEXT.md</code> §5 + §6 (next step — see §6 below).</li>
+</ul>
+<p>No <code>src/</code> or <code>tests/</code> changes. No tag cut (Arc A slice 4 code lands R62+ → v0.5.1 or v0.6.0-alpha candidate).</p>
+<h2 id="5-broken-link-sweep">§5 Broken-link sweep<a class="headerlink" href="#5-broken-link-sweep" title="Permanent link">&para;</a></h2>
+<p>Edits touch 3 existing docs (<code>roadmap.md</code>, <code>CONTEXT.md</code> next, this progress doc new). Cross-link check:</p>
+<ul>
+<li><code>roadmap.md</code> §4.1 now references <code>ADR-024</code> + <code>r61-multi-pivot-alignment.md</code> — both exist, written in this round.</li>
+<li><code>ADR-024</code> references <code>ADR-023</code>, <code>n-run-compare.md</code>, <code>r61-multi-pivot-alignment.md</code> — all exist.</li>
+<li><code>r61-multi-pivot-alignment.md</code> references <code>ADR-006</code>, <code>ADR-023</code>, <code>ADR-024</code>, <code>n-run-compare.md</code> — all exist.</li>
+<li>No broken links expected. Will re-verify via shell glob before commit.</li>
+</ul>
+<h2 id="6-key-findings-for-contextmd-5-promotion">§6 Key findings (for CONTEXT.md §5 promotion)<a class="headerlink" href="#6-key-findings-for-contextmd-5-promotion" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Arc label drift ⇒ ADR canonical, CONTEXT lossy (R61 new, candidate skill addition)</strong>: When CONTEXT.md §6 terminology conflicts with prior ADR terminology, the ADR wins and CONTEXT gets updated. R61's "Arc B kickoff" label in §6 conflicted with ADR-023's <code>Arc B = Ecosystem</code>; ADR-024 rebinds to Arc A slice 4, CONTEXT §5/§6 to match. Candidate skill addition or <code>chronos-release-pattern</code> sibling.</li>
+<li><strong>Post-release planning round archetype (R61 new, complements R56/R57 post-phase-kickoff)</strong>: v0.5.0 shipped R60; R61 is "planning next slice via ADR Draft + research doc + roadmap refresh, zero code". Sibling to R56 (post-release polish) and R57 (phase kickoff). All three are md-only archetypes. R61 = post-release planning.</li>
+<li><strong>Slice-numbered Arc items (R61 new)</strong>: Arc A originally had 5 themed items (ADR-023 §Arc A). As Arc A progresses, each item may become a multi-slice arc itself. "Multi-run compare" = item 1, now itself slice 1 (pivot-anchored, v0.5.0) / slice 4 (auto-centroid, R61-planned) / slice 5 (matrix view, gated). Numbering convention: <code>Arc X item Y slice Z</code>; "slice" always means implementation chunk, "item" means thematic area.</li>
+<li><strong><code>metric_version</code> field as public-contract discipline (R61 new)</strong>: When a numeric output depends on a tunable metric, version the metric. ADR-025 candidate exists day 1. Similar pattern will recur in Arc A item 3 (semantic diff — judge-model version), item 5 (determinism modes — seed-policy version).</li>
+<li><strong>Stale remote-tracking ref trap, third phase hit (R61 confirms)</strong>: R48-B, R59, R60 slot-2, R61 — four occurrences of <code>git fetch</code> producing misleading output where <code>git ls-remote origin &lt;branch&gt;</code> disagrees with <code>refs/remotes/origin/&lt;branch&gt;</code>. Workaround is always the same: <code>git ls-remote origin main</code> to get ground truth. Skill <code>cron-slot-handoff-recovery</code> §"Verify remote state" should be authoritative reference; consider promoting to its own skill or adding to release pattern.</li>
+</ol>
+<h2 id="7-next-round-r62-todo">§7 Next round (R62 TODO)<a class="headerlink" href="#7-next-round-r62-todo" title="Permanent link">&para;</a></h2>
+<p>Three candidates, ranked:</p>
+<h3 id="option-a-recommended-90120-min-arc-a-slice-4-impl-core-tests">Option A (recommended, 90–120 min): Arc A slice 4 impl — core + tests<a class="headerlink" href="#option-a-recommended-90120-min-arc-a-slice-4-impl-core-tests" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>P0</strong>: <code>src/chronos/core/diff/auto_pivot.py</code> (new, ~80 LOC) with <code>compute_distance(report) -&gt; float</code>, <code>pairwise_distances(runs) -&gt; dict[tuple[str, str], float]</code>, <code>select_centroid(runs) -&gt; str</code> (with lexicographic tie-break), <code>auto_pivot_compare(runs) -&gt; MergeReport</code> (returns v0.5.0-compatible report with <code>pivot_selection: "auto-centroid"</code> metadata).</li>
+<li><strong>P1</strong>: <code>tests/unit/test_auto_pivot.py</code> (new, ~15 tests): distance-metric boundary tests (d=0 identical, d=1 disjoint, d symmetric, d ∈ [0,1]), centroid selection (3/4/5-run fixtures), lexicographic tie-break, N=2 degenerate (centroid pick equals single-pivot merge for N=2). Must use <strong>new</strong> fixture not piggyback R58's (R59 rule).</li>
+<li><strong>P2</strong>: <code>src/chronos/__init__.py</code> export <code>auto_pivot_compare</code> (optional, can defer to CLI slice).</li>
+<li>Gate: 507 → ~520 pass (+13), mypy 30→31 files, ruff 0 drift.</li>
+<li><strong>No CLI / API / docs changes</strong> — those are R63.</li>
+</ul>
+<h3 id="option-b-backup-6090-min-arc-a-slice-4-cli-api-wrappers-if-r62-shipped-core-already">Option B (backup, 60–90 min): Arc A slice 4 CLI + API wrappers (if R62 shipped core already)<a class="headerlink" href="#option-b-backup-6090-min-arc-a-slice-4-cli-api-wrappers-if-r62-shipped-core-already" title="Permanent link">&para;</a></h3>
+<p>Only makes sense if R62's core shipped and the handoff-slot hit A2 pattern. Not first-choice for R62.</p>
+<h3 id="option-c-backup-45-min-adr-024-retro-arc-a-post-slice-1-3-retro">Option C (backup, 45 min): ADR-024 retro / Arc A post-slice-1-3 retro<a class="headerlink" href="#option-c-backup-45-min-adr-024-retro-arc-a-post-slice-1-3-retro" title="Permanent link">&para;</a></h3>
+<p>If R62 agent finds R61 ADR-024 shape needs revision before impl, write ADR-024.1 or extend research doc. Demand-driven only.</p>
+<h3 id="recommended-r62">Recommended R62<a class="headerlink" href="#recommended-r62" title="Permanent link">&para;</a></h3>
+<p><strong>Option A (slice 4 core).</strong> R62 is "first code round after planning" — matches R58 archetype (post-ADR-023 R57 → R58 shipped <code>merge_pivot_reports</code> core). Preserves shape symmetry: R57 → R58 / R61 → R62 both: Draft-ADR round → pure-function-core round.</p>
+<h3 id="r62-non-goals-hard-red-lines">R62 non-goals (hard red lines)<a class="headerlink" href="#r62-non-goals-hard-red-lines" title="Permanent link">&para;</a></h3>
+<ul>
+<li>❌ Adapter changes (10-rounds-zero-change target: R52 CrewAI → R62 = <strong>十轮</strong>零代码改动).</li>
+<li>❌ Store schema changes.</li>
+<li>❌ v0.5.0 contract changes (<code>merge_pivot_reports</code>, <code>compare_command</code>, <code>/runs/compare/n</code> signatures frozen).</li>
+<li>❌ CLI / HTTP additions (those are slice 4 "surface" = R63).</li>
+<li>❌ Release cut (slice 4 ships bundled core + surface + dogfood per R60 "Arc slice = core + surface + proof = 1 bundle" invariant → v0.5.1 or v0.6.0-alpha candidate earliest R64).</li>
+<li>❌ Metric v2 work (needs ADR-025, not blocked now).</li>
+</ul>
+<h2 id="8-cron-slot-discipline-check">§8 Cron slot discipline check<a class="headerlink" href="#8-cron-slot-discipline-check" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Windowed (08:32 CST entry) ✅</li>
+<li>Read CONTEXT.md full ✅</li>
+<li>Read latest progress doc (R60) ✅</li>
+<li>Read roadmap Phase 4 section ✅</li>
+<li>Wrote ADR + research doc + roadmap update ✅</li>
+<li>Wrote this progress doc ✅</li>
+<li>Next: update CONTEXT.md §5/§6, commit, push, QQ report.</li>
+<li>No <code>src/</code> edits (md-only round).</li>
+<li>No ADR status promotion (ADR-024 stays Draft until R62+ impl validates).</li>
+<li>No tag cut (next tag candidate R64+ when slice 4 ships end-to-end).</li>
+</ul>
+<hr />
+<p><em>Round 61 agent — R61 executed CONTEXT.md §6 Option A (Arc A slice 4 planning). ADR-024 Draft + <code>r61-multi-pivot-alignment.md</code> survey + roadmap §4.1 slice itemization + naming-drift correction (CONTEXT §6 "Arc B" → ADR-024 "Arc A slice 4"). Zero <code>src/</code> edits, 507/3/0 94% cov baseline preserved. CrewAI adapter R52→R61 = 十轮零代码改动目标位于 R62 (下一轮, impl round). R62 recommended: Option A slice 4 core + tests (~15 tests, new fixture per R59 rule, ~80 LOC <code>auto_pivot.py</code>).</em></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 chengfei867 — content generated 100% by Hermes Agent / Claude Opus
+    </div>
+  
+  
+</div>
+      
+        <div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/chengfei867/chronos-agent" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.top", "navigation.indexes", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.88dd0f4e.min.js"></script>
+      
+    
+  </body>
+</html>

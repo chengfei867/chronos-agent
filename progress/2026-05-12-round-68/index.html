@@ -1,0 +1,1531 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Time-Travel Debugger for Multi-Agent AI Systems — record, replay, fork, diff, compare. With first-class token/cost tracking and pluggable evaluators.">
+      
+      
+        <meta name="author" content="Hermes Agent">
+      
+      
+        <link rel="canonical" href="https://chengfei867.github.io/chronos-agent/progress/2026-05-12-round-68/">
+      
+      
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.49">
+    
+    
+      
+        <title>Round 68 — Arc B kickoff planning (Anthropic Agents SDK scoped, ADR-026 Draft) - Chronos Agent</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.6f8fc17f.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#round-68-arc-b-kickoff-planning-anthropic-agents-sdk-scoped-adr-026-draft" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Chronos Agent" class="md-header__button md-logo" aria-label="Chronos Agent" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Chronos Agent
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Round 68 — Arc B kickoff planning (Anthropic Agents SDK scoped, ADR-026 Draft)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/chengfei867/chronos-agent" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    chengfei867/chronos-agent
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+    
+  
+  Getting started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../concepts/" class="md-tabs__link">
+        
+  
+    
+  
+  Concepts
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../cli-reference/" class="md-tabs__link">
+        
+  
+    
+  
+  CLI reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../cost-tracking/" class="md-tabs__link">
+        
+  
+    
+  
+  Cost tracking
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../evaluators/" class="md-tabs__link">
+        
+  
+    
+  
+  Evaluators
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../adapters/anthropic_agents/" class="md-tabs__link">
+          
+  
+    
+  
+  Adapters
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guides/forking-safely/" class="md-tabs__link">
+          
+  
+    
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../contracts/golden-trace-format/" class="md-tabs__link">
+          
+  
+    
+  
+  Contracts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../decisions/" class="md-tabs__link">
+          
+  
+    
+  
+  Decisions (ADRs)
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../faq/" class="md-tabs__link">
+        
+  
+    
+  
+  FAQ
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Chronos Agent" class="md-nav__button md-logo" aria-label="Chronos Agent" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Chronos Agent
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/chengfei867/chronos-agent" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    chengfei867/chronos-agent
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Getting started
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Concepts
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli-reference/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    CLI reference
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cost-tracking/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Cost tracking
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../evaluators/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Evaluators
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Adapters
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            Adapters
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adapters/anthropic_agents/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Anthropic Agents SDK
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contracts/adapter-protocol/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Adapter protocol
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Guides
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            Guides
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/forking-safely/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Forking safely
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/side-effects/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Side effects
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Contracts
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            Contracts
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contracts/golden-trace-format/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Golden trace format
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../decisions/" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    Decisions (ADRs)
+  </span>
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            Decisions (ADRs)
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    FAQ
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#0-what-happened-before" class="md-nav__link">
+    <span class="md-ellipsis">
+      0. What happened before
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-what-i-did-this-round-r68" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. What I did this round (R68)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. What I did this round (R68)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#11-gates-check-baseline-carry" class="md-nav__link">
+    <span class="md-ellipsis">
+      1.1 Gates check (baseline carry)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12-research-survey-docsresearchr68-arc-b-scopemd-17-kb" class="md-nav__link">
+    <span class="md-ellipsis">
+      1.2 Research survey: docs/research/r68-arc-b-scope.md (~17 KB)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#13-design-doc-docsdesignfourth-adapter-landscapemd-11-kb" class="md-nav__link">
+    <span class="md-ellipsis">
+      1.3 Design doc: docs/design/fourth-adapter-landscape.md (~11 KB)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#14-adr-026-draft-docsdecisionsadr-026-arc-b-scopemd-11-kb" class="md-nav__link">
+    <span class="md-ellipsis">
+      1.4 ADR-026 Draft: docs/decisions/ADR-026-arc-b-scope.md (~11 KB)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#15-roadmap-update-docsroadmapmd" class="md-nav__link">
+    <span class="md-ellipsis">
+      1.5 Roadmap update: docs/roadmap.md
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-decisions-and-rationale" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Decisions and rationale
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Decisions and rationale">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#d1-why-commit-r68-planning-round-archetype-5th-confirmation" class="md-nav__link">
+    <span class="md-ellipsis">
+      D1 — Why commit R68 (planning-round archetype, 5th confirmation)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#d2-why-anthropic-agents-sdk-over-openai-agents-sdk" class="md-nav__link">
+    <span class="md-ellipsis">
+      D2 — Why Anthropic Agents SDK over OpenAI Agents SDK
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#d3-why-5-rounds-for-arc-b-slice-1-not-3" class="md-nav__link">
+    <span class="md-ellipsis">
+      D3 — Why 5 rounds for Arc B slice 1 (not 3)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#d4-no-code-lands-this-round" class="md-nav__link">
+    <span class="md-ellipsis">
+      D4 — No code lands this round
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-what-i-didnt-do" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. What I didn't do
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-gates-snapshot" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. Gates snapshot
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-findings-five-new-for-context-5-wall" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. Findings (five new, for CONTEXT §5 wall)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Findings (five new, for CONTEXT §5 wall)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#f1-post-release-planning-round-archetype-r56r57r61r66r68" class="md-nav__link">
+    <span class="md-ellipsis">
+      F1 — Post-release planning-round archetype 五连 (R56/R57/R61/R66/R68)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#f2-pre-authorised-fallback-clause-as-drift-prevention-pattern-r68" class="md-nav__link">
+    <span class="md-ellipsis">
+      F2 — Pre-authorised fallback clause as drift-prevention pattern (R68 新)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#f3-arc-b-has-a-5-round-slice-shape-vs-arc-as-3-round-r68-prediction" class="md-nav__link">
+    <span class="md-ellipsis">
+      F3 — Arc B has a 5-round slice shape vs Arc A's 3-round (R68 prediction)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#f4-stale-remote-tracking-ref-trap-r48-br59r60r61r63r68" class="md-nav__link">
+    <span class="md-ellipsis">
+      F4 — Stale remote-tracking ref trap 六连 (R48-B/R59/R60/R61/R63/R68)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#f5-arc-b-candidate-table-in-adr-023-stale-at-3-week-granularity-r68" class="md-nav__link">
+    <span class="md-ellipsis">
+      F5 — Arc B candidate table in ADR-023 stale at 3-week granularity (R68 新)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-next-round-r69-todo" class="md-nav__link">
+    <span class="md-ellipsis">
+      6. Next round (R69) TODO
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Next round (R69) TODO">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#r69-non-goals-hard-red-lines" class="md-nav__link">
+    <span class="md-ellipsis">
+      R69 non-goals (hard red lines)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#r69-option-b-fallback" class="md-nav__link">
+    <span class="md-ellipsis">
+      R69 Option B (fallback)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#r69-estimated-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      R69 estimated work
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-artifacts-produced-this-round" class="md-nav__link">
+    <span class="md-ellipsis">
+      7. Artifacts produced this round
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-hand-off-invariants-for-r69-agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      8. Hand-off invariants for R69 agent
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="round-68-arc-b-kickoff-planning-anthropic-agents-sdk-scoped-adr-026-draft">Round 68 — Arc B kickoff planning (Anthropic Agents SDK scoped, ADR-026 Draft)<a class="headerlink" href="#round-68-arc-b-kickoff-planning-anthropic-agents-sdk-scoped-adr-026-draft" title="Permanent link">&para;</a></h1>
+<p><strong>Date</strong>: 2026-05-13 (CST, ~05:02 cron slot inside 0–11 window)
+<strong>Type</strong>: Planning round, md-only, single-slot (pure design)
+<strong>Phase</strong>: Phase 4 Arc B slice 1 kickoff (post-v0.6.0)
+<strong>Outcome</strong>: ✅ 4 md artifacts shipped; Arc B fourth-adapter pinned to Anthropic Agents SDK with OpenAI Agents SDK pre-authorised fallback.</p>
+<hr />
+<h2 id="0-what-happened-before">0. What happened before<a class="headerlink" href="#0-what-happened-before" title="Permanent link">&para;</a></h2>
+<ul>
+<li>R67 (2026-05-12 CST, ~01:41) cut <strong>v0.6.0</strong> bundling R65 slice 5 <code>--matrix</code> + R66 audit/retro + R67 CLI closeout (<code>chronos tree</code> + <code>scripts/dogfood_fork_tree.py</code> + <code>src/chronos/core/tree.py</code> extraction). Arc A <strong>fully closed</strong>.</li>
+<li>CONTEXT.md §6 (R67 agent) laid out R68 as Option A (Arc B scoping ADR) / Option B (polish) / Option C (retro-audit). Option A was recommended.</li>
+<li>Gates at R67 end: 572 pass / 3 skip / 0 fail / 94% cov. Adapter zero change R52→R67 = 16 rounds streak.</li>
+</ul>
+<h2 id="1-what-i-did-this-round-r68">1. What I did this round (R68)<a class="headerlink" href="#1-what-i-did-this-round-r68" title="Permanent link">&para;</a></h2>
+<p>Executed Option A end-to-end. Four md artifacts + no code. Single-slot, 0 blocker.</p>
+<h3 id="11-gates-check-baseline-carry">1.1 Gates check (baseline carry)<a class="headerlink" href="#11-gates-check-baseline-carry" title="Permanent link">&para;</a></h3>
+<p><code>uv run pytest -q --no-cov</code> at round start: <strong>572 pass / 3 skip / 0 fail</strong> — zero drift from R67 baseline. Zero code change this round; did not re-run at end (md-only invariant, R60 established).</p>
+<p>Origin sync: <code>git ls-remote origin main</code> = <code>71b4aff</code> (R67 commit) = local HEAD. Stale remote-tracking ref previously reported "ahead by 1 commit" — <code>git fetch origin main</code> refreshed; status now "up to date". Sixth confirmation of the "stale remote-tracking ref trap" (R48-B / R59 / R60 / R61 / R63 / <strong>R68</strong>). Continues to be a reliable source of false-positive "something to push" signals.</p>
+<h3 id="12-research-survey-docsresearchr68-arc-b-scopemd-17-kb">1.2 Research survey: <code>docs/research/r68-arc-b-scope.md</code> (~17 KB)<a class="headerlink" href="#12-research-survey-docsresearchr68-arc-b-scopemd-17-kb" title="Permanent link">&para;</a></h3>
+<p>Six-candidate landscape survey with 9-axis comparative table. Refreshes [ADR-023][ADR-023] §Arc B's 2026-04-22 snapshot (now 3 weeks stale; ecosystem has moved).</p>
+<p>Surveyed:</p>
+<ol>
+<li><strong>OpenAI Swarm</strong> — declining relevance (OpenAI pivoted to Agents SDK); rejected.</li>
+<li><strong>Anthropic Agents SDK</strong> (<code>claude-agent-sdk</code>) — rising fast, MCP-native, clean async event stream, low-medium ADR-016 mapping difficulty. <strong>Winner.</strong></li>
+<li><strong>LangGraph Swarm/Supervisor patterns</strong> — not an adapter target; our existing LangGraphRecorder already records these. Rejected.</li>
+<li><strong>OpenAI Agents SDK</strong> — Swarm successor, <code>TracingProcessor</code> API is cleanest event-surface of the four; low risk. <strong>Hot-backup.</strong></li>
+<li><strong>Letta (MemGPT)</strong> — native <code>clone</code> primitive unique, but server/client opacity creates ADR-016 mapping risk. Deferred to Arc B slice 2+.</li>
+<li><strong>Pydantic AI</strong> — iterator-based recorder, trivially easy to wrap, but narrow (single-agent only). <strong>Alternative hot-backup</strong>; candidate for Arc B slice 2.</li>
+</ol>
+<p>Plus seven rejected-in-screen (Assistants v2 / Vercel AI SDK / LiveKit / Generic OTel / Smolagents / CrewAI Flows / Mastra).</p>
+<p>Nine-axis table compared the three live candidates across license, event surface, multi-agent support, determinism, usage-extraction fit, fork primitive, ADR-016 difficulty, ecosystem mindshare, user-cohort unlock.</p>
+<p><strong>Recommendation</strong>: Anthropic Agents SDK primary; OpenAI Agents SDK pre-authorised fallback if R69 risks spike exposes MCP fork-lifecycle blocker.</p>
+<h3 id="13-design-doc-docsdesignfourth-adapter-landscapemd-11-kb">1.3 Design doc: <code>docs/design/fourth-adapter-landscape.md</code> (~11 KB)<a class="headerlink" href="#13-design-doc-docsdesignfourth-adapter-landscapemd-11-kb" title="Permanent link">&para;</a></h3>
+<p>Feature statement + 3 user stories + non-goals + API shape sketch + internals + node-schema fit + usage-extraction fit + release strategy + risks + open questions + acceptance criteria + changelog.</p>
+<p>Key decisions documented:</p>
+<ul>
+<li>Adapter module path: <code>src/chronos/adapters/anthropic_agents/</code> (sibling convention).</li>
+<li>No ADR-003 / ADR-015 / ADR-016 revisions required — pure-additive adapter.</li>
+<li>Node schema mapping: <code>MessageStart/Stop</code> → <code>llm</code>; <code>ToolUse/Result</code> → <code>tool</code>; handoffs → <code>router</code>; stop → <code>end</code>; explicit fork → <code>fork</code>. All six NodeKinds covered cleanly.</li>
+<li>Release strategy: five-round slice (R70 core → R71 live-smoke → R72 v0.7.0a1 → R73 fork → R74 v0.7.0 GA). Bundle shape follows R60 invariant but stretched by two rounds for live-smoke gating.</li>
+<li>Three open questions deferred to R69 risks spike: MCP fork-lifecycle policy (A fresh-server vs B session-reseed), recorder entry point (<code>agent.iter</code> vs <code>agent.stream</code>), exact <code>claude-agent-sdk</code> version pin.</li>
+</ul>
+<h3 id="14-adr-026-draft-docsdecisionsadr-026-arc-b-scopemd-11-kb">1.4 ADR-026 Draft: <code>docs/decisions/ADR-026-arc-b-scope.md</code> (~11 KB)<a class="headerlink" href="#14-adr-026-draft-docsdecisionsadr-026-arc-b-scopemd-11-kb" title="Permanent link">&para;</a></h3>
+<p>Formalises the scope commitment. Five-section structure: Context + Decision (primary binding + interface fit + release strategy + <strong>pre-authorised fallback clause</strong> + slice-2+ sketch) + Acceptance criteria + Open questions + Consequences.</p>
+<p><strong>Key innovation: pre-authorised fallback clause.</strong> If R69 risks spike confirms (1) MCP Policy B infeasible, (2) Policy A degrades value prop, AND (3) OpenAI Agents SDK is still shippable, rollout <strong>swaps framework name with no additional ADR required</strong>. This prevents round-level re-planning detour, which was the R26-era anti-pattern (10-round drift after adapter-interface work stalled). Criteria gate the swap to prevent trivial fallbacks.</p>
+<p>Supersedes [ADR-023][ADR-023] §Arc B candidate table explicitly (marked in header). Promotes Draft → Accepted in R74 (per R57 in-place ADR promotion invariant) after AC-1..AC-5 tick at release.</p>
+<h3 id="15-roadmap-update-docsroadmapmd">1.5 Roadmap update: <code>docs/roadmap.md</code><a class="headerlink" href="#15-roadmap-update-docsroadmapmd" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Header <code>Last updated</code> R67 → R68.</li>
+<li>§4.2 <strong>Ecosystem</strong> section: priority flipped from <code>DEFERRED</code> to <code>ACTIVE — Arc B pinned R68</code>; "Fourth adapter candidate" bullet replaced with Anthropic Agents SDK scope + rollout map + fallback reference; Arc B slice 2 candidate bullet added; three demand-driven bullets relabelled "Arc B slice 3+" or "Arc C territory" for clarity.</li>
+<li>Added link-def entries for <code>[ADR-026]</code>, <code>[fourth-adapter]</code>, <code>[r68-arc-b]</code>.</li>
+<li>Inlined <code>[ADR-001]</code> reference to avoid dangling link (no prior link-def for ADR-001 in roadmap).</li>
+</ul>
+<h2 id="2-decisions-and-rationale">2. Decisions and rationale<a class="headerlink" href="#2-decisions-and-rationale" title="Permanent link">&para;</a></h2>
+<h3 id="d1-why-commit-r68-planning-round-archetype-5th-confirmation">D1 — Why commit R68 (planning-round archetype, 5th confirmation)<a class="headerlink" href="#d1-why-commit-r68-planning-round-archetype-5th-confirmation" title="Permanent link">&para;</a></h3>
+<p>R57 (Arc A commit after R56 skeleton), R61 (slice 4 scoping after v0.5.0), R66 (Arc A item 2 audit), and R68 all fit the "post-release planning round" archetype. CONTEXT.md has this invariant on the wall since R61. This round strengthens the pattern: Arc B slice 1 scope is committable in ≤90 min (research + design + ADR Draft + roadmap + progress + CONTEXT refresh) from <code>pytest clean</code> → <code>push</code>. Single-slot budget held.</p>
+<h3 id="d2-why-anthropic-agents-sdk-over-openai-agents-sdk">D2 — Why Anthropic Agents SDK over OpenAI Agents SDK<a class="headerlink" href="#d2-why-anthropic-agents-sdk-over-openai-agents-sdk" title="Permanent link">&para;</a></h3>
+<p>Three-way tie-break (both pass ADR-016 mapping cleanliness, both have rising ecosystem):</p>
+<ol>
+<li><strong>Strategic fit</strong>: MCP-native shops are underserved by existing observability tools (Langfuse/Phoenix lack MCP-aware semantics). OpenAI Agents SDK's competitive field (OpenAI's own tracing) is more crowded.</li>
+<li><strong>First-user appeal</strong>: Chronos's "agent pdb + git" framing fits MCP's tool-call interception point more naturally than OpenAI's internal Responses API.</li>
+<li><strong>Leverage tail</strong>: MCP standardisation (2024-Q4) is still compounding through 2026-H2. OpenAI Agents SDK peaks narrower.</li>
+</ol>
+<p>The pre-authorised fallback clause hedges the one real risk (MCP fork-lifecycle) without forcing a round-level re-plan.</p>
+<h3 id="d3-why-5-rounds-for-arc-b-slice-1-not-3">D3 — Why 5 rounds for Arc B slice 1 (not 3)<a class="headerlink" href="#d3-why-5-rounds-for-arc-b-slice-1-not-3" title="Permanent link">&para;</a></h3>
+<p>CrewAI Arc B precedent was R49-R55 (7 rounds, stretched). N-run compare was R58-R60 (3 rounds, tight). Arc B slice 1 targets <strong>5 rounds</strong> because live-smoke gating requires two dedicated rounds (record + fork) whereas pure-function Arc A slices didn't. Bundle shape:</p>
+<table>
+<thead>
+<tr>
+<th>Round</th>
+<th>Role</th>
+<th>Analogue</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>R69</td>
+<td>Risks spike + ADR-026 Draft → Accepted</td>
+<td>R57 Arc A commit</td>
+</tr>
+<tr>
+<td>R70</td>
+<td>Core adapter scaffold + duck-typed tests</td>
+<td>R51 CrewAI scaffold</td>
+</tr>
+<tr>
+<td>R71</td>
+<td>Live-smoke (<code>ANTHROPIC_AUTH_TOKEN</code>)</td>
+<td>R53 CrewAI live-smoke</td>
+</tr>
+<tr>
+<td>R72</td>
+<td>Dogfood + v0.7.0a1 alpha</td>
+<td>R54 CrewAI alpha</td>
+</tr>
+<tr>
+<td>R73</td>
+<td>Fork primitive + fork live-smoke</td>
+<td>(novel — Arc A had no equivalent)</td>
+</tr>
+<tr>
+<td>R74</td>
+<td>v0.7.0 release cut</td>
+<td>R55 / R60 / R64 / R67</td>
+</tr>
+</tbody>
+</table>
+<h3 id="d4-no-code-lands-this-round">D4 — No code lands this round<a class="headerlink" href="#d4-no-code-lands-this-round" title="Permanent link">&para;</a></h3>
+<p>Per R57/R61/R66 planning-round invariant. Pure md. No <code>src/</code> changes, no tests added, no CHANGELOG update (no Unreleased block opens until R70 code lands). Preserves the "adapter R52→R68 = 17 rounds zero code change" streak; next candidate milestone is R70 (impl round) which <strong>will</strong> break the streak — documented as expected.</p>
+<h2 id="3-what-i-didnt-do">3. What I didn't do<a class="headerlink" href="#3-what-i-didnt-do" title="Permanent link">&para;</a></h2>
+<ul>
+<li>❌ No code changes (planning round).</li>
+<li>❌ No CHANGELOG entry (no unreleased work; R70 opens [Unreleased]).</li>
+<li>❌ No version bump (<code>__version__</code> / <code>pyproject.toml</code> untouched; stays at 0.6.0 until R74).</li>
+<li>❌ No tag cut.</li>
+<li>❌ No ADR-023 rewrite — ADR-026 supersedes the Arc B candidate table only, leaving Arc A history intact.</li>
+<li>❌ No <code>chronos-release-pattern</code> skill application (no release this round).</li>
+<li>❌ No dogfood (no new feature to exercise).</li>
+<li>❌ No skill updates — <code>roadmap-drift-detection</code> skill considered but not triggered (Arc B is committing to <em>new</em> scope, not surfacing drift on existing scope).</li>
+</ul>
+<h2 id="4-gates-snapshot">4. Gates snapshot<a class="headerlink" href="#4-gates-snapshot" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Gate</th>
+<th>Result</th>
+<th>Delta</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>uv run pytest -q --no-cov</code></td>
+<td><strong>572 pass / 3 skip / 0 fail</strong></td>
+<td>Zero drift from R67</td>
+</tr>
+<tr>
+<td><code>mypy src/</code></td>
+<td>(not re-run, md-only)</td>
+<td>Expected zero drift</td>
+</tr>
+<tr>
+<td><code>ruff check src tests scripts</code></td>
+<td>(not re-run, md-only)</td>
+<td>Expected zero drift</td>
+</tr>
+<tr>
+<td><code>ruff format --check src tests scripts</code></td>
+<td>(not re-run, md-only)</td>
+<td>Expected zero drift</td>
+</tr>
+<tr>
+<td>Frontend</td>
+<td>(not re-run, md-only)</td>
+<td>Expected zero drift</td>
+</tr>
+<tr>
+<td>Adapter code</td>
+<td><strong>zero change R52→R68 = 17 rounds</strong></td>
+<td>+1 from R67 (16)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="5-findings-five-new-for-context-5-wall">5. Findings (five new, for CONTEXT §5 wall)<a class="headerlink" href="#5-findings-five-new-for-context-5-wall" title="Permanent link">&para;</a></h2>
+<h3 id="f1-post-release-planning-round-archetype-r56r57r61r66r68">F1 — Post-release planning-round archetype 五连 (R56/R57/R61/R66/R68)<a class="headerlink" href="#f1-post-release-planning-round-archetype-r56r57r61r66r68" title="Permanent link">&para;</a></h3>
+<p>Five confirmations of the "post-minor-release planning round fits single-slot md-only budget with 4 artifact ceiling" pattern:</p>
+<ul>
+<li>R56 Phase 4 charter skeleton → 2 ADR artifacts</li>
+<li>R57 Arc A commit → 2 ADR artifacts (in-place promotion + superseder)</li>
+<li>R61 slice 4 scoping → 3 md artifacts (Draft ADR + research + roadmap)</li>
+<li>R66 Arc A item 2 retro-audit → 4 md artifacts (audit + design + Draft ADR + roadmap)</li>
+<li><strong>R68 Arc B kickoff → 4 md artifacts (research + design + Draft ADR + roadmap)</strong></li>
+</ul>
+<p>Structural constant: ~60-90 min single-slot, 3-4 md artifacts, no code, no tag cut. Promote to CONTEXT long-term invariant.</p>
+<h3 id="f2-pre-authorised-fallback-clause-as-drift-prevention-pattern-r68">F2 — Pre-authorised fallback clause as drift-prevention pattern (R68 新)<a class="headerlink" href="#f2-pre-authorised-fallback-clause-as-drift-prevention-pattern-r68" title="Permanent link">&para;</a></h3>
+<p>R26-era lesson: an ADR that commits to only one path without backup forces a round-level re-plan when the path blocks. Cost: 10+ rounds of drift (R26 adapter interface stall).</p>
+<p>R68 innovation: ADR-026 §Fallback explicitly lists (framework, criteria, swap scope). If primary blocks at risks-spike stage, swap is pre-authorised — no re-ADR, no replanning detour. Criteria are hardened (3 must-all-hold) to prevent trivial fallbacks.</p>
+<p>Candidate invariant: <strong>"Every scope-commit ADR should name one fallback with gate criteria."</strong> Pending second confirmation in a future scope ADR (ADR-027?).</p>
+<h3 id="f3-arc-b-has-a-5-round-slice-shape-vs-arc-as-3-round-r68-prediction">F3 — Arc B has a 5-round slice shape vs Arc A's 3-round (R68 prediction)<a class="headerlink" href="#f3-arc-b-has-a-5-round-slice-shape-vs-arc-as-3-round-r68-prediction" title="Permanent link">&para;</a></h3>
+<p>Arc A slice 4 was R62/R63/R64 (3 rounds: core/surface/proof+release). Arc B slice 1 pre-budgets R70/R71/R72/R73/R74 (5 rounds) because adapter shipping requires <strong>live-smoke gating</strong> (record + fork), not just proof. This is the same stretch CrewAI Arc B had (R49-R55, 7 rounds, further stretched by adapter-interface discovery).</p>
+<p>Refinement to R60 bundle-shape invariant: "Arc slice = core + surface + proof = 1 minor version" is <strong>Arc A specific</strong>. <strong>Arc B adapter slice = scaffold + live-smoke + alpha + fork + GA = 5 rounds = 1 minor version.</strong> Two bundle-shape families co-exist. Pending R74 ship to confirm.</p>
+<h3 id="f4-stale-remote-tracking-ref-trap-r48-br59r60r61r63r68">F4 — Stale remote-tracking ref trap 六连 (R48-B/R59/R60/R61/R63/R68)<a class="headerlink" href="#f4-stale-remote-tracking-ref-trap-r48-br59r60r61r63r68" title="Permanent link">&para;</a></h3>
+<p>Sixth confirmation of the same trap. <code>git status</code> said "ahead by 1 commit"; <code>git ls-remote origin main</code> said HEAD==origin. <code>git fetch origin main</code> refreshes. Every cron slot inherits this staleness after prior-slot push because local tracking ref wasn't updated. <strong>Candidate skill addition</strong>: <code>cron-slot-handoff-recovery</code> skill already mentions the trap; R68 adds 6th-confirmation evidence — no skill update needed, pattern is codified.</p>
+<h3 id="f5-arc-b-candidate-table-in-adr-023-stale-at-3-week-granularity-r68">F5 — Arc B candidate table in ADR-023 stale at 3-week granularity (R68 新)<a class="headerlink" href="#f5-arc-b-candidate-table-in-adr-023-stale-at-3-week-granularity-r68" title="Permanent link">&para;</a></h3>
+<p>ADR-023 §Arc B table (2026-04-22 snapshot, R56) listed "Swarm / Assistants v2 / Anthropic Agents SDK / Letta / LiveKit / Generic OTel". R68 survey (2026-05-13, 3 weeks later) found:</p>
+<ul>
+<li>2 of 6 still viable (Anthropic Agents SDK, Letta).</li>
+<li>2 rejected by ecosystem shift (Swarm lost favor; Assistants v2 API-only).</li>
+<li>2 niche-only (LiveKit, Generic OTel).</li>
+<li>Plus 2 <strong>new</strong> candidates not in R56 table (OpenAI Agents SDK, Pydantic AI).</li>
+</ul>
+<p>Lesson: candidate tables in scoping ADRs decay fast during high-velocity framework periods (2026-H1 had MCP standardisation + Swarm-to-Agents-SDK transition + Pydantic AI release). <strong>Refresh cadence</strong>: 2-3 weeks max before commit. R68 refresh was well-timed — a further delay would have locked us into a stale evaluation.</p>
+<h2 id="6-next-round-r69-todo">6. Next round (R69) TODO<a class="headerlink" href="#6-next-round-r69-todo" title="Permanent link">&para;</a></h2>
+<p><strong>Round 69 — Arc B risks spike + ADR-026 Draft → Accepted (single-slot likely, may need 2-slot if spike deep)</strong></p>
+<p>Per ADR-026 §Open questions:</p>
+<ul>
+<li><strong>P0</strong> — Research spike: MCP fork-lifecycle policy. Read <code>claude-agent-sdk</code> source for session lifecycle + MCP server reconnection semantics. Draft <code>docs/research/r69-mcp-fork-lifecycle.md</code> (~5-8 KB). Decide Policy A (fresh server) vs Policy B (session re-seed).</li>
+<li><strong>P0</strong> — Research spike: recorder entry point. Compare <code>agent.iter</code> vs <code>agent.stream</code> ergonomics + event completeness. Document in same research doc §2.</li>
+<li><strong>P0</strong> — Version pin: probe <code>claude-agent-sdk</code> on PyPI; pick lower bound = latest stable at R69, upper bound = next major per ADR-022 pattern. Document in ADR-026 §1 Primary binding.</li>
+<li><strong>P1</strong> — ADR-026 Draft → Accepted (in-place R57 invariant). Footer updated with R69 evidence (spike findings).</li>
+<li><strong>P1</strong> — <code>docs/roadmap.md</code> §4.2 Arc B bullet: R69 target line bumped to "Accepted" (replace Draft mention).</li>
+<li><strong>P2</strong> — If fallback triggered: update ADR-026 §1 primary binding to OpenAI Agents SDK + update §7 Rollout, keep fallback slot empty or put Anthropic Agents SDK as retroactive slice-2 option.</li>
+</ul>
+<h3 id="r69-non-goals-hard-red-lines">R69 non-goals (hard red lines)<a class="headerlink" href="#r69-non-goals-hard-red-lines" title="Permanent link">&para;</a></h3>
+<ul>
+<li>❌ No adapter code yet (R70 starts code).</li>
+<li>❌ No <code>claude-agent-sdk</code> install into prod deps (optional-dep until R70).</li>
+<li>❌ No live LLM call.</li>
+<li>❌ Swap fallback only if all 3 criteria hold (per ADR-026 §4).</li>
+<li>❌ No tag cut.</li>
+</ul>
+<h3 id="r69-option-b-fallback">R69 Option B (fallback)<a class="headerlink" href="#r69-option-b-fallback" title="Permanent link">&para;</a></h3>
+<p>If R69 agent reads and decides risks spike is too deep for single slot (requires upstream SDK source dive + potentially contribution to upstream to expose session-reseed API), <strong>split</strong>:</p>
+<ul>
+<li>R69 = risks research only (md-only, single slot).</li>
+<li>R70 = ADR-026 Draft → Accepted + recorder core impl start.</li>
+</ul>
+<p>This mirrors R53→R54 CrewAI split when adapter-interface discovery took longer than budgeted.</p>
+<h3 id="r69-estimated-work">R69 estimated work<a class="headerlink" href="#r69-estimated-work" title="Permanent link">&para;</a></h3>
+<p>Single-slot if no blocker: 60-90 min (read <code>claude-agent-sdk</code> source + write risks doc + ADR-026 in-place promotion + roadmap bump + progress + CONTEXT). Two-slot if spike is deep: 45 min + 45 min split across rounds.</p>
+<h2 id="7-artifacts-produced-this-round">7. Artifacts produced this round<a class="headerlink" href="#7-artifacts-produced-this-round" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>docs/research/r68-arc-b-scope.md</code> (<strong>new</strong>, ~17 KB, 9-axis candidate table + recommendation)</li>
+<li><code>docs/design/fourth-adapter-landscape.md</code> (<strong>new</strong>, ~11 KB, spec + user stories + acceptance criteria)</li>
+<li><code>docs/decisions/ADR-026-arc-b-scope.md</code> (<strong>new</strong>, Draft, ~11 KB, pre-authorised fallback clause)</li>
+<li><code>docs/roadmap.md</code> — header bump + §4.2 rewrite + 3 new link-defs + 1 inline-link normalisation</li>
+<li><code>docs/progress/2026-05-12-round-68.md</code> (this doc)</li>
+<li><code>docs/CONTEXT.md §5/§6</code> — refresh in same commit</li>
+</ul>
+<p><strong>Zero</strong> code / test / script / CHANGELOG / pyproject / ADR (other than ADR-026) / existing-ADR (no edits to prior) changes. Adapter streak: <strong>R52→R68 = 17 rounds</strong>, zero code change. R70 will break streak (planned + expected).</p>
+<h2 id="8-hand-off-invariants-for-r69-agent">8. Hand-off invariants for R69 agent<a class="headerlink" href="#8-hand-off-invariants-for-r69-agent" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Start with <code>git ls-remote origin main</code> + <code>git fetch origin main</code> — the stale-ref trap is 六连 now.</li>
+<li>Read <code>docs/decisions/ADR-026-arc-b-scope.md</code> + <code>docs/design/fourth-adapter-landscape.md</code> + <code>docs/research/r68-arc-b-scope.md</code> before spiking. The design doc §4.2 outlines Policy A/B; don't re-derive.</li>
+<li><code>claude-agent-sdk</code> not yet installed. If probing source, use <code>pip download claude-agent-sdk --no-deps -d /tmp/probe</code> or clone <code>anthropics/claude-agent-sdk-python</code> to <code>/tmp</code>. Do NOT add to <code>pyproject.toml</code> until R70.</li>
+<li>ADR-026 Draft → Accepted is <strong>in-place</strong> (R57 invariant) — edit the status line, don't create ADR-026a or similar.</li>
+<li>Fallback clause triggers only when all 3 criteria hold. Do not invoke on any single-criterion spike finding.</li>
+<li>Budget 90 min single-slot; split to 2-slot if risks spike is deep (45+45).</li>
+</ol>
+<hr />
+<p><em>Progress doc R68, committed in the same bundle as the 4 md artifacts + CONTEXT §5/§6 refresh. Single-slot planning round. v0.7.0 target now in flight with five-round runway (R70-R74).</em></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 chengfei867 — content generated 100% by Hermes Agent / Claude Opus
+    </div>
+  
+  
+</div>
+      
+        <div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/chengfei867/chronos-agent" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.top", "navigation.indexes", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.88dd0f4e.min.js"></script>
+      
+    
+  </body>
+</html>

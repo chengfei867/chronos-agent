@@ -1,0 +1,1402 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Time-Travel Debugger for Multi-Agent AI Systems — record, replay, fork, diff, compare. With first-class token/cost tracking and pluggable evaluators.">
+      
+      
+        <meta name="author" content="Hermes Agent">
+      
+      
+        <link rel="canonical" href="https://chengfei867.github.io/chronos-agent/research/r61-multi-pivot-alignment/">
+      
+      
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.49">
+    
+    
+      
+        <title>Research Note — Multi-pivot Alignment Algorithms for N-run Agent Traces - Chronos Agent</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.6f8fc17f.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#research-note-multi-pivot-alignment-algorithms-for-n-run-agent-traces" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Chronos Agent" class="md-header__button md-logo" aria-label="Chronos Agent" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Chronos Agent
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Research Note — Multi-pivot Alignment Algorithms for N-run Agent Traces
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/chengfei867/chronos-agent" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    chengfei867/chronos-agent
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+    
+  
+  Getting started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../concepts/" class="md-tabs__link">
+        
+  
+    
+  
+  Concepts
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../cli-reference/" class="md-tabs__link">
+        
+  
+    
+  
+  CLI reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../cost-tracking/" class="md-tabs__link">
+        
+  
+    
+  
+  Cost tracking
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../evaluators/" class="md-tabs__link">
+        
+  
+    
+  
+  Evaluators
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../adapters/anthropic_agents/" class="md-tabs__link">
+          
+  
+    
+  
+  Adapters
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guides/forking-safely/" class="md-tabs__link">
+          
+  
+    
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../contracts/golden-trace-format/" class="md-tabs__link">
+          
+  
+    
+  
+  Contracts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../decisions/" class="md-tabs__link">
+          
+  
+    
+  
+  Decisions (ADRs)
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../faq/" class="md-tabs__link">
+        
+  
+    
+  
+  FAQ
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Chronos Agent" class="md-nav__button md-logo" aria-label="Chronos Agent" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Chronos Agent
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/chengfei867/chronos-agent" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    chengfei867/chronos-agent
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Getting started
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Concepts
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli-reference/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    CLI reference
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cost-tracking/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Cost tracking
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../evaluators/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Evaluators
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Adapters
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            Adapters
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adapters/anthropic_agents/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Anthropic Agents SDK
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contracts/adapter-protocol/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Adapter protocol
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Guides
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            Guides
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/forking-safely/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Forking safely
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/side-effects/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Side effects
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Contracts
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            Contracts
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contracts/golden-trace-format/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Golden trace format
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../decisions/" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    Decisions (ADRs)
+  </span>
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            Decisions (ADRs)
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    FAQ
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-problem-statement" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Problem Statement
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Problem Statement">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      Scope
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-primitive-recap" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Primitive recap
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-candidate-algorithms" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Candidate algorithms
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Candidate algorithms">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-pairwise-on2-matrix-adr-024-option-a" class="md-nav__link">
+    <span class="md-ellipsis">
+      3.1 Pairwise O(N²) matrix (ADR-024 Option A)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-virtual-pivot-via-lcs-multi-sequence-alignment-adr-024-option-b-rejected" class="md-nav__link">
+    <span class="md-ellipsis">
+      3.2 Virtual pivot via LCS / multi-sequence alignment (ADR-024 Option B — REJECTED)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-star-schema-centroid-pivot-adr-024-option-c-chosen" class="md-nav__link">
+    <span class="md-ellipsis">
+      3.3 Star schema / centroid pivot (ADR-024 Option C — CHOSEN)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#34-bespoke-n-way-dp-alternative-discarded-without-full-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      3.4 Bespoke N-way DP (alternative, discarded without full analysis)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#35-graph-based-consensus-future-exploration-not-r61" class="md-nav__link">
+    <span class="md-ellipsis">
+      3.5 Graph-based consensus (future exploration, not R61)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-comparative-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. Comparative summary
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-connection-to-adr-024-decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. Connection to ADR-024 Decision
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-open-questions-for-r62-implementation-round" class="md-nav__link">
+    <span class="md-ellipsis">
+      6. Open questions for R62+ implementation round
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      7. References
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. References">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cited" class="md-nav__link">
+    <span class="md-ellipsis">
+      Cited
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#internal" class="md-nav__link">
+    <span class="md-ellipsis">
+      Internal
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="research-note-multi-pivot-alignment-algorithms-for-n-run-agent-traces">Research Note — Multi-pivot Alignment Algorithms for N-run Agent Traces<a class="headerlink" href="#research-note-multi-pivot-alignment-algorithms-for-n-run-agent-traces" title="Permanent link">&para;</a></h1>
+<p><strong>Round</strong>: R61 (Phase 4 Arc A slice 4 planning)
+<strong>Date</strong>: 2026-05-10 (CST, inside 0-11 window)
+<strong>Author</strong>: Hermes Agent
+<strong>Companion to</strong>: <a href="../../decisions/ADR-024-multi-pivot-compare/">ADR-024 — Multi-pivot compare</a>
+<strong>Status</strong>: Survey (informs ADR-024 Draft; updated when slice 4 implementation lands or new evidence emerges)</p>
+<hr />
+<h2 id="1-problem-statement">1. Problem Statement<a class="headerlink" href="#1-problem-statement" title="Permanent link">&para;</a></h2>
+<p>Given N≥2 recorded agent runs with no designated pivot (baseline), produce a compare report that is principled, deterministic, reuses existing primitives where possible, and preserves the v0.5.0 single-pivot contract as a strict N=2 special case.</p>
+<p>"Alignment" here means the structural mapping from nodes of one run to nodes of another, following ADR-006's 2-run primitive. The 2-run primitive is our bedrock; everything else in this note is about how to combine its output across multiple pairs.</p>
+<h3 id="scope">Scope<a class="headerlink" href="#scope" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>In</strong>: Selecting/constructing an anchor for N-way compare, once runs are fixed.</li>
+<li><strong>Out</strong>: The 2-run alignment algorithm itself (ADR-006, unchanged), semantic equivalence judgments (future ADR-025 territory), token-cost-weighted distance metrics (deferred).</li>
+</ul>
+<h2 id="2-primitive-recap">2. Primitive recap<a class="headerlink" href="#2-primitive-recap" title="Permanent link">&para;</a></h2>
+<p>ADR-006 <code>diff_reports(run_a, run_b) → DiffReport</code> gives us, for a pair of runs:
+- <strong>Aligned pairs</strong> — node <code>a_i</code> is "same as" node <code>b_j</code> under the alignment.
+- <strong>Unmatched nodes on each side</strong> — nodes with no counterpart.
+- <strong>Per-position verdicts</strong> — <code>equal | changed | absent_a | absent_b</code>.</p>
+<p>ADR-006 alignment is deterministic, O(|a|·|b|) worst case, and stable under prefix extension (appending a node doesn't re-align earlier ones). These properties carry over to anything built on top.</p>
+<p>The R58-R60 shipped primitive <code>merge_pivot_reports(pivot, [r1, r2, ..., r_{N-1}]) → MergeReport</code> is a <strong>pivot-anchored</strong> N-way compare: it runs <code>diff_reports(pivot, r_i)</code> N−1 times and stitches the reports keyed on pivot-node identity. All non-pivot views hang off the pivot's spine.</p>
+<h2 id="3-candidate-algorithms">3. Candidate algorithms<a class="headerlink" href="#3-candidate-algorithms" title="Permanent link">&para;</a></h2>
+<h3 id="31-pairwise-on2-matrix-adr-024-option-a">3.1 Pairwise O(N²) matrix (ADR-024 Option A)<a class="headerlink" href="#31-pairwise-on2-matrix-adr-024-option-a" title="Permanent link">&para;</a></h3>
+<p><strong>Construction</strong>: For all <code>i &lt; j</code>, compute <code>diff_reports(r_i, r_j)</code>. Present as N×N matrix of DiffReports (symmetric, so actually N(N−1)/2 unique cells).</p>
+<p><strong>Complexity</strong>: O(N²) diffs, each O(|r_i|·|r_j|). If node count is bounded by L, total O(N²·L²).</p>
+<p><strong>Memory</strong>: N(N−1)/2 reports. Each report is O(L) unique content + O(L) metadata. Total O(N²·L).</p>
+<p><strong>Deterministic</strong>: Yes (ADR-006 is deterministic; matrix ordering is <code>(i, j)</code> with <code>i &lt; j</code>).</p>
+<p><strong>Failure modes</strong>:
+- Large N: 10 runs = 45 cells, 20 runs = 190. Display scales poorly.
+- No single "ensemble view" — user has to synthesise.
+- Symmetric cells are redundant (<code>(i,j)</code> = transpose of <code>(j,i)</code>), halved by <code>i &lt; j</code> convention.</p>
+<p><strong>Verdict</strong>: Intellectually clean; no new algorithm. Chosen as planned <strong>slice 5</strong> (deferred) in ADR-024. Will ship if auto-centroid proves insufficient.</p>
+<h3 id="32-virtual-pivot-via-lcs-multi-sequence-alignment-adr-024-option-b-rejected">3.2 Virtual pivot via LCS / multi-sequence alignment (ADR-024 Option B — REJECTED)<a class="headerlink" href="#32-virtual-pivot-via-lcs-multi-sequence-alignment-adr-024-option-b-rejected" title="Permanent link">&para;</a></h3>
+<p><strong>Construction sketch</strong>: Find a "skeleton run" representing the consensus of all N runs, then run single-pivot compare against the skeleton.</p>
+<p>Two sub-variants:
+- <strong>3.2a LCS of node identities</strong>: Compute longest common subsequence over the sequence of <code>(node.kind, node.name)</code> tuples across all N runs. Skeleton = LCS. Then align each <code>r_i</code> against skeleton using ADR-006-style alignment.
+- <strong>3.2b Progressive MSA (MUSCLE/MAFFT-style)</strong>: Build a guide tree from pairwise distances, progressively align runs into a skeleton. Classical bioinformatics approach.</p>
+<p><strong>Complexity</strong>:
+- LCS of K sequences is O(L^K) in naive DP; approximations exist (ALINEA, star-LCS) at O(K·L²).
+- Progressive MSA: O(N²·L²) for pairwise distances + O(N·L²) for progressive align + guide tree construction. Total O(N²·L²). Heuristic — not optimal.</p>
+<p><strong>Memory</strong>: Skeleton is O(L_skeleton) + N alignments O(N·L) = O(N·L).</p>
+<p><strong>Deterministic</strong>: Only with a tie-break discipline. MSA heuristics have multiple local optima; seed + guide-tree construction order matters.</p>
+<p><strong>Failure modes</strong>:
+- <strong>Empty skeleton</strong> when runs diverge at step 1: LCS could be empty → degrades to "no view at all". For variant sweeps (common case), this happens regularly.
+- <strong>Ghost run UX</strong> — skeleton is not a recorded run. Runs list must show it as synthetic; users get confused when they click through to "see" it.
+- <strong>Gappy alignments</strong> — MSA produces alignments with many <code>-</code> gaps; interpreting "gap means different" vs. "gap means missing" is fuzzy.
+- <strong>New algorithm to test / debug</strong> — we'd be writing our own MSA, or vendoring a biology library (weird dependency profile).</p>
+<p><strong>Verdict</strong>: Rejected in ADR-024. The ghost-run UX, empty-skeleton degenerate case, and new-algorithm cost outweigh the theoretical appeal. Revisit if a concrete user scenario demands a "consensus subtree" view that centroid pivot can't produce.</p>
+<p>Prior art worth reading if we ever reopen:
+- Edgar, R.C. (2004). <em>MUSCLE: multiple sequence alignment with high accuracy and high throughput</em>. NAR 32(5):1792-1797. Progressive MSA baseline; fast.
+- Katoh, K. &amp; Standley, D.M. (2013). <em>MAFFT multiple sequence alignment software version 7</em>. MBE 30(4):772-780. Better accuracy; slower.
+- <code>diff3</code> (GNU diffutils): 3-way merge with ancestor. Not MSA but has the "consensus-via-common-ancestor" flavour.</p>
+<h3 id="33-star-schema-centroid-pivot-adr-024-option-c-chosen">3.3 Star schema / centroid pivot (ADR-024 Option C — CHOSEN)<a class="headerlink" href="#33-star-schema-centroid-pivot-adr-024-option-c-chosen" title="Permanent link">&para;</a></h3>
+<p><strong>Construction</strong>:
+1. Compute pairwise distance <code>d(i, j)</code> for all <code>i &lt; j</code> — this is the same O(N²) work as matrix view, but we only need a scalar per pair, not the full report.
+2. For each run <code>i</code>, mean distance to others: <code>m_i = (Σ_{j ≠ i} d(i, j)) / (N − 1)</code>.
+3. Centroid = <code>argmin_i m_i</code>. Tie-break by lexicographic run_id.
+4. Call <code>merge_pivot_reports(pivot=centroid, others=remaining N−1 runs)</code>.
+5. Return <code>{report: ..., metadata: {pivot_selection: "auto-centroid", centroid_run_id, distance_matrix, metric_version}}</code>.</p>
+<p><strong>Distance metric (initial definition, <code>metric_version = 1</code>)</strong>:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>d(r_a, r_b) := |disagreeing_positions| / max(1, |aligned_positions|)
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>where:
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  - aligned_positions = positions in ADR-006 diff(r_a, r_b) with verdict ∈ {equal, changed}
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  - disagreeing_positions = positions with verdict = changed, plus all absent_a / absent_b
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>  - normalization: denominator is |aligned|+|unmatched|, i.e., total positions touched
+</span></code></pre></div>
+<p>Alternative definitions considered (all deferred to possible ADR-025):
+- Token-weighted — sum token deltas instead of counts. Richer but requires token tallies per node.
+- Kind-bucketed — weight <code>llm</code> mismatches more than <code>fn</code> mismatches. Captures "important divergence" but introduces tuning knobs.
+- Semantic — LLM-as-judge distance. Arc A item 3 (deferred per ADR-023).</p>
+<p>We start with the <strong>counting metric</strong> because it's (a) cheap, (b) obvious, (c) version-tagged for future refinement, (d) equals 0 for identical runs and 1 for totally disjoint runs (clean interval).</p>
+<p><strong>Complexity</strong>: O(N²) diffs (same as matrix) + O(N) argmin + O(N−1) merge. Dominant term O(N²·L²) — same asymptote as matrix but <strong>smaller constant</strong> when the pairwise matrix is computed only for distances (no report-stitching overhead per cell).</p>
+<p>Optimisation note: if downstream only uses centroid report, the full DiffReport objects for non-centroid pairs are wasted. Keep them in the in-memory cache (let the caller request matrix view for free later — slice 5 hook).</p>
+<p><strong>Memory</strong>: O(N²) distances (scalars) + 1 centroid MergeReport O(N·L).</p>
+<p><strong>Deterministic</strong>: Yes, given metric + tie-break rule.</p>
+<p><strong>Failure modes</strong>:
+- <strong>Outlier-picked-as-centroid</strong> when 3 runs cluster and 1 is distant: centroid is the distant one (closest to "average"). Actually this is fine — the "average" position minimizes total distance, which in a {3-tight + 1-far} case is inside the tight cluster. Wait, let me re-examine: mean distance from far outlier is high; mean distance from any of the 3 tight ones is (2 tight-pair-distances + 1 far-distance)/3. The tight ones will have lower mean. So centroid is in the cluster. ✓ not a failure mode.</p>
+<p>Real failure mode: when <strong>all runs are equidistant</strong> (e.g., 4 totally different runs with no structure), centroid choice is arbitrary → falls through to run_id tie-break. Downstream user doesn't learn anything, but that's an inherent property of the data, not the algorithm.</p>
+<ul>
+<li>
+<p><strong>N=2</strong>: only 1 pairwise distance, both runs have equal mean → tie-break to lexicographic-min run_id. Result: centroid is fixed-choice-by-id, merge report = single-pivot report identical to <code>merge_pivot_reports(run_min_id, [run_other])</code>. This is a <strong>contract-compatibility point</strong> and we should test it.</p>
+</li>
+<li>
+<p><strong>Same-run duplicates</strong>: <code>d(i,j) = 0</code> for identical runs. Either is equally valid centroid, tie-break by id. Same-run-duplicate testing is worth including (edge case for replay-based fixtures).</p>
+</li>
+</ul>
+<p><strong>Verdict</strong>: <strong>Chosen as ADR-024 slice 4 default</strong>. 50-line wrapper on <code>merge_pivot_reports</code>, one new distance function (~30 LOC with docstring), straightforward tests.</p>
+<h3 id="34-bespoke-n-way-dp-alternative-discarded-without-full-analysis">3.4 Bespoke N-way DP (alternative, discarded without full analysis)<a class="headerlink" href="#34-bespoke-n-way-dp-alternative-discarded-without-full-analysis" title="Permanent link">&para;</a></h3>
+<p>Extending ADR-006's DP to N dimensions produces O(L^N) cells — exponentially expensive. Only viable for N≤3 or heavily pruned. Classical MSA literature abandoned this 30+ years ago in favour of progressive heuristics (§3.2b). We mention it only to flag that "just generalize the 2-run algo" is not a free lunch.</p>
+<h3 id="35-graph-based-consensus-future-exploration-not-r61">3.5 Graph-based consensus (future exploration, not R61)<a class="headerlink" href="#35-graph-based-consensus-future-exploration-not-r61" title="Permanent link">&para;</a></h3>
+<p>A recent line of work (e.g., POA — Partial Order Alignment) represents alignment as a DAG rather than a linear sequence. For agent traces, where forks and parallel tool calls are inherently DAG-shaped, this might be a better primitive than sequential alignment in the long run.</p>
+<p>Deferred explicitly — not a candidate for R61 ADR-024. Flagged here for future round to consider if/when Arc A depth goals exceed what ADR-006 linear alignment can express (e.g., when we want to compare fork-trees, not just linear runs).</p>
+<p>Reference: Lee, C., Grasso, C., &amp; Sharlow, M.F. (2002). <em>Multiple sequence alignment using partial order graphs</em>. Bioinformatics 18(3):452-464.</p>
+<h2 id="4-comparative-summary">4. Comparative summary<a class="headerlink" href="#4-comparative-summary" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Criterion</th>
+<th>Option A matrix</th>
+<th>Option B MSA</th>
+<th>Option C centroid</th>
+<th>Option D hybrid</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Compute</strong></td>
+<td>O(N²·L²)</td>
+<td>O(N²·L²) heur.</td>
+<td>O(N²·L²)</td>
+<td>O(N²·L²)</td>
+</tr>
+<tr>
+<td><strong>Display scalability</strong></td>
+<td>Poor for N&gt;10</td>
+<td>Good</td>
+<td>Excellent</td>
+<td>Good (both views)</td>
+</tr>
+<tr>
+<td><strong>Reuses merge primitive</strong></td>
+<td>No</td>
+<td>Partial</td>
+<td>Yes (full)</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><strong>New algorithms needed</strong></td>
+<td>None</td>
+<td>MSA heuristic</td>
+<td>Distance metric only</td>
+<td>Distance metric</td>
+</tr>
+<tr>
+<td><strong>N=2 degenerate behaviour</strong></td>
+<td>Same as <code>diff</code></td>
+<td>Same as <code>diff</code></td>
+<td>Same as single-pivot</td>
+<td>Same as single-pivot</td>
+</tr>
+<tr>
+<td><strong>Empty-consensus failure</strong></td>
+<td>N/A</td>
+<td>Catastrophic</td>
+<td>None</td>
+<td>None</td>
+</tr>
+<tr>
+<td><strong>Ghost-run UX</strong></td>
+<td>No</td>
+<td>Yes (problematic)</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td><strong>Deterministic</strong></td>
+<td>Yes</td>
+<td>With discipline</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><strong>Test burden</strong></td>
+<td>Low</td>
+<td>High</td>
+<td>Low</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td><strong>R61 Decision</strong></td>
+<td>Slice 5 gate</td>
+<td><strong>Rejected</strong></td>
+<td><strong>Slice 4 chosen</strong></td>
+<td>Possible slice 4+5 composite</td>
+</tr>
+</tbody>
+</table>
+<h2 id="5-connection-to-adr-024-decision">5. Connection to ADR-024 Decision<a class="headerlink" href="#5-connection-to-adr-024-decision" title="Permanent link">&para;</a></h2>
+<p>The survey supports ADR-024's R61 decision:</p>
+<ul>
+<li><strong>Option C centroid = slice 4 default</strong> because it's the minimum-viable extension that reuses v0.5.0 primitives, produces a single merged view, handles N=2 cleanly, and is deterministic. The initial counting metric is simple enough to ship without a separate ADR; its version tag (<code>metric_version = 1</code>) leaves room for ADR-025 to refine.</li>
+<li><strong>Option A matrix = slice 5 deferred</strong> because it ships cheaply on top of slice 4 (the distance matrix is already computed) but adds UI/display surface we don't need to own yet.</li>
+<li><strong>Option B MSA = rejected</strong> because the ghost-run UX and empty-skeleton cases outweigh the theoretical elegance, and we lack evidence of a user scenario demanding consensus-subtree view.</li>
+<li><strong>Option E defer = rejected</strong> because R61 is a post-release planning slot with no competing urgency, and the ADR + research doc is slot-sized work.</li>
+</ul>
+<h2 id="6-open-questions-for-r62-implementation-round">6. Open questions for R62+ implementation round<a class="headerlink" href="#6-open-questions-for-r62-implementation-round" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>CLI surface</strong>: does <code>chronos compare</code> grow a <code>--pivot=auto</code> flag, or do we introduce <code>chronos compare-auto</code>? R59's positional argv shape (<code>chronos compare &lt;pivot&gt; &lt;others&gt;</code>) doesn't have a zero-pivot slot. Lean toward <code>--pivot=auto</code> flag + making the first positional arg optional when flag is set.</li>
+<li><strong>HTTP surface</strong>: <code>/runs/compare/n?ids=...&amp;pivot=auto</code>. Straightforward.</li>
+<li><strong>Tie-break ordering</strong>: lexicographic ascending by run_id (string comparison). Write a test where two runs have identical mean distances and assert deterministic pick.</li>
+<li><strong>Metric boundary tests</strong>: d(r,r) = 0; d(r1, r2) = d(r2, r1) (symmetry); d ∈ [0, 1]; d(disjoint runs) = 1.</li>
+<li><strong>Fixture reuse</strong>: R58's <code>test_merge_pivot_reports</code> fixtures should extend to auto-centroid tests. Do NOT piggyback — create a new scenario (R59 lesson).</li>
+<li><strong>Dogfood script</strong>: write <code>scripts/dogfood_compare_auto.py</code> — 4 independent same-task runs with different seeds, no forking. Natural use case for auto-pivot.</li>
+<li><strong>CHANGELOG impact</strong>: R62 slice 4 likely cuts v0.5.1 (post-release polish) or v0.6.0-alpha. Depends on whether HTTP contract changes count as minor or patch.</li>
+</ol>
+<h2 id="7-references">7. References<a class="headerlink" href="#7-references" title="Permanent link">&para;</a></h2>
+<h3 id="cited">Cited<a class="headerlink" href="#cited" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Edgar (2004) MUSCLE — progressive MSA baseline</li>
+<li>Katoh &amp; Standley (2013) MAFFT — accuracy-tuned MSA</li>
+<li>Lee, Grasso &amp; Sharlow (2002) POA — partial-order alignment, DAG-native</li>
+<li>GNU <code>diff3</code> — 3-way merge with common ancestor</li>
+<li><code>git merge-base --octopus</code> — N-way common ancestor selection</li>
+</ul>
+<h3 id="internal">Internal<a class="headerlink" href="#internal" title="Permanent link">&para;</a></h3>
+<ul>
+<li><a href="../../decisions/ADR-006-diff-alignment/">ADR-006</a> — 2-run alignment primitive (primary reuse surface)</li>
+<li><a href="../../decisions/ADR-023-phase-4-charter-skeleton/">ADR-023</a> — Phase 4 Arc A commitment</li>
+<li><a href="../../decisions/ADR-024-multi-pivot-compare/">ADR-024</a> — this note's companion</li>
+<li><a href="../../design/n-run-compare/">n-run-compare design doc</a> — R57 single-pivot design</li>
+</ul>
+<hr />
+<p><em>R61 survey. Will be updated (not rewritten) when R62+ implementation validates or falsifies the Option C choice against real dogfood data.</em></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 chengfei867 — content generated 100% by Hermes Agent / Claude Opus
+    </div>
+  
+  
+</div>
+      
+        <div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/chengfei867/chronos-agent" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.top", "navigation.indexes", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.88dd0f4e.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,1508 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Time-Travel Debugger for Multi-Agent AI Systems — record, replay, fork, diff, compare. With first-class token/cost tracking and pluggable evaluators.">
+      
+      
+        <meta name="author" content="Hermes Agent">
+      
+      
+        <link rel="canonical" href="https://chengfei867.github.io/chronos-agent/decisions/ADR-005-fork-semantics/">
+      
+      
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.49">
+    
+    
+      
+        <title>ADR-005: Fork Semantics and Re-Recording Algorithm - Chronos Agent</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.6f8fc17f.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#adr-005-fork-semantics-and-re-recording-algorithm" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Chronos Agent" class="md-header__button md-logo" aria-label="Chronos Agent" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Chronos Agent
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              ADR-005: Fork Semantics and Re-Recording Algorithm
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/chengfei867/chronos-agent" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    chengfei867/chronos-agent
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+    
+  
+  Getting started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../concepts/" class="md-tabs__link">
+        
+  
+    
+  
+  Concepts
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../cli-reference/" class="md-tabs__link">
+        
+  
+    
+  
+  CLI reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../cost-tracking/" class="md-tabs__link">
+        
+  
+    
+  
+  Cost tracking
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../evaluators/" class="md-tabs__link">
+        
+  
+    
+  
+  Evaluators
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../adapters/anthropic_agents/" class="md-tabs__link">
+          
+  
+    
+  
+  Adapters
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guides/forking-safely/" class="md-tabs__link">
+          
+  
+    
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../contracts/golden-trace-format/" class="md-tabs__link">
+          
+  
+    
+  
+  Contracts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../" class="md-tabs__link">
+          
+  
+    
+  
+  Decisions (ADRs)
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../faq/" class="md-tabs__link">
+        
+  
+    
+  
+  FAQ
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Chronos Agent" class="md-nav__button md-logo" aria-label="Chronos Agent" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Chronos Agent
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/chengfei867/chronos-agent" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    chengfei867/chronos-agent
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Getting started
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Concepts
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli-reference/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    CLI reference
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cost-tracking/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Cost tracking
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../evaluators/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Evaluators
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Adapters
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            Adapters
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adapters/anthropic_agents/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Anthropic Agents SDK
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contracts/adapter-protocol/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Adapter protocol
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Guides
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            Guides
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/forking-safely/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Forking safely
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/side-effects/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Side effects
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Contracts
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            Contracts
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contracts/golden-trace-format/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Golden trace format
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    Decisions (ADRs)
+  </span>
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            Decisions (ADRs)
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    FAQ
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#context" class="md-nav__link">
+    <span class="md-ellipsis">
+      Context
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#spike-5-empirical-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      Spike 5 — Empirical Evidence
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Spike 5 — Empirical Evidence">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#structural-consequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      Structural consequences
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      Decision
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Decision">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-fork-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      A. Fork API
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b-what-the-adapter-does-inside-fork" class="md-nav__link">
+    <span class="md-ellipsis">
+      B. What the adapter does inside fork(...)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c-failure-semantics" class="md-nav__link">
+    <span class="md-ellipsis">
+      C. Failure semantics
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#d-edge-cases-considered-handled" class="md-nav__link">
+    <span class="md-ellipsis">
+      D. Edge cases considered &amp; handled
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#alternatives-considered" class="md-nav__link">
+    <span class="md-ellipsis">
+      Alternatives Considered
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Alternatives Considered">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#alt-1-seed-by-deep-copying-the-checkpointers-state-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      Alt 1 — Seed by deep-copying the checkpointer's state file
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#alt-2-re-invoke-the-whole-graph-from-scratch-with-the-edited-state" class="md-nav__link">
+    <span class="md-ellipsis">
+      Alt 2 — Re-invoke the whole graph from scratch, with the edited state
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#alt-3-put-the-fork-primitive-outside-the-adapter" class="md-nav__link">
+    <span class="md-ellipsis">
+      Alt 3 — Put the fork primitive outside the adapter
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      Consequences
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Consequences">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#positive" class="md-nav__link">
+    <span class="md-ellipsis">
+      Positive
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#negative-accepted-cost" class="md-nav__link">
+    <span class="md-ellipsis">
+      Negative / accepted cost
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#open-questions-deferred" class="md-nav__link">
+    <span class="md-ellipsis">
+      Open questions (deferred)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#test-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      Test Plan
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="adr-005-fork-semantics-and-re-recording-algorithm">ADR-005: Fork Semantics and Re-Recording Algorithm<a class="headerlink" href="#adr-005-fork-semantics-and-re-recording-algorithm" title="Permanent link">&para;</a></h1>
+<ul>
+<li><strong>Status</strong>: Accepted</li>
+<li><strong>Date</strong>: 2026-04-23</li>
+<li><strong>Supersedes / Related</strong>: ADR-003 (forks table), ADR-004 (snapshot→node mapping)</li>
+</ul>
+<hr />
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
+<p>Round 4 (M1.4) shipped <code>LangGraphRecorder</code> that takes a completed LangGraph
+run on a thread and produces a canonical <code>Run</code> + <code>Node[]</code> record.</p>
+<p>Round 5 (M1.5) needs the <strong>fork primitive</strong>: given a previously-recorded
+<code>Run</code>, let the user choose a step <code>k</code>, edit some state fields, and
+re-execute downstream on a new thread. The result must be persisted as a
+second <code>Run</code> linked to the parent via the <code>forks</code> table (schema from
+ADR-003).</p>
+<p>Two non-trivial questions this ADR answers:</p>
+<ol>
+<li><strong>What does <code>get_state_history()</code> look like on a forked thread?</strong>
+   (It's NOT the same as an originally-invoked thread.)</li>
+<li><strong>What is the public API surface for fork?</strong></li>
+</ol>
+<hr />
+<h2 id="spike-5-empirical-evidence">Spike 5 — Empirical Evidence<a class="headerlink" href="#spike-5-empirical-evidence" title="Permanent link">&para;</a></h2>
+<p><code>tests/spikes/spike5_probe_fork_history.py</code> compared the original thread
+A (invoked normally) against a forked thread B (seeded via
+<code>update_state(cfg_b, values, as_node="research")</code> then <code>invoke(None, cfg_b)</code>).</p>
+<p>Key observations (<code>build_graph()</code> from spike 1: plan→research→draft→review→finalize):</p>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Thread A</th>
+<th>Thread B</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Snapshot count</td>
+<td>7 (= N+2 for 5 nodes)</td>
+<td>4 (= <strong>N+1</strong> for 3 downstream nodes)</td>
+</tr>
+<tr>
+<td><code>metadata.source</code> sequence</td>
+<td><code>[input, loop, loop, loop, loop, loop, loop]</code></td>
+<td><code>[update, loop, loop, loop]</code></td>
+</tr>
+<tr>
+<td><code>metadata.step</code> sequence</td>
+<td><code>[-1, 0, 1, 2, 3, 4, 5]</code></td>
+<td><code>[0, 1, 2, 3]</code> (restarts!)</td>
+</tr>
+<tr>
+<td>First snapshot <code>tasks</code></td>
+<td><code>[]</code> (placeholder)</td>
+<td><code>['draft']</code> (next to run)</td>
+</tr>
+<tr>
+<td>First snapshot <code>next</code></td>
+<td><code>('plan',)</code></td>
+<td><code>('draft',)</code></td>
+</tr>
+<tr>
+<td>Last snapshot <code>tasks / next</code></td>
+<td><code>[] / ()</code> (terminal)</td>
+<td><code>[] / ()</code> (terminal)</td>
+</tr>
+<tr>
+<td>Values on first snap</td>
+<td>Initial input only</td>
+<td><strong>Full seeded state</strong> (all fields the fork carried over)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="structural-consequences">Structural consequences<a class="headerlink" href="#structural-consequences" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p>The Round 4 adapter <strong>rejects</strong> thread B: it asserts
+   <code>snapshots[0].metadata["source"] == "input"</code>. Forked threads produce
+   <code>"update"</code> instead.</p>
+</li>
+<li>
+<p>Thread B has <strong>no input placeholder</strong>. The seed snapshot
+   (<code>source='update'</code>) plays a <strong>dual role</strong>: seed state AND pre-execution
+   marker for the first downstream node (<code>tasks[0].name == 'draft'</code>,
+   <code>next == ('draft',)</code>).</p>
+</li>
+<li>
+<p>Step numbering is <strong>thread-local</strong> and restarts at 0 on the forked
+   thread. We cannot use <code>step</code> as a stable global index for nodes across
+   a fork family — we must compute step_index ourselves for the child Run.</p>
+</li>
+<li>
+<p>Forked threads only record re-executed downstream nodes. Nodes
+   <em>before</em> the fork point are NOT duplicated in thread B (they live in
+   thread A's Run).</p>
+</li>
+</ol>
+<hr />
+<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
+<h3 id="a-fork-api">A. Fork API<a class="headerlink" href="#a-fork-api" title="Permanent link">&para;</a></h3>
+<p>Add a second context manager on <code>LangGraphRecorder</code>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">recorder</span> <span class="o">=</span> <span class="n">LangGraphRecorder</span><span class="p">(</span><span class="n">store</span><span class="p">,</span> <span class="n">kind_map</span><span class="o">=...</span><span class="p">)</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="k">with</span> <span class="n">recorder</span><span class="o">.</span><span class="n">fork</span><span class="p">(</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">parent_run_id</span><span class="o">=</span><span class="s2">&quot;...&quot;</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">at_node_id</span><span class="o">=</span><span class="s2">&quot;...&quot;</span><span class="p">,</span>            <span class="c1"># the Node in the parent Run to fork from</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">overrides</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;research&quot;</span><span class="p">:</span> <span class="s2">&quot;...&quot;</span><span class="p">},</span>  <span class="c1"># state-value overrides applied at the fork point</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">child_thread_id</span><span class="o">=</span><span class="s2">&quot;t-fork-1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">reason</span><span class="o">=</span><span class="s2">&quot;test alternative research&quot;</span><span class="p">,</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;exploration&quot;</span><span class="p">],</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="p">)</span> <span class="k">as</span> <span class="n">fork_ref</span><span class="p">:</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">graph</span><span class="o">.</span><span class="n">invoke</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;configurable&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;thread_id&quot;</span><span class="p">:</span> <span class="s2">&quot;t-fork-1&quot;</span><span class="p">}})</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="c1"># on exit:</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="c1">#   fork_ref.child_run_id   → UUID of new Run</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="c1">#   fork_ref.fork_id        → UUID of Fork record linking parent → child</span>
+</span></code></pre></div>
+<p>Top-level convenience will come later (<code>chronos.fork(...)</code>); this ADR
+only commits to the recorder-level contract.</p>
+<h3 id="b-what-the-adapter-does-inside-fork">B. What the adapter does inside <code>fork(...)</code><a class="headerlink" href="#b-what-the-adapter-does-inside-fork" title="Permanent link">&para;</a></h3>
+<p><strong>Before yielding</strong> (setup):</p>
+<ol>
+<li>Load the parent <code>Run</code> from the store.</li>
+<li>Load the parent <code>Node</code> identified by <code>at_node_id</code>; capture its
+   <code>state_after</code> — this is the state as it existed at the fork point.</li>
+<li>Apply <code>overrides</code> on top of <code>state_after</code> → <code>seeded_state</code>.</li>
+<li>Look up <code>as_node</code> — set to the parent node's <code>node_name</code> so LangGraph
+   treats the seeded state as if <code>&lt;node_name&gt;</code> just produced it, and the
+   graph's edge from <code>&lt;node_name&gt;</code> determines the next executed node.</li>
+<li>Resolve the parent Run's <code>adapter_thread_id</code> <em>must</em> differ from the
+   <code>child_thread_id</code> (else we'd overwrite the parent's checkpoints).</li>
+<li>Call <code>graph.update_state(cfg_child, seeded_state, as_node=&lt;node_name&gt;)</code>.
+   This writes the seed checkpoint on the child thread.</li>
+</ol>
+<p><strong>User code runs</strong> <code>graph.invoke(None, cfg_child)</code> to let the graph
+continue from the seeded state.</p>
+<p><strong>On context exit</strong> (teardown):</p>
+<ol>
+<li>Walk <code>graph.get_state_history(cfg_child)</code>, reverse to oldest-first.</li>
+<li>Validate <code>snapshots[0].metadata["source"] == "update"</code> — if not, raise
+   <code>AdapterError</code> (LangGraph API drift).</li>
+<li>Build the child <code>Run</code>:</li>
+<li><code>adapter = "langgraph"</code>, <code>adapter_thread_id = child_thread_id</code></li>
+<li><code>initial_state = snapshots[0].values</code> (the seeded values)</li>
+<li><code>final_state = snapshots[-1].values</code></li>
+<li><code>metadata = {"forked_from_run": parent_run_id, "forked_at_node": at_node_id, ...}</code></li>
+<li><code>tags = [..., "fork"]</code> (auto-tag + user tags)</li>
+<li>Build the child <code>Node[]</code>:</li>
+<li><strong>Iterate <code>i in range(0, len-1)</code></strong> (NOT <code>range(1, len-1)</code> like Round 4):
+     <code>pre = snapshots[i]</code>, <code>post = snapshots[i+1]</code>, same as before.</li>
+<li><code>step_index</code> for the child Run starts from
+     <code>parent_node.step_index + 1</code> so the absolute position in the fork
+     family stays monotonic. Local step number from <code>metadata['step']</code> is
+     preserved in <code>node.metadata['langgraph_step']</code> for debuggability.</li>
+<li><code>parent_node_id</code>:<ul>
+<li>First re-executed node (i=0) → set to <code>at_node_id</code>
+   (cross-Run parent pointer — the fork point's node in the PARENT
+   Run; this encodes causality in the node tree).</li>
+<li>Subsequent nodes → previous child node in the same child Run
+   (same as Round 4).</li>
+</ul>
+</li>
+<li>Build the <code>Fork</code> record (ADR-003 <code>forks</code> table):</li>
+<li><code>parent_run_id</code>, <code>parent_node_id=at_node_id</code>, <code>child_run_id=&lt;new&gt;</code></li>
+<li><code>edited_fields = overrides</code> (raw dict — schema already stores JSON)</li>
+<li><code>reason</code></li>
+<li>Persist in one transaction: <code>put_run(child)</code>,
+   <code>put_node(...)</code>-each, <code>put_fork(fork_record)</code>.</li>
+</ol>
+<h3 id="c-failure-semantics">C. Failure semantics<a class="headerlink" href="#c-failure-semantics" title="Permanent link">&para;</a></h3>
+<ul>
+<li>If the user's <code>graph.invoke(None, ...)</code> raises inside the block, the
+  adapter still persists the partial child Run + whatever nodes exist</li>
+<li>the Fork link, marking child <code>status = FAILED</code>. Then re-raises.
+  (Mirrors Round 4 policy; maintains "forks are never silently lost".)</li>
+<li>If <code>parent_run_id</code> doesn't exist, raise <code>AdapterError</code> <strong>before</strong> yielding.</li>
+<li>If <code>at_node_id</code> doesn't belong to <code>parent_run_id</code>, raise <code>AdapterError</code>.</li>
+<li>If <code>child_thread_id == parent.adapter_thread_id</code>, raise <code>AdapterError</code>
+  to protect the parent's checkpoints.</li>
+</ul>
+<h3 id="d-edge-cases-considered-handled">D. Edge cases considered &amp; handled<a class="headerlink" href="#d-edge-cases-considered-handled" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Fork from the terminal node</strong>: meaningless — no downstream. We raise
+  <code>AdapterError("cannot fork from terminal node: no downstream to re-execute")</code>
+  if the referenced node's <code>node_name</code> has no outgoing edges <em>or</em>
+  <code>update_state</code> produces a thread with <code>next=()</code> immediately. (We do the
+  cheaper structural test first; the <code>next=()</code> test is a backstop.)</li>
+<li><strong>No override (pure replay)</strong>: allowed. <code>overrides</code> can be empty — the
+  user just wants to re-run the downstream deterministically. Still
+  writes a Fork row with <code>edited_fields={}</code>.</li>
+<li><strong>Override introduces a new key</strong>: permitted (LangGraph's state is a
+  dict-like; extra keys flow through). The fork record's <code>edited_fields</code>
+  captures it verbatim.</li>
+<li><strong>Forking an already-forked run</strong>: fine, the Fork row just points to
+  the chosen parent Run. Fork chains are a linked list / DAG via
+  <code>forks.parent_run_id → forks.child_run_id</code>.</li>
+<li><strong>Refork same parent+node with different overrides</strong>: allowed. Each
+  produces a separate child Run with its own Fork row. No uniqueness
+  constraint on <code>(parent_run_id, parent_node_id)</code>.</li>
+</ul>
+<hr />
+<h2 id="alternatives-considered">Alternatives Considered<a class="headerlink" href="#alternatives-considered" title="Permanent link">&para;</a></h2>
+<h3 id="alt-1-seed-by-deep-copying-the-checkpointers-state-file">Alt 1 — Seed by deep-copying the checkpointer's state file<a class="headerlink" href="#alt-1-seed-by-deep-copying-the-checkpointers-state-file" title="Permanent link">&para;</a></h3>
+<p>Instead of <code>update_state</code>, directly copy the LangGraph checkpointer's
+sqlite/memory rows from thread A to thread B, preserving the native
+"input + loop" shape.</p>
+<p><strong>Rejected</strong> because:
+- It tightly couples us to each checkpointer implementation
+  (<code>InMemorySaver</code>, <code>SqliteSaver</code>, Postgres, ...). We'd need N adapters.
+- LangGraph's public contract is <code>update_state</code>. Going under it is
+  version-fragile.
+- The "update" source in the forked thread's history is actually
+  useful signal — it lets us tell forked threads apart from originals
+  at inspection time.</p>
+<h3 id="alt-2-re-invoke-the-whole-graph-from-scratch-with-the-edited-state">Alt 2 — Re-invoke the whole graph from scratch, with the edited state<a class="headerlink" href="#alt-2-re-invoke-the-whole-graph-from-scratch-with-the-edited-state" title="Permanent link">&para;</a></h3>
+<p>Set <code>cfg_b</code>, call <code>graph.invoke(modified_initial_state, cfg_b)</code> — but
+that also re-executes every pre-fork node.</p>
+<p><strong>Rejected</strong> because:
+- Wastes work (the whole point of fork is to reuse pre-fork results).
+- Non-deterministic pre-fork nodes (LLM calls!) would produce <em>different</em>
+  pre-fork state, so the "fork" wouldn't actually preserve the context
+  the user wanted to fork from.</p>
+<h3 id="alt-3-put-the-fork-primitive-outside-the-adapter">Alt 3 — Put the fork primitive outside the adapter<a class="headerlink" href="#alt-3-put-the-fork-primitive-outside-the-adapter" title="Permanent link">&para;</a></h3>
+<p>Separate module <code>chronos.ops.fork(store, run_id, ...)</code> that does not know
+about LangGraph. Call into <code>graph.update_state</code> via user-supplied callback.</p>
+<p><strong>Rejected for v0.1</strong> because the current <code>LangGraphRecorder</code> already
+owns the LangGraph ↔ canonical-model translation; splitting the fork
+logic across two modules means duplicating the snapshot-walk code. We
+can refactor to a framework-agnostic <code>chronos.ops</code> layer in Phase 2 when
+AutoGen adapter arrives — that's the natural boundary.</p>
+<hr />
+<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
+<h3 id="positive">Positive<a class="headerlink" href="#positive" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Users get one-liner fork: <code>recorder.fork(parent, at=..., overrides=...)</code>.</li>
+<li>Fork lineage is queryable from the store (ADR-003 <code>forks</code> table).</li>
+<li>Child Run is a first-class Run — all existing read APIs (list, get,
+  get_nodes) work unchanged.</li>
+<li>The code path is a small delta on the already-tested Round 4 pipeline:
+  same <code>_persist_from_history</code> logic with a different loop bound
+  (<code>range(0, len-1)</code> vs <code>range(1, len-1)</code>) and a different <code>source</code> check.</li>
+</ul>
+<h3 id="negative-accepted-cost">Negative / accepted cost<a class="headerlink" href="#negative-accepted-cost" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Small code duplication in the persistence loop (different bounds,
+  different source check). We'll factor it into a private
+  <code>_persist_history(snapshots, *, loop_start, expected_first_source, ...)</code>
+  helper shared between <code>record()</code> and <code>fork()</code>.</li>
+<li><code>step_index</code> on a child run's first node is <code>parent.step_index + 1</code>,
+  which means step numbers within a single child Run are not zero-based.
+  Mitigated: child Run's <code>Node</code> rows still use monotonically increasing
+  step_index; we also stash <code>langgraph_step</code> in node metadata.</li>
+</ul>
+<h3 id="open-questions-deferred">Open questions (deferred)<a class="headerlink" href="#open-questions-deferred" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Determinism</strong>: fork only makes sense if re-executing downstream is
+  deterministic enough to be comparable to the parent. For spike fixtures
+  (FakeLLM) it's fully deterministic. For real LLMs, Phase 3 introduces
+  <code>determinism modes</code> (roadmap). v0.1 leaves this to the user.</li>
+<li><strong>Side effects</strong>: if a downstream node calls an external API (email,
+  DB write), fork re-executes it. ADR-006 (Phase 3) will address
+  sandboxing; v0.1 documents the caveat.</li>
+</ul>
+<hr />
+<h2 id="test-plan">Test Plan<a class="headerlink" href="#test-plan" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Unit</strong> (<code>tests/unit/test_adapter_fork.py</code>, duck-typed fakes):</li>
+<li><code>fork()</code> builds correct child Run from synthesized forked history</li>
+<li><code>source='input'</code> on child thread → <code>AdapterError</code></li>
+<li><code>source='update'</code> on child thread → OK</li>
+<li><code>parent_run_id</code> not found → <code>AdapterError</code></li>
+<li><code>at_node_id</code> not in parent run → <code>AdapterError</code></li>
+<li><code>child_thread_id == parent.adapter_thread_id</code> → <code>AdapterError</code></li>
+<li>Child node <code>parent_node_id</code> of first child node is <code>at_node_id</code>
+    (cross-run pointer)</li>
+<li>Child <code>step_index</code> starts at <code>parent.step_index + 1</code></li>
+<li>Fork record written with correct <code>edited_fields</code></li>
+<li>Failed child invoke → child Run persisted with <code>status=FAILED</code> +
+    Fork still written</li>
+<li>
+<p>Empty overrides allowed (replay mode)</p>
+</li>
+<li>
+<p><strong>Integration</strong> (<code>tests/integration/test_fork_e2e.py</code>, real LangGraph):</p>
+</li>
+<li>Record parent run on thread A</li>
+<li>Fork at research node with <code>overrides={"research": "..."}</code></li>
+<li>Assert child Run's final_state differs from parent's</li>
+<li>Assert cross-process: close store, reopen subprocess, verify parent<ul>
+<li>child + fork row all present</li>
+</ul>
+</li>
+<li>Assert <code>forks</code> linkage: <code>get_fork_for_child(child_run_id)</code> returns
+    the correct Fork record</li>
+</ul>
+<hr />
+<p><em>Author: Hermes Agent (Round 5). Spike 5 raw evidence lives in
+<code>tests/spikes/spike5_probe_fork_history.py</code>.</em></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 chengfei867 — content generated 100% by Hermes Agent / Claude Opus
+    </div>
+  
+  
+</div>
+      
+        <div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/chengfei867/chronos-agent" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.top", "navigation.indexes", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.88dd0f4e.min.js"></script>
+      
+    
+  </body>
+</html>

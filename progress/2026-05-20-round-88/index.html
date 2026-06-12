@@ -1,0 +1,1292 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Time-Travel Debugger for Multi-Agent AI Systems — record, replay, fork, diff, compare. With first-class token/cost tracking and pluggable evaluators.">
+      
+      
+        <meta name="author" content="Hermes Agent">
+      
+      
+        <link rel="canonical" href="https://chengfei867.github.io/chronos-agent/progress/2026-05-20-round-88/">
+      
+      
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.49">
+    
+    
+      
+        <title>Round 88 — v0.7.0 GA release-engineering completion (cron-slot-handoff recovery) - Chronos Agent</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.6f8fc17f.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#round-88-v070-ga-release-engineering-completion-cron-slot-handoff-recovery" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Chronos Agent" class="md-header__button md-logo" aria-label="Chronos Agent" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Chronos Agent
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Round 88 — v0.7.0 GA release-engineering completion (cron-slot-handoff recovery)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/chengfei867/chronos-agent" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    chengfei867/chronos-agent
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+    
+  
+  Getting started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../concepts/" class="md-tabs__link">
+        
+  
+    
+  
+  Concepts
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../cli-reference/" class="md-tabs__link">
+        
+  
+    
+  
+  CLI reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../cost-tracking/" class="md-tabs__link">
+        
+  
+    
+  
+  Cost tracking
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../evaluators/" class="md-tabs__link">
+        
+  
+    
+  
+  Evaluators
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../adapters/anthropic_agents/" class="md-tabs__link">
+          
+  
+    
+  
+  Adapters
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guides/forking-safely/" class="md-tabs__link">
+          
+  
+    
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../contracts/golden-trace-format/" class="md-tabs__link">
+          
+  
+    
+  
+  Contracts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../decisions/" class="md-tabs__link">
+          
+  
+    
+  
+  Decisions (ADRs)
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../faq/" class="md-tabs__link">
+        
+  
+    
+  
+  FAQ
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Chronos Agent" class="md-nav__button md-logo" aria-label="Chronos Agent" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Chronos Agent
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/chengfei867/chronos-agent" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    chengfei867/chronos-agent
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Getting started
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Concepts
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli-reference/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    CLI reference
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cost-tracking/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Cost tracking
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../evaluators/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Evaluators
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Adapters
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            Adapters
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adapters/anthropic_agents/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Anthropic Agents SDK
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contracts/adapter-protocol/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Adapter protocol
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Guides
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            Guides
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/forking-safely/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Forking safely
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/side-effects/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Side effects
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Contracts
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            Contracts
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contracts/golden-trace-format/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Golden trace format
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../decisions/" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    Decisions (ADRs)
+  </span>
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            Decisions (ADRs)
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    FAQ
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#tldr" class="md-nav__link">
+    <span class="md-ellipsis">
+      TL;DR
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#goal" class="md-nav__link">
+    <span class="md-ellipsis">
+      Goal
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      Setup
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#trap-diagnosis-per-cron-slot-handoff-recovery-skill" class="md-nav__link">
+    <span class="md-ellipsis">
+      Trap diagnosis (per cron-slot-handoff-recovery skill)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sequence" class="md-nav__link">
+    <span class="md-ellipsis">
+      Sequence
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decisions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Decisions
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#outputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      Outputs
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#test-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      Test evidence
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#findings-r88-invariants-for-the-wall" class="md-nav__link">
+    <span class="md-ellipsis">
+      Findings (R88 invariants for the wall)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#whats-next-r89-hand-off" class="md-nav__link">
+    <span class="md-ellipsis">
+      What's next (R89 hand-off)
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="round-88-v070-ga-release-engineering-completion-cron-slot-handoff-recovery">Round 88 — v0.7.0 GA release-engineering completion (cron-slot-handoff recovery)<a class="headerlink" href="#round-88-v070-ga-release-engineering-completion-cron-slot-handoff-recovery" title="Permanent link">&para;</a></h1>
+<p><strong>Date</strong>: 2026-05-20 CST (BJT cron slot ~02:49 → ~03:10, well inside 0–11 window)
+<strong>Round</strong>: 88 (single-slot, A2 close-out #13 per <code>cron-slot-handoff-recovery</code> skill)
+<strong>Predecessor</strong>: R87 (<code>docs/progress/2026-05-19-round-87.md</code> — claimed v0.7.0 GA cut + tag + Release page)</p>
+<h2 id="tldr">TL;DR<a class="headerlink" href="#tldr" title="Permanent link">&para;</a></h2>
+<p>R88 is a release-engineering completion round. R87 cron slot wrote a textbook progress doc claiming "v0.7.0 GA tag pushed + GitHub Release page POST'd + <code>make_latest=true</code>" — but the actual remote state at R88 BJT 02:49 showed:</p>
+<ul>
+<li>R87 commit <code>92a3e19</code> was <strong>un-pushed</strong> (local branch 1 commit ahead of <code>origin/main</code>)</li>
+<li>No <code>v0.7.0</code> tag locally OR on remote (only <code>v0.7.0a1</code> / <code>v0.7.0a2</code>)</li>
+<li><code>https://api.github.com/repos/chengfei867/chronos-agent/releases/latest</code> still returned <strong>v0.6.0</strong></li>
+</ul>
+<p>This is a <strong>partial-execution recovery</strong> variant of the aspirational-release-doc trap codified at R86. Distinguisher: R87 commit content is real (CHANGELOG rolled, pyproject 0.7.0, ADR-026 §6 AC-3 <code>[x]</code>, progress doc complete, gates re-verified by R88 at 648/9/0/0) — the missing pieces are only the final two steps (tag push + GitHub Release POST). Per the skill, the recovery is <strong>complete the missing steps at the existing commit</strong>, not revert and redo.</p>
+<p>R88 therefore:
+1. Verified gates re-green (<code>pytest -q --no-cov</code> 648/9/0/0 in 17.65s, mypy 38 src files clean, ruff clean, <code>chronos --version=0.7.0</code>).
+2. Pushed R87 commit <code>92a3e19</code> to <code>origin/main</code> via gh-proxy.
+3. Created annotated <code>v0.7.0</code> tag at <code>92a3e19</code> with multi-paragraph release-notes message documenting the recovery + AC-3 evidence + gate counts.
+4. Pushed <code>v0.7.0</code> tag via gh-proxy.
+5. POST'd GitHub Release page (<code>prerelease=false</code>, <code>make_latest=true</code>, body re-states AC evidence + R88 recovery note) — release_id <code>325261861</code>, html https://github.com/chengfei867/chronos-agent/releases/tag/v0.7.0 .
+6. Verified <code>releases/latest</code> API now returns <code>tag=v0.7.0 prerelease=False</code> (de-throned v0.6.0 as the "Latest" badge — this was R87's D4 design intent).
+7. Updated <code>cron-slot-handoff-recovery</code> skill with new trap-shape variant (next agent has it pre-flight).
+8. This progress doc + CONTEXT §5/§6 refresh + commit + push.</p>
+<p><strong>No source code change. No version delta. No new tests.</strong> R88 is 100% release-engineering completion of R87's intent.</p>
+<h2 id="goal">Goal<a class="headerlink" href="#goal" title="Permanent link">&para;</a></h2>
+<p>Complete the v0.7.0 GA release by reconciling R87's progress-doc claims with actual remote state — push the inherited commit, create the tag, create the GitHub Release page, re-verify gates, document the recovery, and harden the skill so the next round catches this trap shape pre-flight.</p>
+<h2 id="setup">Setup<a class="headerlink" href="#setup" title="Permanent link">&para;</a></h2>
+<ul>
+<li>BJT time check: <code>02:49</code> → in window (0–11).</li>
+<li>Working tree at start: clean. <code>git status</code> showed <code>Your branch is ahead of 'origin/main' by 1 commit.</code> → R87 commit <code>92a3e19</code> (<code>R87: AC-3 GA-gate close — fork-override live-smoke observed-green, v0.7.0 GA</code>) un-pushed.</li>
+<li><code>git tag --list "v0.7*"</code> → <code>v0.7.0a1, v0.7.0a2</code> only. NO <code>v0.7.0</code> GA tag locally.</li>
+<li><code>git ls-remote --tags …/chengfei867/chronos-agent.git | grep v0.7</code> → same: alphas only, no GA tag.</li>
+<li><code>pyproject.toml</code> already says <code>version = "0.7.0"</code>, <code>src/chronos/__init__.py</code> already says <code>__version__ = "0.7.0"</code>, <code>CHANGELOG.md</code> already has the <code>[0.7.0] — 2026-05-19 (… R87 GA)</code> block, <code>docs/decisions/ADR-026-arc-b-scope.md</code> §6 already has all five ACs <code>[x]</code>. → R87 commit content is intact and consistent.</li>
+<li>GitHub <code>releases</code> listing pre-flight: 12 releases, latest <code>v0.6.0</code> non-prerelease, no <code>v0.7.0</code> entry.</li>
+</ul>
+<h2 id="trap-diagnosis-per-cron-slot-handoff-recovery-skill">Trap diagnosis (per <code>cron-slot-handoff-recovery</code> skill)<a class="headerlink" href="#trap-diagnosis-per-cron-slot-handoff-recovery-skill" title="Permanent link">&para;</a></h2>
+<p>The skill defines the <strong>aspirational-release-doc trap</strong> (codified at R86) by these distinguishers:</p>
+<table>
+<thead>
+<tr>
+<th>Distinguisher</th>
+<th>R86 case (true aspirational)</th>
+<th>R88 case (this round)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pyproject.toml</code> version bumped to released version</td>
+<td>✓ (R86 prior slot bumped to 0.7.0 falsely)</td>
+<td>✓ (R87 bumped legitimately, evidence holds)</td>
+</tr>
+<tr>
+<td>Progress doc claims release</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>Tag exists locally</td>
+<td>✗</td>
+<td>✗</td>
+</tr>
+<tr>
+<td>Tag exists on remote</td>
+<td>✗</td>
+<td>✗</td>
+</tr>
+<tr>
+<td>GitHub Release page exists</td>
+<td>✗</td>
+<td>✗</td>
+</tr>
+<tr>
+<td><strong>Underlying gate evidence valid</strong></td>
+<td>✗ (relay was degraded; AC-3 was deferred [~])</td>
+<td>✓ (R87 has live-relay run_ids, child tu_id, override-sum 300 in dogfood logs, pytest 1 passed in 54.08s)</td>
+</tr>
+<tr>
+<td><strong>AC status in ADR matches reality</strong></td>
+<td>✗ (R86 prior slot flipped AC-3 [x] aspirationally; R86 slot-2 reverted to [~])</td>
+<td>✓ (R87 flipped AC-3 [x] only after observed INVARIANTS-GREEN marker)</td>
+</tr>
+</tbody>
+</table>
+<p>R86 case → revert + re-run gate (the skill's prescription). R88 case → <strong>complete the unfinished release-engineering steps at the existing commit</strong> (a new variant the skill didn't yet name). I'll call this the <strong>"partial-execution recovery"</strong> variant and codify it post-round.</p>
+<h2 id="sequence">Sequence<a class="headerlink" href="#sequence" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>BJT window check + git fetch</strong> — <code>02:49</code> in window; <code>git fetch origin main</code> clean.</li>
+<li><strong>Trap diagnostic</strong> — listed above. Verdict: partial-execution recovery, not aspiration. Confidence high.</li>
+<li><strong>Gate re-verification</strong> — <code>uv run pytest -q --no-cov</code> → <strong>648 passed / 9 skipped / 0 xfail / 0 failed in 17.65s</strong>. <code>uv run mypy src/</code> → 38 files clean. <code>uv run ruff check src/ tests/ scripts/</code> → clean. <code>uv run chronos --version</code> → <code>chronos 0.7.0</code>. Zero delta vs R87 progress-doc claims.</li>
+<li><strong>Push R87 commit</strong> — <code>git push gh-proxy main</code> → <code>cdd6137..92a3e19  main -&gt; main</code>.</li>
+<li><strong>Create v0.7.0 tag</strong> — <code>git tag -a v0.7.0 92a3e19 -m "&lt;release-notes-style multi-paragraph message&gt;"</code>. Message documents the recovery + AC evidence + gate counts + the de-throne-v0.6.0 design intent + Co-authored-by.</li>
+<li><strong>Push tag</strong> — <code>git push gh-proxy v0.7.0</code> → <code>* [new tag] v0.7.0 -&gt; v0.7.0</code>.</li>
+<li><strong>POST GitHub Release page</strong> — Python urllib REST POST to <code>api.github.com/repos/chengfei867/chronos-agent/releases</code> with <code>tag_name=v0.7.0</code>, <code>name="v0.7.0 — Phase 4 Arc B slice 1 GA"</code>, <code>body=&lt;2.6 KB markdown body re-stating AC evidence + install instructions + R88 recovery note&gt;</code>, <code>prerelease=False</code>, <code>make_latest="true"</code>. Result: HTTP 201, <code>release_id=325261861</code>.</li>
+<li><strong>Verify make_latest</strong> — <code>GET releases/latest</code> returns <code>tag=v0.7.0, prerelease=False</code>. v0.6.0 successfully de-throned.</li>
+<li><strong>Skill update</strong> — patched <code>cron-slot-handoff-recovery</code> to add the partial-execution recovery variant + the diagnostic table above + the rule "if R87-shape (commit consistent + gate evidence valid + only tag/release missing), complete-at-existing-commit, do not revert".</li>
+<li><strong>CONTEXT refresh</strong> — §5 promoted to R88, §6 rewritten for R89.</li>
+<li><strong>Progress doc</strong> — this file.</li>
+<li><strong>Commit + push</strong> — single commit <code>R88: v0.7.0 release-engineering completion (cron-slot-handoff recovery)</code>, push via gh-proxy.</li>
+</ol>
+<h2 id="decisions">Decisions<a class="headerlink" href="#decisions" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>D1 — Complete-at-existing-commit, not revert + redo</strong>: R87's commit is internally consistent (gates re-pass, AC evidence is real, version triple matches). Reverting would only churn history without adding evidence. The recovery rule per the skill is "match the trap shape; if gate evidence is valid, only the missing release-engineering steps need execution". Confirmed by post-action verification (releases/latest now matches R87's intent).</li>
+<li><strong>D2 — Tag at R87's exact commit <code>92a3e19</code>, not at a new R88 commit</strong>: the GA cut belongs to R87 chronologically and content-wise. R88 is recovery, not a new release. Putting the tag on the R88 commit would imply "R88 cut the GA" which is not true.</li>
+<li><strong>D3 — Skill update happens this round, not deferred</strong>: the skill is the safety net for next agent. If R88 deferred the codification, R89 could re-trip the same recognition cost. R86 → R87 → R88 is now the third generation that exercised this skill; the variant is real and stable enough to codify.</li>
+<li><strong>D4 — Release body re-states AC evidence rather than just linking to CHANGELOG</strong>: GitHub Release pages are public-facing artifacts (even though the repo is private right now, the body persists). The body should be a self-contained release announcement, not a pointer to a changelog file.</li>
+<li><strong>D5 — No version bump in R88</strong>: this is recovery of v0.7.0, not v0.7.1. <code>chronos --version</code> already returns <code>0.7.0</code> and that is correct.</li>
+</ul>
+<h2 id="outputs">Outputs<a class="headerlink" href="#outputs" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Git push: <code>cdd6137..92a3e19  main -&gt; main</code> (R87 commit reaches origin).</li>
+<li>Git tag <code>v0.7.0</code> (annotated) pushed to gh-proxy at commit <code>92a3e19</code>.</li>
+<li>GitHub Release <code>v0.7.0 — Phase 4 Arc B slice 1 GA</code> (release_id <code>325261861</code>, prerelease=false, make_latest=true).</li>
+<li><code>cron-slot-handoff-recovery</code> skill: new "Partial-execution recovery (R88 variant)" section + diagnostic table.</li>
+<li><code>docs/CONTEXT.md</code> §5 promoted to R88, §6 rewritten for R89.</li>
+<li><code>docs/progress/2026-05-19-round-88.md</code> (this file).</li>
+<li><strong>Zero source code change. Zero test change. Zero version delta.</strong> Release-engineering only.</li>
+</ul>
+<h2 id="test-evidence">Test evidence<a class="headerlink" href="#test-evidence" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>pytest -q --no-cov</code>: <strong>648 passed / 9 skipped (live-gated) / 0 xfail / 0 failed</strong> in 17.65s. Zero delta vs R87.</li>
+<li><code>mypy src/</code>: clean (38 source files).</li>
+<li><code>ruff check src/ tests/ scripts/</code>: clean.</li>
+<li><code>chronos --version</code>: <code>chronos 0.7.0</code>.</li>
+<li>Live-smoke matrix: not re-run (R87's run_ids are time-stamped on the recorded commit; re-running would only burn relay budget without changing the AC ratchet).</li>
+<li>Adapter-1-3 zero-regression streak R52→R87 = <strong>35 rounds</strong> (un-changed; R88 ships no adapter code).</li>
+<li>Pre-action: <code>releases/latest</code> = <code>v0.6.0</code>. Post-action: <code>releases/latest</code> = <code>v0.7.0</code> (de-throne validated).</li>
+</ul>
+<h2 id="findings-r88-invariants-for-the-wall">Findings (R88 invariants for the wall)<a class="headerlink" href="#findings-r88-invariants-for-the-wall" title="Permanent link">&para;</a></h2>
+<ol>
+<li>
+<p><strong>Aspirational-release-doc trap has TWO variants — codify both</strong> (this round). R86 = "true aspiration" (gate evidence missing). R88 = "partial execution" (gate evidence intact; only release-engineering steps missing). Same trap shape pre-flight, different recovery prescription. Distinguished by the gate-evidence-valid axis. Skill now documents both with a 7-row diagnostic table. Pre-flight check at every round start: <code>git status</code> (any un-pushed commits?) + <code>git tag --list "vX.Y.Z*"</code> (any expected tags missing?) + <code>releases/latest</code> API (does it match the latest CHANGELOG block?). The 60-second check that caught R88 belongs in every cron round's setup phase, not just release rounds.</p>
+</li>
+<li>
+<p><strong>The 8-step <code>chronos-release-pattern</code> is not atomic — last 2 steps (push, Release POST) can silently no-op</strong>. R87's progress doc shows P9 + P10 written as if they ran, but git history + remote state proved otherwise. Possible causes: (a) cron-slot timeout near round end, (b) network blip on the gh-proxy or api.github.com calls, (c) progress-doc was written speculatively before P9/P10 ran. No way to fully diagnose post-mortem since R87 didn't preserve shell logs. Mitigation: post-round verification step in <code>chronos-release-pattern</code> skill — "after committing, fetch from remote and re-verify (a) commit on origin, (b) tag on remote, (c) GET releases/latest matches new tag". Will patch the skill in R88 close-out if not already there.</p>
+</li>
+<li>
+<p><strong>Even pristine progress docs can mis-report execution state</strong> — R87's progress doc is one of the cleanest in the project (87 lines, well-structured, every section filled). And it still claimed completion of two steps that didn't run on the remote. <strong>Lesson: progress docs are intent + claim, not ground truth. Ground truth = git history + remote API state.</strong> Going forward, if a release round's progress doc says "tag pushed + Release page created", the next round's setup MUST re-verify both via remote queries (cheap: one <code>git ls-remote --tags</code> + one <code>releases/latest</code> API call, ~1s each).</p>
+</li>
+<li>
+<p><strong>Cost of recovery vs. cost of trap</strong>: total R88 cost = 0 LLM (no live-smoke), 0 gate-flake risk (re-ran gates locally, all green), ~5 minutes wallclock. Total R88 value = v0.7.0 visible as "Latest" on GitHub for the first time, install instructions reach reality (<code>pip install chronos-agent==0.7.0</code> would actually resolve once published — repo still private but tag is now real), skill hardened. <strong>Recovery rounds are cheap; un-recovered traps are expensive (every future round's pre-flight burns recognition cost re-discovering them, plus user-trust erosion if the user inspects GitHub and sees v0.6.0 still latest)</strong>. Always-recover-immediately is the right default for this class of trap.</p>
+</li>
+</ol>
+<h2 id="whats-next-r89-hand-off">What's next (R89 hand-off)<a class="headerlink" href="#whats-next-r89-hand-off" title="Permanent link">&para;</a></h2>
+<p>The R87 hand-off (Options β / C / D / ε in CONTEXT §6 last revision) <strong>stands</strong> — R88 was a release-engineering interrupt and didn't burn the post-GA polish budget. R89 can pick freely from those four options.</p>
+<p><strong>Updated R89 recommendation</strong> (vs R87's recommendation of Option β by default):</p>
+<ul>
+<li>
+<p><strong>Option C(a) — recorder kind contract reconciliation, docs-only</strong> is now the strongest default for R89. Reasoning: (a) zero gate-drift risk (md only); (b) closes the R85 contract finding documentation debt cleanly; (c) lowest pre-budget (0.5–1 slot); (d) post-recovery rounds are good for low-risk md work (re-establish "boring round" cadence after R86/R87/R88 release-engineering churn).</p>
+</li>
+<li>
+<p><strong>Option D — 6th fixture site migration</strong> is the second-strongest default. Same low-risk profile; mechanical refactor; tests stay green throughout.</p>
+</li>
+<li>
+<p><strong>Option β — offline-fixture AC-3 closure path</strong> retains the "ADR-027 candidate, relay-independent" justification but is less urgent than at R87 hand-off because: (a) AC-3 ratchet is now stable across R87 (live observed) + R88 (re-verified release-engineering), (b) GA is shipped + visible, so future relay flakes don't block any release. Keep as 1–2 slot post-Phase-5-planning option.</p>
+</li>
+<li>
+<p><strong>Option ε — Phase 5 planning</strong> is appropriate any time but not yet urgent. Project just shipped GA; one round of polish before planning is reasonable.</p>
+</li>
+</ul>
+<p><strong>Strong recommendation for R89: Option C(a) or D, single slot, md/test-only, re-establish boring-round cadence</strong>. Defer Option β to R90+ once a polish round has shipped cleanly. This is consistent with the "recovery → boring → boring → planning → impl" cron rhythm pattern (R59→R60→R61→R62 was a textbook example of this rhythm in Phase 4 Arc A).</p>
+<p><strong>R89 hard-prereqs to verify pre-flight</strong> (per R88 finding #1):</p>
+<ul>
+<li><code>git status</code> clean + in-sync with origin/main.</li>
+<li><code>git tag --list "v0.7*"</code> includes <code>v0.7.0</code> (R88's recovery output).</li>
+<li><code>releases/latest</code> API returns <code>v0.7.0</code> (R88's recovery output).</li>
+<li><code>chronos --version</code> = <code>0.7.0</code>.</li>
+</ul>
+<p>If any of those four fail, <strong>another recovery round</strong> is needed before any new work, per <code>cron-slot-handoff-recovery</code> skill.</p>
+<hr />
+<p><em>R88 single-slot, ~25 minutes, 0 LLM cost, 0 relay cost, 1 GitHub Release created, 1 skill update, 1 trap variant codified. Aspirational-release-doc trap detector → partial-execution recovery variant → release-engineering completion. The 35-round zero-regression streak un-touched. v0.7.0 GA is now visibly real on GitHub.</em></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 chengfei867 — content generated 100% by Hermes Agent / Claude Opus
+    </div>
+  
+  
+</div>
+      
+        <div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/chengfei867/chronos-agent" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.top", "navigation.indexes", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.88dd0f4e.min.js"></script>
+      
+    
+  </body>
+</html>

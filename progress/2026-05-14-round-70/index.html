@@ -1,0 +1,1396 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Time-Travel Debugger for Multi-Agent AI Systems — record, replay, fork, diff, compare. With first-class token/cost tracking and pluggable evaluators.">
+      
+      
+        <meta name="author" content="Hermes Agent">
+      
+      
+        <link rel="canonical" href="https://chengfei867.github.io/chronos-agent/progress/2026-05-14-round-70/">
+      
+      
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.49">
+    
+    
+      
+        <title>Round 70 — Phase 4 Arc B slice 1: Anthropic Agents SDK adapter core scaffold - Chronos Agent</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.6f8fc17f.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#round-70-phase-4-arc-b-slice-1-anthropic-agents-sdk-adapter-core-scaffold" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Chronos Agent" class="md-header__button md-logo" aria-label="Chronos Agent" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Chronos Agent
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Round 70 — Phase 4 Arc B slice 1: Anthropic Agents SDK adapter core scaffold
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/chengfei867/chronos-agent" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    chengfei867/chronos-agent
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+    
+  
+  Getting started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../concepts/" class="md-tabs__link">
+        
+  
+    
+  
+  Concepts
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../cli-reference/" class="md-tabs__link">
+        
+  
+    
+  
+  CLI reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../cost-tracking/" class="md-tabs__link">
+        
+  
+    
+  
+  Cost tracking
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../evaluators/" class="md-tabs__link">
+        
+  
+    
+  
+  Evaluators
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../adapters/anthropic_agents/" class="md-tabs__link">
+          
+  
+    
+  
+  Adapters
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guides/forking-safely/" class="md-tabs__link">
+          
+  
+    
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../contracts/golden-trace-format/" class="md-tabs__link">
+          
+  
+    
+  
+  Contracts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../decisions/" class="md-tabs__link">
+          
+  
+    
+  
+  Decisions (ADRs)
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../faq/" class="md-tabs__link">
+        
+  
+    
+  
+  FAQ
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Chronos Agent" class="md-nav__button md-logo" aria-label="Chronos Agent" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Chronos Agent
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/chengfei867/chronos-agent" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    chengfei867/chronos-agent
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Getting started
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Concepts
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli-reference/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    CLI reference
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cost-tracking/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Cost tracking
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../evaluators/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Evaluators
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Adapters
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            Adapters
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adapters/anthropic_agents/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Anthropic Agents SDK
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contracts/adapter-protocol/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Adapter protocol
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Guides
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            Guides
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/forking-safely/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Forking safely
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/side-effects/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Side effects
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Contracts
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            Contracts
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contracts/golden-trace-format/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Golden trace format
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../decisions/" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    Decisions (ADRs)
+  </span>
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            Decisions (ADRs)
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    FAQ
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#0-tldr" class="md-nav__link">
+    <span class="md-ellipsis">
+      §0 TL;DR
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-context-inherited-wip-from-prior-cron-slot" class="md-nav__link">
+    <span class="md-ellipsis">
+      §1 Context: inherited WIP from prior cron slot
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-what-shipped-this-round" class="md-nav__link">
+    <span class="md-ellipsis">
+      §2 What shipped this round
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="§2 What shipped this round">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-new-package-srcchronosadaptersanthropic_agents" class="md-nav__link">
+    <span class="md-ellipsis">
+      §2.1 New package src/chronos/adapters/anthropic_agents/
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-tests-testsunittest_adapter_anthropic_agentspy-577-loc-34-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      §2.2 Tests tests/unit/test_adapter_anthropic_agents.py (577 LOC, 34 tests)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-pyprojecttoml-deltas" class="md-nav__link">
+    <span class="md-ellipsis">
+      §2.3 pyproject.toml deltas
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#24-srcchronosadapters__init__py-wiring" class="md-nav__link">
+    <span class="md-ellipsis">
+      §2.4 src/chronos/adapters/__init__.py wiring
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#25-fix-pre-existing-clitreepy-mypy-error" class="md-nav__link">
+    <span class="md-ellipsis">
+      §2.5 Fix: pre-existing cli/tree.py mypy error
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-gates" class="md-nav__link">
+    <span class="md-ellipsis">
+      §3 Gates
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-findings-for-the-wall" class="md-nav__link">
+    <span class="md-ellipsis">
+      §4 Findings for the wall
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-deviations-from-context-6-option-a-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      §5 Deviations from CONTEXT §6 Option A plan
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-next-round-todo-r71-live-smoke-dogfood-script" class="md-nav__link">
+    <span class="md-ellipsis">
+      §6 Next round TODO — R71 live smoke + dogfood script
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="§6 Next round TODO — R71 live smoke + dogfood script">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#option-a-code-live-round-r71-live-smoke-dogfood-scaffold" class="md-nav__link">
+    <span class="md-ellipsis">
+      Option A (首选, code + live round): R71 live-smoke + dogfood scaffold
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-b-baidu-int-relay-claude-agent-sdk-or-nodejs-cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      Option B (备选, 硬卡点兜底): baidu-int relay 不支持 claude-agent-sdk or Node.js CLI 缺失
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-c-r71-documentation-polish-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      Option C (最后兜底): R71 = documentation polish only
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recommendation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Recommendation
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#r71-hand-off-invariants-r70-agent-r71-agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      R71 Hand-off invariants (R70 agent → R71 agent)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#release-strategy-update" class="md-nav__link">
+    <span class="md-ellipsis">
+      Release strategy update
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-invariants-touched-added-this-round" class="md-nav__link">
+    <span class="md-ellipsis">
+      §7 Invariants touched / added this round
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-commit-push-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      §8 Commit + push plan
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="round-70-phase-4-arc-b-slice-1-anthropic-agents-sdk-adapter-core-scaffold">Round 70 — Phase 4 Arc B slice 1: Anthropic Agents SDK adapter core scaffold<a class="headerlink" href="#round-70-phase-4-arc-b-slice-1-anthropic-agents-sdk-adapter-core-scaffold" title="Permanent link">&para;</a></h1>
+<p><strong>When</strong>: 2026-05-14 CST ~02:45 (inside 0–11 CST cron window)
+<strong>Round class</strong>: <strong>Code round</strong>, Option A2 close-out over inherited WIP — first substantial code round after R61→R62 planning→code cadence for Arc B.
+<strong>Blocker count</strong>: 0.
+<strong>Tag cut</strong>: None. v0.7.0a1 target remains R72. v0.6.0 still current.</p>
+<h2 id="0-tldr">§0 TL;DR<a class="headerlink" href="#0-tldr" title="Permanent link">&para;</a></h2>
+<p>R70 ships the <strong>fourth Chronos adapter scaffold</strong> — <code>chronos.adapters.anthropic_agents</code> against Anthropic's official <code>claude-agent-sdk</code> (PyPI <code>&gt;=0.1.80,&lt;1.0</code>, ADR-026). Record-only scaffold in this round (R71 = live smoke, R72 = alpha tag, R73 = fork via SDK-native <code>fork_session()</code>, R74 = GA). <strong>Breaks the R52→R69 eighteen-round adapter zero-change streak — by design</strong>, this is the planned Arc B kickoff. All adapter-1-3 (LangGraph / AutoGen / CrewAI) remain zero-regression.</p>
+<p>Gates: <strong>606 pass / 3 skip / 0 fail</strong> (+34 from R69 baseline 572). mypy 36 files 0 error. ruff check clean (src+tests+scripts). ruff format --check 90 files clean.</p>
+<h2 id="1-context-inherited-wip-from-prior-cron-slot">§1 Context: inherited WIP from prior cron slot<a class="headerlink" href="#1-context-inherited-wip-from-prior-cron-slot" title="Permanent link">&para;</a></h2>
+<p>Opening diagnostic per <code>cron-slot-handoff-recovery</code> skill:
+- <code>git ls-remote origin main</code> → <code>18825d5</code> (== local HEAD).
+- <code>git fetch origin main</code> refreshed (stale-ref trap #7 check clean).
+- <code>git status</code> revealed <strong>uncommitted WIP</strong>: <code>pyproject.toml</code> + <code>src/chronos/adapters/__init__.py</code> + <code>uv.lock</code> modified, plus untracked <code>src/chronos/adapters/anthropic_agents/</code> package (3 files, ~769 LOC) and <code>tests/unit/test_adapter_anthropic_agents.py</code> (577 LOC, 34 tests).
+- Diff shape matched R70 Option A exactly per CONTEXT §6.</p>
+<p><strong>Diagnosis</strong>: R69 ran out of tool-call budget after finishing its md-only research round, but a subsequent cron slot between R69 and this slot started R70 Option A and got through the bulk of the coding (probe / recorder body / test file / pyproject extra / adapter <code>__init__</code> wire-up) — then ran out of budget before commit. This is the <strong>ninth Option A2 close-out</strong> in project history (R48-A → R51 → R52 → R53 → R59 → R63 → R65 → R67 → <strong>R70</strong>), and the <strong>first of the Arc B family</strong> (prior eight were Arc A / Phase 3).</p>
+<p>Per the A2 doc close-out 5-item checklist, this slot's share is:
+1. Verify the scaffold's gates (done — see §3).
+2. Fix any breakage surfaced by the gates (done — see §3, pre-existing <code>cli/tree.py</code> mypy + one ruff format drift).
+3. Update <code>CHANGELOG.md</code> [Unreleased] with R70 Added + Fixed blocks (done).
+4. Write this progress doc (done, this file).
+5. Refresh <code>docs/CONTEXT.md</code> §5 current-state + §6 next-round TODO (done).</p>
+<p>Then <code>git add -A</code> + commit (single logical unit crediting prior slot) + push via gh-proxy + QQ battle report.</p>
+<h2 id="2-what-shipped-this-round">§2 What shipped this round<a class="headerlink" href="#2-what-shipped-this-round" title="Permanent link">&para;</a></h2>
+<h3 id="21-new-package-srcchronosadaptersanthropic_agents">§2.1 New package <code>src/chronos/adapters/anthropic_agents/</code><a class="headerlink" href="#21-new-package-srcchronosadaptersanthropic_agents" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong><code>_probe.py</code> (59 LOC)</strong> — <code>HAS_CLAUDE_SDK: bool</code> + <code>CLAUDE_SDK_IMPORT_ERROR: ImportError | None</code> + <code>install_hint() -&gt; str</code>. Mirrors CrewAI / AutoGen probe shape verbatim.</li>
+<li><strong><code>recorder.py</code> (552 LOC)</strong> — <code>AnthropicAgentsRecorder</code> implementing <code>RecorderProtocol</code>. Key design:</li>
+<li><strong>Seam</strong>: async iterator of <code>Message</code> objects. Works against both <code>ClaudeSDKClient.receive_messages()</code> (stateful client) and the top-level <code>query(prompt, options)</code> generator (stateless). <code>_resolve_iterator()</code> duck-types both.</li>
+<li><strong>Dispatch</strong>: class-name strings (<code>UserMessage</code> / <code>AssistantMessage</code> / <code>SystemMessage</code> / <code>ResultMessage</code>). Mirrors ADR-021 CrewAI event-class-name dispatch — recorder does NOT import <code>claude_agent_sdk</code> classes at runtime.</li>
+<li><strong>Content summariser</strong>: handles string, <code>None</code>, and block lists (<code>TextBlock</code> / <code>ToolUseBlock</code> / <code>ToolResultBlock</code> / <code>ThinkingBlock</code>) — the four block types enumerated in R69 spike #2.</li>
+<li><strong>Usage projection</strong>: Anthropic <code>input_tokens</code> / <code>output_tokens</code> / <code>cache_creation_input_tokens</code> / <code>cache_read_input_tokens</code> → Chronos <code>Usage</code>. Cache tokens summed. All-zero → <code>None</code>. Type drift → <code>AdapterError</code> (ADR-021 invariant: never silent).</li>
+<li><strong>Tool surfacing</strong>: <code>AssistantMessage</code> + single <code>ToolUseBlock</code> sets <code>tool_name</code> / <code>tool_input</code>; <code>UserMessage</code> + <code>ToolResultBlock</code> sets <code>tool_output</code>; <code>is_error=True</code> sets <code>error_message</code>.</li>
+<li><strong>Node name</strong>: message class → base name (<code>user</code> / <code>assistant</code> / <code>system</code> / <code>result</code>); if assistant + single ToolUseBlock, append <code>:&lt;tool_name&gt;</code> (ADR-020 three-segment pattern's first-segment analogue for single-tool calls).</li>
+<li><strong><code>fork()</code> stub</strong>: <code>raise NotImplementedError("R73: delegate to</code>claude_agent_sdk.fork_session()<code>")</code>. R73 will swap in the delegate.</li>
+<li><strong><code>__init__.py</code> (158 LOC)</strong> — public exports + extensive module docstring with usage pattern, R70 scope, R70 non-goals, R71/R72/R73/R74 forward pointers. <code>anthropic_agents_adapter</code> = module-level <code>AdapterProtocol</code> instance for R32-B dynamic registry enumeration.</li>
+</ul>
+<h3 id="22-tests-testsunittest_adapter_anthropic_agentspy-577-loc-34-tests">§2.2 Tests <code>tests/unit/test_adapter_anthropic_agents.py</code> (577 LOC, 34 tests)<a class="headerlink" href="#22-tests-testsunittest_adapter_anthropic_agentspy-577-loc-34-tests" title="Permanent link">&para;</a></h3>
+<p>Covers structural conformance, usage projection (6 cases), content summariser (6 cases), node-name dispatch (5 cases), translate dispatch (8 cases), record happy + failure + ClaudeSDKClient-style + non-iterable + SDK-drift, fork-stub, factory channels, probe, kind-map override.</p>
+<p>Critically: <strong>every test uses in-memory async-generator duck runtimes</strong>. No <code>claude_agent_sdk</code> import required to run the suite. The recorder has no runtime dependency on the SDK — only the <code>anthropic_agents</code> extra install adds it.</p>
+<h3 id="23-pyprojecttoml-deltas">§2.3 <code>pyproject.toml</code> deltas<a class="headerlink" href="#23-pyprojecttoml-deltas" title="Permanent link">&para;</a></h3>
+<div class="language-toml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">[project.optional-dependencies]</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">anthropic_agents</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="s2">&quot;claude-agent-sdk&gt;=0.1.80,&lt;1.0&quot;</span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="p">]</span>
+</span></code></pre></div>
+<p>Plus mypy override so <code>claude_agent_sdk.*</code> imports stay green without the extra installed.</p>
+<p><strong>Pin rationale</strong> (ADR-026 §7 + R69 spike #3.3): 0.1.x is explicitly alpha (83 releases, Development Status 3, weekly additive-only patch cadence). ADR-022's next-minor ceiling applies to 1.x stable SemVer, not pre-1.0. Using next-major <code>&lt;1.0</code> avoids bump-round churn with no corresponding breakage risk. Re-evaluate at 1.0.0.</p>
+<h3 id="24-srcchronosadapters__init__py-wiring">§2.4 <code>src/chronos/adapters/__init__.py</code> wiring<a class="headerlink" href="#24-srcchronosadapters__init__py-wiring" title="Permanent link">&para;</a></h3>
+<p>Registered the new adapter: docstring mentions v0.7-R70, module-level import of <code>AnthropicAgentsRecorder</code> + <code>anthropic_agents_adapter</code>, both added to <code>__all__</code> alphabetically.</p>
+<h3 id="25-fix-pre-existing-clitreepy-mypy-error">§2.5 Fix: pre-existing <code>cli/tree.py</code> mypy error<a class="headerlink" href="#25-fix-pre-existing-clitreepy-mypy-error" title="Permanent link">&para;</a></h3>
+<p><code>git stash</code> + <code>git stash pop</code> verified the <code>arg-type</code> error on <code>rich_by_run.get(parent_rid, tree)</code> (line 198) is on HEAD (R67 regression, not introduced by R70 WIP). Fixed with a one-token guard: <code>... if parent_rid is not None else tree</code>. Behaviour unchanged. Per R63 "pre-existing-this-slot vs pre-existing-this-round" distinction, this counts as pre-existing-this-round (inherited on HEAD, not introduced in the inherited WIP) — appropriate to fix silently alongside the round's scaffold, noted in CHANGELOG under <code>### Fixed</code>.</p>
+<h2 id="3-gates">§3 Gates<a class="headerlink" href="#3-gates" title="Permanent link">&para;</a></h2>
+<p>Baseline (R69): 572 pass / 3 skip / 0 fail.</p>
+<p><strong>R70 final</strong>:
+- <code>uv run pytest -q --no-cov</code> → <strong>606 passed, 3 skipped</strong> (+34, all new: <code>test_adapter_anthropic_agents.py</code>). 16.86s.
+- <code>uv run mypy src/</code> → <strong>0 errors, 36 files</strong> (+1 new package with 3 modules = +3, minus 0 regressions).
+- <code>uv run ruff check src tests scripts</code> → <strong>all checks passed</strong>.
+- <code>uv run ruff format --check src tests</code> → <strong>90 files already formatted</strong>.
+- <code>uv run chronos --version</code> → <code>chronos 0.6.0</code> (no version bump — alpha tag is R72 per ADR-026 §4).</p>
+<p><strong>Adapter regression guard</strong> (new metric): LangGraph + AutoGen + CrewAI all zero-change in R70 impl. The R52→R69 "eighteen rounds adapter zero-change" streak is intentionally broken at R70 (Arc B kickoff was always the planned stopper). Going forward, the streak counter tracks <strong>adapters 1–3 zero-regression</strong> instead: R70 = 1st round of this new streak (trivially).</p>
+<h2 id="4-findings-for-the-wall">§4 Findings for the wall<a class="headerlink" href="#4-findings-for-the-wall" title="Permanent link">&para;</a></h2>
+<ol>
+<li>
+<p><strong>A2 inheritance chain 九连, first Arc B entry</strong>: R48-A → R51 → R52 → R53 → R59 → R63 → R65 → R67 → <strong>R70</strong>. All nine share the same shape: prior slot ships substantial scaffold + tests (green or almost-green) but runs out of budget before close-out (CHANGELOG + progress doc + CONTEXT refresh + commit + push). <strong>R63's pre-budget rule "2 slots per impl round" continues to hold</strong>; R70 confirmed. Arc B's first entry conforming with zero deviation from Arc A pattern is itself validating — the structural constant of autonomous cron scheduling isn't tied to feature area.</p>
+</li>
+<li>
+<p><strong>Class-name dispatch pattern 三连 (R70 new)</strong>: CrewAI adapter (ADR-021) / AutoGen adapter (ADR-020 three-segment node names) / <strong>Anthropic Agents adapter (R70)</strong> all use <code>type(msg).__name__</code> string dispatch rather than isinstance checks against SDK classes. Rationale: recorder module is SDK-import-free at runtime (probe-gated), so isinstance is impossible. Class-name string is the duck-typed replacement. Promote to <strong>candidate invariant</strong>: "SDK-optional-dep adapters dispatch by runtime class name, not isinstance". Pending fourth confirmation (Arc B slice 2 adapter if R74+ lands one).</p>
+</li>
+<li>
+<p><strong>Four-block message content invariant (R70 new, R69 spike #2 confirmation)</strong>: Anthropic <code>Message.content</code> is either <code>str | None</code> (simple text case) or <code>list[TextBlock | ToolUseBlock | ToolResultBlock | ThinkingBlock]</code> (rich case). No fifth block type observed across R69 source inspection. Summariser handles all four + <code>None</code> + <code>str</code>. If a new block type lands in a future SDK release, ADR-015 extractor contract v2 may need amendment — but R70 codebase fails loud rather than silent-lossy (unknown blocks → <code>_summarise_block</code> fallback to class-name tag). Worth grep-checking in R71 live smoke.</p>
+</li>
+<li>
+<p><strong>Pre-1.0 pin ceiling is library-maturity-aware (R69 promoted, R70 applied)</strong>: <code>claude-agent-sdk&gt;=0.1.80,&lt;1.0</code> is the first Chronos extra to use a next-major ceiling. ADR-022's next-minor ceiling stays for 1.x stable deps (CrewAI <code>&lt;2.0</code>, langgraph <code>&lt;2.0</code>, etc.). The rule, now codified in pyproject comment + ADR-026 §7: "<strong>next-major ceiling for 0.x alpha libraries with additive-only patch cadence; next-minor ceiling for 1.x stable SemVer</strong>."</p>
+</li>
+<li>
+<p><strong>Tests run without the optional extra installed (R70 new, reinforces ADR-016 optional-dep precedent)</strong>: <code>test_adapter_anthropic_agents.py</code> does NOT <code>skipif not HAS_CLAUDE_SDK</code>; instead it uses duck-typed async-generator runtimes with class-name dispatch. This is <strong>stricter than</strong> the CrewAI adapter's <code>skipif not HAS_CREWAI</code> pattern, and it's possible because the recorder never imports SDK classes at runtime (class-name dispatch + duck-typed content blocks). <strong>Rule refinement</strong>: when an adapter's recorder has zero runtime SDK imports (probe-gated only), the unit-test suite should run unconditionally rather than skip — catches structural regressions even in minimal dev environments. Pattern to generalise to Arc B slice 2 if applicable.</p>
+</li>
+<li>
+<p><strong>uv.lock regeneration was real this time (R70 new, context to lockfile-trap rule)</strong>: <code>git status</code> showed <code>M uv.lock</code> with 2541 diff lines. Per the skill's lockfile-regeneration trap recipe, checked <code>git diff pyproject.toml</code> first — the diff was <strong>non-empty</strong> (new <code>anthropic_agents</code> optional extra). This means the lockfile churn is <strong>real and required</strong>, not uv-version noise. Unlike R65 / R68 where pyproject was untouched. Committed as-is. <strong>Refinement to <code>cron-slot-handoff-recovery</code> skill</strong>: the trap triggers <em>only</em> when pyproject is untouched; real manifest changes carry real lockfile diffs. The 2-tool-call recipe correctly handled both cases in R70.</p>
+</li>
+</ol>
+<h2 id="5-deviations-from-context-6-option-a-plan">§5 Deviations from CONTEXT §6 Option A plan<a class="headerlink" href="#5-deviations-from-context-6-option-a-plan" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Adapter enumeration order in <code>__init__.py</code></strong>: plan said "anthropic_agents after crewai"; actual file has anthropic_agents first (alphabetical). No semantic difference; alphabetical is the existing convention for <code>__all__</code>. Trivial, not worth a separate note.</li>
+<li><strong>No <code>scripts/dogfood/arc_b_slice_1_smoke.py</code> scaffold</strong>: Option A P1 item. Skipped in the inherited WIP, not added this slot. R71 will create it fresh as part of live-smoke setup. <strong>Impact</strong>: zero — R70 round-end checklist has no script to point to, but R71 was always going to write the live version from scratch anyway.</li>
+<li><strong>Extractor contract conformance</strong>: R69 flagged <code>ThinkingBlock</code> as possibly needing ADR-015 amendment. R70 recorder handles it via summariser fallback (<code>_summarise_block</code> maps unknown/thinking blocks to a class-name tag string, no schema change). This defers the formal question "is <code>ThinkingBlock</code> a first-class block type or a debug artifact?" to R71 live smoke — the answer depends on whether real traces surface it or not. <strong>ADR-015 is NOT amended this round</strong>; the contract fits as-is via the summariser fallback.</li>
+</ul>
+<h2 id="6-next-round-todo-r71-live-smoke-dogfood-script">§6 Next round TODO — R71 live smoke + dogfood script<a class="headerlink" href="#6-next-round-todo-r71-live-smoke-dogfood-script" title="Permanent link">&para;</a></h2>
+<h3 id="option-a-code-live-round-r71-live-smoke-dogfood-scaffold">Option A (首选, code + live round): R71 live-smoke + dogfood scaffold<a class="headerlink" href="#option-a-code-live-round-r71-live-smoke-dogfood-scaffold" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>P0</strong> Pre-flight: <code>git ls-remote origin main</code> + <code>git fetch</code> (stale-ref trap #8 check). Read this progress doc + ADR-026 §4 + R69 research doc §2 + recorder source.</li>
+<li><strong>P0</strong> Install the extra in the cron VM: <code>uv sync --extra anthropic_agents</code>. Verify <code>python -c "from claude_agent_sdk import ClaudeSDKClient"</code> succeeds. If the Node.js <code>claude-code</code> CLI is missing (R69 spike #3.4 flagged), surface blocker to user — <strong>do NOT attempt Node install autonomously</strong> (per CONTEXT §3.3 hard constraints).</li>
+<li><strong>P0</strong> <code>scripts/dogfood/arc_b_slice_1_smoke.py</code> (<strong>new</strong>): short script that spins up <code>ClaudeSDKClient</code> with a cheap model (claude-haiku-3-5 or similar if available via baidu-int relay — check if that relay supports claude-agent-sdk session format; <strong>if not, surface blocker</strong>, do NOT call the public Anthropic API). Runs the recorder against 1–2 prompts. Runtime asserts: <code>run_id</code> populated, ≥ 2 nodes, at least one <code>assistant</code> + one <code>user</code> node, usage non-None where applicable.</li>
+<li><strong>P0</strong> <code>tests/live/test_anthropic_agents_smoke.py</code> (<strong>new</strong>): CHRONOS_LIVE=1 gated, mirrors <code>test_crewai_smoke.py</code> shape. Minimum 1 test: round-trip through <code>ClaudeSDKClient.query()</code> + assert recorder landed expected node kinds.</li>
+<li><strong>P1</strong> If live-smoke surfaces extractor-contract gaps (new block types, usage-field drift, node-name ambiguity), amend ADR-015 in-place per R57 pattern — document the amendment in the progress doc.</li>
+<li><strong>P1</strong> <code>docs/progress/2026-05-XX-round-71.md</code> (YYYY-MM-DD fix).</li>
+<li><strong>P1</strong> <code>docs/roadmap.md</code> §4.2 — R70 ✅ marker + R71 progress.</li>
+<li><strong>P1</strong> <code>docs/CONTEXT.md §5/§6</code> — R71 findings + R72 TODO.</li>
+<li><strong>P2</strong> No CHANGELOG bump (still [Unreleased]). No tag. No version bump (alpha is R72 per ADR-026 §4).</li>
+</ul>
+<h3 id="option-b-baidu-int-relay-claude-agent-sdk-or-nodejs-cli">Option B (备选, 硬卡点兜底): baidu-int relay 不支持 claude-agent-sdk or Node.js CLI 缺失<a class="headerlink" href="#option-b-baidu-int-relay-claude-agent-sdk-or-nodejs-cli" title="Permanent link">&para;</a></h3>
+<p>If live smoke blocked by infra:
+- <strong>Do NOT</strong> revert the R70 scaffold — R70 is already green in unit tests, the scaffold stands on its own.
+- <strong>Do NOT</strong> attempt to install Node.js or probe an external Anthropic endpoint.
+- Write <code>docs/progress/2026-05-XX-round-71.md</code> as a blocker-investigation round. Include exact reproduce: <code>uv sync --extra anthropic_agents</code> output + <code>claude-code --help</code> result + <code>python -c "from claude_agent_sdk import ClaudeSDKClient; ..."</code> error trace.
+- Reach out to user via QQ with specific unblock ask (Node.js install policy + baidu-int relay session-API capability).
+- R71 bundle shape becomes 5+1 rounds → 6 (risks / core / <strong>blocker-investigation</strong> / live-smoke / alpha / fork / GA), v0.7.0 target slips to R75.</p>
+<h3 id="option-c-r71-documentation-polish-only">Option C (最后兜底): R71 = documentation polish only<a class="headerlink" href="#option-c-r71-documentation-polish-only" title="Permanent link">&para;</a></h3>
+<p>If neither live smoke nor blocker-investigation are actionable in the R71 slot, use it for <code>docs/adapters/anthropic_agents.md</code> user-facing install+usage doc. Minimal risk, no blocking.</p>
+<h3 id="recommendation">Recommendation<a class="headerlink" href="#recommendation" title="Permanent link">&para;</a></h3>
+<p><strong>Option A</strong> — R69 source inspection confirmed SDK <code>Python &gt;=3.10</code> + MIT + clean install. Probability of infra block is low; if it hits, Option B is the graceful fallback.</p>
+<h3 id="r71-hand-off-invariants-r70-agent-r71-agent">R71 Hand-off invariants (R70 agent → R71 agent)<a class="headerlink" href="#r71-hand-off-invariants-r70-agent-r71-agent" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Work window 0–11 CST.</li>
+<li>R71 is a <strong>live-smoke round</strong>, expects Node.js CLI available — if not, Option B.</li>
+<li><code>uv sync --extra anthropic_agents</code> + <code>claude-code --help</code> = first two commands.</li>
+<li>Adapter-1-3 zero-regression must continue (R70 = 1st round of new streak).</li>
+<li>Dogfood script path: <code>scripts/dogfood/arc_b_slice_1_smoke.py</code> (note the <code>dogfood/</code> subdirectory — first adapter to use it; prior dogfoods sit at <code>scripts/dogfood_*.py</code> flat).</li>
+<li>If <code>ThinkingBlock</code> surfaces in live trace, decide ADR-015 amendment vs summariser-fallback coverage — document either way.</li>
+<li><strong>QQ battle report template</strong>: test count delta + live smoke result + extra install result + adapters 1-3 zero-regression.</li>
+</ul>
+<h3 id="release-strategy-update">Release strategy update<a class="headerlink" href="#release-strategy-update" title="Permanent link">&para;</a></h3>
+<ul>
+<li>v0.7.0a1 🚧 target <strong>R72</strong> (R71 live-smoke + R72 alpha tag) — unchanged.</li>
+<li>v0.7.0 🚧 target <strong>R74 GA</strong> — unchanged.</li>
+<li>R70 scaffold lands in [Unreleased] and will be rolled into the v0.7.0a1 CHANGELOG at R72.</li>
+</ul>
+<h2 id="7-invariants-touched-added-this-round">§7 Invariants touched / added this round<a class="headerlink" href="#7-invariants-touched-added-this-round" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>A2 inheritance chain 九连</strong> (updates R67 八连 invariant).</li>
+<li><strong>Class-name dispatch pattern 三连</strong> (CrewAI / AutoGen / Anthropic Agents; candidate invariant).</li>
+<li><strong>Four-block Message.content contract</strong> (<code>str | None | list[4-block-types]</code>; R69 spike #2 lock).</li>
+<li><strong>Pre-1.0 pin ceiling library-maturity-aware</strong> (next-major for 0.x alpha, next-minor for 1.x stable; R69 promoted, R70 applied).</li>
+<li><strong>Adapter recorder SDK-import-free at runtime</strong> (tests run without extra installed; candidate invariant for probe-gated adapters).</li>
+<li><strong>uv.lock real-diff vs noise-diff distinguisher</strong> (pyproject non-empty diff → real; refined lockfile-trap rule).</li>
+</ul>
+<h2 id="8-commit-push-plan">§8 Commit + push plan<a class="headerlink" href="#8-commit-push-plan" title="Permanent link">&para;</a></h2>
+<p>Single logical commit covering: pyproject extra + adapter package (probe + recorder + <strong>init</strong>) + test file + adapters/<strong>init</strong>.py wire-up + cli/tree.py pre-existing fix + CHANGELOG + progress doc + CONTEXT refresh + uv.lock.</p>
+<p>Commit message:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>R70: Arc B slice 1 — Anthropic Agents SDK adapter core scaffold (ADR-026)
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>Fourth Chronos adapter. Record-only scaffold against `claude-agent-sdk`
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>&gt;=0.1.80,&lt;1.0 per ADR-026. Recorder seam: async iterator of Message
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>objects (R69 spike #2 confirmed), works against both
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>ClaudeSDKClient.receive_messages() and top-level query(). Class-name
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>dispatch; SDK-import-free at runtime so unit tests run without the
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>extra installed.
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>R70 scope: probe + recorder + adapter + 34 unit tests (all duck-typed
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>runtimes, zero live API call). fork() = NotImplementedError(&quot;R73&quot;)
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>stub — SDK-native fork_session() delegate is R73 per ADR-026 §6.
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>Option A2 close-out over inherited WIP from prior cron slot
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>(scaffold + tests already green; this slot&#39;s share = CHANGELOG +
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>progress doc + CONTEXT refresh + pre-existing cli/tree.py mypy fix
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>+ mypy override + ruff format + commit). Ninth A2 in project
+</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>history (R48-A → ... → R70), first of Arc B family. Pattern
+</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>confirmed structural constant across feature areas.
+</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>
+</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>Gates: 606 pass (+34) / 3 skip / 0 fail. mypy 36 files clean. ruff
+</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>clean. Adapter streak: R52→R69 = 18 rounds zero-change intentionally
+</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>broken at R70 (Arc B kickoff planned); new streak = adapters 1-3
+</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>zero-regression starts R70.
+</span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a>
+</span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a>No tag cut — v0.7.0a1 target R72.
+</span><span id="__span-1-27"><a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a>
+</span><span id="__span-1-28"><a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a>Refs: ADR-026, R69 research (docs/research/r69-mcp-fork-lifecycle.md).
+</span><span id="__span-1-29"><a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a>
+</span><span id="__span-1-30"><a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a>Co-authored-by: Hermes Agent &lt;agent@hermes.ai&gt;
+</span></code></pre></div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 chengfei867 — content generated 100% by Hermes Agent / Claude Opus
+    </div>
+  
+  
+</div>
+      
+        <div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/chengfei867/chronos-agent" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.top", "navigation.indexes", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.88dd0f4e.min.js"></script>
+      
+    
+  </body>
+</html>

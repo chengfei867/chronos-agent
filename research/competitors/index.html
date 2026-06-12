@@ -1,0 +1,1660 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Time-Travel Debugger for Multi-Agent AI Systems — record, replay, fork, diff, compare. With first-class token/cost tracking and pluggable evaluators.">
+      
+      
+        <meta name="author" content="Hermes Agent">
+      
+      
+        <link rel="canonical" href="https://chengfei867.github.io/chronos-agent/research/competitors/">
+      
+      
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.49">
+    
+    
+      
+        <title>Competitive Analysis — Agent Observability / Debugging Landscape - Chronos Agent</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.6f8fc17f.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#competitive-analysis-agent-observability-debugging-landscape" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Chronos Agent" class="md-header__button md-logo" aria-label="Chronos Agent" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Chronos Agent
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Competitive Analysis — Agent Observability / Debugging Landscape
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/chengfei867/chronos-agent" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    chengfei867/chronos-agent
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+    
+  
+  Getting started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../concepts/" class="md-tabs__link">
+        
+  
+    
+  
+  Concepts
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../cli-reference/" class="md-tabs__link">
+        
+  
+    
+  
+  CLI reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../cost-tracking/" class="md-tabs__link">
+        
+  
+    
+  
+  Cost tracking
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../evaluators/" class="md-tabs__link">
+        
+  
+    
+  
+  Evaluators
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../adapters/anthropic_agents/" class="md-tabs__link">
+          
+  
+    
+  
+  Adapters
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guides/forking-safely/" class="md-tabs__link">
+          
+  
+    
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../contracts/golden-trace-format/" class="md-tabs__link">
+          
+  
+    
+  
+  Contracts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../decisions/" class="md-tabs__link">
+          
+  
+    
+  
+  Decisions (ADRs)
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../faq/" class="md-tabs__link">
+        
+  
+    
+  
+  FAQ
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Chronos Agent" class="md-nav__button md-logo" aria-label="Chronos Agent" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Chronos Agent
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/chengfei867/chronos-agent" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    chengfei867/chronos-agent
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Getting started
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Concepts
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli-reference/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    CLI reference
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cost-tracking/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Cost tracking
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../evaluators/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Evaluators
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Adapters
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            Adapters
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adapters/anthropic_agents/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Anthropic Agents SDK
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contracts/adapter-protocol/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Adapter protocol
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Guides
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            Guides
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/forking-safely/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Forking safely
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/side-effects/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Side effects
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Contracts
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            Contracts
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contracts/golden-trace-format/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Golden trace format
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../decisions/" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    Decisions (ADRs)
+  </span>
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            Decisions (ADRs)
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    FAQ
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#why-this-document-exists" class="md-nav__link">
+    <span class="md-ellipsis">
+      Why This Document Exists
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tier-1-direct-adjacent-llmagent-observability" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tier 1 — Direct Adjacent (LLM/Agent Observability)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tier 1 — Direct Adjacent (LLM/Agent Observability)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-langsmith-by-langchain" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. LangSmith (by LangChain)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-langfuse-open-source" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Langfuse (open source)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-agentopsai" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. AgentOps.ai
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-arize-phoenix-arize-ax" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. Arize Phoenix / Arize AX
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-helicone" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. Helicone
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-braintrust" class="md-nav__link">
+    <span class="md-ellipsis">
+      6. Braintrust
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-laminar-lmnrai" class="md-nav__link">
+    <span class="md-ellipsis">
+      7. Laminar (lmnr.ai)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-humanloop" class="md-nav__link">
+    <span class="md-ellipsis">
+      8. Humanloop
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9-langgraph-checkpointer-langchain" class="md-nav__link">
+    <span class="md-ellipsis">
+      9. LangGraph Checkpointer (LangChain)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#10-autogen-crewai-swarm-built-in-trace" class="md-nav__link">
+    <span class="md-ellipsis">
+      10. AutoGen / CrewAI / Swarm Built-in Trace
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tier-2-parallel-adjacent-non-llm-but-relevant" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tier 2 — Parallel-Adjacent (Non-LLM but relevant)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tier 2 — Parallel-Adjacent (Non-LLM but relevant)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#11-pdb-debuggers-for-programming-languages" class="md-nav__link">
+    <span class="md-ellipsis">
+      11. pdb / debuggers for programming languages
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12-jupyter-notebook" class="md-nav__link">
+    <span class="md-ellipsis">
+      12. Jupyter Notebook
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#13-git-gitgraph-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      13. Git / GitGraph tools
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#14-time-travel-debuggers-eg-rr-undodb-replayio" class="md-nav__link">
+    <span class="md-ellipsis">
+      14. Time-travel Debuggers (e.g. rr, UndoDB, Replay.io)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#15-foundrys-vmsnapshot-vmrevert-ethereum-testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      15. Foundry's vm.snapshot() / vm.revert() (Ethereum testing)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#16-apache-beam-flink-dataflow-checkpointing" class="md-nav__link">
+    <span class="md-ellipsis">
+      16. Apache Beam / Flink (dataflow checkpointing)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tier-3-research-adjacent" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tier 3 — Research-Adjacent
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tier 3 — Research-Adjacent">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#17-academic-agent-benchmarking-platforms" class="md-nav__link">
+    <span class="md-ellipsis">
+      17. Academic: Agent Benchmarking Platforms
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#18-academic-llm-debugging-papers" class="md-nav__link">
+    <span class="md-ellipsis">
+      18. Academic: LLM Debugging Papers
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#19-guardrails-safety-tools-guardrails-ai-nemo-guardrails" class="md-nav__link">
+    <span class="md-ellipsis">
+      19. Guardrails / Safety Tools (Guardrails AI, NeMo Guardrails)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#20-llm-as-judge-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      20. LLM-as-Judge Tools
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#gap-analysis-the-chronos-agent-niche" class="md-nav__link">
+    <span class="md-ellipsis">
+      Gap Analysis — The chronos-agent Niche
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Gap Analysis — The chronos-agent Niche">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#where-is-the-empty-space" class="md-nav__link">
+    <span class="md-ellipsis">
+      Where is the empty space?
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-havent-the-big-players-done-this" class="md-nav__link">
+    <span class="md-ellipsis">
+      Why haven't the big players done this?
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-chronos-agent-must-prove-to-matter" class="md-nav__link">
+    <span class="md-ellipsis">
+      What chronos-agent must prove to matter
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#threat-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      Threat Analysis
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#open-questions-for-next-round" class="md-nav__link">
+    <span class="md-ellipsis">
+      Open Questions for Next Round
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      References
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="competitive-analysis-agent-observability-debugging-landscape">Competitive Analysis — Agent Observability / Debugging Landscape<a class="headerlink" href="#competitive-analysis-agent-observability-debugging-landscape" title="Permanent link">&para;</a></h1>
+<p><strong>Last updated</strong>: 2026-04-22 (Round 1)
+<strong>Status</strong>: Initial analysis — to be verified against live sources in future rounds</p>
+<blockquote>
+<p>⚠️ <strong>Verification needed</strong>: This document represents the agent's knowledge snapshot as of training + April 2026 public information. Future rounds should cross-check each competitor's feature list against their live docs, since the agent tooling space moves fast. Add <code>Last verified YYYY-MM-DD</code> stamps per section.</p>
+</blockquote>
+<hr />
+<h2 id="why-this-document-exists">Why This Document Exists<a class="headerlink" href="#why-this-document-exists" title="Permanent link">&para;</a></h2>
+<p><code>chronos-agent</code> claims the "time-travel debugger for multi-agent systems" niche is empty. This doc is the falsification test: list every serious player in adjacent spaces and prove, feature-by-feature, the gap is real.</p>
+<p><strong>Framing</strong>: We care about <strong>four capabilities</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Capability</th>
+<th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>R1. Record</strong></td>
+<td>Capture agent runs (prompts, tool calls, state) with enough fidelity to reconstruct</td>
+</tr>
+<tr>
+<td><strong>R2. Replay</strong></td>
+<td>Walk through a recorded run step-by-step (read-only)</td>
+</tr>
+<tr>
+<td><strong>R3. Fork</strong></td>
+<td>Branch from any step, modify a variable (prompt / tool / model), re-run downstream</td>
+</tr>
+<tr>
+<td><strong>R4. Diff</strong></td>
+<td>Structured comparison of two runs or two forks of same run</td>
+</tr>
+</tbody>
+</table>
+<p>If a competitor has only R1, they are an <strong>observability tool</strong>.
+If they have R1+R2, they are a <strong>replay tool</strong>.
+If they have R1+R2+R3, they are a <strong>time-travel debugger</strong> — the chronos-agent niche.
+R4 is a bonus feature that further differentiates.</p>
+<hr />
+<h2 id="tier-1-direct-adjacent-llmagent-observability">Tier 1 — Direct Adjacent (LLM/Agent Observability)<a class="headerlink" href="#tier-1-direct-adjacent-llmagent-observability" title="Permanent link">&para;</a></h2>
+<h3 id="1-langsmith-by-langchain">1. LangSmith (by LangChain)<a class="headerlink" href="#1-langsmith-by-langchain" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>What</strong>: Hosted tracing + evaluation platform tightly coupled to LangChain / LangGraph ecosystem</li>
+<li><strong>Capabilities</strong>:</li>
+<li>R1 ✅ — Full trace capture via LangChain callbacks</li>
+<li>R2 ✅ — Web UI walks through each step</li>
+<li>R3 ⚠️ — "Playground" lets you re-run a single LLM call with edits, but <strong>not fork + re-run downstream</strong> of a multi-step agent</li>
+<li>R4 ❌ — Trace comparison exists for evaluations but not step-by-step structural diff</li>
+<li><strong>Coverage</strong>: LangChain / LangGraph first-class, others via manual OTel</li>
+<li><strong>Business model</strong>: Freemium SaaS, enterprise pricing</li>
+<li><strong>Gap vs. chronos-agent</strong>: LangSmith <del>is the gold standard for observability but does not solve "I want to change step 5 of a past run and see what would have happened"</del>. The Playground is per-LLM-call, not per-agent-graph.</li>
+</ul>
+<h3 id="2-langfuse-open-source">2. Langfuse (open source)<a class="headerlink" href="#2-langfuse-open-source" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>What</strong>: Self-hostable LLM observability; Langfuse = open-source Langsmith-like competitor</li>
+<li><strong>Capabilities</strong>:</li>
+<li>R1 ✅ — OpenTelemetry-compatible tracing, SDK for Python / JS</li>
+<li>R2 ✅ — Web UI for tracing</li>
+<li>R3 ❌ — "Prompt playground" exists for single-prompt iteration; no agent-tree fork</li>
+<li>R4 ⚠️ — Dataset-based eval, some trace comparison, no node-level diff</li>
+<li><strong>Coverage</strong>: Any framework via SDK</li>
+<li><strong>Business model</strong>: Open core + hosted cloud</li>
+<li><strong>Gap</strong>: Same as LangSmith. Strong foundation (OTel + open source), but <strong>not a debugger in the interactive-intervention sense</strong>.</li>
+</ul>
+<h3 id="3-agentopsai">3. AgentOps.ai<a class="headerlink" href="#3-agentopsai" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>What</strong>: Observability specifically aimed at agents (emphasizes "session replay")</li>
+<li><strong>Capabilities</strong>:</li>
+<li>R1 ✅ — SDK captures LLM calls, tool calls, errors</li>
+<li>R2 ✅ — "Session replay" in web UI — strong point</li>
+<li>R3 ❌ — No fork / re-run capability discovered in docs</li>
+<li>R4 ⚠️ — Some comparison via dashboards, not structural</li>
+<li><strong>Coverage</strong>: Multi-framework (CrewAI, AutoGen, LangChain via SDK)</li>
+<li><strong>Business model</strong>: Freemium SaaS</li>
+<li><strong>Gap</strong>: Best "session replay" in the field (read-only), still no write-side intervention.</li>
+</ul>
+<h3 id="4-arize-phoenix-arize-ax">4. Arize Phoenix / Arize AX<a class="headerlink" href="#4-arize-phoenix-arize-ax" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>What</strong>: Enterprise ML observability → added LLM/agent support</li>
+<li><strong>Capabilities</strong>:</li>
+<li>R1 ✅ — OTel-based agent tracing</li>
+<li>R2 ✅ — Trace tree viewer</li>
+<li>R3 ❌ — Evaluation replay via dataset, no fork</li>
+<li>R4 ✅ (partial) — Strong eval/comparison between runs via datasets</li>
+<li><strong>Coverage</strong>: OTel-compatible</li>
+<li><strong>Business model</strong>: Open source (Phoenix) + enterprise (AX)</li>
+<li><strong>Gap</strong>: Strong eval/monitoring; eval comparison is at dataset level, not reasoning-node level.</li>
+</ul>
+<h3 id="5-helicone">5. Helicone<a class="headerlink" href="#5-helicone" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>What</strong>: LLM proxy that logs all calls; added "sessions" grouping for agent patterns</li>
+<li><strong>Capabilities</strong>:</li>
+<li>R1 ✅ — Proxy-based, zero-instrument capture</li>
+<li>R2 ⚠️ — Session grouping but not full agent semantics</li>
+<li>R3 ❌</li>
+<li>R4 ⚠️ — A/B prompt testing but not fork/diff</li>
+<li><strong>Coverage</strong>: Any HTTPS LLM call through proxy</li>
+<li><strong>Business model</strong>: Hosted + self-host</li>
+<li><strong>Gap</strong>: Simplest capture (no SDK) but <strong>no agent-level semantics or fork</strong>.</li>
+</ul>
+<h3 id="6-braintrust">6. Braintrust<a class="headerlink" href="#6-braintrust" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>What</strong>: "Evaluation-first" platform with tracing on the side</li>
+<li><strong>Capabilities</strong>:</li>
+<li>R1 ✅</li>
+<li>R2 ✅</li>
+<li>R3 ⚠️ — "Experiments" let you rerun prompts over a dataset, not fork a single live run</li>
+<li>R4 ✅ — Strong dataset-based diff between experiment variants</li>
+<li><strong>Coverage</strong>: Multi-framework</li>
+<li><strong>Business model</strong>: Closed-source SaaS</li>
+<li><strong>Gap</strong>: The comparison/eval angle is strongest here but operates at <strong>dataset granularity</strong>, not <strong>run-node granularity</strong>.</li>
+</ul>
+<h3 id="7-laminar-lmnrai">7. Laminar (lmnr.ai)<a class="headerlink" href="#7-laminar-lmnrai" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>What</strong>: Newer entrant, OpenTelemetry-based agent observability with emphasis on clean trace UI</li>
+<li><strong>Capabilities</strong>:</li>
+<li>R1 ✅ — OTel GenAI semantic conventions</li>
+<li>R2 ✅ — Replay viewer</li>
+<li>R3 ❌ — No fork capability discovered</li>
+<li>R4 ⚠️ — Basic comparison</li>
+<li><strong>Coverage</strong>: OTel-compatible</li>
+<li><strong>Business model</strong>: Open source core + cloud</li>
+<li><strong>Gap</strong>: Closest in aesthetic goal to chronos-agent (developer-focused), <strong>but still observability-only</strong>.</li>
+</ul>
+<h3 id="8-humanloop">8. Humanloop<a class="headerlink" href="#8-humanloop" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>What</strong>: Prompt management + evaluation</li>
+<li><strong>Capabilities</strong>:</li>
+<li>R1 ✅ — Capture via SDK</li>
+<li>R2 ⚠️ — Trace view exists but Humanloop focuses on prompt versioning</li>
+<li>R3 ⚠️ — Strong prompt versioning + playground (re-run single prompt)</li>
+<li>R4 ✅ — Structured eval diff per prompt version</li>
+<li><strong>Coverage</strong>: Multi-framework</li>
+<li><strong>Business model</strong>: SaaS</li>
+<li><strong>Gap</strong>: Excellent at <strong>prompt-level</strong> time-travel; <strong>zero</strong> at reasoning-tree fork.</li>
+</ul>
+<h3 id="9-langgraph-checkpointer-langchain">9. LangGraph Checkpointer (LangChain)<a class="headerlink" href="#9-langgraph-checkpointer-langchain" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>What</strong>: Framework feature (not a product) — save state between nodes in a LangGraph</li>
+<li><strong>Capabilities</strong>:</li>
+<li>R1 ✅ — State persistence built into LangGraph</li>
+<li>R2 ✅ — Can resume from checkpoint</li>
+<li>R3 ✅ (partial!) — Can restart from checkpoint with modified state → <strong>this is closest to fork</strong></li>
+<li>R4 ❌ — No comparison tooling</li>
+<li><strong>Coverage</strong>: <strong>LangGraph only</strong> (hard boundary)</li>
+<li><strong>Gap</strong>: <strong>This is the most philosophically-aligned thing that exists</strong>, but:</li>
+<li>Only works within LangGraph</li>
+<li>No UI, no diff, no cross-framework abstraction</li>
+<li>No "fork tree" metaphor — it's "resume from snapshot with overrides"</li>
+<li>No cost tracking, no evaluation hooks, no shareability</li>
+</ul>
+<p><strong>⚠️ Competitive insight</strong>: chronos-agent's value is <strong>to be to LangGraph checkpointer what git is to tar</strong>. The primitive is there, but nobody has built the workflow, the UI, the cross-framework abstraction, or the diff tooling.</p>
+<h3 id="10-autogen-crewai-swarm-built-in-trace">10. AutoGen / CrewAI / Swarm Built-in Trace<a class="headerlink" href="#10-autogen-crewai-swarm-built-in-trace" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>What</strong>: Each framework ships simple trace logging</li>
+<li><strong>Capabilities</strong>: R1 only (basic logs)</li>
+<li><strong>Gap</strong>: No serious tooling built on top of their trace formats.</li>
+</ul>
+<hr />
+<h2 id="tier-2-parallel-adjacent-non-llm-but-relevant">Tier 2 — Parallel-Adjacent (Non-LLM but relevant)<a class="headerlink" href="#tier-2-parallel-adjacent-non-llm-but-relevant" title="Permanent link">&para;</a></h2>
+<h3 id="11-pdb-debuggers-for-programming-languages">11. pdb / debuggers for programming languages<a class="headerlink" href="#11-pdb-debuggers-for-programming-languages" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>What</strong>: Interactive debugging for traditional code</li>
+<li><strong>Relevance</strong>: Conceptual inspiration. <code>chronos-agent</code> essentially ports the pdb metaphor to LLM reasoning.</li>
+<li><strong>Gap</strong>: No LLM/agent analog exists.</li>
+</ul>
+<h3 id="12-jupyter-notebook">12. Jupyter Notebook<a class="headerlink" href="#12-jupyter-notebook" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>What</strong>: Interactive code cells with persistent kernel state</li>
+<li><strong>Relevance</strong>: Similar "rerun a cell with different input" metaphor</li>
+<li><strong>Gap</strong>: Not agent-aware, not trace-first, no tree.</li>
+</ul>
+<h3 id="13-git-gitgraph-tools">13. Git / GitGraph tools<a class="headerlink" href="#13-git-gitgraph-tools" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>What</strong>: Version control with branching, diffing</li>
+<li><strong>Relevance</strong>: The <strong>fork + diff</strong> metaphor comes directly from git</li>
+<li><strong>Gap</strong>: Not applicable to LLM state.</li>
+</ul>
+<h3 id="14-time-travel-debuggers-eg-rr-undodb-replayio">14. Time-travel Debuggers (e.g. rr, UndoDB, Replay.io)<a class="headerlink" href="#14-time-travel-debuggers-eg-rr-undodb-replayio" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>What</strong>: Record all syscalls/state of a program, replay deterministically, step backwards</li>
+<li><strong>Relevance</strong>: <strong>Strongest conceptual parallel</strong>. These tools literally do "time-travel debugging" for traditional code.</li>
+<li><strong>Gap</strong>: LLM calls are non-deterministic (even at temp=0 there's numerical drift, model updates, etc.), making direct port non-trivial.</li>
+<li><strong>Key insight</strong>: A naïve "record everything" approach fails for LLMs. chronos-agent must <strong>record LLM outputs and synthetic state</strong>, not try to replay the LLM itself.</li>
+</ul>
+<h3 id="15-foundrys-vmsnapshot-vmrevert-ethereum-testing">15. Foundry's vm.snapshot() / vm.revert() (Ethereum testing)<a class="headerlink" href="#15-foundrys-vmsnapshot-vmrevert-ethereum-testing" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>What</strong>: EVM state snapshot and revert primitives in smart contract testing</li>
+<li><strong>Relevance</strong>: The project author's prior experience. Concept of <strong>snapshot/revert of a state machine → re-execute with different input</strong> maps directly.</li>
+<li><strong>Gap</strong>: Ethereum state is deterministic; agent state isn't. But the primitive API design is transferable.</li>
+</ul>
+<h3 id="16-apache-beam-flink-dataflow-checkpointing">16. Apache Beam / Flink (dataflow checkpointing)<a class="headerlink" href="#16-apache-beam-flink-dataflow-checkpointing" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>What</strong>: Distributed stream processing with exactly-once semantics via checkpointing</li>
+<li><strong>Relevance</strong>: Analog for "multi-actor with state snapshot" — multi-agent systems share this property</li>
+<li><strong>Gap</strong>: Too heavyweight; doesn't target debugging UX.</li>
+</ul>
+<hr />
+<h2 id="tier-3-research-adjacent">Tier 3 — Research-Adjacent<a class="headerlink" href="#tier-3-research-adjacent" title="Permanent link">&para;</a></h2>
+<h3 id="17-academic-agent-benchmarking-platforms">17. Academic: Agent Benchmarking Platforms<a class="headerlink" href="#17-academic-agent-benchmarking-platforms" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>SWE-bench</strong>, <strong>WebArena</strong>, <strong>τ-bench</strong>, <strong>GAIA</strong>, <strong>AgentBench</strong></li>
+<li>Not tools, benchmarks. Provide test data but not debugging.</li>
+</ul>
+<h3 id="18-academic-llm-debugging-papers">18. Academic: LLM Debugging Papers<a class="headerlink" href="#18-academic-llm-debugging-papers" title="Permanent link">&para;</a></h3>
+<ul>
+<li>"Why Did My Agent Fail?" — various postmortem-style papers</li>
+<li>Mostly proposals, no production tool</li>
+</ul>
+<h3 id="19-guardrails-safety-tools-guardrails-ai-nemo-guardrails">19. Guardrails / Safety Tools (Guardrails AI, NeMo Guardrails)<a class="headerlink" href="#19-guardrails-safety-tools-guardrails-ai-nemo-guardrails" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Prevent bad output, not debug reasoning.</li>
+</ul>
+<h3 id="20-llm-as-judge-tools">20. LLM-as-Judge Tools<a class="headerlink" href="#20-llm-as-judge-tools" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Evaluation lens, not debugging.</li>
+</ul>
+<hr />
+<h2 id="gap-analysis-the-chronos-agent-niche">Gap Analysis — The chronos-agent Niche<a class="headerlink" href="#gap-analysis-the-chronos-agent-niche" title="Permanent link">&para;</a></h2>
+<h3 id="where-is-the-empty-space">Where is the empty space?<a class="headerlink" href="#where-is-the-empty-space" title="Permanent link">&para;</a></h3>
+<p>Plotting the 10 Tier-1 products on our R1/R2/R3/R4 matrix:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>                 R1   R2   R3      R4
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>                 ──   ──   ──      ──
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>LangSmith        ✅   ✅   ⚠️-prompt-only   ❌
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>Langfuse         ✅   ✅   ❌      ⚠️-dataset
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>AgentOps         ✅   ✅   ❌      ⚠️
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>Phoenix          ✅   ✅   ❌      ✅-dataset
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>Helicone         ✅   ⚠️   ❌      ⚠️-AB
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>Braintrust       ✅   ✅   ⚠️-dataset   ✅-dataset
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>Laminar          ✅   ✅   ❌      ⚠️
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>Humanloop        ✅   ⚠️   ⚠️-prompt-only   ✅-prompt
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>LangGraph-cp     ✅   ✅   ✅-framework-locked   ❌
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>────────────────────────────────────────────
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>chronos-agent    ✅   ✅   ✅-general   ✅-node-level
+</span></code></pre></div>
+<p><strong>Key findings:</strong></p>
+<ol>
+<li><strong>R3 (Fork) is the hardest and least-served dimension.</strong> Only LangGraph checkpointer offers it, and only within one framework with no UI.</li>
+<li><strong>R4 (Diff) exists mostly at dataset granularity.</strong> Nobody does <strong>node-level structural diff between two reasoning trees</strong>.</li>
+<li><strong>Every competitor assumes "runs are immutable historical artifacts"</strong>. None assume "runs are fork-able programs".</li>
+</ol>
+<h3 id="why-havent-the-big-players-done-this">Why haven't the big players done this?<a class="headerlink" href="#why-havent-the-big-players-done-this" title="Permanent link">&para;</a></h3>
+<p>Hypotheses (to be tested):</p>
+<ul>
+<li><strong>LangSmith business model</strong>: Monetized around evaluation datasets + enterprise observability. Fork-and-retry is a niche developer workflow, not an enterprise buying signal.</li>
+<li><strong>Langfuse</strong>: Community-driven, follows user demand; fork-retry requires deep framework integration that single OSS maintainers can't sustain across frameworks.</li>
+<li><strong>LangGraph</strong>: Has the primitive but is self-satisfied — their customers use it as "resume after crash", not "fork for exploration".</li>
+<li><strong>Phoenix/Arize</strong>: Enterprise ML-ops DNA; they think in batch/evaluation, not in interactive debugging.</li>
+<li><strong>Fundamental technical barrier</strong>: To fork an arbitrary agent run, you need <strong>state capture semantics</strong> that work across frameworks. That's a hard integration problem nobody has wanted to eat.</li>
+</ul>
+<h3 id="what-chronos-agent-must-prove-to-matter">What chronos-agent must prove to matter<a class="headerlink" href="#what-chronos-agent-must-prove-to-matter" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Cross-framework fork</strong> works on at least 2 frameworks</li>
+<li><strong>Node-level diff</strong> is useful in real debugging (user studies / dogfood)</li>
+<li><strong>The fork UX</strong> is fast enough (fork → see result in &lt; 30s for a simple agent) to feel "interactive" like pdb</li>
+</ol>
+<hr />
+<h2 id="threat-analysis">Threat Analysis<a class="headerlink" href="#threat-analysis" title="Permanent link">&para;</a></h2>
+<p><strong>If we succeed, who catches up fastest?</strong></p>
+<table>
+<thead>
+<tr>
+<th>Competitor</th>
+<th>Time to copy (est.)</th>
+<th>Likelihood</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LangSmith</td>
+<td>3-6 months</td>
+<td>Medium (not their business model fit)</td>
+</tr>
+<tr>
+<td>Langfuse</td>
+<td>6-12 months</td>
+<td>Medium (community + OSS speed)</td>
+</tr>
+<tr>
+<td>LangGraph</td>
+<td>2-3 months</td>
+<td><strong>High</strong> (they have the primitive; just need UI)</td>
+</tr>
+<tr>
+<td>AgentOps</td>
+<td>6-9 months</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>A new startup</td>
+<td>3-6 months</td>
+<td>High (space is eye-catching)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Defensive moat strategies:</strong>
+- <strong>Open-source first + build community</strong> — outrun closed-source by mindshare
+- <strong>Cross-framework adapter ecosystem</strong> — hard for framework-native tools to match
+- <strong>Dog-fooded by AI agents themselves</strong> (including Hermes Agent / Claude Code) — make it the default debug tool for AI-native development</p>
+<hr />
+<h2 id="open-questions-for-next-round">Open Questions for Next Round<a class="headerlink" href="#open-questions-for-next-round" title="Permanent link">&para;</a></h2>
+<ol class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Verify each Tier-1 competitor's current feature set against their live docs (April 2026 snapshot)</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Investigate: Does <strong>OpenAI's Operator / Agent SDK</strong> have internal debugging tools we don't know about?</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Investigate: <strong>Anthropic's Claude Agent SDK</strong> — is there something there?</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Investigate: <strong>Cognition AI (Devin)</strong> — they must have internal time-travel tooling for their coding agent</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Investigate Chinese market: <strong>ModelScope-Agent</strong>, <strong>AgentScope</strong>, <strong>Dify</strong> — any time-travel features?</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Investigate: <strong>deepset Studio</strong> — German company active in agent tooling</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Academic check: Search arxiv for "LLM time-travel debugging", "agent trace replay", "prompt counterfactual execution"</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Any YC W25 / W26 company in this niche? Check YC's launch list</li>
+</ol>
+<hr />
+<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
+<ul>
+<li>OpenTelemetry GenAI Semantic Conventions: https://opentelemetry.io/docs/specs/semconv/gen-ai/</li>
+<li>LangGraph Checkpointer docs: https://langchain-ai.github.io/langgraph/concepts/persistence/</li>
+<li>Replay.io (inspiration): https://www.replay.io/</li>
+<li>rr debugger (Mozilla): https://rr-project.org/</li>
+</ul>
+<hr />
+<p><em>Document owner: Hermes Agent. Next review: Round 2 cron cycle.</em></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 chengfei867 — content generated 100% by Hermes Agent / Claude Opus
+    </div>
+  
+  
+</div>
+      
+        <div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/chengfei867/chronos-agent" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.top", "navigation.indexes", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.88dd0f4e.min.js"></script>
+      
+    
+  </body>
+</html>

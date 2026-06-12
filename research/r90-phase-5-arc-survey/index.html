@@ -1,0 +1,1663 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Time-Travel Debugger for Multi-Agent AI Systems — record, replay, fork, diff, compare. With first-class token/cost tracking and pluggable evaluators.">
+      
+      
+        <meta name="author" content="Hermes Agent">
+      
+      
+        <link rel="canonical" href="https://chengfei867.github.io/chronos-agent/research/r90-phase-5-arc-survey/">
+      
+      
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.49">
+    
+    
+      
+        <title>R90 Research — Phase 5 Arc Selection Survey - Chronos Agent</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.6f8fc17f.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#r90-research-phase-5-arc-selection-survey" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Chronos Agent" class="md-header__button md-logo" aria-label="Chronos Agent" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Chronos Agent
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              R90 Research — Phase 5 Arc Selection Survey
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/chengfei867/chronos-agent" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    chengfei867/chronos-agent
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+    
+  
+  Getting started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../concepts/" class="md-tabs__link">
+        
+  
+    
+  
+  Concepts
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../cli-reference/" class="md-tabs__link">
+        
+  
+    
+  
+  CLI reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../cost-tracking/" class="md-tabs__link">
+        
+  
+    
+  
+  Cost tracking
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../evaluators/" class="md-tabs__link">
+        
+  
+    
+  
+  Evaluators
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../adapters/anthropic_agents/" class="md-tabs__link">
+          
+  
+    
+  
+  Adapters
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guides/forking-safely/" class="md-tabs__link">
+          
+  
+    
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../contracts/golden-trace-format/" class="md-tabs__link">
+          
+  
+    
+  
+  Contracts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../decisions/" class="md-tabs__link">
+          
+  
+    
+  
+  Decisions (ADRs)
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../faq/" class="md-tabs__link">
+        
+  
+    
+  
+  FAQ
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Chronos Agent" class="md-nav__button md-logo" aria-label="Chronos Agent" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Chronos Agent
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/chengfei867/chronos-agent" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    chengfei867/chronos-agent
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Getting started
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Concepts
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli-reference/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    CLI reference
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cost-tracking/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Cost tracking
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../evaluators/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Evaluators
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Adapters
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            Adapters
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adapters/anthropic_agents/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Anthropic Agents SDK
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contracts/adapter-protocol/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Adapter protocol
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Guides
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            Guides
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/forking-safely/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Forking safely
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/side-effects/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Side effects
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Contracts
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            Contracts
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contracts/golden-trace-format/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Golden trace format
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../decisions/" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    Decisions (ADRs)
+  </span>
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            Decisions (ADRs)
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    FAQ
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#0-why-this-doc-exists" class="md-nav__link">
+    <span class="md-ellipsis">
+      0. Why this doc exists
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0. Why this doc exists">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#hard-constraints-from-prior-adrs-still-binding-in-phase-5" class="md-nav__link">
+    <span class="md-ellipsis">
+      Hard constraints from prior ADRs (still binding in Phase 5)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-r90-explicitly-does-not-do" class="md-nav__link">
+    <span class="md-ellipsis">
+      What R90 explicitly does NOT do
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-candidate-inventory-2026-05-21" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Candidate inventory (2026-05-21)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Candidate inventory (2026-05-21)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#11-arc-c-replay-ui-time-travel-debugger-interactive-frontend" class="md-nav__link">
+    <span class="md-ellipsis">
+      1.1 Arc C — Replay UI / Time-travel debugger interactive frontend
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12-arc-d-cross-framework-golden-trace-test-fixtures" class="md-nav__link">
+    <span class="md-ellipsis">
+      1.2 Arc D — Cross-framework golden-trace test fixtures
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#13-arc-e-5th-adapter" class="md-nav__link">
+    <span class="md-ellipsis">
+      1.3 Arc E — 5th adapter
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#14-arc-f-recorder-seam-refactor-heavy-r85-option-b" class="md-nav__link">
+    <span class="md-ellipsis">
+      1.4 Arc F — Recorder-seam refactor (heavy R85 Option (b))
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-comparison-matrix-9-axes" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Comparison matrix (9 axes)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Comparison matrix (9 axes)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-hero-axis-ranking" class="md-nav__link">
+    <span class="md-ellipsis">
+      2.1 Hero-axis ranking
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-foundation-axis-ranking" class="md-nav__link">
+    <span class="md-ellipsis">
+      2.2 Foundation-axis ranking
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-decision-rationale-recommendation" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Decision rationale (recommendation)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Decision rationale (recommendation)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-recommended-primary-arc-c-replay-ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      3.1 Recommended primary: Arc C (Replay UI)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-hot-backup-arc-d-golden-traces" class="md-nav__link">
+    <span class="md-ellipsis">
+      3.2 Hot-backup: Arc D (Golden traces)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-defer-arc-e-and-arc-f" class="md-nav__link">
+    <span class="md-ellipsis">
+      3.3 Defer Arc E and Arc F
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#34-whats-explicitly-not-a-phase-5-candidate" class="md-nav__link">
+    <span class="md-ellipsis">
+      3.4 What's explicitly NOT a Phase 5 candidate
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-arc-c-slice-by-slice-rollout-recommended-primary" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. Arc C slice-by-slice rollout (recommended primary)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Arc C slice-by-slice rollout (recommended primary)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#slice-1-replay-core-r91-single-slot-spike-first" class="md-nav__link">
+    <span class="md-ellipsis">
+      Slice 1 — Replay core (R91, single slot — spike-first)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#slice-2-state-evolution-side-panel-r92-2-slots" class="md-nav__link">
+    <span class="md-ellipsis">
+      Slice 2 — State-evolution side panel (R92, 2 slots)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#slice-3-fork-tree-replay-mode-r93-r94-2-slots" class="md-nav__link">
+    <span class="md-ellipsis">
+      Slice 3 — Fork-tree replay mode (R93-R94, 2 slots)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#slice-4-url-shareable-state-r95-1-slot" class="md-nav__link">
+    <span class="md-ellipsis">
+      Slice 4 — URL-shareable state (R95, 1 slot)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#slice-5-stretch-diff-aware-lockstep-replay-r96-r97-2-slots" class="md-nav__link">
+    <span class="md-ellipsis">
+      Slice 5 (stretch) — Diff-aware lockstep replay (R96-R97, 2 slots)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#slice-6-polish-dogfood-v080-cut-r98-1-slot" class="md-nav__link">
+    <span class="md-ellipsis">
+      Slice 6 — Polish + dogfood + v0.8.0 cut (R98, 1 slot)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-cost-outlook-for-phase-5-first-arc" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. Cost outlook for Phase 5 first arc
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-process-invariants-r91-must-honor" class="md-nav__link">
+    <span class="md-ellipsis">
+      6. Process invariants R91+ must honor
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Process invariants R91+ must honor">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#new-for-phase-5" class="md-nav__link">
+    <span class="md-ellipsis">
+      New for Phase 5
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-recommendation-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      7. Recommendation summary
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="r90-research-phase-5-arc-selection-survey">R90 Research — Phase 5 Arc Selection Survey<a class="headerlink" href="#r90-research-phase-5-arc-selection-survey" title="Permanent link">&para;</a></h1>
+<p><strong>Round</strong>: 90 (Phase 5 kickoff planning, post-v0.7.0 GA md-only slot)
+<strong>Date</strong>: 2026-05-21 (CST, BJT 09:54, in-window cron slot)
+<strong>Status</strong>: Research survey. Feeds <a href="../../decisions/ADR-027-phase-5-arc-selection/">ADR-027 Draft</a>.
+<strong>Supersedes</strong>: The Phase 5 stub in <a href="../../roadmap/">docs/roadmap.md</a> §"Phase 5+" ("Vague on purpose" — three one-liners with no scope).
+<strong>Scope</strong>: Evaluate four candidate arcs for Phase 5 (post-v0.7.0). Pick <strong>one recommended primary</strong> plus <strong>one hot-backup</strong>. Deliver a 9-axis comparative table, dependency analysis, and a slice-by-slice rollout sketch for the recommended arc.</p>
+<hr />
+<h2 id="0-why-this-doc-exists">0. Why this doc exists<a class="headerlink" href="#0-why-this-doc-exists" title="Permanent link">&para;</a></h2>
+<p>With Phase 4 fully closed at v0.7.0 GA (Arc A v0.5.x→v0.6.0 R58-R67, Arc B slice 1 v0.7.0a1→v0.7.0 R70-R88, R89 contract docs polish), the project is at a natural planning beat. The next 3-6 rounds need a binding direction or they'll drift into ad-hoc fixture / docs / dogfood polish work. ADR-023 (Phase 4 charter) successfully steered 30+ rounds via the "three arcs framing → commit one"  pattern; R90 replicates that pattern for Phase 5.</p>
+<p>R90 is a <strong>planning round</strong> (md-only, ≤2 slots). Its output (this doc + ADR-027) is fuel for the next 3-6 rounds. The R57→R58 and R68→R69 precedents both show: a planning round consumed in slot N produces 5-8 high-quality impl rounds in slots N+1..N+8.</p>
+<h3 id="hard-constraints-from-prior-adrs-still-binding-in-phase-5">Hard constraints from prior ADRs (still binding in Phase 5)<a class="headerlink" href="#hard-constraints-from-prior-adrs-still-binding-in-phase-5" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong><a href="../../decisions/ADR-001-language/">ADR-001</a></strong> — Python 3.11+ pin. TypeScript-native arcs (Vercel AI SDK, Mastra) remain blocked.</li>
+<li><strong><a href="../../decisions/ADR-016-adapter-interface/">ADR-016</a></strong> — adapter interface contract. Any new adapter must be expressible as <code>RecorderProtocol</code> + <code>AdapterProtocol</code>.</li>
+<li><strong><a href="../../decisions/ADR-019-chronos-does-not-sandbox/">ADR-019</a></strong> — Chronos does not sandbox fork execution. Any "isolation" or "VM-based fork" arc is out.</li>
+<li><strong><a href="../../decisions/ADR-023-phase-4-charter-skeleton/">ADR-023</a></strong> — Phase 4 charter; Arc C (plumbing) explicitly demand-driven, not capability-driven. Same logic still applies in Phase 5: arcs without a clear leverage story are deferred.</li>
+<li><strong><a href="../../decisions/ADR-026-arc-b-scope/">ADR-026</a></strong> §6 — all 5 ACs <code>[x]</code> at v0.7.0; Arc B slice 1 done. Slice 2+ (Pydantic AI, Letta, OTel receiver) remain candidates.</li>
+<li><strong>No external users</strong> — confirmed via R67 / R88 progress docs and CONTEXT §0; project is private. Phase 5 is therefore <strong>leverage-driven</strong>, not demand-driven. Pick the arc most likely to <strong>attract</strong> the first external user, not what an existing user requests.</li>
+</ul>
+<h3 id="what-r90-explicitly-does-not-do">What R90 explicitly does NOT do<a class="headerlink" href="#what-r90-explicitly-does-not-do" title="Permanent link">&para;</a></h3>
+<p>R90 does NOT:</p>
+<ul>
+<li>Write code (md-only round, see CONTEXT §3.1 rule 2).</li>
+<li>Cut a release (Phase 5 first slice will land at v0.8.0; v0.7.1 is reserved for accumulated docs polish if any).</li>
+<li>Re-open Arc A / Arc B charter decisions (Phase 4 closed cleanly; reopening would be drift).</li>
+<li>Bind the slice-2 + slice-3 details — only slice-1 of the chosen arc is committed in ADR-027. Subsequent slices get their own ADRs (R57 <code>chronos-spike-authoring</code> cadence).</li>
+</ul>
+<hr />
+<h2 id="1-candidate-inventory-2026-05-21">1. Candidate inventory (2026-05-21)<a class="headerlink" href="#1-candidate-inventory-2026-05-21" title="Permanent link">&para;</a></h2>
+<p>The four arcs that survived initial screening. All four were named in CONTEXT §6 R90 hand-off (Option α plan §Goal). Each has at least one prior round of source-inspection or design audit, so none is purely speculative.</p>
+<h3 id="11-arc-c-replay-ui-time-travel-debugger-interactive-frontend">1.1 Arc C — Replay UI / Time-travel debugger interactive frontend<a class="headerlink" href="#11-arc-c-replay-ui-time-travel-debugger-interactive-frontend" title="Permanent link">&para;</a></h3>
+<p><strong>Pitch</strong>: Build the user-facing interactive replay surface — keyboard navigation through a recorded run's nodes with state diff side-panel, inline override editor, "fork from here" CTA, and live URL state for sharable replay sessions. Builds on the existing <code>frontend/</code> SPA (React 19 + Vite + ReactFlow, R34-C/R36-D/R37.5/R46-A/R48-B).</p>
+<p><strong>State at R90</strong>:</p>
+<ul>
+<li><strong>Backend</strong> — <code>GET /runs/{id}/tree</code> (R34-A) and <code>GET /runs/{id}/nodes</code> (R34-A) already cover the read path. No new schema needed.</li>
+<li><strong>Frontend</strong> — <code>frontend/src/pages/TreeView.tsx</code> (684 LOC) renders the static fork-tree DAG. <code>NodeDetails</code> drawer (R36-D, 4 tabs: Identity / I-O / State / Cost) covers single-node inspection. <code>ForkPlanModal</code> (R46-A) covers fork-creation UX. <strong>Replay mode is the missing surface</strong>: there is no "step through nodes interactively, see state evolve" flow.</li>
+<li><strong>CLI</strong> — <code>chronos replay &lt;run_id&gt;</code> (M1.7, R8) is already a TUI replay. Web replay would be a port + extension.</li>
+</ul>
+<p><strong>ADR-016 compatibility</strong>: ✅ none needed; replay reads existing data, doesn't change adapter contract.</p>
+<p><strong>Slice sketch (3-5 rounds, target v0.8.0)</strong>:</p>
+<ul>
+<li>Slice 1 — <code>frontend/src/pages/Replay.tsx</code> core: linear playback timeline + step controls + state-evolution side panel. Keyboard ←/→/space/q parity with CLI.</li>
+<li>Slice 2 — fork-tree mode: replay through a fork's parent → diverge-point highlight → child branch replay. Reuses TreeView's lane layout.</li>
+<li>Slice 3 — URL-shareable state: <code>#/runs/&lt;id&gt;/replay?step=N&amp;fork=&lt;fork_id&gt;</code> deep-linking + clipboard copy.</li>
+<li>Slice 4 (stretch) — diff-aware replay: when comparing two runs (R65 matrix view), step both in lockstep and call out diverging nodes inline.</li>
+</ul>
+<p><strong>Risks</strong>:</p>
+<ul>
+<li>(R-1) Frontend bundle size — current 1.39 MB raw / 452 KB gzipped (R36-D). Adding a second page route + state-evolution UI could push to 600 KB gzipped; manageable but not free. Mitigation: <code>React.lazy</code> per-route + AntD modular import audit.</li>
+<li>(R-2) State-evolution rendering — node <code>state_after</code> is opaque framework-specific JSON. Generic deep-diff display is not always meaningful (e.g. LangGraph <code>MessagesState</code> vs anthropic_agents <code>state_after.blocks[i].block</code>). Mitigation: per-adapter <code>formatState(state) → ReactNode</code> hook in adapter package, default to <code>react-json-view</code>.</li>
+<li>(R-3) Animation cost — Framer Motion already in the bundle (R36-D); add <code>usePlayback</code> hook (already exists, R36-D) ergonomic ports. Low risk.</li>
+<li>(R-4) <strong>Visual review forcing function</strong> — the <code>dogfood</code> skill + R37.5 lesson ("interface-green ≠ user-visible-correct") apply with full force here. Every slice must end with a <code>chronos web</code> browser_vision pass before progress doc.</li>
+</ul>
+<p><strong>Leverage story</strong>: This is <strong>the</strong> marquee feature that distinguishes Chronos from Langsmith/Langfuse/Phoenix. Those tools all have static trace viewers; "step through reasoning + see diverge points" is the hero demo for the project's name ("Chronos" = time). First external-user attractor.</p>
+<p><strong>Slot budget</strong>: 4-5 slots (3 impl + 1 dogfood + 1 polish/release).</p>
+<p><strong>Dependencies on Phase 4 work</strong>: low — only reads the data path that's already stable. No adapter changes needed.</p>
+<hr />
+<h3 id="12-arc-d-cross-framework-golden-trace-test-fixtures">1.2 Arc D — Cross-framework golden-trace test fixtures<a class="headerlink" href="#12-arc-d-cross-framework-golden-trace-test-fixtures" title="Permanent link">&para;</a></h3>
+<p><strong>Pitch</strong>: Build a deterministic regression layer: capture canonical recorded JSONL traces from each of the 4 first-class adapters (langgraph, autogen, crewai, anthropic_agents) and assert the recorder + fork primitive correctness against fakes that replay the captured envelopes. Result: every CI run verifies all 4 adapters' end-to-end behaviour without <code>CHRONOS_LIVE=1</code> or any LLM relay.</p>
+<p><strong>State at R90</strong>:</p>
+<ul>
+<li><strong>Currently</strong> — only <code>langgraph</code> and <code>linear</code> (toy) adapters are tested in CI deterministically. AutoGen / CrewAI / anthropic_agents tests are either unit-stub-based (mocked SDK) or <code>CHRONOS_LIVE=1</code>-gated (relay-dependent, not run in CI).</li>
+<li><strong>Coverage gap</strong> — a real-relay regression in any of the three live-gated adapters would surface only in dogfood rounds, not CI. R86 hit this exact pattern: relay degraded, R85's previously-green dogfood failed too, no CI signal. Cost: full slot of confusion + recovery.</li>
+<li><strong>Existing scaffolding</strong> — <code>tests/unit/fixtures/anthropic_agents_stubs.py</code> (R84) is a partial precedent. Linear adapter's reference impl (R28) demonstrates the pattern on a smaller scale.</li>
+</ul>
+<p><strong>ADR-016 compatibility</strong>: ✅ test-only, no production code change.</p>
+<p><strong>Slice sketch (3-5 rounds, target v0.8.0 or v0.7.1)</strong>:</p>
+<ul>
+<li>Slice 1 — Capture infrastructure: <code>scripts/capture/</code> directory with one capture script per adapter (<code>capture_anthropic_agents.py</code>, etc.). Each script runs against the live relay once with <code>CHRONOS_CAPTURE=1</code>, dumps the SDK's top-level event stream as JSONL to <code>tests/fixtures/golden_traces/&lt;adapter&gt;/&lt;scenario&gt;.jsonl</code>. <strong>Captures must be sanitised</strong> — no API keys, no proprietary tool descriptions; replace with synthetic values via a sanitiser hook.</li>
+<li>Slice 2 — Fake replay infrastructure: <code>tests/fakes/&lt;adapter&gt;/replay.py</code> per adapter, <code>class FakeRuntime</code> that replays captured JSONL and exposes the same surface the adapter calls (e.g. for anthropic_agents: a fake <code>ClaudeSDKClient.query()</code> async iterator that yields envelopes from the JSONL).</li>
+<li>Slice 3 — Golden-trace tests per adapter: <code>tests/golden/test_&lt;adapter&gt;_golden.py</code> — for each captured scenario, replay through the fake, run the recorder, assert resulting Run has the captured node-count / kinds / names / state shape. Strict-xfail forcing function applies (R76→R77 / R79→R80).</li>
+<li>Slice 4 — Regression-ratchet integration: any <code>CHRONOS_LIVE=1</code> round that captures a NEW interesting envelope shape automatically <code>--save-golden</code> to a new fixture file; reviewer chooses to merge or discard. This is the long-term mechanism by which the golden corpus grows organically.</li>
+</ul>
+<p><strong>Risks</strong>:</p>
+<ul>
+<li>(R-1) Captured envelope drift over SDK versions — when <code>claude-agent-sdk</code> ships v0.2.0 with a new envelope, captured fixtures from v0.1.x may stop validating. Mitigation: capture-version metadata in JSONL header; recapture on SDK upgrade is a documented release pre-flight step (<code>chronos-release-pattern</code> skill addition).</li>
+<li>(R-2) Capture sanitisation completeness — if a capture leaks a real API key or a customer-confidential tool description, the fixture is unshippable. Mitigation: sanitiser regex audit + manual review checklist + <code>git diff</code> review on every capture commit.</li>
+<li>(R-3) Per-adapter capture infra cost — each adapter's stream has different framing (LangGraph: checkpointer events; AutoGen: BaseAgent.on_messages_stream; CrewAI: event-bus emit; anthropic_agents: SDK message iterator). Slice 1 is 4 sub-rounds, not 1. Mitigation: ship slice 1 incrementally — anthropic_agents first (most needed, AC-3 unblock vector), then crewai, then autogen, then langgraph.</li>
+<li>(R-4) Fork primitive coverage — pure replay is cheaper than fork; fork-replay needs the fake to support <code>fork_session()</code> semantics. anthropic_agents already has this (per R80 hybrid trap fake). Other 3 adapters need new fork-fake work. Risk for slice 3.</li>
+</ul>
+<p><strong>Leverage story</strong>: AC-3-style relay-flake outages stop blocking releases. CI grows from "src compiles + 4 adapter unit tests" to "src compiles + 4 adapter end-to-end golden traces". Confidence in cross-adapter changes (e.g. recorder.py refactor, ADR-016 evolution) increases dramatically. <strong>Foundation work</strong> — not user-facing, but unblocks Phase 5+ ambition.</p>
+<p><strong>Slot budget</strong>: 6-8 slots (1 capture infra + 4 per-adapter capture/replay/test + 1 ratchet + 1 polish/release).</p>
+<p><strong>Dependencies on Phase 4 work</strong>: medium — needs each adapter's stream surface stable. anthropic_agents is freshly stable (R85+R87 fixed); others have been stable since Phase 3.</p>
+<hr />
+<h3 id="13-arc-e-5th-adapter">1.3 Arc E — 5th adapter<a class="headerlink" href="#13-arc-e-5th-adapter" title="Permanent link">&para;</a></h3>
+<p><strong>Pitch</strong>: Extend the adapter matrix from 4 to 5. Candidates from R68/R69 deferred set: <strong>Pydantic AI</strong> (low-risk, type-safe), <strong>Letta</strong> (memory-first, ambitious), <strong>LlamaIndex agents</strong> (large-ecosystem, mature), <strong>AG2</strong> (AutoGen fork), <strong>CrewAI Flows v2</strong> (workflow-graph successor to CrewAI tasks).</p>
+<p><strong>State at R90</strong>:</p>
+<ul>
+<li><strong>Pydantic AI</strong> — Marked "Arc B slice 2 candidate" in ADR-026 §"Pre-authorised fallback" tail and roadmap §4.2. Lowest-risk option: type-safe, narrow-scope, one obvious recorder seam (<code>Agent.run_stream</code>). Likely 3-4 slot adapter.</li>
+<li><strong>Letta</strong> — Memory-first agents, server/client split. Higher risk: opaque server-side memory, fork semantics unclear (would replay client-side, server memory diverges). 6-8 slot project.</li>
+<li><strong>LlamaIndex agents</strong> — Mature, widely-adopted, but recorder seam is in flux (LlamaIndex agents API changed significantly between versions). 5-6 slot project, version-pin headache risk.</li>
+<li><strong>AG2</strong> — Fork of AutoGen with own roadmap. Risk: depends on whether AG2 has diverged from AutoGen's event surface enough to need separate work, or whether the existing AutoGen adapter (ADR-017) can be parametrised.</li>
+<li><strong>CrewAI Flows v2</strong> — A different surface within the CrewAI org; would extend the existing crewai adapter rather than be a 5th separate adapter. Lower-leverage given crewai is already shipped.</li>
+</ul>
+<p><strong>ADR-016 compatibility</strong>: depends on candidate. Pydantic AI / LlamaIndex / AG2 — straightforward. Letta — needs new "remote-state-aware" extension to ADR-016 (formal ADR work).</p>
+<p><strong>Slice sketch</strong> (depending on candidate; <strong>Pydantic AI assumed below as most likely choice if Arc E selected</strong>):</p>
+<ul>
+<li>Slice 1 — <code>src/chronos/adapters/pydantic_ai/</code> package + recorder + 1 unit test corpus + dogfood + live-smoke (paralleling R70-R72 anthropic_agents kickoff).</li>
+<li>Slice 2 — Fork primitive (paralleling R75-R83 anthropic_agents fork chain).</li>
+<li>Slice 3 — Tool-call instrumentation (paralleling R85-R87 anthropic_agents tool-call work).</li>
+<li>Slice 4 — GA cut as v0.8.0.</li>
+</ul>
+<p><strong>Risks</strong>:</p>
+<ul>
+<li>(R-1) <strong>Marginal value at adapter #5</strong> — going from 0 to 1 adapter (LangGraph, R4) created the project; from 1 to 2 (linear ref, R28) validated ADR-016; from 2 to 3 (CrewAI, R52-R55) demonstrated the third pattern; from 3 to 4 (anthropic_agents, R70-R88) opened the MCP segment. Going from 4 to 5 adds breadth but no new capability dimension. <strong>Diminishing returns axis.</strong></li>
+<li>(R-2) Maintenance burden — every adapter is an SDK-version-pin liability (R22 CrewAI version-bump ADR; R26 anthropic_agents <code>&gt;=0.1.80,&lt;1.0</code> pin). 5 adapters = 5 SDK upgrade vectors per quarter.</li>
+<li>(R-3) Distraction from depth work — Arc C (replay UI) is the hero feature; Arc D (golden traces) is foundation; Arc E ties up budget for breadth that isn't asked for.</li>
+</ul>
+<p><strong>Leverage story</strong>: <strong>Weak</strong> in absence of an external user pulling for a specific framework. Unless a Pydantic AI user shows up (none has, per R88 CONTEXT §0), Arc E is exploration not execution. Same logic that deferred Arc C in Phase 4 (ADR-023 demand-driven test) applies.</p>
+<p><strong>Slot budget</strong>: 5-7 slots for Pydantic AI; 7-10 for Letta; 6-8 for LlamaIndex.</p>
+<p><strong>Dependencies on Phase 4 work</strong>: low — adapter pattern is stable, just need to pick a candidate.</p>
+<hr />
+<h3 id="14-arc-f-recorder-seam-refactor-heavy-r85-option-b">1.4 Arc F — Recorder-seam refactor (heavy R85 Option (b))<a class="headerlink" href="#14-arc-f-recorder-seam-refactor-heavy-r85-option-b" title="Permanent link">&para;</a></h3>
+<p><strong>Pitch</strong>: Implement the deferred R85 Option (b) — split per-block events in <code>anthropic_agents</code> recorder into separate Nodes (one Node per <code>ToolUseBlock</code>/<code>ToolResultBlock</code> instead of one Node per Message), introducing a new <code>kind=TOOL</code> node-class and breaking the "one Node = one envelope" invariant codified in R89's contracts doc.</p>
+<p><strong>State at R90</strong>:</p>
+<ul>
+<li>ADR-026 §6 AC-2 closed at R89 via Option (a) — document the envelope-determines-kind rule as intentional. Option (b) was explicitly NOT chosen because of post-GA breaking-change cost asymmetry (1 round md vs 6+ rounds impl + alpha→GA).</li>
+<li>R89 R-3 ("Cost asymmetry") quantified: (b) = ADR-027 + per-block split refactor + R76/R77 <code>tool_use_id</code>/<code>tool_use_ids</code> re-stamp logic + 30+ test rewrites + dogfood updates + alpha→GA cycle for v0.8.0.</li>
+</ul>
+<p><strong>ADR-016 compatibility</strong>: ⚠️ <strong>breaking</strong> — node-count for any tool-using run multiplies; diff invariants change; replay storage shape changes; external tooling assumptions break. The R89 contract doc would need a major revision in the same round.</p>
+<p><strong>Slice sketch</strong>: irrelevant — covered by ADR-027 if chosen.</p>
+<p><strong>Risks</strong>:</p>
+<ul>
+<li>(R-1) Schema migration — existing v0.7.0 stored Runs would need an upgrade path, OR be marked legacy-readable-only. SQLite schema bump (ADR-003 was last revised in M1.3).</li>
+<li>(R-2) Cross-adapter generalisation — would the same per-block split apply to LangGraph multi-output checkpoints? CrewAI multi-step crew? AutoGen agent-of-agents? Arc F's per-adapter scope is not obvious.</li>
+<li>(R-3) Demand signal — <strong>zero</strong>. R85/R89 finding is a contract observation, not a user complaint. No round (R85, R86, R87, R88, R89) has surfaced a user-visible gap.</li>
+</ul>
+<p><strong>Leverage story</strong>: <strong>none</strong> in absence of explicit user mandate. Per R89 §3.D-1, the asymmetry is so stark (~$0.01 vs ~6 rounds × ~$X) that Arc F becomes pure tech-debt repayment without a forcing function.</p>
+<p><strong>Slot budget</strong>: 8-12 slots (ADR + spike + per-adapter eval + impl + alpha + GA).</p>
+<p><strong>Dependencies on Phase 4 work</strong>: high — touches the just-stabilised v0.7.0 recorder and contracts doc.</p>
+<hr />
+<h2 id="2-comparison-matrix-9-axes">2. Comparison matrix (9 axes)<a class="headerlink" href="#2-comparison-matrix-9-axes" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Axis</th>
+<th>Arc C (Replay UI)</th>
+<th>Arc D (Golden traces)</th>
+<th>Arc E (5th adapter)</th>
+<th>Arc F (Recorder refactor)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Slot budget (rough)</strong></td>
+<td>4-5</td>
+<td>6-8</td>
+<td>5-7</td>
+<td>8-12</td>
+</tr>
+<tr>
+<td><strong>External-user attractor</strong></td>
+<td>🟢 strong (hero feature)</td>
+<td>🟡 indirect (CI confidence)</td>
+<td>🟡 narrow (per-framework only)</td>
+<td>🔴 none</td>
+</tr>
+<tr>
+<td><strong>Capability-axis novelty</strong></td>
+<td>🟢 new (interactive replay)</td>
+<td>🟡 new (deterministic CI)</td>
+<td>🔴 same (more breadth, no new shape)</td>
+<td>🔴 none (refactor)</td>
+</tr>
+<tr>
+<td><strong>Risk class</strong></td>
+<td>medium (frontend visual review)</td>
+<td>medium (capture sanitisation, version drift)</td>
+<td>low-medium (SDK pin, depending on candidate)</td>
+<td>high (breaking schema, low demand)</td>
+</tr>
+<tr>
+<td><strong>Phase 4 dependency</strong></td>
+<td>low (read-path stable)</td>
+<td>medium (per-adapter stream stable)</td>
+<td>low (pattern stable)</td>
+<td>high (touches just-stabilised contracts)</td>
+</tr>
+<tr>
+<td><strong>Demand-driven?</strong></td>
+<td>leverage-driven</td>
+<td>foundation-driven</td>
+<td>leverage-driven</td>
+<td>none</td>
+</tr>
+<tr>
+<td><strong>Reverses-recently-made-decision?</strong></td>
+<td>no</td>
+<td>no</td>
+<td>no</td>
+<td><strong>yes</strong> (R89 chose Option (a), Arc F is Option (b))</td>
+</tr>
+<tr>
+<td><strong>Unlocks downstream?</strong></td>
+<td>enables shareable demo links, marketing</td>
+<td>enables aggressive recorder refactors</td>
+<td>enables narrower SDK targeting</td>
+<td>only enables itself</td>
+</tr>
+<tr>
+<td><strong>Demo-able to first external user</strong></td>
+<td>🟢 yes — single browser URL</td>
+<td>🔴 no — internal only</td>
+<td>🟡 partial — only if user wants that exact framework</td>
+<td>🔴 no</td>
+</tr>
+</tbody>
+</table>
+<h3 id="21-hero-axis-ranking">2.1 Hero-axis ranking<a class="headerlink" href="#21-hero-axis-ranking" title="Permanent link">&para;</a></h3>
+<p>Sorted by external-user-attractor score (per ADR-023 leverage-driven principle):</p>
+<ol>
+<li><strong>Arc C</strong> (Replay UI) — strong attractor. The "Chronos" name pays off for the first time when users can <strong>see</strong> time-travel through reasoning.</li>
+<li><strong>Arc D</strong> (Golden traces) — indirect attractor. Internal CI win, but invisible to external users until they hit a regression that didn't ship because Arc D caught it.</li>
+<li><strong>Arc E</strong> (5th adapter) — narrow attractor. Only attracts Pydantic AI (or whichever candidate) users specifically; cap on 4-adapter audience grows.</li>
+<li><strong>Arc F</strong> (Refactor) — no attractor.</li>
+</ol>
+<h3 id="22-foundation-axis-ranking">2.2 Foundation-axis ranking<a class="headerlink" href="#22-foundation-axis-ranking" title="Permanent link">&para;</a></h3>
+<p>Sorted by "what does this unlock for the next 5 phases":</p>
+<ol>
+<li><strong>Arc D</strong> — golden traces unlock aggressive recorder refactors (incl. Arc F if ever needed), unblock relay-flake-resilient releases (R86 lesson), enable contributor onboarding (anyone can run all tests offline).</li>
+<li><strong>Arc C</strong> — unlocks shareable demo links (marketing), unlocks <code>chronos-share</code> future feature (LAN-share traces, currently Arc C deferred in roadmap §4.2).</li>
+<li><strong>Arc E</strong> — unlocks specific framework's user segment.</li>
+<li><strong>Arc F</strong> — unlocks only itself.</li>
+</ol>
+<hr />
+<h2 id="3-decision-rationale-recommendation">3. Decision rationale (recommendation)<a class="headerlink" href="#3-decision-rationale-recommendation" title="Permanent link">&para;</a></h2>
+<h3 id="31-recommended-primary-arc-c-replay-ui">3.1 Recommended primary: <strong>Arc C (Replay UI)</strong><a class="headerlink" href="#31-recommended-primary-arc-c-replay-ui" title="Permanent link">&para;</a></h3>
+<p>Three independent reasons converge:</p>
+<p><strong>Reason 1 — hero feature status.</strong> Phase 1-4 has built the <em>capability</em> (record, fork, diff, multi-pivot, golden-pair-compare, fork-tree viz) but the <em>demo experience</em> lags. A user dropping into the project today sees a CLI, a static tree viewer, and a node-details drawer — but cannot <strong>step through</strong> a recorded conversation. The Chronos name promises time-travel; Arc C delivers it. This is the marquee deliverable that finally makes the project demo-able in a 60-second screen-share.</p>
+<p><strong>Reason 2 — leverage-driven over demand-driven (ADR-023 echo).</strong> Phase 5 has zero external users (per R88 CONTEXT §0). The same logic that picked Arc A over Arc C in Phase 4 (ADR-023 §"Why Arc A over Arc C") now picks Arc C in Phase 5: with no demand signal, pick the work most likely to <strong>create</strong> demand. A working interactive replay viewer is the single highest-leverage attractor.</p>
+<p><strong>Reason 3 — riskpool balance.</strong> Arc C has medium risk (frontend visual review forcing function applies), but the risk surface is bounded — frontend bundle, state-evolution rendering, animation cost. All three are routine. Arc D's risk surface is unbounded — capture sanitisation, version drift, per-adapter capture infra cost. Arc E's risk is low but capability axis is empty. Arc F's risk is high and demand zero. <strong>Arc C has the best risk-to-leverage ratio.</strong></p>
+<h3 id="32-hot-backup-arc-d-golden-traces">3.2 Hot-backup: <strong>Arc D (Golden traces)</strong><a class="headerlink" href="#32-hot-backup-arc-d-golden-traces" title="Permanent link">&para;</a></h3>
+<p>Pre-authorised fallback if Arc C slice 1 spike (frontend integration test on a 20-node recorded run) reveals an unexpected blocker — e.g. ReactFlow performance collapse on long timelines, or <code>usePlayback</code> hook fundamentally incompatible with state-evolution rendering. Arc D would then become the active arc and Arc C deferred to v0.9.0. Switch criterion: <strong>Arc C slice 1 spike fails</strong>, OR <strong>Arc D becomes blocking for a release</strong> (e.g. AC-3-style relay flake re-occurs and blocks v0.7.x patch release).</p>
+<p>This is the same disprover-first / spike-first cadence used at R69 (Arc B) and R73 (R69 disprover refutation). The spike runs in <strong>R91 slot 1 of Arc C</strong>, before any production code is written.</p>
+<h3 id="33-defer-arc-e-and-arc-f">3.3 Defer Arc E and Arc F<a class="headerlink" href="#33-defer-arc-e-and-arc-f" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Arc E</strong> — defer to Phase 6 (post-Arc-C). Pydantic AI is the most likely re-pick at that time (lowest risk, type-safety story is on-trend). Re-evaluate when external user shows up OR when Arc C / Arc D have shipped and budget opens up.</li>
+<li><strong>Arc F</strong> — defer indefinitely. R89 already decided Option (a) over (b); Arc F would reverse that decision without new evidence. Re-open only if a user explicitly requests per-block tool-node granularity, or if a downstream tool integration breaks because of envelope-Node coupling.</li>
+</ul>
+<h3 id="34-whats-explicitly-not-a-phase-5-candidate">3.4 What's explicitly NOT a Phase 5 candidate<a class="headerlink" href="#34-whats-explicitly-not-a-phase-5-candidate" title="Permanent link">&para;</a></h3>
+<p>These were all considered and dismissed in the inventory phase, included here for transparency:</p>
+<ul>
+<li>Public marketing site / demo deployment — Arc C territory adjacency, but pre-mature without Arc C shipping first.</li>
+<li>Cloud-hosted SaaS (Phase 5+ roadmap stub) — premature; needs Arc C and Arc D + an external user before commercial scaffolding makes sense.</li>
+<li>Plugin system for custom diff / redaction (roadmap §4.3 deferred plumbing) — demand-driven; no demand signal.</li>
+<li>Determinism modes (stable/explore/custom) — Phase 3 deferred; no demand signal; one adapter's seed/temp policy ≠ universal abstraction.</li>
+<li>Semantic diff (LLM-as-judge) — Phase 4 deferred; needs trust-model ADR; budget heavy for unclear value.</li>
+<li>Dependency-aware partial fork — Phase 4 deferred; needs per-node purity annotation; budget heavy for unclear value.</li>
+</ul>
+<hr />
+<h2 id="4-arc-c-slice-by-slice-rollout-recommended-primary">4. Arc C slice-by-slice rollout (recommended primary)<a class="headerlink" href="#4-arc-c-slice-by-slice-rollout-recommended-primary" title="Permanent link">&para;</a></h2>
+<p>If ADR-027 picks Arc C (recommended), the next 4-5 rounds follow this slice plan.</p>
+<h3 id="slice-1-replay-core-r91-single-slot-spike-first">Slice 1 — Replay core (R91, single slot — spike-first)<a class="headerlink" href="#slice-1-replay-core-r91-single-slot-spike-first" title="Permanent link">&para;</a></h3>
+<p><strong>Goal</strong>: prove ReactFlow + a linear playback timeline can render a 20-node recorded run with smooth keyboard navigation, no animation jank, and bundle size under 600 KB gzipped.</p>
+<p><strong>Spike script</strong>: <code>tests/spikes/spike15_replay_perf.py</code> (loads <code>scripts/seed_demo.py</code> data, opens <code>chronos web</code>, browser_vision smoke).</p>
+<p><strong>Deliverable</strong>: <code>frontend/src/pages/Replay.tsx</code> (~150 LOC), <code>frontend/src/components/PlaybackTimeline.tsx</code> (~80 LOC), keyboard handler hook reuse from <code>usePlayback</code> (R36-D). Manual browser_vision pass (R37.5 forcing function).</p>
+<p><strong>Exit criteria</strong>: replay through the 20-node seed_demo run smoothly; bundle delta ≤ +50 KB raw.</p>
+<p><strong>Rollback gate</strong>: if perf collapses on 20-node run OR <code>usePlayback</code> needs major rework, spike fails → Arc D becomes active (R92).</p>
+<h3 id="slice-2-state-evolution-side-panel-r92-2-slots">Slice 2 — State-evolution side panel (R92, 2 slots)<a class="headerlink" href="#slice-2-state-evolution-side-panel-r92-2-slots" title="Permanent link">&para;</a></h3>
+<p><strong>Goal</strong>: when stepping through nodes, render <code>state_after</code> diff between previous and current node in a side panel. Per-adapter <code>formatState</code> hook for adapter-specific rendering (e.g. anthropic_agents <code>state_after.blocks[i].block</code> per-block fan-out).</p>
+<p><strong>Deliverable</strong>: <code>frontend/src/components/StatePanel.tsx</code>, <code>formatState</code> registry in <code>frontend/src/adapters/</code>, default <code>react-json-view</code> fallback.</p>
+<p><strong>Exit criteria</strong>: state diff visible for all 4 first-class adapters' seed_demo runs.</p>
+<h3 id="slice-3-fork-tree-replay-mode-r93-r94-2-slots">Slice 3 — Fork-tree replay mode (R93-R94, 2 slots)<a class="headerlink" href="#slice-3-fork-tree-replay-mode-r93-r94-2-slots" title="Permanent link">&para;</a></h3>
+<p><strong>Goal</strong>: replay through a fork's parent → diverge-point highlight → child branch replay. Reuse TreeView lane layout.</p>
+<p><strong>Deliverable</strong>: extend <code>Replay.tsx</code> with fork-tree mode toggle; integrate with TreeView's existing layout hooks (<code>frontend/src/layout.ts</code>); diverge-point ring highlight.</p>
+<h3 id="slice-4-url-shareable-state-r95-1-slot">Slice 4 — URL-shareable state (R95, 1 slot)<a class="headerlink" href="#slice-4-url-shareable-state-r95-1-slot" title="Permanent link">&para;</a></h3>
+<p><strong>Goal</strong>: <code>#/runs/&lt;id&gt;/replay?step=N&amp;fork=&lt;fork_id&gt;</code> deep-linking + clipboard copy.</p>
+<p><strong>Deliverable</strong>: hash-router state sync; copy-link button; landing-page CTA.</p>
+<h3 id="slice-5-stretch-diff-aware-lockstep-replay-r96-r97-2-slots">Slice 5 (stretch) — Diff-aware lockstep replay (R96-R97, 2 slots)<a class="headerlink" href="#slice-5-stretch-diff-aware-lockstep-replay-r96-r97-2-slots" title="Permanent link">&para;</a></h3>
+<p><strong>Goal</strong>: when comparing two runs (R65 matrix view), step both in lockstep with diverging-node call-out.</p>
+<p><strong>Deliverable</strong>: <code>Replay.tsx</code> accepts comma-separated run IDs; lockstep playback; visual diverge marker.</p>
+<h3 id="slice-6-polish-dogfood-v080-cut-r98-1-slot">Slice 6 — Polish + dogfood + v0.8.0 cut (R98, 1 slot)<a class="headerlink" href="#slice-6-polish-dogfood-v080-cut-r98-1-slot" title="Permanent link">&para;</a></h3>
+<p><strong>Goal</strong>: release-pattern checklist + dogfood pass (R37.5 visual review) + CHANGELOG roll + v0.8.0 tag + GitHub Release.</p>
+<hr />
+<h2 id="5-cost-outlook-for-phase-5-first-arc">5. Cost outlook for Phase 5 first arc<a class="headerlink" href="#5-cost-outlook-for-phase-5-first-arc" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Arc</th>
+<th>Round count</th>
+<th>Total slot budget</th>
+<th>Live-LLM cost</th>
+<th>Frontend bundle delta</th>
+<th>Schema delta</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Arc C (Replay UI)</td>
+<td>6 rounds (R91-R98 across 4-5 slices)</td>
+<td>4-5 + dogfood</td>
+<td>$0 (read-only)</td>
+<td>+50-150 KB raw</td>
+<td>none</td>
+</tr>
+<tr>
+<td>Arc D (Golden traces)</td>
+<td>7-8 rounds</td>
+<td>6-8 + ratchet</td>
+<td>$0.50-2 (one capture per adapter)</td>
+<td>none</td>
+<td>none</td>
+</tr>
+<tr>
+<td>Arc E (Pydantic AI)</td>
+<td>5-7 rounds</td>
+<td>5-7</td>
+<td>$0.20-1 (live-smoke)</td>
+<td>none</td>
+<td>none</td>
+</tr>
+<tr>
+<td>Arc F (Refactor)</td>
+<td>8-12 rounds</td>
+<td>8-12 + alpha</td>
+<td>$0.20-1 (re-validation)</td>
+<td>possibly</td>
+<td><strong>bump</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Arc C is cheapest by relay-cost, second-cheapest by total slot, and only Arc D rivals it on schema-stability.</p>
+<hr />
+<h2 id="6-process-invariants-r91-must-honor">6. Process invariants R91+ must honor<a class="headerlink" href="#6-process-invariants-r91-must-honor" title="Permanent link">&para;</a></h2>
+<p>Inherited from Phase 4, still binding:</p>
+<ul>
+<li><strong>Pre-flight remote-state check</strong> (R88 codified): always <code>git fetch</code> first; verify all 5 hard-prereqs at R91+ slot start.</li>
+<li><strong>Aspirational-release-doc trap detector</strong> (<code>cron-slot-handoff-recovery</code>, R88 refinement): 7-row diagnostic table for any inherited release claim.</li>
+<li><strong>Disprover-first</strong> (R73 invariant): Arc C slice 1 spike runs before slice 2+ commits.</li>
+<li><strong>Strict-xfail forcing function</strong> (R76→R80 pattern): Arc C slices that introduce new behaviour write strict-xfail tests against not-yet-existing UI.</li>
+<li><strong>Visual review forcing function</strong> (R37.5, <code>dogfood</code>/<code>visual-review-loop</code> skills): every Arc C slice ends with <code>chronos web</code> + browser_vision before progress doc.</li>
+<li><strong>2-slot pre-budget for impl rounds</strong> (R48-A→R89 = 13-round inheritance chain): R92, R93-R94, R96-R97 each get 2-slot pre-budget.</li>
+<li><strong>No retroactive AC unratchet on relay flake</strong> (R86 invariant): Arc C does not interact with relay; AC-3-style flakes don't apply.</li>
+<li><strong>Docs-only round = cadence-restorer</strong> (R89 NEW): after Arc C slice 6 (release), schedule R99 as a docs-polish round.</li>
+<li><strong>Tool-call iteration budget — commit early, not last</strong> (R69/R71 lessons): Arc C frontend rounds have high write_file/patch volume; commit per-component as gates green.</li>
+</ul>
+<h3 id="new-for-phase-5">New for Phase 5<a class="headerlink" href="#new-for-phase-5" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Arc switch criterion</strong>: if Arc C slice 1 (R91) spike fails, ADR-027 amendment switches to Arc D in same slot. Document the switch in R91 progress doc + ADR-027 §"Outcome of slice 1 spike".</li>
+<li><strong>Frontend bundle budget</strong>: Arc C target is ≤ 600 KB gzipped at v0.8.0. Track delta in each slice's progress doc.</li>
+<li><strong>Adapter-zero-regression streak continues</strong>: Arc C does NOT touch any adapter or recorder code. Streak R52→R89 = 37 rounds; Arc C extends it.</li>
+</ul>
+<hr />
+<h2 id="7-recommendation-summary">7. Recommendation summary<a class="headerlink" href="#7-recommendation-summary" title="Permanent link">&para;</a></h2>
+<p><strong>Recommended primary</strong>: Arc C (Replay UI), 4-5 slot budget, R91-R98, target v0.8.0.</p>
+<p><strong>Pre-authorised fallback</strong>: Arc D (Golden traces), activated if Arc C slice 1 spike fails OR if a relay-flake outage blocks a v0.7.x patch release.</p>
+<p><strong>Deferred</strong>: Arc E (Phase 6 candidate, Pydantic AI most likely), Arc F (defer indefinitely without explicit user mandate).</p>
+<p>ADR-027 commits this in Draft status (R90), to be promoted to Accepted in R91 after the slice 1 spike ratifies Arc C OR refutes it (per R57 in-place promotion rule).</p>
+<hr />
+<p>— Hermes Agent, R90 cron, 2026-05-21 ~10:00 CST</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 chengfei867 — content generated 100% by Hermes Agent / Claude Opus
+    </div>
+  
+  
+</div>
+      
+        <div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/chengfei867/chronos-agent" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.top", "navigation.indexes", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.88dd0f4e.min.js"></script>
+      
+    
+  </body>
+</html>

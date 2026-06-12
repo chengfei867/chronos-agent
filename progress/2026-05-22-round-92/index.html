@@ -1,0 +1,1512 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Time-Travel Debugger for Multi-Agent AI Systems — record, replay, fork, diff, compare. With first-class token/cost tracking and pluggable evaluators.">
+      
+      
+        <meta name="author" content="Hermes Agent">
+      
+      
+        <link rel="canonical" href="https://chengfei867.github.io/chronos-agent/progress/2026-05-22-round-92/">
+      
+      
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.49">
+    
+    
+      
+        <title>Round 92 — Phase 5 Arc C slice 1 ships (Linear Replay UI + ADR-027 promotion) - Chronos Agent</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.6f8fc17f.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#round-92-phase-5-arc-c-slice-1-ships-linear-replay-ui-adr-027-promotion" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Chronos Agent" class="md-header__button md-logo" aria-label="Chronos Agent" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Chronos Agent
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Round 92 — Phase 5 Arc C slice 1 ships (Linear Replay UI + ADR-027 promotion)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/chengfei867/chronos-agent" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    chengfei867/chronos-agent
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+    
+  
+  Getting started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../concepts/" class="md-tabs__link">
+        
+  
+    
+  
+  Concepts
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../cli-reference/" class="md-tabs__link">
+        
+  
+    
+  
+  CLI reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../cost-tracking/" class="md-tabs__link">
+        
+  
+    
+  
+  Cost tracking
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../evaluators/" class="md-tabs__link">
+        
+  
+    
+  
+  Evaluators
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../adapters/anthropic_agents/" class="md-tabs__link">
+          
+  
+    
+  
+  Adapters
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guides/forking-safely/" class="md-tabs__link">
+          
+  
+    
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../contracts/golden-trace-format/" class="md-tabs__link">
+          
+  
+    
+  
+  Contracts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../decisions/" class="md-tabs__link">
+          
+  
+    
+  
+  Decisions (ADRs)
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../faq/" class="md-tabs__link">
+        
+  
+    
+  
+  FAQ
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Chronos Agent" class="md-nav__button md-logo" aria-label="Chronos Agent" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Chronos Agent
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/chengfei867/chronos-agent" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    chengfei867/chronos-agent
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Getting started
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Concepts
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli-reference/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    CLI reference
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cost-tracking/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Cost tracking
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../evaluators/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Evaluators
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Adapters
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            Adapters
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adapters/anthropic_agents/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Anthropic Agents SDK
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contracts/adapter-protocol/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Adapter protocol
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Guides
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            Guides
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/forking-safely/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Forking safely
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/side-effects/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Side effects
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Contracts
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            Contracts
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contracts/golden-trace-format/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Golden trace format
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../decisions/" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    Decisions (ADRs)
+  </span>
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            Decisions (ADRs)
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    FAQ
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#0-tldr" class="md-nav__link">
+    <span class="md-ellipsis">
+      §0 TL;DR
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-context-what-was-inherited" class="md-nav__link">
+    <span class="md-ellipsis">
+      §1 Context — what was inherited
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="§1 Context — what was inherited">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pre-flight-remote-state-per-r88-codified-rule" class="md-nav__link">
+    <span class="md-ellipsis">
+      Pre-flight remote state (per R88 codified rule)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-diagnostic-was-this-wip-safe-to-ship" class="md-nav__link">
+    <span class="md-ellipsis">
+      §2 Diagnostic — was this WIP safe to ship?
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="§2 Diagnostic — was this WIP safe to ship?">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-i18n-key-resolution-r46-a-trap-pre-emption" class="md-nav__link">
+    <span class="md-ellipsis">
+      A. i18n key resolution (R46-A trap pre-emption)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b-hash-route-ordering-trap" class="md-nav__link">
+    <span class="md-ellipsis">
+      B. Hash-route ordering trap
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c-appheader-routename-widening-caught-by-tsc-b" class="md-nav__link">
+    <span class="md-ellipsis">
+      C. AppHeader RouteName widening (caught by tsc -b)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#d-spike-16-invariants" class="md-nav__link">
+    <span class="md-ellipsis">
+      D. Spike 16 invariants
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-gate-cleanup" class="md-nav__link">
+    <span class="md-ellipsis">
+      §3 Gate cleanup
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="§3 Gate cleanup">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#final-gate-sweep-post-cleanup" class="md-nav__link">
+    <span class="md-ellipsis">
+      Final gate sweep (post-cleanup)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lockfile-churn-check-r65r68r70-skill-rule" class="md-nav__link">
+    <span class="md-ellipsis">
+      Lockfile churn check (R65/R68/R70 skill rule)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-adr-027-promotion-r57-in-place-rule" class="md-nav__link">
+    <span class="md-ellipsis">
+      §4 ADR-027 promotion (R57 in-place rule)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-commit-anatomy" class="md-nav__link">
+    <span class="md-ellipsis">
+      §5 Commit anatomy
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-whats-next-r93" class="md-nav__link">
+    <span class="md-ellipsis">
+      §6 What's next (R93)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="§6 What's next (R93)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#v07x-release-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      v0.7.x release strategy
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-skill-review" class="md-nav__link">
+    <span class="md-ellipsis">
+      §7 Skill review
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-footer" class="md-nav__link">
+    <span class="md-ellipsis">
+      §8 Footer
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="round-92-phase-5-arc-c-slice-1-ships-linear-replay-ui-adr-027-promotion">Round 92 — Phase 5 Arc C slice 1 ships (Linear Replay UI + ADR-027 promotion)<a class="headerlink" href="#round-92-phase-5-arc-c-slice-1-ships-linear-replay-ui-adr-027-promotion" title="Permanent link">&para;</a></h1>
+<p><strong>Date</strong>: 2026-05-22 (BJT)
+<strong>Slot</strong>: cron 07:19 BJT (single slot — A2 close-out of inherited slot-1 WIP)
+<strong>Status</strong>: ✅ shipped — slice 1 deliverable + ADR-027 promoted Draft → Accepted in-place
+<strong>Author</strong>: Hermes Agent (Claude Opus 4.7 via baidu-int relay)</p>
+<h2 id="0-tldr">§0 TL;DR<a class="headerlink" href="#0-tldr" title="Permanent link">&para;</a></h2>
+<p>Round 92 inherited substantially-complete WIP from a prior cron slot (the actual
+implementation slot for Phase 5 Arc C slice 1, executing CONTEXT §6's R92 plan)
+and shipped it as the close-out plus the <strong>R57 in-place ADR-027 promotion</strong>.
+Spike 16 ran 11/11 GREEN validating ADR-027 §2 slice 1's three assumptions; the
+React skeleton (<code>Replay.tsx</code> 347 LOC + <code>PlaybackTimeline.tsx</code> 117 LOC), the
+<code>usePlayback</code> hook extension (<code>stepBack</code> / <code>stepForward</code> / <code>jumpTo</code>), the
+hash-route addition <code>#/runs/&lt;id&gt;/replay</code>, and the i18n bilingual key block all
+landed in a single coherent commit. ADR-027 was promoted from Draft to Accepted
+in the SAME diff per the R57 invariant.</p>
+<p>This is the <strong>12th consecutive A2 close-out</strong> (R48-A → R51 → R52 → R53 → R59 →
+R63 → R65 → R67 → R70 → R72 → R88 → R91 → <strong>R92</strong>) in chronos-agent's
+post-ADR-landing cron-slot history. The structural-constant hypothesis from R52
+is now grade-A++.</p>
+<p><strong>Adapter zero-regression streak</strong>: R52 → <strong>R92</strong> = <strong>40 rounds</strong>, new
+project-history high. Crossing the 40-round threshold for the first time.</p>
+<p><strong>Phase 5 status</strong>: Arc C slice 1 = ✅ shipped. Slice 2 (state-panel reuse +
+URL deep-links) is next per ADR-027 §2.</p>
+<h2 id="1-context-what-was-inherited">§1 Context — what was inherited<a class="headerlink" href="#1-context-what-was-inherited" title="Permanent link">&para;</a></h2>
+<p><code>git fetch</code> + <code>git status</code> at slot start (BJT 07:20):</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>On branch main
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>Your branch is up to date with &#39;origin/main&#39;.
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>Changes not staged for commit:
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>        modified:   frontend/src/App.tsx
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>        modified:   frontend/src/hooks/usePlayback.ts
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>        modified:   frontend/src/i18n/en.ts
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>        modified:   frontend/src/i18n/zh.ts
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>Untracked files:
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>        frontend/src/components/PlaybackTimeline.tsx
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>        frontend/src/pages/Replay.tsx
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>        tests/spikes/spike16_replay_ui_data.py
+</span></code></pre></div>
+<p>Origin/main = <code>5237f5b</code> (R91 close-out commit), un-shifted. No local commits
+ahead of origin. Three new files + four modified files all sit cleanly in
+ADR-027 §2 slice 1's deliverable surface — exactly what CONTEXT §6 R92 default
+plan prescribed:</p>
+<table>
+<thead>
+<tr>
+<th>Deliverable</th>
+<th>CONTEXT §6 plan item</th>
+<th>File on disk</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tests/spikes/spike16_replay_ui_data.py</code></td>
+<td>Plan step 2</td>
+<td>✅ untracked, 238 LOC</td>
+</tr>
+<tr>
+<td><code>frontend/src/pages/Replay.tsx</code> (skeleton)</td>
+<td>Plan step 3</td>
+<td>✅ untracked, 347 LOC</td>
+</tr>
+<tr>
+<td><code>frontend/src/components/PlaybackTimeline.tsx</code></td>
+<td>Plan step 4</td>
+<td>✅ untracked, 117 LOC</td>
+</tr>
+<tr>
+<td><code>usePlayback</code> extension (stepBack/stepForward/jumpTo)</td>
+<td>Implicit in step 4</td>
+<td>✅ modified +51 LOC</td>
+</tr>
+<tr>
+<td><code>App.tsx</code> hash route <code>/runs/&lt;id&gt;/replay</code></td>
+<td>Plan step 3</td>
+<td>✅ modified +9 LOC</td>
+</tr>
+<tr>
+<td><code>replay.*</code> i18n keys (en + zh)</td>
+<td>Implicit (UX surface)</td>
+<td>✅ modified +13 LOC each</td>
+</tr>
+</tbody>
+</table>
+<p>The prior slot delivered everything in the deliverable surface. What was missing:
+ADR-027 promotion (Draft → Accepted), CHANGELOG entry, progress doc, CONTEXT
+§5/§6 refresh, gate cleanup, commit/push, QQ war report. That's the standard A2
+close-out shape.</p>
+<h3 id="pre-flight-remote-state-per-r88-codified-rule">Pre-flight remote state (per R88 codified rule)<a class="headerlink" href="#pre-flight-remote-state-per-r88-codified-rule" title="Permanent link">&para;</a></h3>
+<p>All five hard-prereqs from CONTEXT §6 verified clean:</p>
+<ol>
+<li>✅ <code>git fetch origin main</code> succeeded; local <code>origin/main</code> ref refreshed</li>
+<li>✅ <code>git tag --list "v0.7*"</code> includes <code>v0.7.0</code> (also <code>v0.7.0a1</code>, <code>v0.7.0a2</code>)</li>
+<li>✅ <code>git ls-remote --tags &lt;gh-proxy&gt; | grep v0.7.0</code> shows <code>v0.7.0</code> at SHA
+   <code>92a3e192…</code></li>
+<li>✅ <code>releases/latest</code> API returns <code>tag_name=v0.7.0</code> (verified at R88)</li>
+<li>✅ <code>chronos --version</code> returns <code>0.7.0</code> (no pyproject changes since R88)</li>
+</ol>
+<p>No release-mid-flight or aspirational-release-doc trap detected. Pure A2.</p>
+<h2 id="2-diagnostic-was-this-wip-safe-to-ship">§2 Diagnostic — was this WIP safe to ship?<a class="headerlink" href="#2-diagnostic-was-this-wip-safe-to-ship" title="Permanent link">&para;</a></h2>
+<p>The cron-slot-handoff-recovery skill mandates <strong>dynamic-string dependency
+audit</strong> before adopting inherited frontend WIP (R46-A trap). I ran the audit:</p>
+<h3 id="a-i18n-key-resolution-r46-a-trap-pre-emption">A. i18n key resolution (R46-A trap pre-emption)<a class="headerlink" href="#a-i18n-key-resolution-r46-a-trap-pre-emption" title="Permanent link">&para;</a></h3>
+<p>Grep extracted all <code>t("…")</code> keys used in <code>Replay.tsx</code> + <code>PlaybackTimeline.tsx</code>:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>t(&quot;replay.back&quot;)        t(&quot;replay.errorTitle&quot;)  t(&quot;replay.kbdHint&quot;)
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>t(&quot;replay.empty&quot;)       t(&quot;replay.model&quot;)       t(&quot;replay.stateAfter&quot;)
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>t(&quot;replay.stepBack&quot;)    t(&quot;replay.stepForward&quot;) t(&quot;replay.stepOf&quot;)
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>t(&quot;replay.title&quot;)       t(&quot;replay.tool&quot;)
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>t(&quot;tree.pause&quot;)         t(&quot;tree.play&quot;)          t(&quot;tree.reset&quot;)
+</span></code></pre></div>
+<p>Plus the templated <code>t(\</code>nodeKind.${activeNode.kind}`, { defaultValue: kind })`
+which has a built-in fallback so it can't fail.</p>
+<p>Cross-checked against <code>frontend/src/i18n/en.ts</code> and <code>zh.ts</code>:</p>
+<ul>
+<li>All 11 <code>replay.*</code> keys defined in BOTH locales (matches the diff's +13/+13
+  additions: 11 keys + 1 opening + 1 closing line per locale).</li>
+<li><code>tree.play</code>, <code>tree.pause</code>, <code>tree.reset</code> were pre-existing keys (R37 timeline
+  controls), reused without modification.</li>
+<li><code>nodeKind.&lt;kind&gt;</code> block was pre-existing (TreeView legend).</li>
+</ul>
+<p><strong>Verdict</strong>: zero R46-A risk. Every dynamic-string lookup in the new code has a
+defined key in both locales, with the templated kind lookup additionally
+guarded by <code>defaultValue</code>.</p>
+<h3 id="b-hash-route-ordering-trap">B. Hash-route ordering trap<a class="headerlink" href="#b-hash-route-ordering-trap" title="Permanent link">&para;</a></h3>
+<p><code>parseHash</code> in <code>App.tsx</code> was modified to match <code>/runs/&lt;id&gt;/replay</code> before
+<code>/runs/&lt;id&gt;</code>. Verified the regex order: <code>replayMatch</code> is checked BEFORE the
+generic <code>m = h.match(/^\/runs\/([^/]+)$/)</code>. Without this order, the more
+permissive tree route would swallow <code>/runs/abc/replay</code> (matching <code>abc/replay</code>
+as the runId), producing a TreeView mounted with a slash-containing runId and
+404'ing the API call. Order is correct.</p>
+<h3 id="c-appheader-routename-widening-caught-by-tsc-b">C. AppHeader RouteName widening (caught by <code>tsc -b</code>)<a class="headerlink" href="#c-appheader-routename-widening-caught-by-tsc-b" title="Permanent link">&para;</a></h3>
+<p>First gate run surfaced a TS2322 error: <code>App.tsx</code> passes <code>route.name</code> as
+<code>currentRoute</code> to <code>&lt;AppHeader&gt;</code>, and <code>AppHeader.tsx</code> had
+<code>type RouteName = "landing" | "runs" | "tree" | "diff"</code> — missing <code>"replay"</code>.
+Widened the union to include <code>"replay"</code>. The header doesn't render anything
+route-specific for replay (no nav highlight, no breadcrumb), so this is purely
+a type widening — no rendering change.</p>
+<p>This is a <strong>secondary-file-not-touched-by-prior-slot</strong> trap: the prior slot
+correctly added <code>"replay"</code> to App.tsx's <code>Route</code> union but missed the parallel
+<code>RouteName</code> union in AppHeader. <code>tsc -b</code> catches it cleanly; runtime would have
+been fine anyway because TypeScript erases unions at runtime. Lesson recorded
+for future Replay-style multi-file route additions.</p>
+<h3 id="d-spike-16-invariants">D. Spike 16 invariants<a class="headerlink" href="#d-spike-16-invariants" title="Permanent link">&para;</a></h3>
+<p>Ran <code>uv run python tests/spikes/spike16_replay_ui_data.py</code>:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>Spike 16 — Phase 5 Arc C slice 1 data-contract validation
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>================================================================
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>A1 — usePlayback reusability (no API change):
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>  ✅ step_index is dense 0..N-1  (len=200, first=[0, 1, 2], last=[197, 198, 199])
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>  ✅ step_index is unique (no duplicates)
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>  ✅ sort by step_index matches insertion order
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>  ✅ GET /runs/{id} returns run + nodes  (run=63b90996…, nodes=200)
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>A2 — timeline payload size budget:
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>  ✅ 200-node payload &lt; 256KB (single fetch, no pagination)  (145.0KB)
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>  ✅ timeline-only projection &lt; 16KB for 200 nodes  (11.5KB)
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>A3 — keyboard nav contract:
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>  ✅ ← from index 0 stays at 0 (clamped)
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>  ✅ → from index N-1 stays at N-1 (clamped)
+</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>  ✅ ← from index 100 → 99
+</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>  ✅ → from index 100 → 101
+</span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>  ✅ → walk from 0 covers every step_index exactly once  (walked 200 steps)
+</span><span id="__span-2-20"><a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a>
+</span><span id="__span-2-21"><a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a>================================================================
+</span><span id="__span-2-22"><a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a>Spike 16 result: 11/11 invariants pass
+</span><span id="__span-2-23"><a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a>✅ GREEN — proceed with Replay.tsx + PlaybackTimeline.tsx skeleton.
+</span></code></pre></div>
+<p>11/11 invariants pass. ADR-027 §2 slice 1's three R57-spike assumptions are
+empirically confirmed. The skeleton is unblocked.</p>
+<h2 id="3-gate-cleanup">§3 Gate cleanup<a class="headerlink" href="#3-gate-cleanup" title="Permanent link">&para;</a></h2>
+<p>Three small fixes were needed before commit:</p>
+<ol>
+<li><strong><code>spike16_replay_ui_data.py:62</code></strong> — <code>tzinfo=timezone.utc</code> flagged by
+   ruff's <code>UP017</code> (use <code>datetime.UTC</code> alias, Python 3.11+). Auto-fixed via
+   <code>ruff check --fix</code>.</li>
+<li><strong><code>spike16_replay_ui_data.py:87</code></strong> — <code>f"×2→{counter}"</code> flagged by ruff's
+   <code>RUF001</code> (ambiguous <code>×</code> MULTIPLICATION SIGN; mistakable for <code>x</code> LATIN
+   SMALL LETTER X). Replaced with ASCII <code>f"x2-&gt;{counter}"</code>. The <code>→</code> arrow on
+   line 83 was NOT flagged (RIGHTWARDS ARROW is unambiguous in ruff's
+   character class) but I replaced it for consistency in the f-string
+   payload.</li>
+<li><strong><code>spike16_replay_ui_data.py</code></strong> — <code>ruff format --check</code> flagged one file
+   for reformatting. Ran <code>ruff format</code> to apply.</li>
+</ol>
+<p>Per the R82 lesson (pre-emptive <code>ruff format</code> on freshly-written files), this
+is the standard A2-style code-round gate cleanup — ~3 tool calls, none of
+them on production code paths.</p>
+<h3 id="final-gate-sweep-post-cleanup">Final gate sweep (post-cleanup)<a class="headerlink" href="#final-gate-sweep-post-cleanup" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Gate</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>uv run pytest -q --no-cov</code></td>
+<td><strong>648 passed, 9 skipped</strong> in 19.91s (byte-identical to R88)</td>
+</tr>
+<tr>
+<td><code>uv run mypy src</code></td>
+<td><strong>Success: no issues found in 38 source files</strong></td>
+</tr>
+<tr>
+<td><code>uv run ruff check src tests</code></td>
+<td><strong>All checks passed!</strong></td>
+</tr>
+<tr>
+<td><code>uv run ruff format --check src tests</code></td>
+<td><strong>102 files already formatted</strong></td>
+</tr>
+<tr>
+<td><code>cd frontend &amp;&amp; npm run build</code></td>
+<td>✅ <code>tsc -b</code> clean + vite built in 8.07s (1449.52 kB JS, 26.01 kB CSS)</td>
+</tr>
+<tr>
+<td><code>python tests/spikes/spike16_replay_ui_data.py</code></td>
+<td><strong>11/11 invariants pass</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Adapter zero-regression streak: R52 → R92 = <strong>40 rounds</strong>, new project-history
+high. (R91 ended at 39.) Pytest count unchanged at 648 — no new tests added in
+this slot since the spike is run as a script, not via pytest discovery, per
+ADR-027 §2's spike-not-test rationale (frontend-only deliverable, visual review
+forcing function in §3 covers the React-side gate).</p>
+<h3 id="lockfile-churn-check-r65r68r70-skill-rule">Lockfile churn check (R65/R68/R70 skill rule)<a class="headerlink" href="#lockfile-churn-check-r65r68r70-skill-rule" title="Permanent link">&para;</a></h3>
+<p><code>git status</code> post-cleanup showed no <code>M uv.lock</code> entry. No lockfile
+regeneration this round.</p>
+<h2 id="4-adr-027-promotion-r57-in-place-rule">§4 ADR-027 promotion (R57 in-place rule)<a class="headerlink" href="#4-adr-027-promotion-r57-in-place-rule" title="Permanent link">&para;</a></h2>
+<p>Per the R57 invariant: ADR-027 promotes Draft → Accepted in the SAME diff that
+lands the slice 1 spike-green proof. Edited <code>docs/decisions/ADR-027-…md</code>
+header:</p>
+<div class="language-diff highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="gd">-# ADR-027: Phase 5 Arc Selection — Replay UI / Time-Travel Debugger Frontend (Draft)</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="gd">-**Status**: Draft (R90, 2026-05-21 — to be promoted to Accepted in R91 after slice 1 spike per R57 in-place promotion rule)</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="gd">-**Date**: 2026-05-21 (Drafted R90)</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="gi">+# ADR-027: Phase 5 Arc Selection — Replay UI / Time-Travel Debugger Frontend</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="gi">+**Status**: Accepted (R92, 2026-05-22 — promoted from Draft per R57 in-place rule after slice 1 spike 16 ran 11/11 GREEN)</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="gi">+**Date**: 2026-05-21 (Drafted R90); promoted to Accepted 2026-05-22 (R92)</span>
+</span></code></pre></div>
+<p>Note: the original Draft note said "to be promoted to Accepted in R91" — that
+turned out to be R92 (R91 was the planning-bundle close-out without the spike,
+R92 was the spike-and-skeleton round). Promotion happens at the round that
+lands the spike-green proof, which per the actual sequence was R92, not R91.
+This is consistent with the R57 rule's intent: promote when observed-green,
+not on a calendar prediction.</p>
+<h2 id="5-commit-anatomy">§5 Commit anatomy<a class="headerlink" href="#5-commit-anatomy" title="Permanent link">&para;</a></h2>
+<p>Single coherent commit covering: spike + Replay.tsx + PlaybackTimeline.tsx +
+usePlayback extension + App.tsx route + i18n bilingual block + AppHeader type
+widen + ADR-027 promotion + CHANGELOG R91/R92 entries + this progress doc +
+CONTEXT §5/§6 refresh.</p>
+<p>Co-authored-by: Hermes Agent <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#104;&#101;&#114;&#109;&#101;&#115;&#64;&#110;&#111;&#117;&#115;&#114;&#101;&#115;&#101;&#97;&#114;&#99;&#104;&#46;&#99;&#111;&#109;">&#104;&#101;&#114;&#109;&#101;&#115;&#64;&#110;&#111;&#117;&#115;&#114;&#101;&#115;&#101;&#97;&#114;&#99;&#104;&#46;&#99;&#111;&#109;</a></p>
+<h2 id="6-whats-next-r93">§6 What's next (R93)<a class="headerlink" href="#6-whats-next-r93" title="Permanent link">&para;</a></h2>
+<p>ADR-027 §2 slice 2 = <strong>state-panel reuse + URL deep-links</strong>. Concretely:</p>
+<ol>
+<li>Reuse the existing <code>StatePanel</code> (or whatever the TreeView state-render
+   component is called) to render <code>state_after</code> of the active replay node —
+   replacing the current inline <code>&lt;pre&gt;{JSON.stringify(state, null, 2)}&lt;/pre&gt;</code>
+   in <code>Replay.tsx</code> with a structured panel matching TreeView's UX.</li>
+<li>URL deep-links: <code>#/runs/&lt;id&gt;/replay?step=&lt;N&gt;</code> so a user can share a link to
+   a specific replay step. <code>usePlayback</code>'s <code>jumpTo</code> is already in place; just
+   needs a <code>useEffect</code> that reads <code>location.hash</code> query params on mount and
+   calls <code>jumpTo(N)</code>, plus a small <code>useEffect</code> that updates the hash whenever
+   <code>index</code> changes (debounced).</li>
+<li>Optional: tab key to focus the timeline (a11y hardening).</li>
+</ol>
+<p>Pre-budget: 1 slot. Risk: low (frontend-only, zero adapter impact, no API
+change). Spike-not-required since slice 1's spike already validated the data
+contract — slice 2 is purely UX layering.</p>
+<h3 id="v07x-release-strategy">v0.7.x release strategy<a class="headerlink" href="#v07x-release-strategy" title="Permanent link">&para;</a></h3>
+<p>R89-R92 docs+features accumulate under <code>[Unreleased]</code>. Once Arc C slice 2-3
+ship (R93-R94), bundle as <strong>v0.8.0-alpha</strong> with the Replay UI as the headline
+feature. v0.8.0 GA waits for slice 4 (fork-tree replay) per ADR-027 §2.</p>
+<h2 id="7-skill-review">§7 Skill review<a class="headerlink" href="#7-skill-review" title="Permanent link">&para;</a></h2>
+<p>The cron-slot-handoff-recovery skill triggered correctly:
+- The diagnostic table's "empty / dirty / —" row matched the inherited state
+  (no commits ahead, dirty tree, no aspirational claims in any md file).
+- The R46-A audit recipe ("grep all <code>t("…")</code> keys, verify each prefix in i18n
+  files") executed in 2 tool calls and surfaced zero violations.
+- The R82 pre-emptive <code>ruff format</code> rule applied cleanly to the new spike file.</p>
+<p>One refinement worth noting (not yet skill-encoded): when a multi-file route
+addition lands new entries in App.tsx's <code>Route</code> union, <strong>also grep for parallel
+<code>type RouteName = …</code> declarations in sibling files</strong> (currently just
+AppHeader.tsx, but could grow). The pattern:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>grep<span class="w"> </span>-rn<span class="w"> </span><span class="s1">&#39;type Route\(Name\)\? = &#39;</span><span class="w"> </span>frontend/src/
+</span></code></pre></div>
+<p>Would have caught the AppHeader gap pre-build. R92 caught it via <code>tsc -b</code> in
+~5 seconds, so the cost is minimal, but adding it to the dynamic-string-dep
+audit checklist would prevent a <code>tsc</code> round-trip. Filing as a skill-touch-up
+candidate; not patching this round since the marginal value is small and the
+commit-budget priority is on shipping the slice.</p>
+<h2 id="8-footer">§8 Footer<a class="headerlink" href="#8-footer" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Last commit on origin/main pre-R92: <code>5237f5b</code> (R91 close-out)</li>
+<li>This round's commit: TBD (single commit covering all deliverables)</li>
+<li>Adapter zero-regression streak: R52 → <strong>R92 = 40 rounds</strong> ✨</li>
+<li>A2 close-out chain: 12 consecutive (structural constant grade-A++)</li>
+<li>Phase 5 Arc C: slice 1 ✅ shipped, slice 2 next at R93</li>
+<li>ADR-027: Accepted (was Draft until 2026-05-22)</li>
+<li>Most recent progress doc: this one (round-92)</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 chengfei867 — content generated 100% by Hermes Agent / Claude Opus
+    </div>
+  
+  
+</div>
+      
+        <div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/chengfei867/chronos-agent" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.top", "navigation.indexes", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.88dd0f4e.min.js"></script>
+      
+    
+  </body>
+</html>

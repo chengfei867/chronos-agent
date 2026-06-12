@@ -1,0 +1,43 @@
+Available demos (4):
+
+  • anthropic-agent-tools
+    Anthropic Agents — tool-using research agent (web_search + http_get, fork 
+the citation flag)
+    An agent-with-tools loop: plan → web_search (tool) → fetch_page (tool) → 
+synthesize → finalize. The parent run produces a one-line answer; a fork at the 
+synthesize node sets citation_required=true, producing an answer with an 
+attached source URL. Demonstrates Chronos's handling of the 'tool' NodeKind and 
+how a single boolean flag fork can change the *form* of the final output without
+changing its facts. Synthetic illustrative usage numbers (no real LLM calls or 
+HTTP requests).
+    evaluators: final_state_key_present, output_length_chars
+
+  • builtin-minimal
+    Builtin Minimal (zero-dep greet → draft → finalize, with formal-tone fork)
+    The default zero-dependency demo: a parent run (greet → draft → finalize, 
+friendly tone) plus a child run forked at greet with tone=formal. Synthetic 
+illustrative token/cost numbers on the LLM-kind 'draft' nodes (per ADR-029) so 
+`runs list` shows populated columns out of the box. No real LLM calls.
+    evaluators: output_length_chars
+
+  • crewai-research-team
+    CrewAI Research Team (researcher → analyst → reporter, fork the analyst's 
+stance)
+    A 3-agent CrewAI-style pipeline researching 'remote work productivity'. The 
+parent run produces a neutral report; a fork at the analyst node flips stance to
+'critical', producing a measurably longer and more skeptical report. 
+Demonstrates how Chronos lets you A/B-test agent personas without re-running the
+upstream researcher. Synthetic illustrative usage numbers (no real LLM calls).
+    evaluators: output_length_chars, final_state_key_present
+
+  • langgraph-router
+    LangGraph Router (conditional-edge routing with fork)
+    A 4-node conditional-routing graph: classify → route → (general_answer | 
+technical_answer) → finalize. The parent run takes the 'general' branch; a fork 
+at the classify node flips the category to 'technical', causing the same router 
+to walk the 'technical_answer' branch instead. Demonstrates how Chronos captures
+branch-divergent fork-children and how `chronos diff` surfaces the resulting 
+answer-style change. Synthetic illustrative usage numbers (no real LLM calls).
+    evaluators: output_length_chars
+
+Load one with chronos quickstart --demo <name>.

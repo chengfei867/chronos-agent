@@ -1,0 +1,1986 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Time-Travel Debugger for Multi-Agent AI Systems — record, replay, fork, diff, compare. With first-class token/cost tracking and pluggable evaluators.">
+      
+      
+        <meta name="author" content="Hermes Agent">
+      
+      
+        <link rel="canonical" href="https://chengfei867.github.io/chronos-agent/guides/forking-safely/">
+      
+      
+        <link rel="prev" href="../../contracts/adapter-protocol/">
+      
+      
+        <link rel="next" href="../side-effects/">
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.49">
+    
+    
+      
+        <title>Forking safely - Chronos Agent</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.6f8fc17f.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#forking-safely-reading-chronoss-effect-aware-ux" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Chronos Agent" class="md-header__button md-logo" aria-label="Chronos Agent" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Chronos Agent
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Forking safely
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/chengfei867/chronos-agent" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    chengfei867/chronos-agent
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+    
+  
+  Getting started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../concepts/" class="md-tabs__link">
+        
+  
+    
+  
+  Concepts
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../cli-reference/" class="md-tabs__link">
+        
+  
+    
+  
+  CLI reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../cost-tracking/" class="md-tabs__link">
+        
+  
+    
+  
+  Cost tracking
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../evaluators/" class="md-tabs__link">
+        
+  
+    
+  
+  Evaluators
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../adapters/anthropic_agents/" class="md-tabs__link">
+          
+  
+    
+  
+  Adapters
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="./" class="md-tabs__link">
+          
+  
+    
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../contracts/golden-trace-format/" class="md-tabs__link">
+          
+  
+    
+  
+  Contracts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../decisions/" class="md-tabs__link">
+          
+  
+    
+  
+  Decisions (ADRs)
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../faq/" class="md-tabs__link">
+        
+  
+    
+  
+  FAQ
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Chronos Agent" class="md-nav__button md-logo" aria-label="Chronos Agent" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Chronos Agent
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/chengfei867/chronos-agent" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    chengfei867/chronos-agent
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Getting started
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Concepts
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli-reference/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    CLI reference
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cost-tracking/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Cost tracking
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../evaluators/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Evaluators
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Adapters
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            Adapters
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adapters/anthropic_agents/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Anthropic Agents SDK
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contracts/adapter-protocol/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Adapter protocol
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+        
+        
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Guides
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            Guides
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Forking safely
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Forking safely
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#tldr-the-decision-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      TL;DR — the decision table
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#surface-1-adapter-tag-drawer-warning" class="md-nav__link">
+    <span class="md-ellipsis">
+      Surface 1 — Adapter tag + drawer warning
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Surface 1 — Adapter tag + drawer warning">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#screenshot-warning-drawer" class="md-nav__link">
+    <span class="md-ellipsis">
+      Screenshot — warning drawer
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#surface-2-cli-chronos-fork-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      Surface 2 — CLI chronos fork plan
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Surface 2 — CLI chronos fork plan">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#machine-readable-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      Machine-readable output
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#surface-3-web-ui-fork-plan-preview-modal" class="md-nav__link">
+    <span class="md-ellipsis">
+      Surface 3 — Web UI Fork plan preview modal
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Surface 3 — Web UI Fork plan preview modal">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-the-dangerous-case-orange-alert" class="md-nav__link">
+    <span class="md-ellipsis">
+      3.1 The dangerous case — orange Alert
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-the-pure-llm-safe-case-green-alert" class="md-nav__link">
+    <span class="md-ellipsis">
+      3.2 The pure-LLM safe case — green Alert
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-the-last-node-safe-case-green-alert" class="md-nav__link">
+    <span class="md-ellipsis">
+      3.3 The last-node safe case — green Alert
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-download-edit-apply-the-three-step-dance" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. Download → edit → apply — the three-step dance
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-http-endpoint-get-runsrun_idnodesnode_idfork-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. HTTP endpoint — GET /runs/{run_id}/nodes/{node_id}/fork-plan
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-per-tool-effect-overrides-autogen-v040a2" class="md-nav__link">
+    <span class="md-ellipsis">
+      6. Per-tool effect overrides (AutoGen, v0.4.0a2+)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6a-crewai-adapter-event-bus-paradigm-v040" class="md-nav__link">
+    <span class="md-ellipsis">
+      6a. CrewAI adapter — event-bus paradigm (v0.4.0+)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6a. CrewAI adapter — event-bus paradigm (v0.4.0+)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-gets-recorded" class="md-nav__link">
+    <span class="md-ellipsis">
+      What gets recorded
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pitfalls-empirically-validated-across-r52r55" class="md-nav__link">
+    <span class="md-ellipsis">
+      Pitfalls (empirically validated across R52–R55)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#live-test-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      Live test reference
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-related-reading" class="md-nav__link">
+    <span class="md-ellipsis">
+      7. Related reading
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../side-effects/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Side effects
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Contracts
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            Contracts
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contracts/golden-trace-format/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Golden trace format
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../decisions/" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    Decisions (ADRs)
+  </span>
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            Decisions (ADRs)
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    FAQ
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#tldr-the-decision-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      TL;DR — the decision table
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#surface-1-adapter-tag-drawer-warning" class="md-nav__link">
+    <span class="md-ellipsis">
+      Surface 1 — Adapter tag + drawer warning
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Surface 1 — Adapter tag + drawer warning">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#screenshot-warning-drawer" class="md-nav__link">
+    <span class="md-ellipsis">
+      Screenshot — warning drawer
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#surface-2-cli-chronos-fork-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      Surface 2 — CLI chronos fork plan
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Surface 2 — CLI chronos fork plan">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#machine-readable-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      Machine-readable output
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#surface-3-web-ui-fork-plan-preview-modal" class="md-nav__link">
+    <span class="md-ellipsis">
+      Surface 3 — Web UI Fork plan preview modal
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Surface 3 — Web UI Fork plan preview modal">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-the-dangerous-case-orange-alert" class="md-nav__link">
+    <span class="md-ellipsis">
+      3.1 The dangerous case — orange Alert
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-the-pure-llm-safe-case-green-alert" class="md-nav__link">
+    <span class="md-ellipsis">
+      3.2 The pure-LLM safe case — green Alert
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-the-last-node-safe-case-green-alert" class="md-nav__link">
+    <span class="md-ellipsis">
+      3.3 The last-node safe case — green Alert
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-download-edit-apply-the-three-step-dance" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. Download → edit → apply — the three-step dance
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-http-endpoint-get-runsrun_idnodesnode_idfork-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. HTTP endpoint — GET /runs/{run_id}/nodes/{node_id}/fork-plan
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-per-tool-effect-overrides-autogen-v040a2" class="md-nav__link">
+    <span class="md-ellipsis">
+      6. Per-tool effect overrides (AutoGen, v0.4.0a2+)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6a-crewai-adapter-event-bus-paradigm-v040" class="md-nav__link">
+    <span class="md-ellipsis">
+      6a. CrewAI adapter — event-bus paradigm (v0.4.0+)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6a. CrewAI adapter — event-bus paradigm (v0.4.0+)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-gets-recorded" class="md-nav__link">
+    <span class="md-ellipsis">
+      What gets recorded
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pitfalls-empirically-validated-across-r52r55" class="md-nav__link">
+    <span class="md-ellipsis">
+      Pitfalls (empirically validated across R52–R55)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#live-test-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      Live test reference
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-related-reading" class="md-nav__link">
+    <span class="md-ellipsis">
+      7. Related reading
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="forking-safely-reading-chronoss-effect-aware-ux">Forking safely: reading Chronos's effect-aware UX<a class="headerlink" href="#forking-safely-reading-chronoss-effect-aware-ux" title="Permanent link">&para;</a></h1>
+<p><strong>Audience:</strong> you opened a recorded run in Chronos and want to fork from
+some intermediate node. You want to know whether that fork will re-run
+something dangerous (a database write, an HTTP POST, a file deletion)
+<strong>before</strong> you hand the plan to <code>chronos fork apply</code>.</p>
+<p>This guide walks through the three surfaces Chronos gives you for that:</p>
+<ol>
+<li>The <strong>adapter auto-tagging + node badge + drawer warning</strong> on every node (v0.3.0 / PH3-02).</li>
+<li>The <strong><code>chronos fork plan</code> CLI preview panel</strong> on your terminal (v0.3.1 / PH3-03).</li>
+<li>The <strong>Web UI "Fork plan preview" modal</strong> on the tree page (v0.4.0-alpha / PH3-04).</li>
+</ol>
+<p>All three read the <strong>same <code>metadata.effects</code> tags</strong> on the downstream
+nodes. They are three projections of the same truth. Chronos <strong>plans</strong>
+forks but never <strong>executes</strong> them — see <a href="../../decisions/ADR-019-chronos-does-not-sandbox/">ADR-019</a> for why.</p>
+<hr />
+<h2 id="tldr-the-decision-table">TL;DR — the decision table<a class="headerlink" href="#tldr-the-decision-table" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>You see…</th>
+<th>Chronos is telling you…</th>
+<th>What to do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>🟢 Alert: <em>"This is the last node of the run"</em></td>
+<td>No downstream nodes. Fork is free.</td>
+<td>Fork away.</td>
+</tr>
+<tr>
+<td>🟢 Alert: <em>"N downstream node(s), but none carry dangerous side-effect tags"</em></td>
+<td>Downstream is pure-LLM (or pure-function). Re-running is safe.</td>
+<td>Fork away. Cost = N×LLM calls.</td>
+</tr>
+<tr>
+<td>🟠 Alert: <em>"This fork re-runs N node(s) with real-world side effects"</em> with tags like <code>db:1 network:2 fs:1</code></td>
+<td>One or more downstream nodes will re-issue real-world actions if you blindly apply the plan.</td>
+<td><strong>Stop.</strong> Read <a href="../side-effects/"><code>side-effects.md</code></a> and apply one of the three patterns (mock transport / envvar / plan-actuator split) before running <code>chronos fork apply</code>.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="surface-1-adapter-tag-drawer-warning">Surface 1 — Adapter tag + drawer warning<a class="headerlink" href="#surface-1-adapter-tag-drawer-warning" title="Permanent link">&para;</a></h2>
+<p>When you open a run in the Web UI and click any node, the <strong>right-side
+Drawer</strong> shows a <strong>Node Details</strong> panel. If that node carries
+<code>metadata.effects</code> (auto-tagged by the adapter at record time, see
+<a href="../side-effects/#background"><code>side-effects.md</code> §How Chronos tags</a>), you get:</p>
+<ul>
+<li>A red "effects: db, network" badge under the node name.</li>
+<li>A warning Alert:
+  <em>"⚠️ This node touches real-world state (db, network). Forking from
+  here will re-run it."</em></li>
+<li>A <strong>danger-styled "Fork here" button</strong> at the bottom of the drawer.</li>
+</ul>
+<p>Clicking the Fork button opens <strong>Surface 3</strong> (the modal).</p>
+<h3 id="screenshot-warning-drawer">Screenshot — warning drawer<a class="headerlink" href="#screenshot-warning-drawer" title="Permanent link">&para;</a></h3>
+<p>The drawer itself is not captured separately in this guide; it's fully
+covered inside Surface 3 below.</p>
+<hr />
+<h2 id="surface-2-cli-chronos-fork-plan">Surface 2 — CLI <code>chronos fork plan</code><a class="headerlink" href="#surface-2-cli-chronos-fork-plan" title="Permanent link">&para;</a></h2>
+<p>On your terminal, generate a fork plan. The effects preview is
+<strong>rendered by default</strong> alongside the Plan panel:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>$<span class="w"> </span>chronos<span class="w"> </span>fork<span class="w"> </span>plan<span class="w"> </span>&lt;run_id&gt;<span class="w"> </span>--at-node-id<span class="w"> </span>&lt;node_id&gt;<span class="w"> </span>--db<span class="w"> </span>dogfood.db
+</span></code></pre></div>
+<p>You get a <strong>Plan</strong> panel (the JSON artifact you would later feed to
+<code>chronos fork apply</code>) preceded by a <strong>Downstream side-effects preview</strong>
+panel:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>╭─ Downstream side-effects preview ────────────────────────────╮
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>│ ⚠ side effects: forking here may re-execute 4 dangerous      │
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>│   downstream node(s) out of 5 total.                          │
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>│   breakdown: db=1, external=1, fs=1, network=1               │
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>│   examples:                                                   │
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>│     • step 1: db_write (db)                                   │
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>│     • step 2: http_fetch (network)                            │
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>│     • step 3: write_file (fs)                                 │
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>│     • … and 1 more                                            │
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>│   Chronos does not sandbox fork execution (ADR-019). If these │
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>│   effects touch the real world, confirm duplicate invocations │
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>│   are safe before running the fork.                           │
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>╰───────────────────────────────────────────────────────────────╯
+</span></code></pre></div>
+<p>The <strong>silence principle</strong> applies: if <code>dangerous_count == 0</code> the CLI
+<strong>does not show the effects panel at all</strong>. No output = nothing to worry
+about.</p>
+<h3 id="machine-readable-output">Machine-readable output<a class="headerlink" href="#machine-readable-output" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>$<span class="w"> </span>chronos<span class="w"> </span>fork<span class="w"> </span>plan<span class="w"> </span>&lt;run_id&gt;<span class="w"> </span>--at-node-id<span class="w"> </span>&lt;node_id&gt;<span class="w"> </span>--json
+</span></code></pre></div>
+<p>prints the raw <code>ForkPlan</code> JSON envelope to stdout and <strong>suppresses</strong> the
+effects panel (the <code>--json</code> flag is stdout-only). For scripted pipelines
+that want both the plan <strong>and</strong> the effects summary, call the HTTP
+endpoint documented in <a href="#5-http-endpoint">§5</a> below.</p>
+<hr />
+<h2 id="surface-3-web-ui-fork-plan-preview-modal">Surface 3 — Web UI Fork plan preview modal<a class="headerlink" href="#surface-3-web-ui-fork-plan-preview-modal" title="Permanent link">&para;</a></h2>
+<p>From the tree page, clicking <strong>Fork here</strong> opens a modal (<strong>not</strong> a
+drawer — modals are for deliverables, drawers for aux context). Layout:</p>
+<ol>
+<li>Intro: <em>"Chronos plans forks but does not execute them. Download or
+   copy this JSON, edit the overrides block, then run <code>chronos fork
+   apply &lt;plan.json&gt;</code> locally."</em></li>
+<li><strong>Effects summary Alert</strong> (this is the heart of the modal).</li>
+<li>Plan JSON block (scroll-locked to 320px).</li>
+<li>Next-steps paragraph with the exact command to run.</li>
+<li>Footer: <strong>Close · Copy · Download</strong> buttons.</li>
+</ol>
+<p>The modal reverses the CLI's silence principle: even when downstream is
+safe, it shows a <strong>green success Alert</strong> — because in a modal context
+silence looks broken. ("I clicked Fork, nothing happened.")</p>
+<h3 id="31-the-dangerous-case-orange-alert">3.1 The dangerous case — orange Alert<a class="headerlink" href="#31-the-dangerous-case-orange-alert" title="Permanent link">&para;</a></h3>
+<p><img alt="Fork modal showing warning alert with 4 dangerous downstream nodes (db, network, fs, external)" src="../../images/fork-modal/01-warning.png" /></p>
+<p>What to read:
+- <strong>"This fork re-runs 4 node(s) with real-world side effects (of 5
+  downstream total)"</strong> — 4 out of 5 downstream nodes carry effect tags.
+- <strong>Tag breakdown</strong> — a horizontal row of pills: <code>db:1  network:1
+  fs:1  external:1</code>. Same counts as the CLI panel.
+- <strong>Examples (up to 3)</strong> — first three dangerous nodes by step index.</p>
+<p>Action: <strong>do not press Download → apply blindly.</strong> Read the examples,
+match them against your adapter code, and decide which of the three
+side-effect patterns in <a href="../side-effects/"><code>side-effects.md</code></a> you want to
+apply.</p>
+<h3 id="32-the-pure-llm-safe-case-green-alert">3.2 The pure-LLM safe case — green Alert<a class="headerlink" href="#32-the-pure-llm-safe-case-green-alert" title="Permanent link">&para;</a></h3>
+<p><img alt="Fork modal showing success alert: 3 downstream nodes re-run but none carry dangerous tags" src="../../images/fork-modal/02-safe-pure-llm.png" /></p>
+<p>What to read:
+- <strong>"3 downstream node(s) will re-run, but none carry dangerous
+  side-effect tags (per ADR-019 heuristics)."</strong> — downstream is
+  pure-LLM.
+- No tag breakdown, no examples — there's nothing dangerous to list.</p>
+<p>Action: safe to proceed. Edit the <code>overrides</code> block (change a prompt /
+model / temperature), save the JSON, and run
+<code>chronos fork apply &lt;plan.json&gt;</code>.</p>
+<p><strong>Caveat — "heuristics":</strong> effect tags come from adapter-side regex
+against node names and tool-call payloads. A function called
+<code>format_report</code> that internally writes to disk will <strong>not</strong> be tagged.
+If your adapter doesn't auto-tag a dangerous tool, pass
+<code>effects_map={"format_report": ["fs"]}</code> into the recorder. See
+<a href="../side-effects/#background"><code>side-effects.md</code> §Tagging</a>.</p>
+<h3 id="33-the-last-node-safe-case-green-alert">3.3 The last-node safe case — green Alert<a class="headerlink" href="#33-the-last-node-safe-case-green-alert" title="Permanent link">&para;</a></h3>
+<p><img alt="Fork modal showing success alert: this is the last node of the run, nothing downstream to re-run" src="../../images/fork-modal/03-safe-last-node.png" /></p>
+<p>What to read:
+- <strong>"This is the last node of the run — nothing downstream to re-run."</strong>
+- Forking from the last node is purely symbolic — it gives you a plan
+  envelope you can edit and replay from, but with zero downstream
+  replay cost.</p>
+<p>Action: always safe. Useful for "let me re-run just this final step
+with a different prompt" workflows.</p>
+<hr />
+<h2 id="4-download-edit-apply-the-three-step-dance">4. Download → edit → apply — the three-step dance<a class="headerlink" href="#4-download-edit-apply-the-three-step-dance" title="Permanent link">&para;</a></h2>
+<p>Chronos never mutates a fork plan on your behalf. The expected workflow
+is:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># 1. Preview (any of the three surfaces above — this example uses the Web UI)</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="c1">#    → Download button writes fork-plan-&lt;runId&gt;-step&lt;N&gt;.json locally.</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># 2. Edit the overrides block in your editor:</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>$<span class="w"> </span><span class="nv">$EDITOR</span><span class="w"> </span>fork-plan-run_92f53-step0.json
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="c1">#    Change prompts, swap the model, tighten temperature, inject a</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="c1">#    mocked tool definition… whatever hypothesis you want to test.</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="c1"># 3. Apply the plan — this is where execution actually happens:</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>$<span class="w"> </span>chronos<span class="w"> </span>fork<span class="w"> </span>apply<span class="w"> </span>fork-plan-run_92f53-step0.json<span class="w"> </span>--db<span class="w"> </span>chronos.db
+</span></code></pre></div>
+<p>Step 3 is the <strong>only</strong> step that re-executes anything. Steps 1 and 2
+are pure planning and editing. If the effects preview scared you, you
+still have a full edit cycle to defuse before any real side effect
+happens.</p>
+<hr />
+<h2 id="5-http-endpoint-get-runsrun_idnodesnode_idfork-plan">5. HTTP endpoint — <code>GET /runs/{run_id}/nodes/{node_id}/fork-plan</code><a class="headerlink" href="#5-http-endpoint-get-runsrun_idnodesnode_idfork-plan" title="Permanent link">&para;</a></h2>
+<p>The Web modal calls this endpoint. You can hit it directly:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>$<span class="w"> </span>curl<span class="w"> </span>http://127.0.0.1:8765/runs/&lt;run_id&gt;/nodes/&lt;node_id&gt;/fork-plan
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="o">{</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="s2">&quot;plan&quot;</span>:<span class="w"> </span><span class="o">{</span><span class="w"> </span><span class="s2">&quot;chronos_fork_plan_version&quot;</span>:<span class="w"> </span><span class="m">1</span>,<span class="w"> </span>...<span class="w"> </span><span class="o">}</span>,
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="s2">&quot;effects_summary&quot;</span>:<span class="w"> </span><span class="o">{</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="s2">&quot;total&quot;</span>:<span class="w"> </span><span class="m">5</span>,
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="s2">&quot;dangerous_count&quot;</span>:<span class="w"> </span><span class="m">4</span>,
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="s2">&quot;tag_counts&quot;</span>:<span class="w"> </span><span class="o">{</span><span class="w"> </span><span class="s2">&quot;db&quot;</span>:<span class="w"> </span><span class="m">1</span>,<span class="w"> </span><span class="s2">&quot;network&quot;</span>:<span class="w"> </span><span class="m">1</span>,<span class="w"> </span><span class="s2">&quot;fs&quot;</span>:<span class="w"> </span><span class="m">1</span>,<span class="w"> </span><span class="s2">&quot;external&quot;</span>:<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="o">}</span>,
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">    </span><span class="s2">&quot;dangerous_samples&quot;</span>:<span class="w"> </span><span class="o">[</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">      </span><span class="o">[</span><span class="m">1</span>,<span class="w"> </span><span class="s2">&quot;db_write&quot;</span>,<span class="w"> </span><span class="o">[</span><span class="s2">&quot;db&quot;</span><span class="o">]]</span>,
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">      </span><span class="o">[</span><span class="m">2</span>,<span class="w"> </span><span class="s2">&quot;http_fetch&quot;</span>,<span class="w"> </span><span class="o">[</span><span class="s2">&quot;network&quot;</span><span class="o">]]</span>,
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">      </span><span class="o">[</span><span class="m">3</span>,<span class="w"> </span><span class="s2">&quot;write_file&quot;</span>,<span class="w"> </span><span class="o">[</span><span class="s2">&quot;fs&quot;</span><span class="o">]]</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">    </span><span class="o">]</span>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">  </span><span class="o">}</span>
+</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="o">}</span>
+</span></code></pre></div>
+<ul>
+<li><code>plan</code> is the raw <code>ForkPlan</code> envelope (v0.1.1+ contract, stable).</li>
+<li><code>effects_summary</code> is an <strong>advisory</strong> object — the shape is stable but
+  not part of the <code>ForkPlan</code> schema.</li>
+</ul>
+<p>Integration idea: scripted fork campaigns that want the CLI's
+<code>--preview-effects</code> data without shelling out should call this
+endpoint.</p>
+<hr />
+<h2 id="6-per-tool-effect-overrides-autogen-v040a2">6. Per-tool effect overrides (AutoGen, v0.4.0a2+)<a class="headerlink" href="#6-per-tool-effect-overrides-autogen-v040a2" title="Permanent link">&para;</a></h2>
+<p>The classifier tags effects by matching keyword patterns against the
+adapter-emitted <code>node_name</code>. Graph-based adapters (LangGraph) already
+produce function-shaped names, so effects Just Work. Message-based
+adapters (AutoGen) have to synthesize a name — see
+<a href="../../decisions/ADR-020-adapter-tool-node-name-shape/">ADR-020</a> for
+the convention.</p>
+<p>For AutoGen, tool event <code>node_name</code>s take the shape:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>{source}:{EventClass}:{tool_name[+tool_name...]}
+</span></code></pre></div>
+<p>Examples:</p>
+<ul>
+<li><code>coder:ToolCallExecutionEvent:fetch_weather_api</code> → <code>["network"]</code></li>
+<li><code>analyst:ToolCallRequestEvent:read_file+query_db</code> → <code>["fs", "db"]</code></li>
+</ul>
+<p>You can override or extend the classifier's verdict per-tool via the
+<code>effects_map</code> kwarg on the recorder. Keys are exact-match against
+<code>node_name</code>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">chronos.adapters.autogen</span><span class="w"> </span><span class="kn">import</span> <span class="n">AutoGenRecorder</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">recorder</span> <span class="o">=</span> <span class="n">AutoGenRecorder</span><span class="p">(</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>    <span class="n">store</span><span class="p">,</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>    <span class="n">effects_map</span><span class="o">=</span><span class="p">{</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>        <span class="c1"># Mark a specific tool as &quot;external&quot; (fire-and-forget API call)</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>        <span class="s2">&quot;coder:ToolCallExecutionEvent:fetch_weather_api&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;external&quot;</span><span class="p">],</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>        <span class="c1"># Clear tags on a known read-only tool the classifier over-tagged</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>        <span class="s2">&quot;analyst:ToolCallExecutionEvent:list_users&quot;</span><span class="p">:</span> <span class="p">[],</span>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>    <span class="p">},</span>
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="p">)</span>
+</span></code></pre></div>
+<p>If you don't supply an <code>effects_map</code> entry, the classifier's keyword
+regex still runs. The override is only consulted when the key matches
+exactly.</p>
+<p><strong>Discovery path</strong>: if your override isn't taking effect, check the
+actual <code>node_name</code> strings your recorder emitted:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">store</span><span class="o">.</span><span class="n">get_nodes_for_run</span><span class="p">(</span><span class="n">run_id</span><span class="p">):</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">node</span><span class="o">.</span><span class="n">kind</span><span class="si">}</span><span class="s2">  </span><span class="si">{</span><span class="n">node</span><span class="o">.</span><span class="n">node_name</span><span class="si">}</span><span class="s2">  effects=</span><span class="si">{</span><span class="n">node</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;effects&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<p>Keys in <code>effects_map</code> must match those strings character-for-character.</p>
+<hr />
+<h2 id="6a-crewai-adapter-event-bus-paradigm-v040">6a. CrewAI adapter — event-bus paradigm (v0.4.0+)<a class="headerlink" href="#6a-crewai-adapter-event-bus-paradigm-v040" title="Permanent link">&para;</a></h2>
+<p>The CrewAI adapter (<a href="../../decisions/ADR-021-crewai-adapter/">ADR-021</a>, pin
+<code>&gt;=0.80,&lt;2.0</code> per <a href="../../decisions/ADR-022-crewai-version-pin-bump/">ADR-022</a>)
+subscribes to <code>crewai_event_bus</code> inside <code>record()</code>'s <code>scoped_handlers()</code>
+context manager. This sits on a third paradigm — neither LangGraph's
+state-dict nor AutoGen's message list, but a <strong>per-run scoped event
+bus</strong> with <code>ThreadPoolExecutor</code> dispatch.</p>
+<p>Recording shape (ADR-021 §D5 — sync-first, no <code>asyncio.run</code>):</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">crewai</span><span class="w"> </span><span class="kn">import</span> <span class="n">Agent</span><span class="p">,</span> <span class="n">Crew</span><span class="p">,</span> <span class="n">Task</span><span class="p">,</span> <span class="n">Process</span><span class="p">,</span> <span class="n">LLM</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">crewai.tools</span><span class="w"> </span><span class="kn">import</span> <span class="n">tool</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">chronos.adapters.crewai</span><span class="w"> </span><span class="kn">import</span> <span class="n">crewai_adapter</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">chronos.store</span><span class="w"> </span><span class="kn">import</span> <span class="n">SqliteStore</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="nd">@tool</span><span class="p">(</span><span class="s2">&quot;fetch_weather_api&quot;</span><span class="p">)</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="k">def</span><span class="w"> </span><span class="nf">fetch_weather</span><span class="p">(</span><span class="n">city</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Fetch live weather for a city (network effect).&quot;&quot;&quot;</span>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;It is sunny in </span><span class="si">{</span><span class="n">city</span><span class="si">}</span><span class="s2">.&quot;</span>
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="n">llm</span> <span class="o">=</span> <span class="n">LLM</span><span class="p">(</span>
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>    <span class="n">provider</span><span class="o">=</span><span class="s2">&quot;openai&quot;</span><span class="p">,</span>                  <span class="c1"># R54: explicit provider=&quot;openai&quot;</span>
+</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;GLM-5&quot;</span><span class="p">,</span>                      <span class="c1"># bypasses LiteLLM native-constants</span>
+</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>    <span class="n">base_url</span><span class="o">=</span><span class="s2">&quot;https://...&quot;</span><span class="p">,</span>             <span class="c1"># validation for OneAPI aliases</span>
+</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>    <span class="n">api_key</span><span class="o">=</span><span class="s2">&quot;...&quot;</span><span class="p">,</span>
+</span><span id="__span-8-16"><a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a><span class="p">)</span>
+</span><span id="__span-8-17"><a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a>
+</span><span id="__span-8-18"><a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a><span class="n">investigator</span> <span class="o">=</span> <span class="n">Agent</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s2">&quot;investigator&quot;</span><span class="p">,</span> <span class="n">goal</span><span class="o">=</span><span class="s2">&quot;...&quot;</span><span class="p">,</span> <span class="n">llm</span><span class="o">=</span><span class="n">llm</span><span class="p">,</span> <span class="n">tools</span><span class="o">=</span><span class="p">[</span><span class="n">fetch_weather</span><span class="p">])</span>
+</span><span id="__span-8-19"><a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a><span class="n">task</span> <span class="o">=</span> <span class="n">Task</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;...&quot;</span><span class="p">,</span> <span class="n">agent</span><span class="o">=</span><span class="n">investigator</span><span class="p">,</span> <span class="n">expected_output</span><span class="o">=</span><span class="s2">&quot;...&quot;</span><span class="p">)</span>
+</span><span id="__span-8-20"><a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a><span class="n">crew</span> <span class="o">=</span> <span class="n">Crew</span><span class="p">(</span><span class="n">agents</span><span class="o">=</span><span class="p">[</span><span class="n">investigator</span><span class="p">],</span> <span class="n">tasks</span><span class="o">=</span><span class="p">[</span><span class="n">task</span><span class="p">],</span> <span class="n">process</span><span class="o">=</span><span class="n">Process</span><span class="o">.</span><span class="n">sequential</span><span class="p">)</span>
+</span><span id="__span-8-21"><a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a>
+</span><span id="__span-8-22"><a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a><span class="k">with</span> <span class="n">SqliteStore</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s2">&quot;chronos.db&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">store</span><span class="p">:</span>
+</span><span id="__span-8-23"><a id="__codelineno-8-23" name="__codelineno-8-23" href="#__codelineno-8-23"></a>    <span class="k">with</span> <span class="n">crewai_adapter</span><span class="o">.</span><span class="n">build_recorder</span><span class="p">(</span><span class="n">store</span><span class="p">)</span><span class="o">.</span><span class="n">record</span><span class="p">(</span>
+</span><span id="__span-8-24"><a id="__codelineno-8-24" name="__codelineno-8-24" href="#__codelineno-8-24"></a>        <span class="n">crew</span><span class="p">,</span> <span class="n">thread_id</span><span class="o">=</span><span class="s2">&quot;t1&quot;</span>
+</span><span id="__span-8-25"><a id="__codelineno-8-25" name="__codelineno-8-25" href="#__codelineno-8-25"></a>    <span class="p">)</span> <span class="k">as</span> <span class="n">ref</span><span class="p">:</span>
+</span><span id="__span-8-26"><a id="__codelineno-8-26" name="__codelineno-8-26" href="#__codelineno-8-26"></a>        <span class="n">result</span> <span class="o">=</span> <span class="n">crew</span><span class="o">.</span><span class="n">kickoff</span><span class="p">(</span><span class="n">inputs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;topic&quot;</span><span class="p">:</span> <span class="s2">&quot;weather&quot;</span><span class="p">})</span>
+</span><span id="__span-8-27"><a id="__codelineno-8-27" name="__codelineno-8-27" href="#__codelineno-8-27"></a>        <span class="n">ref</span><span class="o">.</span><span class="n">submit_result</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>       <span class="c1"># optional; records Run.final_state</span>
+</span><span id="__span-8-28"><a id="__codelineno-8-28" name="__codelineno-8-28" href="#__codelineno-8-28"></a>    <span class="c1"># run_id = ref.run_id is available here, after handlers have flushed</span>
+</span></code></pre></div>
+<h3 id="what-gets-recorded">What gets recorded<a class="headerlink" href="#what-gets-recorded" title="Permanent link">&para;</a></h3>
+<p>On <code>crewai_event_bus</code>, the recorder subscribes to the event families
+listed in <a href="../../decisions/ADR-021-crewai-adapter/">ADR-021 §D1</a> and
+materializes them as <code>Node</code>s with <code>kind ∈ {llm, tool, fn, end}</code>. The
+adapter's <code>classify_effects()</code> sees CrewAI-shaped <code>node_name</code>s (e.g.
+<code>ToolUsageStartedEvent:fetch_weather_api</code>) and emits effect tags
+consistent with the other adapters — a <code>read_file</code> tool gets <code>["fs"]</code>,
+<code>query_db</code> gets <code>["db"]</code>, <code>fetch_weather_api</code> gets <code>["network"]</code>.</p>
+<h3 id="pitfalls-empirically-validated-across-r52r55">Pitfalls (empirically validated across R52–R55)<a class="headerlink" href="#pitfalls-empirically-validated-across-r52r55" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>OneAPI model names</strong>: <code>LLM(model="openai/GLM-5", ...)</code> is rejected
+   by LiteLLM's native-constants validator. Always pass
+   <code>LLM(provider="openai", model="GLM-5", ...)</code> — the <code>provider=</code>
+   keyword bypasses the <code>model=&lt;ns&gt;/&lt;name&gt;</code> parse path.</li>
+<li><strong>Telemetry muting</strong>: set <code>CREWAI_DISABLE_TELEMETRY=1</code> and
+   <code>OTEL_SDK_DISABLED=true</code> when running in CI / live tests; otherwise
+   CrewAI's OTel hooks race with the recorder's event-bus handler.</li>
+<li><strong>Optional dep</strong>: <code>crewai</code> ships as <code>[project.optional-dependencies].crewai</code>,
+   not core. Tests must guard with <code>importlib.util.find_spec("crewai")</code> in
+   addition to <code>CHRONOS_LIVE</code> / API-key gates.</li>
+<li><strong>Event-bus handlers fire on a thread pool</strong>: the adapter's
+   <code>scoped_handlers()</code> CM takes care of this, but if you hand-roll a
+   recorder you must call <code>crewai_event_bus.flush(timeout=...)</code> before
+   reading back from the store. ADR-021 §D2 explains why.</li>
+<li><strong>Fork</strong>: not supported yet (Phase 4 candidate). Record + classify +
+   diff work end-to-end on CrewAI v1.x; <code>fork()</code> lands in a later
+   milestone after the LangGraph-style checkpointer-equivalent design
+   is ADR'd.</li>
+</ol>
+<h3 id="live-test-reference">Live test reference<a class="headerlink" href="#live-test-reference" title="Permanent link">&para;</a></h3>
+<p>The three-adapter live-smoke suite is at <code>tests/live/test_real_llm_smoke.py</code>
+(LangGraph + AutoGen) and <code>tests/live/test_crewai_smoke.py</code> (CrewAI).
+Opt-in via <code>CHRONOS_LIVE=1</code>. Total wall-clock ≈ 3–4 minutes with
+OneAPI GLM-5 as the backend.</p>
+<hr />
+<h2 id="7-related-reading">7. Related reading<a class="headerlink" href="#7-related-reading" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../../decisions/ADR-019-chronos-does-not-sandbox/">ADR-019 — Chronos does not sandbox</a></li>
+<li><a href="../../decisions/ADR-020-adapter-tool-node-name-shape/">ADR-020 — Adapter tool-event <code>node_name</code> shape</a></li>
+<li><a href="../../decisions/ADR-021-crewai-adapter/">ADR-021 — CrewAI adapter</a></li>
+<li><a href="../../decisions/ADR-022-crewai-version-pin-bump/">ADR-022 — CrewAI version pin</a></li>
+<li><a href="../side-effects/"><code>side-effects.md</code></a> — three patterns for making your
+  side-effecting tools fork-safe.</li>
+<li><a href="../../decisions/ADR-013-fork-auto-execution-stay-frozen/">ADR-013 — fork auto-execution stays frozen</a></li>
+</ul>
+<hr />
+<h1 id="fork-chronos-ux">安全 Fork 指南：读懂 Chronos 的副作用感知 UX<a class="headerlink" href="#fork-chronos-ux" title="Permanent link">&para;</a></h1>
+<p><strong>面向场景：</strong> 你在 Chronos 里打开了一个已录制的 run, 想从某个中间节点
+分叉 (fork), 但在把 plan 交给 <code>chronos fork apply</code> <strong>之前</strong>, 你想知道
+这个 fork 会不会重跑什么危险的东西 (数据库写入、HTTP POST、文件删除)。</p>
+<p>本文覆盖 Chronos 为此提供的三个界面:</p>
+<ol>
+<li><strong>Adapter 自动打标签 + 节点角标 + drawer 警告</strong> (v0.3.0 / PH3-02)</li>
+<li><strong><code>chronos fork plan</code> CLI 预览面板</strong> (v0.3.1 / PH3-03)</li>
+<li><strong>Web UI "Fork plan preview" 模态框</strong> (v0.4.0-alpha / PH3-04)</li>
+</ol>
+<p>三者读的是下游节点上<strong>同一份 <code>metadata.effects</code> 标签</strong>, 是同一个真相的
+三种投影。Chronos <strong>规划</strong> fork, 从不<strong>执行</strong> fork — 见 <a href="../../decisions/ADR-019-chronos-does-not-sandbox/">ADR-019</a>.</p>
+<hr />
+<h2 id="tldr">TL;DR — 决策表<a class="headerlink" href="#tldr" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>你看到…</th>
+<th>Chronos 在告诉你…</th>
+<th>怎么办</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>🟢 Alert: <em>"这是 run 的最后一个节点"</em></td>
+<td>没有下游节点, fork 零代价</td>
+<td>放心 fork</td>
+</tr>
+<tr>
+<td>🟢 Alert: <em>"N 个下游节点, 但都没有危险副作用标签"</em></td>
+<td>下游是纯 LLM (或纯函数), 重跑安全</td>
+<td>放心 fork, 成本 = N×LLM call</td>
+</tr>
+<tr>
+<td>🟠 Alert: <em>"此 fork 将重跑 N 个带真实副作用的节点"</em> 带 <code>db:1 network:2 fs:1</code> 类标签</td>
+<td>下游有节点会再次触发真实世界动作</td>
+<td><strong>停.</strong> 读 <a href="../side-effects/"><code>side-effects.md</code></a>, 先上三种模式 (mock transport / envvar / plan-actuator 拆分) 之一, 再跑 <code>chronos fork apply</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="1-adapter-drawer">界面 1 — Adapter 标签 + Drawer 警告<a class="headerlink" href="#1-adapter-drawer" title="Permanent link">&para;</a></h2>
+<p>Web UI 里打开 run, 点任意节点 → 右侧 Drawer 展开 Node Details 面板。
+如果该节点 <code>metadata.effects</code> 非空 (录制时 adapter 自动打的标签):</p>
+<ul>
+<li>节点名下方一条红色 "effects: db, network" 角标</li>
+<li>一条 warning Alert:
+  <em>"⚠️ 此节点触碰了真实世界状态 (db, network). 从这里 fork 会重跑它."</em></li>
+<li>Drawer 底部一枚 <strong>danger 样式的 "Fork here" 按钮</strong></li>
+</ul>
+<p>点 Fork 按钮 → 打开<strong>界面 3</strong> (模态框).</p>
+<hr />
+<h2 id="2-cli-chronos-fork-plan">界面 2 — CLI <code>chronos fork plan</code><a class="headerlink" href="#2-cli-chronos-fork-plan" title="Permanent link">&para;</a></h2>
+<p>终端 (effects 预览默认打印):</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>$<span class="w"> </span>chronos<span class="w"> </span>fork<span class="w"> </span>plan<span class="w"> </span>&lt;run_id&gt;<span class="w"> </span>--at-node-id<span class="w"> </span>&lt;node_id&gt;<span class="w"> </span>--db<span class="w"> </span>dogfood.db
+</span></code></pre></div>
+<p>打印 <strong>Plan</strong> 面板 (fork plan JSON artifact), 紧接着 <strong>Downstream
+effects</strong> 面板 (同上英文例子).</p>
+<p><strong>静默原则:</strong> 若 <code>dangerous_count == 0</code>, CLI <strong>不打印 effects 面板</strong>.
+零输出 = 没啥好担心的.</p>
+<p>机器可读输出 <code>--json</code>: 只输出 <code>ForkPlan</code> envelope 到 stdout,
+<strong>抑制</strong> effects preview. 脚本场景若同时想要 plan + effects summary,
+走 <a href="#5-http-端点--getrunsrun_idnodesnode_idfork-plan">§5</a> 的 HTTP 端点.</p>
+<hr />
+<h2 id="3-web-ui-fork-plan-preview">界面 3 — Web UI "Fork plan preview" 模态框<a class="headerlink" href="#3-web-ui-fork-plan-preview" title="Permanent link">&para;</a></h2>
+<p>Tree 页点 <strong>Fork here</strong> → 弹模态框 (不是 drawer — 模态框装<strong>产出物</strong>,
+drawer 装<strong>辅助上下文</strong>). 版式:</p>
+<ol>
+<li>Intro: <em>"Chronos plans forks but does not execute them…"</em></li>
+<li><strong>Effects summary Alert</strong> (核心)</li>
+<li>Plan JSON 块 (锁定 320px 高度, 可滚动)</li>
+<li>Next-steps 段, 含精确命令</li>
+<li>页脚: <strong>Close · Copy · Download</strong> 三按钮</li>
+</ol>
+<p>模态框反转了 CLI 的静默原则: 即使下游安全也<strong>必须显示 green success
+Alert</strong> — 模态框里的静默=坏了 ("我按了 Fork 啥反应都没有").</p>
+<h3 id="31-alert">3.1 危险场景 — 橙色 Alert<a class="headerlink" href="#31-alert" title="Permanent link">&para;</a></h3>
+<p><img alt="带 4 个危险下游节点的 warning alert" src="../../images/fork-modal/01-warning.png" /></p>
+<p>关键读点:
+- <strong>"此 fork 将重跑 4 个带真实副作用的节点 (共 5 个下游)"</strong>
+- <strong>Tag breakdown</strong> 横排 pill: <code>db:1  network:1  fs:1  external:1</code>
+- <strong>Examples (最多 3 个)</strong> — 按 step index 取前三个危险节点</p>
+<p>动作: <strong>别直接 Download → apply.</strong> 对照你的 adapter 代码,
+从 <a href="../side-effects/"><code>side-effects.md</code></a> 三种模式里挑一个再动手.</p>
+<h3 id="32-llm-alert">3.2 纯 LLM 安全场景 — 绿色 Alert<a class="headerlink" href="#32-llm-alert" title="Permanent link">&para;</a></h3>
+<p><img alt="3 个下游节点但都无危险标签的 success alert" src="../../images/fork-modal/02-safe-pure-llm.png" /></p>
+<p>关键读点:
+- <strong>"3 个下游节点会重跑, 但都没有危险副作用标签 (按 ADR-019 启发式)"</strong>
+- 无 tag breakdown, 无 examples</p>
+<p>动作: 放心改 <code>overrides</code> 块 (prompt / model / temperature), 存盘,
+跑 <code>chronos fork apply &lt;plan.json&gt;</code>.</p>
+<p><strong>"启发式"警示:</strong> effect 标签来自 adapter 侧对 node name / tool-call
+payload 的正则识别。一个叫 <code>format_report</code> 的函数如果内部偷偷写盘,
+<strong>不会被打标签</strong>。自己的工具要补标签, 在 recorder 上传
+<code>effects_map={"format_report": ["fs"]}</code>。详见 <a href="../side-effects/"><code>side-effects.md</code></a>.</p>
+<h3 id="33-alert">3.3 最后节点安全场景 — 绿色 Alert<a class="headerlink" href="#33-alert" title="Permanent link">&para;</a></h3>
+<p><img alt="最后节点场景: nothing downstream to re-run" src="../../images/fork-modal/03-safe-last-node.png" /></p>
+<p>关键读点: <strong>"这是 run 的最后一个节点 — 没有下游可重跑."</strong></p>
+<p>动作: 永远安全. 适合 "我就想用不同的 prompt 重跑最后一步" 的场景.</p>
+<hr />
+<h2 id="4-download-edit-apply">4. Download → edit → apply 三步舞<a class="headerlink" href="#4-download-edit-apply" title="Permanent link">&para;</a></h2>
+<p>Chronos 绝不替你改 fork plan, 标准流程:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># 1. 预览 (三个界面任选, 此处 Web UI 为例)</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="c1">#    Download 按钮写出 fork-plan-&lt;runId&gt;-step&lt;N&gt;.json</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="c1"># 2. 编辑 overrides 块:</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>$<span class="w"> </span><span class="nv">$EDITOR</span><span class="w"> </span>fork-plan-run_92f53-step0.json
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="c1"># 3. Apply — 这一步才真正执行:</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>$<span class="w"> </span>chronos<span class="w"> </span>fork<span class="w"> </span>apply<span class="w"> </span>fork-plan-run_92f53-step0.json<span class="w"> </span>--db<span class="w"> </span>chronos.db
+</span></code></pre></div>
+<p>只有第 3 步会重跑任何东西. 第 1-2 步纯规划 + 编辑. 即便 preview 吓到
+你, 你在触发任何真实副作用前, 还有完整的编辑周期拆弹.</p>
+<hr />
+<h2 id="5-http-get-runsrun_idnodesnode_idfork-plan">5. HTTP 端点 — <code>GET /runs/{run_id}/nodes/{node_id}/fork-plan</code><a class="headerlink" href="#5-http-get-runsrun_idnodesnode_idfork-plan" title="Permanent link">&para;</a></h2>
+<p>Web 模态框就是调这个端点. 也可以直接打:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>$<span class="w"> </span>curl<span class="w"> </span>http://127.0.0.1:8765/runs/&lt;run_id&gt;/nodes/&lt;node_id&gt;/fork-plan
+</span></code></pre></div>
+<p>返回:
+- <code>plan</code>: 原生 <code>ForkPlan</code> envelope (v0.1.1+ 对外契约, 稳定)
+- <code>effects_summary</code>: <strong>advisory</strong> 对象, 形状稳定但不属于 <code>ForkPlan</code>
+  schema</p>
+<p>脚本化 fork 活动若想复用 CLI <code>--preview-effects</code> 数据而不 shell out,
+走这条.</p>
+<hr />
+<h2 id="6-effect-autogen-v040a2">6. 按工具粒度的 effect 覆写 (AutoGen, v0.4.0a2+)<a class="headerlink" href="#6-effect-autogen-v040a2" title="Permanent link">&para;</a></h2>
+<p>Classifier 通过关键词模式匹配 adapter 吐出的 <code>node_name</code> 来打 effects 标签。
+基于图的 adapter (LangGraph) 天然就是函数名形状, 所以 effects 开箱即用。
+基于消息的 adapter (AutoGen) 需要自己合成一个 <code>node_name</code> — 约定见
+<a href="../../decisions/ADR-020-adapter-tool-node-name-shape/">ADR-020</a>。</p>
+<p>AutoGen 的 tool event <code>node_name</code> 形状是:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>{source}:{EventClass}:{tool_name[+tool_name...]}
+</span></code></pre></div>
+<p>示例:</p>
+<ul>
+<li><code>coder:ToolCallExecutionEvent:fetch_weather_api</code> → <code>["network"]</code></li>
+<li><code>analyst:ToolCallRequestEvent:read_file+query_db</code> → <code>["fs", "db"]</code></li>
+</ul>
+<p>通过 recorder 的 <code>effects_map</code> 参数可以按工具粒度覆写或扩展 classifier
+的判决。key 是对 <code>node_name</code> 的精确匹配:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">chronos.adapters.autogen</span><span class="w"> </span><span class="kn">import</span> <span class="n">AutoGenRecorder</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="n">recorder</span> <span class="o">=</span> <span class="n">AutoGenRecorder</span><span class="p">(</span>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>    <span class="n">store</span><span class="p">,</span>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>    <span class="n">effects_map</span><span class="o">=</span><span class="p">{</span>
+</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>        <span class="c1"># 把特定工具标记为 &quot;external&quot; (fire-and-forget API 调用)</span>
+</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>        <span class="s2">&quot;coder:ToolCallExecutionEvent:fetch_weather_api&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;external&quot;</span><span class="p">],</span>
+</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>        <span class="c1"># 清掉 classifier 误标的只读工具的标签</span>
+</span><span id="__span-13-9"><a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>        <span class="s2">&quot;analyst:ToolCallExecutionEvent:list_users&quot;</span><span class="p">:</span> <span class="p">[],</span>
+</span><span id="__span-13-10"><a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a>    <span class="p">},</span>
+</span><span id="__span-13-11"><a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a><span class="p">)</span>
+</span></code></pre></div>
+<p>如果没在 <code>effects_map</code> 里提供条目, 关键词正则照跑。覆写只在 key 精确匹配
+时才被查询。</p>
+<p><strong>调试方法</strong>: 如果覆写没生效, 检查 recorder 实际吐出的 <code>node_name</code>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">store</span><span class="o">.</span><span class="n">get_nodes_for_run</span><span class="p">(</span><span class="n">run_id</span><span class="p">):</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">node</span><span class="o">.</span><span class="n">kind</span><span class="si">}</span><span class="s2">  </span><span class="si">{</span><span class="n">node</span><span class="o">.</span><span class="n">node_name</span><span class="si">}</span><span class="s2">  effects=</span><span class="si">{</span><span class="n">node</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;effects&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<p><code>effects_map</code> 的 key 必须一字不差。</p>
+<hr />
+<h2 id="6a-crewai-adapter-event-bus-v040">6a. CrewAI adapter — event-bus 范式 (v0.4.0+)<a class="headerlink" href="#6a-crewai-adapter-event-bus-v040" title="Permanent link">&para;</a></h2>
+<p>CrewAI adapter (<a href="../../decisions/ADR-021-crewai-adapter/">ADR-021</a>, pin
+<code>&gt;=0.80,&lt;2.0</code>, 由 <a href="../../decisions/ADR-022-crewai-version-pin-bump/">ADR-022</a> 抬升)
+在 <code>record()</code> 的 <code>scoped_handlers()</code> 上下文里订阅 <code>crewai_event_bus</code>.
+这是第三种范式 — 既不是 LangGraph 的 state-dict, 也不是 AutoGen 的
+message list, 而是<strong>按 run 作用域的事件总线</strong> + <code>ThreadPoolExecutor</code> 派发.</p>
+<p>录制形状 (ADR-021 §D5, sync-first, 不用 <code>asyncio.run</code>):</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">crewai</span><span class="w"> </span><span class="kn">import</span> <span class="n">Agent</span><span class="p">,</span> <span class="n">Crew</span><span class="p">,</span> <span class="n">Task</span><span class="p">,</span> <span class="n">Process</span><span class="p">,</span> <span class="n">LLM</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">crewai.tools</span><span class="w"> </span><span class="kn">import</span> <span class="n">tool</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">chronos.adapters.crewai</span><span class="w"> </span><span class="kn">import</span> <span class="n">crewai_adapter</span>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">chronos.store</span><span class="w"> </span><span class="kn">import</span> <span class="n">SqliteStore</span>
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>
+</span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="nd">@tool</span><span class="p">(</span><span class="s2">&quot;fetch_weather_api&quot;</span><span class="p">)</span>
+</span><span id="__span-15-7"><a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="k">def</span><span class="w"> </span><span class="nf">fetch_weather</span><span class="p">(</span><span class="n">city</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="__span-15-8"><a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;取某城市实时天气 (network 副作用).&quot;&quot;&quot;</span>
+</span><span id="__span-15-9"><a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a>    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;It is sunny in </span><span class="si">{</span><span class="n">city</span><span class="si">}</span><span class="s2">.&quot;</span>
+</span><span id="__span-15-10"><a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a>
+</span><span id="__span-15-11"><a id="__codelineno-15-11" name="__codelineno-15-11" href="#__codelineno-15-11"></a><span class="n">llm</span> <span class="o">=</span> <span class="n">LLM</span><span class="p">(</span>
+</span><span id="__span-15-12"><a id="__codelineno-15-12" name="__codelineno-15-12" href="#__codelineno-15-12"></a>    <span class="n">provider</span><span class="o">=</span><span class="s2">&quot;openai&quot;</span><span class="p">,</span>                  <span class="c1"># R54: 显式传 provider=&quot;openai&quot;</span>
+</span><span id="__span-15-13"><a id="__codelineno-15-13" name="__codelineno-15-13" href="#__codelineno-15-13"></a>    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;GLM-5&quot;</span><span class="p">,</span>                      <span class="c1"># 绕开 LiteLLM native-constants</span>
+</span><span id="__span-15-14"><a id="__codelineno-15-14" name="__codelineno-15-14" href="#__codelineno-15-14"></a>    <span class="n">base_url</span><span class="o">=</span><span class="s2">&quot;https://...&quot;</span><span class="p">,</span>             <span class="c1"># 校验 (OneAPI 别名用)</span>
+</span><span id="__span-15-15"><a id="__codelineno-15-15" name="__codelineno-15-15" href="#__codelineno-15-15"></a>    <span class="n">api_key</span><span class="o">=</span><span class="s2">&quot;...&quot;</span><span class="p">,</span>
+</span><span id="__span-15-16"><a id="__codelineno-15-16" name="__codelineno-15-16" href="#__codelineno-15-16"></a><span class="p">)</span>
+</span><span id="__span-15-17"><a id="__codelineno-15-17" name="__codelineno-15-17" href="#__codelineno-15-17"></a>
+</span><span id="__span-15-18"><a id="__codelineno-15-18" name="__codelineno-15-18" href="#__codelineno-15-18"></a><span class="n">investigator</span> <span class="o">=</span> <span class="n">Agent</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s2">&quot;investigator&quot;</span><span class="p">,</span> <span class="n">goal</span><span class="o">=</span><span class="s2">&quot;...&quot;</span><span class="p">,</span> <span class="n">llm</span><span class="o">=</span><span class="n">llm</span><span class="p">,</span> <span class="n">tools</span><span class="o">=</span><span class="p">[</span><span class="n">fetch_weather</span><span class="p">])</span>
+</span><span id="__span-15-19"><a id="__codelineno-15-19" name="__codelineno-15-19" href="#__codelineno-15-19"></a><span class="n">task</span> <span class="o">=</span> <span class="n">Task</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;...&quot;</span><span class="p">,</span> <span class="n">agent</span><span class="o">=</span><span class="n">investigator</span><span class="p">,</span> <span class="n">expected_output</span><span class="o">=</span><span class="s2">&quot;...&quot;</span><span class="p">)</span>
+</span><span id="__span-15-20"><a id="__codelineno-15-20" name="__codelineno-15-20" href="#__codelineno-15-20"></a><span class="n">crew</span> <span class="o">=</span> <span class="n">Crew</span><span class="p">(</span><span class="n">agents</span><span class="o">=</span><span class="p">[</span><span class="n">investigator</span><span class="p">],</span> <span class="n">tasks</span><span class="o">=</span><span class="p">[</span><span class="n">task</span><span class="p">],</span> <span class="n">process</span><span class="o">=</span><span class="n">Process</span><span class="o">.</span><span class="n">sequential</span><span class="p">)</span>
+</span><span id="__span-15-21"><a id="__codelineno-15-21" name="__codelineno-15-21" href="#__codelineno-15-21"></a>
+</span><span id="__span-15-22"><a id="__codelineno-15-22" name="__codelineno-15-22" href="#__codelineno-15-22"></a><span class="k">with</span> <span class="n">SqliteStore</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s2">&quot;chronos.db&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">store</span><span class="p">:</span>
+</span><span id="__span-15-23"><a id="__codelineno-15-23" name="__codelineno-15-23" href="#__codelineno-15-23"></a>    <span class="k">with</span> <span class="n">crewai_adapter</span><span class="o">.</span><span class="n">build_recorder</span><span class="p">(</span><span class="n">store</span><span class="p">)</span><span class="o">.</span><span class="n">record</span><span class="p">(</span>
+</span><span id="__span-15-24"><a id="__codelineno-15-24" name="__codelineno-15-24" href="#__codelineno-15-24"></a>        <span class="n">crew</span><span class="p">,</span> <span class="n">thread_id</span><span class="o">=</span><span class="s2">&quot;t1&quot;</span>
+</span><span id="__span-15-25"><a id="__codelineno-15-25" name="__codelineno-15-25" href="#__codelineno-15-25"></a>    <span class="p">)</span> <span class="k">as</span> <span class="n">ref</span><span class="p">:</span>
+</span><span id="__span-15-26"><a id="__codelineno-15-26" name="__codelineno-15-26" href="#__codelineno-15-26"></a>        <span class="n">result</span> <span class="o">=</span> <span class="n">crew</span><span class="o">.</span><span class="n">kickoff</span><span class="p">(</span><span class="n">inputs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;topic&quot;</span><span class="p">:</span> <span class="s2">&quot;weather&quot;</span><span class="p">})</span>
+</span><span id="__span-15-27"><a id="__codelineno-15-27" name="__codelineno-15-27" href="#__codelineno-15-27"></a>        <span class="n">ref</span><span class="o">.</span><span class="n">submit_result</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>       <span class="c1"># 可选, 记 Run.final_state</span>
+</span><span id="__span-15-28"><a id="__codelineno-15-28" name="__codelineno-15-28" href="#__codelineno-15-28"></a>    <span class="c1"># CM 退出后 ref.run_id 已可用, handlers 已 flush</span>
+</span></code></pre></div>
+<h3 id="_1">能录到什么<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h3>
+<p>Recorder 订阅 <a href="../../decisions/ADR-021-crewai-adapter/">ADR-021 §D1</a>
+列出的事件族, 物化成 <code>kind ∈ {llm, tool, fn, end}</code> 的 Node.
+Adapter <code>classify_effects()</code> 看到 CrewAI 形状的 <code>node_name</code>
+(如 <code>ToolUsageStartedEvent:fetch_weather_api</code>), 吐出与其它 adapter
+一致的 effect tag — <code>read_file</code> 工具 <code>["fs"]</code>, <code>query_db</code> <code>["db"]</code>,
+<code>fetch_weather_api</code> <code>["network"]</code>.</p>
+<h3 id="r52r55">坑位 (R52–R55 经验)<a class="headerlink" href="#r52r55" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>OneAPI 模型名</strong>: <code>LLM(model="openai/GLM-5", ...)</code> 被 LiteLLM
+   native-constants 校验拒掉. 必须 <code>LLM(provider="openai", model="GLM-5", ...)</code>
+   — <code>provider=</code> 关键字绕开 <code>model=&lt;ns&gt;/&lt;name&gt;</code> 解析分支.</li>
+<li><strong>遥测静音</strong>: CI / live test 里设 <code>CREWAI_DISABLE_TELEMETRY=1</code> +
+   <code>OTEL_SDK_DISABLED=true</code>, 否则 CrewAI 的 OTel 钩子会跟 recorder 的
+   event-bus handler 抢跑.</li>
+<li><strong>可选依赖</strong>: <code>crewai</code> 在 <code>[project.optional-dependencies].crewai</code>,
+   不是核心 dep. 测试除了 <code>CHRONOS_LIVE</code> / API-key gate 外还要用
+   <code>importlib.util.find_spec("crewai")</code> 守一下.</li>
+<li><strong>事件总线 handler 在线程池里跑</strong>: adapter 的 <code>scoped_handlers()</code> CM
+   已处理好; 如果你自己搭 recorder, 读 store 前必须先
+   <code>crewai_event_bus.flush(timeout=...)</code>. 原因见 ADR-021 §D2.</li>
+<li><strong>Fork</strong>: 尚未支持 (Phase 4 候选). CrewAI v1.x 上 record + classify +
+   diff 端到端都 OK; <code>fork()</code> 等后面一个 milestone, 需要先 ADR
+   一个类 LangGraph checkpointer 的机制.</li>
+</ol>
+<h3 id="live">Live 测试参考<a class="headerlink" href="#live" title="Permanent link">&para;</a></h3>
+<p>三 adapter live smoke 分布在 <code>tests/live/test_real_llm_smoke.py</code>
+(LangGraph + AutoGen) 与 <code>tests/live/test_crewai_smoke.py</code> (CrewAI).
+<code>CHRONOS_LIVE=1</code> opt-in. OneAPI GLM-5 下墙钟合计 ≈ 3-4 min.</p>
+<hr />
+<h2 id="7">7. 相关阅读<a class="headerlink" href="#7" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../../decisions/ADR-019-chronos-does-not-sandbox/">ADR-019 — Chronos does not sandbox</a></li>
+<li><a href="../../decisions/ADR-020-adapter-tool-node-name-shape/">ADR-020 — Adapter tool-event <code>node_name</code> shape</a></li>
+<li><a href="../../decisions/ADR-021-crewai-adapter/">ADR-021 — CrewAI adapter</a></li>
+<li><a href="../../decisions/ADR-022-crewai-version-pin-bump/">ADR-022 — CrewAI version pin</a></li>
+<li><a href="../side-effects/"><code>side-effects.md</code></a> — 让副作用工具 fork-safe 的三种模式</li>
+<li><a href="../../decisions/ADR-013-fork-auto-execution-stay-frozen/">ADR-013 — fork auto-execution stays frozen</a></li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 chengfei867 — content generated 100% by Hermes Agent / Claude Opus
+    </div>
+  
+  
+</div>
+      
+        <div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/chengfei867/chronos-agent" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.top", "navigation.indexes", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.88dd0f4e.min.js"></script>
+      
+    
+  </body>
+</html>

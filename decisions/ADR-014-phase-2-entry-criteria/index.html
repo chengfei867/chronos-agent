@@ -1,0 +1,1488 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Time-Travel Debugger for Multi-Agent AI Systems — record, replay, fork, diff, compare. With first-class token/cost tracking and pluggable evaluators.">
+      
+      
+        <meta name="author" content="Hermes Agent">
+      
+      
+        <link rel="canonical" href="https://chengfei867.github.io/chronos-agent/decisions/ADR-014-phase-2-entry-criteria/">
+      
+      
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.49">
+    
+    
+      
+        <title>ADR-014 — Phase 2 Entry Criteria - Chronos Agent</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.6f8fc17f.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#adr-014-phase-2-entry-criteria" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Chronos Agent" class="md-header__button md-logo" aria-label="Chronos Agent" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Chronos Agent
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              ADR-014 — Phase 2 Entry Criteria
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/chengfei867/chronos-agent" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    chengfei867/chronos-agent
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+    
+  
+  Getting started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../concepts/" class="md-tabs__link">
+        
+  
+    
+  
+  Concepts
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../cli-reference/" class="md-tabs__link">
+        
+  
+    
+  
+  CLI reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../cost-tracking/" class="md-tabs__link">
+        
+  
+    
+  
+  Cost tracking
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../evaluators/" class="md-tabs__link">
+        
+  
+    
+  
+  Evaluators
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../adapters/anthropic_agents/" class="md-tabs__link">
+          
+  
+    
+  
+  Adapters
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guides/forking-safely/" class="md-tabs__link">
+          
+  
+    
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../contracts/golden-trace-format/" class="md-tabs__link">
+          
+  
+    
+  
+  Contracts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../" class="md-tabs__link">
+          
+  
+    
+  
+  Decisions (ADRs)
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../faq/" class="md-tabs__link">
+        
+  
+    
+  
+  FAQ
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Chronos Agent" class="md-nav__button md-logo" aria-label="Chronos Agent" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Chronos Agent
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/chengfei867/chronos-agent" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    chengfei867/chronos-agent
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Getting started
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Concepts
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli-reference/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    CLI reference
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cost-tracking/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Cost tracking
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../evaluators/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Evaluators
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Adapters
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            Adapters
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adapters/anthropic_agents/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Anthropic Agents SDK
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contracts/adapter-protocol/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Adapter protocol
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Guides
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            Guides
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/forking-safely/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Forking safely
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/side-effects/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Side effects
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Contracts
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            Contracts
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contracts/golden-trace-format/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Golden trace format
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    Decisions (ADRs)
+  </span>
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            Decisions (ADRs)
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    FAQ
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#context" class="md-nav__link">
+    <span class="md-ellipsis">
+      Context
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-this-adr-why-now" class="md-nav__link">
+    <span class="md-ellipsis">
+      Why this ADR, why now
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#options-considered" class="md-nav__link">
+    <span class="md-ellipsis">
+      Options Considered
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Options Considered">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#option-a-open-phase-2-now-on-time-elapsed-alone" class="md-nav__link">
+    <span class="md-ellipsis">
+      Option A — Open Phase 2 now on time-elapsed alone
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-b-require-external-validation-before-phase-2" class="md-nav__link">
+    <span class="md-ellipsis">
+      Option B — Require external validation before Phase 2
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-c-define-a-concrete-entry-checklist" class="md-nav__link">
+    <span class="md-ellipsis">
+      Option C — Define a concrete entry checklist
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-d-pick-a-proxy-metric-tests-coverage-loc" class="md-nav__link">
+    <span class="md-ellipsis">
+      Option D — Pick a proxy metric (tests, coverage, LOC)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      Decision
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Decision">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#required-all-four-must-be" class="md-nav__link">
+    <span class="md-ellipsis">
+      Required (all four must be ✅)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#optional-raise-confidence-do-not-block" class="md-nav__link">
+    <span class="md-ellipsis">
+      Optional (raise confidence, do not block)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#evidence-quality-disclaimer" class="md-nav__link">
+    <span class="md-ellipsis">
+      Evidence quality disclaimer
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      Consequences
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Consequences">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#positive" class="md-nav__link">
+    <span class="md-ellipsis">
+      Positive
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#negative" class="md-nav__link">
+    <span class="md-ellipsis">
+      Negative
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#neutral" class="md-nav__link">
+    <span class="md-ellipsis">
+      Neutral
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#concrete-r24-r2x-work-breakdown-non-binding-forecast" class="md-nav__link">
+    <span class="md-ellipsis">
+      Concrete R24 → R2X work breakdown (non-binding forecast)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#deferred-alternatives-explicitly-not-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      Deferred alternatives (explicitly not done)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Deferred alternatives (explicitly not done)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-also-gate-on-a-v10-stability-commitment" class="md-nav__link">
+    <span class="md-ellipsis">
+      A. "Also gate on a v1.0 stability commitment"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b-set-a-round-count-cap-eg-open-phase-2-by-r30-regardless" class="md-nav__link">
+    <span class="md-ellipsis">
+      B. "Set a round-count cap (e.g., open Phase 2 by R30 regardless)"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c-include-go-public-on-github-as-a-required-criterion" class="md-nav__link">
+    <span class="md-ellipsis">
+      C. "Include 'go public on GitHub' as a required criterion"
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-r24-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      Related R24 work
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="adr-014-phase-2-entry-criteria">ADR-014 — Phase 2 Entry Criteria<a class="headerlink" href="#adr-014-phase-2-entry-criteria" title="Permanent link">&para;</a></h1>
+<ul>
+<li><strong>Status:</strong> Accepted</li>
+<li><strong>Date:</strong> 2026-04-23</li>
+<li><strong>Round:</strong> R24</li>
+<li><strong>Relates to:</strong> ADR-005 (adapter interface), ADR-010/011/012 (extractor contract evolution), ADR-013 (fork-exec stay frozen), <code>docs/roadmap.md</code> (Phase 2 milestones)</li>
+<li><strong>Supersedes:</strong> none (this ADR does NOT change code — it formalizes a gating decision)</li>
+</ul>
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
+<p><code>docs/roadmap.md</code> names Phase 2 as <em>"Multi-agent + Web UI, v0.2"</em> with seven
+bullet-point milestones (AutoGen adapter, multi-agent lanes, HTTP API, Web
+UI, <code>chronos web</code>, fork-batch, v0.2.0 tag). It does <strong>not</strong> say when Phase
+1 ends and Phase 2 begins, nor what would make starting Phase 2 a good
+bet versus a premature widening of surface area.</p>
+<p>Phase 1 has run 14 rounds past its technical MVP (R9 shipped v0.1.0 with
+all named milestones). We have accumulated:</p>
+<ul>
+<li>7 tagged releases (v0.1.0 → v0.1.6)</li>
+<li>264 tests at 93 % coverage</li>
+<li>13 ADRs</li>
+<li>3 external-framework dogfood case studies (supervisor / swarm / bigtool)</li>
+<li>1 self-hosted case study (fork via <code>--emit python</code>)</li>
+<li>4 076 src LOC, 6 697 test LOC</li>
+<li>0 external users, 0 GitHub issues, 0 production deployments</li>
+<li>1 LLM backend (Claude Opus 4.7 via baidu-int OneAPI)</li>
+<li>1 graph framework supported (LangGraph 1.1.9)</li>
+</ul>
+<p>The temptation after each round is to open another Phase-1 line of work
+(deeper CLI polish, another dogfood, another invariant). The question
+this ADR answers is: <strong>what would have to be true for opening the
+AutoGen adapter to be a better use of the next round than another
+Phase-1 increment?</strong></p>
+<h2 id="why-this-adr-why-now">Why this ADR, why now<a class="headerlink" href="#why-this-adr-why-now" title="Permanent link">&para;</a></h2>
+<p>Three forcing functions:</p>
+<ol>
+<li><strong>R23-A proved the self-hosted dogfood loop works.</strong> <code>--emit python</code>
+   was exercised against our own R17 supervisor artifact, surfaced three
+   real bugs, shipped fixes. Phase 1's internal testability story is
+   closed.</li>
+<li><strong>R10 near-miss is still the canonical red line.</strong> At R10 this agent
+   started <code>uv add autogen-agentchat</code> under a "自由发挥" authorization and
+   caught itself only after re-reading CONTEXT.md. That event produced
+   the rule <em>"自由发挥 does not override documented roadmap discipline."</em>
+   R24 makes that rule falsifiable instead of vibe-based.</li>
+<li><strong>ADR-013 freed the planning budget.</strong> With fork-exec formally off
+   the table, "what ships next?" needs a real answer. Without entry
+   criteria, the answer drifts.</li>
+</ol>
+<h2 id="options-considered">Options Considered<a class="headerlink" href="#options-considered" title="Permanent link">&para;</a></h2>
+<h3 id="option-a-open-phase-2-now-on-time-elapsed-alone">Option A — Open Phase 2 now on time-elapsed alone<a class="headerlink" href="#option-a-open-phase-2-now-on-time-elapsed-alone" title="Permanent link">&para;</a></h3>
+<p>Argument: we're at R24, v0.1.6, 93 % coverage, zero blockers. Phase 1
+goals are checked off per roadmap. Keep momentum; start AutoGen adapter.</p>
+<p><strong>Rejected.</strong> Time-elapsed is not evidence. Zero external users means
+zero external validation that the LangGraph adapter shape we built is
+the right <em>abstract</em> shape — and Phase 2 bets on generalizing that shape
+to AutoGen. Generalizing an unvalidated abstraction is the most
+expensive way to discover it was wrong.</p>
+<h3 id="option-b-require-external-validation-before-phase-2">Option B — Require external validation before Phase 2<a class="headerlink" href="#option-b-require-external-validation-before-phase-2" title="Permanent link">&para;</a></h3>
+<p>Argument: mirror ADR-013's trigger-condition-1 ("external GitHub
+issue"). Only open Phase 2 when a real user has used v0.1.x and found
+its single-framework scope limiting.</p>
+<p><strong>Rejected as sole gate.</strong> Waiting for external users on a private repo
+with no announcement is a tautology — there are none because nobody
+knows it exists. That's a different decision (ADR-TBD on when to take
+the repo public). Making Phase 2 blocked by it conflates two orthogonal
+questions.</p>
+<h3 id="option-c-define-a-concrete-entry-checklist">Option C — Define a concrete entry checklist<a class="headerlink" href="#option-c-define-a-concrete-entry-checklist" title="Permanent link">&para;</a></h3>
+<p>Argument: list the <em>specific</em> signals that make AutoGen adapter work
+high-leverage vs. premature. Each signal is independently verifiable.
+Phase 2 opens when <strong>all required</strong> signals are present; optional
+signals raise confidence but don't block.</p>
+<p><strong>Accepted.</strong> This is the pattern ADR-013 used for fork-exec trigger
+conditions, reframed from "unfreeze" to "entry gate."</p>
+<h3 id="option-d-pick-a-proxy-metric-tests-coverage-loc">Option D — Pick a proxy metric (tests, coverage, LOC)<a class="headerlink" href="#option-d-pick-a-proxy-metric-tests-coverage-loc" title="Permanent link">&para;</a></h3>
+<p>Argument: cheap to check — e.g. "open Phase 2 at 300 tests" or "at
+5 000 src LOC."</p>
+<p><strong>Rejected.</strong> These measure throughput, not readiness. We could hit
+300 tests in two rounds of Phase-1 polish that don't change Phase 2
+readiness at all.</p>
+<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
+<p>Phase 2 opens (AutoGen adapter development begins, <code>uv add
+autogen-agentchat</code> becomes permitted, Phase 2 milestones in
+<code>docs/roadmap.md</code> become active planning units) <strong>iff all four required
+entry criteria below are satisfied</strong>. Optional criteria are
+confidence-raisers; they do not block but their absence should be
+explicitly acknowledged in the opening round's progress doc.</p>
+<h3 id="required-all-four-must-be">Required (all four must be ✅)<a class="headerlink" href="#required-all-four-must-be" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>R1 — Adapter interface frozen.</strong> <code>AdapterProtocol</code> (or whatever the
+   adapter API is called at that point) has an ADR describing its stable
+   surface, and at least one <strong>non-trivial change</strong> to the LangGraph
+   adapter has been implementable without modifying the
+   framework-neutral core (<code>chronos.core.*</code>). "Non-trivial" ≥ one
+   public-API-visible change. This proves the abstraction boundary is
+   real, not aspirational.</li>
+</ol>
+<p><em>Current status:</em> ❌ adapter surface is implicit, no ADR-005 follow-up.
+   We have <code>src/chronos/adapters/langgraph.py</code> with hand-edited extractor
+   registration but no written contract that a second adapter would have
+   to honor.</p>
+<ol>
+<li><strong>R2 — Extractor contract v2 documented.</strong> ADR-010 / 011 / 012
+   collectively define the <code>UsageExtractor</code> protocol by evolution. A
+   single ADR-TBD must consolidate: pre/post-state access, multi-LLM
+   per node (R18/ADR-012), state-serialization boundary (R15/ADR-011),
+   and what a framework-agnostic extractor contract looks like. AutoGen's
+   message/tool model differs enough from LangGraph's that a
+   consolidated v2 contract must be written <em>before</em> a second extractor
+   is implemented, else the second implementation becomes the de-facto
+   spec and drift compounds.</li>
+</ol>
+<p><em>Current status:</em> ❌ contract is scattered across three ADRs + code.</p>
+<ol>
+<li><strong>R3 — One adversarial LangGraph dogfood.</strong> We have three topology
+   dogfoods (supervisor/swarm/bigtool) that all <em>worked</em>. We need one
+   dogfood that is <strong>explicitly adversarial</strong> — chosen because we
+   predict Chronos will be awkward or wrong — and either it surfaces a
+   real gap (fix it) or it doesn't (proves LangGraph adapter is
+   battle-tested enough to generalize from). Candidates: streaming
+   tokens via <code>.astream_events</code> (explicitly noted as untested in R17
+   case study); sub-graph nesting (also noted as untested); a graph
+   with side-effectful tools that hit real APIs (tests extractor
+   robustness under error paths). Pick one; dogfood it; document.</li>
+</ol>
+<p><em>Current status:</em> ❌ not attempted. All three prior dogfoods picked
+   canonical topologies.</p>
+<ol>
+<li><strong>R4 — CONTEXT.md §4 refreshed for Phase 2 discipline.</strong> The
+   current §4 encodes Phase-1 red lines (no AutoGen, no fork-exec).
+   Phase 2 needs its own operational red lines — what AutoGen adapter
+   is <em>not</em> allowed to do (e.g., pull in AutoGen's own serialization
+   assumptions), what the Web UI is <em>not</em> allowed to do (e.g., mutate
+   recorded runs), etc. Opening Phase 2 without refreshing this
+   invites a Phase-2 equivalent of the R10 near-miss.</li>
+</ol>
+<p><em>Current status:</em> ❌ §4 is Phase-1-specific.</p>
+<h3 id="optional-raise-confidence-do-not-block">Optional (raise confidence, do not block)<a class="headerlink" href="#optional-raise-confidence-do-not-block" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>O1 — Second LLM backend exercised.</strong> Running any existing case
+  study via a non-Anthropic backend (OpenAI <code>gpt-*</code>, Gemini) once.
+  Confirms extractor registration pattern generalizes at the backend
+  level. Absence-acknowledgement acceptable: "Phase 2 adapter work
+  may surface Anthropic-coupling; revisit if it does."</li>
+<li><strong>O2 — External user signal.</strong> ≥ 1 GitHub issue, star, or
+  acknowledgement from a non-agent user. Raises confidence that
+  widening surface area has any market. Private-repo posture makes
+  this unlikely pre-Phase-2 and that's okay.</li>
+<li><strong>O3 — Performance baseline published.</strong> <code>chronos runs list</code> on
+  a 10k-run DB, <code>chronos replay</code> on a 500-step run. Phase 2 adds
+  Web UI that will exercise these paths hard; knowing today's
+  numbers lets us detect regressions. Nice-to-have, not blocking.</li>
+</ul>
+<h2 id="evidence-quality-disclaimer">Evidence quality disclaimer<a class="headerlink" href="#evidence-quality-disclaimer" title="Permanent link">&para;</a></h2>
+<p>Same disclaimer as ADR-013: one user, one backend, one framework. The
+criteria above are calibrated to that reality:</p>
+<ul>
+<li>R1/R2/R3 are <strong>internally verifiable</strong> — they don't require external
+  users, only disciplined self-work.</li>
+<li>R4 is process hygiene.</li>
+<li>The optional list (O1-O3) is where external validation lives;
+  intentionally non-blocking so Phase 2 isn't hostage to the
+  "go-public" decision.</li>
+</ul>
+<p>If Chronos ever gains external users, expect this ADR to be
+<strong>superseded</strong> by one that re-weights optional → required.</p>
+<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
+<h3 id="positive">Positive<a class="headerlink" href="#positive" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Phase 2 is no longer a vibe call.</strong> The four required criteria are
+  things we either have or don't; a round's progress doc can just say
+  "R1 ✅, R2 ❌ (why), R3 ❌ (why), R4 ❌ (why) — not yet."</li>
+<li><strong>R24-R27 planning has a target.</strong> Each of R1-R4 is roughly one
+  round's work. That gives 4 rounds of clearly-scoped Phase-1.5 work
+  before Phase 2 opens, which is approximately where Phase 1 naturally
+  slows its marginal returns.</li>
+<li><strong>Red line hardened.</strong> R10 near-miss ("自由发挥 doesn't override
+  roadmap discipline") is now backed by a checklist instead of
+  memory. This agent can be handed the authorization to "开始 Phase 2"
+  and correctly refuse until the checklist is green.</li>
+<li><strong>Composes with ADR-013.</strong> Phase 2 entry can reopen fork-exec
+  (ADR-013 trigger #3). The two ADRs form a two-stage gate: first get
+  Phase 2 entry signed off, then re-evaluate fork-exec in the Phase-2
+  context.</li>
+</ul>
+<h3 id="negative">Negative<a class="headerlink" href="#negative" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Four rounds of work before the headline feature.</strong> AutoGen adapter
+  is the most "feature-list-visible" thing in the Phase 2 bullet list.
+  Delaying it means 4+ rounds where the project's elevator pitch
+  ("Chronos supports AutoGen too") doesn't advance. Mitigated by
+  honest framing: the project isn't chasing feature-count.</li>
+<li><strong>Locks in a specific order.</strong> Some users might argue "just start
+  AutoGen and figure out the adapter interface retroactively."
+  ADR-014 rejects that. If this turns out wrong, the ADR gets
+  superseded; that's cheap.</li>
+</ul>
+<h3 id="neutral">Neutral<a class="headerlink" href="#neutral" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Code is unchanged by this ADR. No version bump required.</li>
+<li>Roadmap.md's Phase 2 bullet list stays as-is; this ADR is the gate,
+  not a re-plan.</li>
+</ul>
+<h2 id="concrete-r24-r2x-work-breakdown-non-binding-forecast">Concrete R24 → R2X work breakdown (non-binding forecast)<a class="headerlink" href="#concrete-r24-r2x-work-breakdown-non-binding-forecast" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>R24</strong> (this round): ship ADR-014 itself + small hygiene fixes
+  (e.g., the FORCE_COLOR conftest fixture from v0.1.6 report
+  Finding #1).</li>
+<li><strong>R25 candidate</strong>: tackle <strong>R2</strong> (extractor contract v2 ADR) — it's
+  the pre-requisite for R1 (adapter interface ADR) because the adapter
+  API subsumes extractor registration.</li>
+<li><strong>R26 candidate</strong>: tackle <strong>R1</strong> (adapter interface ADR). Write it,
+  then prove it by refactoring one non-trivial LangGraph adapter
+  change through it.</li>
+<li><strong>R27 candidate</strong>: tackle <strong>R3</strong> (adversarial dogfood). Top pick:
+  <code>.astream_events</code> streaming, because R17 explicitly flagged it as
+  untested and Web UI will want streaming.</li>
+<li><strong>R28 candidate</strong>: tackle <strong>R4</strong> (CONTEXT.md §4 Phase-2 refresh) +
+  evaluate optional criteria. If all four required are ✅, <strong>Phase 2
+  opens in R29</strong>.</li>
+</ul>
+<p>This ordering is <strong>non-binding</strong> — unexpected signal (bug discovery,
+external issue, reprioritization) can reorder R25-R28. The binding
+commitment is the four required criteria, not the round numbers.</p>
+<h2 id="deferred-alternatives-explicitly-not-done">Deferred alternatives (explicitly not done)<a class="headerlink" href="#deferred-alternatives-explicitly-not-done" title="Permanent link">&para;</a></h2>
+<h3 id="a-also-gate-on-a-v10-stability-commitment">A. "Also gate on a v1.0 stability commitment"<a class="headerlink" href="#a-also-gate-on-a-v10-stability-commitment" title="Permanent link">&para;</a></h3>
+<p><strong>Deferred.</strong> v1.0 implies a compatibility promise we can't make with
+zero external users. v0.x signals breaking-changes-allowed and that's
+honest. Phase 2 opens at v0.2.x, not v1.0.</p>
+<h3 id="b-set-a-round-count-cap-eg-open-phase-2-by-r30-regardless">B. "Set a round-count cap (e.g., open Phase 2 by R30 regardless)"<a class="headerlink" href="#b-set-a-round-count-cap-eg-open-phase-2-by-r30-regardless" title="Permanent link">&para;</a></h3>
+<p><strong>Rejected.</strong> Time-boxing forced readiness is option A in disguise.
+The whole point of this ADR is to replace "time elapsed" with
+"criteria met."</p>
+<h3 id="c-include-go-public-on-github-as-a-required-criterion">C. "Include 'go public on GitHub' as a required criterion"<a class="headerlink" href="#c-include-go-public-on-github-as-a-required-criterion" title="Permanent link">&para;</a></h3>
+<p><strong>Deferred to a future ADR.</strong> Going public is a product decision
+(branding, license, security posture) that is orthogonal to technical
+Phase-2 readiness. Bundling them delays both for the wrong reasons.</p>
+<h2 id="related-r24-work">Related R24 work<a class="headerlink" href="#related-r24-work" title="Permanent link">&para;</a></h2>
+<p>R24 is the <strong>formalization</strong> round: the ADR itself is the deliverable.
+No code change is mandated. A small co-shipped fix (FORCE_COLOR conftest
+fixture, closing v0.1.6 report Finding #1) is included to keep the
+round from being ADR-only.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 chengfei867 — content generated 100% by Hermes Agent / Claude Opus
+    </div>
+  
+  
+</div>
+      
+        <div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/chengfei867/chronos-agent" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.top", "navigation.indexes", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "content.tabs.link", "toc.follow"], "search": "../../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.88dd0f4e.min.js"></script>
+      
+    
+  </body>
+</html>
